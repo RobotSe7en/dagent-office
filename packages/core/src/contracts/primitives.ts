@@ -8,7 +8,7 @@ export const RevisionSchema = z.number().int().min(0).max(Number.MAX_SAFE_INTEGE
 
 // Canonical POSIX package paths, not filesystem paths or resource permissions.
 export const PackagePathSchema = z.string().regex(
-  /^(?!\.{1,2}(?:\/|$))(?!.*\/\.{1,2}(?:\/|$))[^/\\:\u0000-\u001f\u007f?#]+(?:\/[^/\\:\u0000-\u001f\u007f?#]+)*(?![\s\S])/,
+  /^(?!\.{1,2}(?:\/|$))(?![\s\S]*\/\.{1,2}(?:\/|$))[^/\\:\u0000-\u001f\u007f?#]+(?:\/[^/\\:\u0000-\u001f\u007f?#]+)*(?![\s\S])/,
 );
 
 export const DocumentKindSchema = z.enum(["document", "presentation", "workbook"]);

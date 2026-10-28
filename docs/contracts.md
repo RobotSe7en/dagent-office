@@ -80,7 +80,7 @@ import proposalSchema from "@dagent-office/core/schemas/edit-proposal.json"
 
 ## 错误与运行时类型
 
-`DocumentError` 包含 `code`、`message` 和 `details`，`toJSON()` 输出 `document-error` 数据。消息最多 256 字符，问题最多 16 项，每项路径最多 16 段。不保存原始输入或原始校验器错误，不把文档原文回显进错误。
+`DocumentError` 包含 `code`、`message` 和 `details`，`toJSON()` 输出 `document-error` 数据。消息最多 256 字符，问题最多 16 项，每项路径最多 16 段；字符串长度上限按 Unicode 码点计算。不保存原始输入或原始校验器错误，不把文档原文回显进错误。
 
 文档结构错误使用 `InvalidDocument`，操作及事务使用 `InvalidOperation`，提案使用 `InvalidProposal`。格式标识不支持为 `UnsupportedFormat`，当前没有实现的交互类型或契约为 `UnsupportedFeature`。读取或校验错误不改变原始字节和输入对象。
 

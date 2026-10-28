@@ -8,16 +8,17 @@ export const DocumentErrorCodeSchema = z.enum([
 ]);
 export type DocumentErrorCode = z.infer<typeof DocumentErrorCodeSchema>;
 
+// Unicode regex bounds count code points in both Zod and exported JSON Schemas.
 export const ValidationIssueSchema = z.strictObject({
-  code: z.string().min(1).max(64),
-  path: z.array(z.union([z.string().max(128), RevisionSchema])).max(16),
-  message: z.string().min(1).max(256),
+  code: z.string().min(1).regex(/^[\s\S]{0,64}(?![\s\S])/u),
+  path: z.array(z.union([z.string().regex(/^[\s\S]{0,128}(?![\s\S])/u), RevisionSchema])).max(16),
+  message: z.string().min(1).regex(/^[\s\S]{0,256}(?![\s\S])/u),
 });
 export type ValidationIssue = z.infer<typeof ValidationIssueSchema>;
 
 export const DocumentErrorDataSchema = z.strictObject({
   code: DocumentErrorCodeSchema,
-  message: z.string().min(1).max(256),
+  message: z.string().min(1).regex(/^[\s\S]{0,256}(?![\s\S])/u),
   details: z.array(ValidationIssueSchema).max(16),
 });
 export type DocumentErrorData = z.infer<typeof DocumentErrorDataSchema>;
