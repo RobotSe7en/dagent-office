@@ -1,6 +1,6 @@
 # 技术选型
 
-第一版采用 TypeScript 和浏览器 HTML/CSS 排版。文档协议、批注、事务和提案校验由本项目实现；文本输入、格式写出和浏览器渲染复用成熟基础能力。宿主智能体负责模型调用和运行，SDK 不引入模型供应商依赖。R1-02 已锁定工程工具，R1-03 已引入结构校验依赖，R1-04 已引入 HTML/CSS 解析器；编辑和 Office 依赖仍为计划选型。
+第一版采用 TypeScript 和浏览器 HTML/CSS 排版。文档协议、批注、事务、提案校验及 DOCX/PPTX/XLSX 的 OOXML 读写和样式映射由本项目实现；文本输入、浏览器渲染及 ZIP/XML/哈希等通用能力复用成熟基础库。宿主智能体负责模型调用和运行，SDK 不引入模型供应商依赖。R1-02 至 R1-05 已锁定工程、结构校验、HTML/CSS、资源哈希及 ZIP 依赖；编辑、XML 与公式计算依赖按后续任务验证。
 
 ## 已锁定的结构校验依赖
 
@@ -23,6 +23,15 @@
 | source-map-js | 1.2.2 | CSS Tree 间接依赖：源映射 | BSD-3-Clause |
 
 直接依赖锁定精确版本，间接解析版本记录于 `pnpm-lock.yaml`，许可证来自已安装包的 manifest。R1-04 验证报告与合成 HTML/CSS 的保存重开、严格 ES2022 类型、Node 打包执行和普通 JS 浏览器打包。第三方 AST 留在核心内部；UTF-8 使用支持环境内建的 TextEncoder/TextDecoder，经内部适配器调用，不向消费者引入 DOM 或 Node 全局声明。支持范围和限制见[文档模型](document-model.md)。
+
+## 已锁定的资源与 ZIP 依赖
+
+| 依赖 | 版本 | 用途 | 许可证 |
+| --- | --- | --- | --- |
+| `@noble/hashes` | 2.4.0 | `core`：同步、跨运行环境的 SHA-256；保持现有打开接口同步 | MIT |
+| fflate | 0.8.3 | `office`：DEFLATE 流及 ZIP 写出，使用不依赖 Node 的 browser 入口 | MIT |
+
+资源 MIME 识别和基本容器边界由内部轻量适配器检查，不实现像素解码。ZIP 适配层在解压前按原始记录检查路径、重复项、结构及预算，压缩解压由 fflate 执行；不能只依赖上层解包 Map，因为此时重复名可能已被覆盖。版本与许可来自已安装包，支持范围见[资源与 ZIP](resources-and-zip.md)。[fflate](https://github.com/101arrowz/fflate)、[noble-hashes](https://github.com/paulmillr/noble-hashes)
 
 ## 已锁定的工程依赖
 
@@ -53,10 +62,10 @@ TypeScript 暂用 6.0.3，以保留工程边界检查所需的编译器 API；7.
 | PPT 编辑 | HTML 定位布局、SVG、自有对象操作 | 几何、层级、框选、组合、母版与主题 |
 | Excel 编辑 | 虚拟网格、自有单元格适配器 | HTML 文档源和计算器数据间的转换 |
 | Excel 计算 | 优先验证 Univer 基础公式能力 | 支持函数矩阵、计算状态和依赖更新桥接 |
-| OOXML 公共基础 | JSZip、fast-xml-parser 等 | 关系、资源、样式继承和三格式读入 |
-| DOCX 输出 | `docx` | 当前 HTML 结构、样式及页面语义的编译 |
-| PPTX 输出 | PptxGenJS | HTML 对象到原生幻灯片对象的编译 |
-| XLSX 读写 | ExcelJS | 文档源映射、公式计算器连接、超出库能力的格式适配 |
+| OOXML 公共基础 | fflate（已锁定）；XML 解析器待验证，如 fast-xml-parser | 自行实现 OPC 包、关系及三格式映射 |
+| DOCX 读写 | 自研 OOXML 适配器 | 原生段落、文字、样式、编号、节和页面语义 |
+| PPTX 读写 | 自研 OOXML 适配器 | 原生对象、主题、母版、对象树和几何映射 |
+| XLSX 读写 | 自研 OOXML 适配器 | 原生单元格、公式、样式、工作表及关系映射 |
 | 渲染与 PDF | Chromium、Playwright | 固定字体、布局测量、截图、导出与视觉回归 |
 | 测试 | Vitest、Playwright | 核心、协议、输入、可编辑重开、视觉和宿主边界 |
 
@@ -70,13 +79,11 @@ Tiptap 的开源核心采用 MIT 许可，官方也提供付费批注和 AI 扩�
 
 Univer 以插件和命令组织能力，并能在浏览器与 Node 环境使用。评估公式能力时只引入所需基础模块；其 Pro 转换与协同能力不作为本项目导入导出的前提。[基础概念](https://docs.univer.ai/guides/sheets/getting-started/quickstart)、[Node 运行](https://docs.univer.ai/guides/sheets/getting-started/node)
 
-`docx` 提供浏览器及 Node 的 DOCX 生成能力。PptxGenJS 提供文字、形状、表格、图表和图片输出，其 `tableToSlides` 处理的是 HTML 表格，整页 HTML 的映射由本项目完成。[docx](https://github.com/dolanmiu/docx)、[PptxGenJS 对象能力](https://gitbrent.github.io/PptxGenJS/docs/introduction/)、[HTML 表格转换](https://gitbrent.github.io/PptxGenJS/docs/html-to-powerpoint.html)
-
-ExcelJS 负责工作簿读写。公式保存和公式计算分开实现，不能只写入一个公式表达式就认为依赖结果已更新。[ExcelJS](https://github.com/exceljs/exceljs)
+Office 转换路线已确定为自研 OOXML，不采用 docx、PptxGenJS、ExcelJS。依据公开格式标准实现 DOCX/PPTX/XLSX 的解析、写回、关系和样式映射，以便掌握原文档特性的保留策略；兼容性以真实格式样例、原生可编辑重开及固定环境视觉对照验收，不以自行实现本身作为保真证明。ZIP、XML、哈希等通用能力继续复用成熟库。公式保存和公式计算分开实现，不能只写入一个公式表达式就认为依赖结果已更新。
 
 ## 原则
 
-自研内容围绕产品差异和文档格式，不重新实现浏览器文字输入、ZIP 压缩或通用 Office 输出的所有基础设施。第一版不引入 Rust 构建链；后续 Rust 或 WASM 实现可以替换格式适配器及性能关键路径。
+自研内容包括文档格式、OOXML 读写与样式映射，不重新实现浏览器文字输入、通用 ZIP 压缩、XML 解析及哈希基础设施。第一版不引入 Rust 构建链；后续 Rust 或 WASM 实现可以替换格式适配器及性能关键路径。
 
 每个格式适配器声明自己支持的导入、编辑和导出特性，记录具体库版本与许可证。基础库没有覆盖的样式和对象由适配层补齐，无法完成的转换返回明确结果。
 

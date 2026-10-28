@@ -1,5 +1,5 @@
 import type { Annotation, Anchor } from "./contracts/annotations.js";
-import type { DocumentManifest, DocumentMetadata } from "./contracts/document.js";
+import type { AssetDescriptor, DocumentManifest, DocumentMetadata } from "./contracts/document.js";
 import type { DocumentEvent } from "./contracts/events.js";
 import type { ContextStyle, DocumentInteractionRequest, EditProposal } from "./contracts/interaction.js";
 import type { ContentOperationName, DocumentTransaction } from "./contracts/operations.js";
@@ -10,6 +10,11 @@ export type DeepReadonly<Value> = Value extends readonly (infer Item)[]
 
 /** Virtual package files; manifest.json is contained here, never duplicated as authority. */
 export type DocumentPackage = ReadonlyMap<string, Uint8Array>;
+
+/** Bind each provider to the host's principal/session; package paths never authorize reads. */
+export interface AssetProvider {
+  readAsset(asset: DeepReadonly<AssetDescriptor>): Promise<Uint8Array | undefined>;
+}
 
 /** A derived, read-only view, not a second persistence format. */
 export interface DocumentSnapshot {

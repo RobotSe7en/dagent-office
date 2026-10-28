@@ -1,2 +1,2 @@
-/** Document-package and Office adapters will be introduced after the core contracts. */
-export {};
+export { DEFAULT_MAX_ZIP_BYTES, readDocumentZip, writeDocumentZip } from "./document-zip.js";
+export type { DocumentZipOptions } from "./document-zip.js";

@@ -2,6 +2,8 @@ import { parseContract } from "./schema-registry.js";
 import type { DocumentModel, DocumentPackage, DocumentSnapshot, OpenDocumentOptions } from "./runtime.js";
 import { normalizeCss } from "./document/css.js";
 import { parseHtml } from "./document/html.js";
+import { validateAssets } from "./document/assets.js";
+import { readManifest } from "./document/manifest.js";
 import { copyPackage, encode, readJson, readText } from "./document/package.js";
 import { checkLimit, freeze, invalid, readLimits, unsupported } from "./document/validation.js";
 
@@ -11,12 +13,10 @@ export { DEFAULT_DOCUMENT_READ_LIMITS } from "./document/validation.js";
 export function openDocument(input: DocumentPackage, options: OpenDocumentOptions = {}): DocumentModel {
   const limits = readLimits(options.limits);
   const files = copyPackage(input, limits);
-  const manifest = parseContract("document-manifest", readJson(files, "manifest.json"));
+  const manifest = readManifest(files);
   if (manifest.kind !== "document") unsupported("Only document packages can be opened by this reader.");
 
-  const roles = ["manifest.json", manifest.entrypoint, manifest.metadata, manifest.annotations, ...manifest.styles,
-    ...manifest.assets.map((asset) => asset.path)];
-  if (new Set(roles).size !== roles.length) invalid("Manifest file roles and resource paths must not overlap or repeat.");
+  validateAssets(manifest.assets, files);
   const metadata = parseContract("document-metadata", readJson(files, manifest.metadata));
   const annotations = parseContract("annotations", readJson(files, manifest.annotations));
   const cssBudget = { nodes: 0 };

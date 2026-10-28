@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>样式与资源往返样例</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<article data-node-id="root" data-office-kind="document">
+  <h1 data-node-id="title" class="title">样式与资源往返样例</h1>
+  <p data-node-id="paragraph" class="body" style="color: #234567; text-indent: 24pt">中文字体与段落样式：<strong data-node-id="bold">粗体</strong>、<em data-node-id="italic">斜体</em>、<span data-node-id="unicode">é😀</span>。<br>保留换行和空白。</p>
+  <ol data-node-id="list" start="3">
+    <li data-node-id="item-one">列表编号从三开始。</li>
+    <li data-node-id="item-two" value="7">保留单独指定的编号。</li>
+  </ol>
+  <table data-node-id="table">
+    <tr data-node-id="row-one"><th data-node-id="heading" colspan="2" scope="colgroup">合并表头</th></tr>
+    <tr data-node-id="row-two"><td data-node-id="cell-one" rowspan="2">跨行</td><td data-node-id="cell-two">第一行</td></tr>
+    <tr data-node-id="row-three"><td data-node-id="cell-three">第二行</td></tr>
+  </table>
+  <p data-node-id="images"><img data-node-id="png" src="assets/sample.png" width="24" height="24" alt="PNG 样例"><img data-node-id="jpeg" src="assets/sample.jpg" width="24" height="24" alt="JPEG 样例"><img data-node-id="webp" src="assets/sample.webp" width="24" height="24" alt="WebP 样例"></p>
+</article>
+</body>
+</html>

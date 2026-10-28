@@ -86,6 +86,11 @@ test("packed packages load in Node and reject access to their internal files", (
     "const document = openDocument(files);",
     'assert.equal(document.getNode("n-summary").text, "项目计划于第三季度完成。");',
     "assert.deepEqual(openDocument(document.serialize()).snapshot(), document.snapshot());",
+    'const { createAssetDescriptor, collectDocumentAssets } = await import("@dagent-office/core");',
+    'const { readDocumentZip, writeDocumentZip } = await import("@dagent-office/office");',
+    'assert.equal(createAssetDescriptor("assets/a.bin", "application/octet-stream", new Uint8Array([97,98,99])).sha256, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");',
+    'const collected = await collectDocumentAssets(files, { async readAsset() { throw new Error("Unexpected host read"); } });',
+    'assert.deepEqual(openDocument(readDocumentZip(writeDocumentZip(collected))).snapshot(), document.snapshot());',
     "for (const name of CONTRACT_NAMES) {",
     '  const schema = await import("@dagent-office/core/schemas/" + name + ".json", { with: { type: "json" } });',
     "  assert.deepEqual(schema.default, getContractJsonSchema(name));",
@@ -103,7 +108,7 @@ test("packed packages load in Node and reject access to their internal files", (
 test("packed declarations resolve without borrowing workspace source or ambient types", () => {
   const compiler = require.resolve("typescript/bin/tsc");
   for (const [name, imported, lib] of [
-    ["core", ["core"], ["ES2022"]],
+    ["core", ["core", "office"], ["ES2022"]],
     ["browser", ["core", "editor", "office"], ["ES2022", "DOM", "DOM.Iterable"]],
   ] as const) {
     writeFileSync(join(consumer, name + ".ts"), [...imported.flatMap((module, index) => [
@@ -123,6 +128,15 @@ test("packed declarations resolve without borrowing workspace source or ambient 
       "void text;",
       "// @ts-expect-error Parser-specific AST is not part of the public node interface.",
       'document.getNode("n")?.childNodes;',
+      'import { collectDocumentAssets, createAssetDescriptor } from "@dagent-office/core";',
+      'import type { AssetProvider } from "@dagent-office/core";',
+      'import { readDocumentZip, writeDocumentZip } from "@dagent-office/office";',
+      'const provider: AssetProvider = { async readAsset() { return undefined; } };',
+      'const collected: Promise<ReadonlyMap<string, Uint8Array>> = collectDocumentAssets(files, provider);',
+      'const archive: Uint8Array = writeDocumentZip(files);',
+      'const unpacked: ReadonlyMap<string, Uint8Array> = readDocumentZip(archive);',
+      'const digest: string = createAssetDescriptor("assets/a.bin", "application/octet-stream", archive).sha256;',
+      'void collected; void unpacked; void digest;',
     ].join("\n"));
     writeFileSync(join(consumer, "tsconfig." + name + ".json"), JSON.stringify({
       compilerOptions: {
@@ -144,7 +158,12 @@ test("packed browser modules build in a plain JavaScript host without React", as
     + 'document.documentElement.dataset.revision = String(parseContract("document-manifest", input).revision);\n'
     + "const sources = " + JSON.stringify(reportSources) + ";\n"
     + "const files = new Map(Object.entries(sources).map(([path, source]) => [path, new TextEncoder().encode(source)]));\n"
-    + 'document.documentElement.dataset.documentId = openDocument(files).snapshot().manifest.documentId;\n');
+    + 'document.documentElement.dataset.documentId = openDocument(files).snapshot().manifest.documentId;\n'
+    + 'import { createAssetDescriptor, collectDocumentAssets } from "@dagent-office/core";\n'
+    + 'import { readDocumentZip, writeDocumentZip } from "@dagent-office/office";\n'
+    + 'const collected = await collectDocumentAssets(files, { async readAsset() { return undefined; } });\n'
+    + 'document.documentElement.dataset.roundtrip = openDocument(readDocumentZip(writeDocumentZip(collected))).snapshot().manifest.documentId;\n'
+    + 'document.documentElement.dataset.digest = createAssetDescriptor("assets/a.bin", "application/octet-stream", new Uint8Array([97,98,99])).sha256;\n');
   await build({
     root: consumer,
     configFile: false,

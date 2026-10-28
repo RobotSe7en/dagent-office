@@ -2,7 +2,7 @@
 
 ## Scope
 
-`dagent-office` is an independent TypeScript SDK for HTML-based Office editing and human/AI collaboration. Read [README.md](README.md) and the task-relevant design documents before implementation. The core implements structural contracts, JSON Schemas and a read-only HTML/CSS document package model; session execution and editors are not implemented yet.
+`dagent-office` is an independent TypeScript SDK for HTML-based Office editing and human/AI collaboration. Read [README.md](README.md) and the task-relevant design documents before implementation. The core implements structural contracts, JSON Schemas, a read-only HTML/CSS document package model and resource validation/collection; office implements bounded package ZIP adapters. Session execution, editors and OOXML conversion are not implemented yet.
 
 ## Working with the user
 
@@ -23,6 +23,7 @@
 - Do not read Enterprise databases or knowledge tables. A host supplies only context authorized for its current principal.
 - Keep per-session document and model state isolated. Never share private document content or model contexts between host cache namespaces.
 - Do not copy or translate ibisOffice source into this project. Implement from the document specification and public format standards; record licenses for reused dependencies.
+- Implement DOCX/PPTX/XLSX OOXML reading, writing and style mapping in this project. Do not use docx, PptxGenJS or ExcelJS for Office conversion. Mature ZIP, XML and hashing primitives may be reused behind adapters.
 
 ## Document and editing invariants
 

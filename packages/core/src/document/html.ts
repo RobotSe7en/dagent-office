@@ -6,6 +6,7 @@ import { DocumentError } from "../errors.js";
 import { normalizeCss } from "./css.js";
 import type { CssBudget } from "./css.js";
 import { parseHtmlTree } from "./html-parser.js";
+import { validateImageAsset } from "./assets.js";
 import { resolveReference } from "./package.js";
 import { checkLimit, freeze, invalid, unsupported } from "./validation.js";
 
@@ -78,7 +79,7 @@ export function parseHtml(source: string, manifest: DocumentManifest, files: Doc
     const index = new Map<string, { element: Element; parentId: string | null; children: string[] }>();
     const domIds = new Set<string>();
     const stylePaths: string[] = [];
-    const assets = new Set(manifest.assets.map((asset) => asset.path));
+    const assets = new Map(manifest.assets.map((asset) => [asset.path, asset]));
     const stack: { node: Node; depth: number; inBody: boolean; parentId: string | null }[] = [
       { node: tree, depth: 0, inBody: false, parentId: null },
     ];
@@ -147,7 +148,9 @@ export function parseHtml(source: string, manifest: DocumentManifest, files: Doc
           const src = attribute(node, "src");
           if (!src) invalid("Document images require a package resource reference.");
           const path = resolveReference(src, manifest.entrypoint);
-          if (!assets.has(path)) invalid("An image refers to an undeclared package resource.");
+          const asset = assets.get(path);
+          if (!asset) invalid("An image refers to an undeclared package resource.");
+          validateImageAsset(asset);
           if (!files.has(path)) throw new DocumentError("AssetUnavailable", "A referenced image is not supplied in the package.");
         }
       } else if (node.nodeName === "#documentType" && "name" in node) {

@@ -1,0 +1,8 @@
+:root { --body-color: #123456; --spacing: 6pt; }
+article { font-family: "Noto Serif CJK SC", "宋体", serif; font-size: 12pt; line-height: 1.5; color: var(--body-color); }
+.title { font-size: 20pt; font-weight: 700; text-align: center; margin-bottom: 12pt; }
+.body { margin: var(--spacing) 0; white-space: normal; }
+table { border-collapse: collapse; width: 100%; }
+td, th { border: 1pt solid #456789; padding: 4pt 6pt; }
+th { background-color: #eeeeee; }
+img { margin-right: 6pt; vertical-align: middle; }

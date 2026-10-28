@@ -1,0 +1,30 @@
+{
+  "format": "dagent-office",
+  "formatVersion": 1,
+  "documentId": "fidelity-demo",
+  "kind": "document",
+  "revision": 0,
+  "entrypoint": "content.html",
+  "styles": [
+    "styles.css"
+  ],
+  "metadata": "metadata.json",
+  "annotations": "annotations.json",
+  "assets": [
+    {
+      "path": "assets/sample.png",
+      "mimeType": "image/png",
+      "sha256": "b5591ad6441d94a60acc5e581b4c9f90abe97285369c6102ee40760a62dd9e71"
+    },
+    {
+      "path": "assets/sample.jpg",
+      "mimeType": "image/jpeg",
+      "sha256": "e02c77306ab61b9ab6685dd6e7a22417bccd2a25ef822fc7c1ed3f60b9e340b8"
+    },
+    {
+      "path": "assets/sample.webp",
+      "mimeType": "image/webp",
+      "sha256": "ceb119f4bddf6d2c6dcae1f4710c82cfac0955e77acbaa9837adaf3d374f40dd"
+    }
+  ]
+}
