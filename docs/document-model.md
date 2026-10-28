@@ -23,7 +23,7 @@ const reopened = openDocument(savedFiles);
 ## 读取规则
 
 - `manifest.json` 决定格式版本、入口及文件角色。未知整数版本返回 `UnsupportedVersion`；当前读取器对 `presentation`、`workbook` 返回 `UnsupportedFeature`。
-- 所有文件路径必须为规范 POSIX 相对路径。清单中的正文、样式、元数据、批注及资源路径不能重复或重叠。
+- 所有文件路径必须为规范 POSIX 相对路径。包内所有文件均不能与另一文件的祖先路径冲突，包括未被清单引用的文件；同一路径不能同时作为文件和目录。清单中的正文、样式、元数据、批注及资源路径不能重复或重叠。
 - 正文、样式和 JSON 文件必须存在，文本必须是有效 UTF-8。读取错误返回有界 `DocumentError`，不回显原始内容或解析器错误。
 - HTML 采用 HTML5 doctype 和一个 UTF-8 charset 声明。正文仅有一个 `article`、`section` 或 `div` 根，其 `data-office-kind` 为 `document`。解析错误、重复属性和不支持的结构均拒绝，不静默删除内容。
 - 正文中除 `br`、`thead`、`tbody`、`tfoot` 外的元素必须有非空且唯一的 `data-node-id`。这些结构也可显式带 ID。普通 HTML `id` 若出现也须唯一。
@@ -65,7 +65,7 @@ CSS Tree 解析和检查样式表及行内声明，保存声明顺序、级联�
 | `maxDepth` | 128 | HTML/CSS 树深度 |
 | `maxCssNodes` | 100000 | 所有样式表和行内样式累计的 AST 节点 |
 
-HTML 在构建树时累计节点数并检查深度，超限立即中止解析并返回 `ResourceLimitExceeded`，不等完整树构建完毕。源标签若被解析器忽略而未生成元素，也会被拒绝；合法表格自动补全 `tbody` 等规范化仍受支持。规范化结果也检查字节预算，避免同一配置下产出无法重开的包。默认值通过冻结的 `DEFAULT_DOCUMENT_READ_LIMITS` 导出。
+HTML 和 CSS 在构建树时累计节点数并检查深度，超限立即中止解析并返回 `ResourceLimitExceeded`，不等完整树构建完毕。CSS 预算覆盖所有样式表和行内声明，以及解析器直接补建的节点。HTML 源标签若被解析器忽略而未生成元素，也会被拒绝；合法表格自动补全 `tbody` 等规范化仍受支持。规范化结果也检查字节预算，避免同一配置下产出无法重开的包。默认值通过冻结的 `DEFAULT_DOCUMENT_READ_LIMITS` 导出。
 
 ## 后续边界
 

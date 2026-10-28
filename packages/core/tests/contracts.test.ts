@@ -153,6 +153,24 @@ describe("version and error boundary", () => {
     expect(parseContract("document-error", error.toJSON())).toEqual(error.toJSON());
   });
 
+  test.each([
+    ["annotations", (items: unknown[]) => items, "InvalidDocument", [0]],
+    ["document-metadata", (items: unknown[]) => ({ ...metadata, sections: items }), "InvalidDocument", ["sections", 0]],
+    ["anchor", (items: unknown[]) => ({ kind: "text-set", ranges: items }), "InvalidDocument", ["ranges", 0]],
+    ["interaction-request", (items: unknown[]) => ({ ...request, context: { ...request.context, blocks: items } }),
+      "InvalidDocument", ["context", "blocks", 0]],
+    ["edit-proposal", (items: unknown[]) => ({ ...proposal, operations: items }), "InvalidProposal", ["operations", 0]],
+    ["document-transaction", (items: unknown[]) => ({ protocolVersion: 1, documentId: "d", baseRevision: 0,
+      operations: [{ op: "addAnnotation", annotation: { ...annotations[0], anchor: { kind: "text-set", ranges: items } } }] }),
+      "InvalidOperation", ["operations", 0, "annotation", "anchor", "ranges", 0]],
+  ] as const)("stops at an invalid array item in %s before reading its tail", (name, input, code, prefix) => {
+    const items: unknown[] = [{}];
+    Object.defineProperty(items, 1, { get() { throw new Error("The array tail must not be read."); } });
+    const error = failure(name, input(items), code);
+    expect(error.details.length).toBeGreaterThan(0);
+    expect(error.details.every((issue) => prefix.every((part, index) => issue.path[index] === part))).toBe(true);
+  });
+
   test("unknown contract names cannot resolve inherited registry properties", () => {
     const name = "constructor" as ContractName;
     failure(name, {}, "UnsupportedFeature");

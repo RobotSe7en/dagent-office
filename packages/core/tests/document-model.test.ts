@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { describe, expect, expectTypeOf, test } from "vitest";
 import { createAssetDescriptor, DEFAULT_DOCUMENT_READ_LIMITS, DocumentError, openDocument, parseContract } from "@dagent-office/core";
@@ -131,6 +132,31 @@ describe("document package reading and serialization", () => {
     ]) {
       json(input, "manifest.json", changed);
       failure(input);
+    }
+  });
+
+  test.each([false, true])("rejects file ancestors across all package paths in either order: %s", (reverse) => {
+    const input = files();
+    input.set("content.html/metadata.json", input.get("metadata.json")!);
+    json(input, "manifest.json", { ...manifest, metadata: "content.html/metadata.json" });
+    failure(reverse ? new Map([...input].reverse()) : input);
+
+    const unreferenced = files();
+    unreferenced.set("sources/original", new Uint8Array());
+    unreferenced.set("sources/original-copy", new Uint8Array());
+    unreferenced.set("sources/original/metadata.json", new Uint8Array());
+    failure(reverse ? new Map([...unreferenced].reverse()) : unreferenced);
+  });
+
+  test("preserves sibling prefixes and deeply nested unreferenced package files", () => {
+    const input = files();
+    for (const path of ["sources/a", "sources/a-copy", "sources/ab/item", "a/".repeat(32_000) + "b"]) {
+      input.set(path, new Uint8Array([1]));
+    }
+    const document = openDocument(input);
+    expect(openDocument(document.serialize()).snapshot()).toEqual(document.snapshot());
+    for (const [path, bytes] of input) {
+      if (path.startsWith("sources/") || path.length > 64_000) expect(document.serialize().get(path)).toEqual(bytes);
     }
   });
 
@@ -340,6 +366,25 @@ describe("CSS support and validation", () => {
 
 describe("bounded document input", () => {
   test.each([
+    ["annotations.json", "JSON.stringify(Array.from({ length: 100_000 }, () => ({})))", "InvalidDocument"],
+    ["styles.css", "'p{color:red}'.repeat(200_000)", "ResourceLimitExceeded"],
+  ])("rejects oversized structure in %s within a 128 MiB heap", (path, source, code) => {
+    const output = execFileSync(process.execPath, ["--max-old-space-size=128", "--input-type=module", "-e", `
+      import { readFileSync } from "node:fs";
+      import { DocumentError, openDocument } from "./packages/core/dist/index.js";
+      const files = new Map(["manifest.json", "content.html", "styles.css", "metadata.json", "annotations.json"]
+        .map(path => [path, readFileSync("examples/report/" + path)]));
+      files.set(${JSON.stringify(path)}, new TextEncoder().encode(${source}));
+      try { openDocument(files); throw new Error("Expected a bounded failure."); }
+      catch (error) {
+        if (!(error instanceof DocumentError) || error.code !== ${JSON.stringify(code)}) throw error;
+        console.log(error.code);
+      }
+    `], { cwd: repository, encoding: "utf8", timeout: 15_000 });
+    expect(output.trim()).toBe(code);
+  });
+
+  test.each([
     { maxFiles: 4 }, { maxPackageBytes: 10 }, { maxFileBytes: 10 },
     { maxNodes: 10 }, { maxDepth: 3 }, { maxCssNodes: 3 },
   ])("enforces configured limits %j", (limits) => { failure(files(), "ResourceLimitExceeded", limits); });
@@ -349,6 +394,38 @@ describe("bounded document input", () => {
     input.set("styles.css", encoder.encode("p{color:blue}"));
     // Each input alone is below ten AST nodes; the combined document is above it.
     failure(input, "ResourceLimitExceeded", { maxCssNodes: 10 });
+  });
+
+  test.each([
+    ["p{color:red}", 9],
+    ['p[data-x="v"] p{color:red}', 14],
+    ["p{--x: }", 9],
+  ] as const)("enforces exact CSS node and depth budgets including implicit nodes: %s", (css, maxCssNodes) => {
+    const input = body("");
+    input.set("styles.css", encoder.encode(css));
+    const limits = { maxCssNodes, maxDepth: 6 };
+    const document = openDocument(input, { limits });
+    expect(openDocument(document.serialize(), { limits }).snapshot()).toEqual(document.snapshot());
+    failure(input, "ResourceLimitExceeded", { ...limits, maxCssNodes: maxCssNodes - 1 });
+    failure(input, "ResourceLimitExceeded", { ...limits, maxDepth: 5 });
+  });
+
+  test.each([
+    ["stylesheet", "p{color:red}".repeat(1000) + "p{broken}"],
+    ["declarationList", "color:red;".repeat(1000) + "broken"],
+  ])("stops CSS tree construction before parsing the tail in %s", (context, css) => {
+    const input = context === "stylesheet" ? body("") : body('<p data-node-id="p" style="' + css + '">text</p>');
+    input.set("styles.css", encoder.encode(context === "stylesheet" ? css : ""));
+    failure(input, "ResourceLimitExceeded", { maxCssNodes: 64 });
+    // Failed parser state must not affect a subsequent document.
+    expect(() => openDocument(files())).not.toThrow();
+  });
+
+  test("stops deeply nested CSS functions before overflowing the parser stack", () => {
+    const input = body("");
+    input.set("styles.css", encoder.encode("p{--x:" + "var(--x,".repeat(30_000) + "red" + ")".repeat(30_000) + "}"));
+    failure(input, "ResourceLimitExceeded");
+    expect(() => openDocument(files())).not.toThrow();
   });
 
   test("stops deeply nested HTML before parsing the remaining source", () => {

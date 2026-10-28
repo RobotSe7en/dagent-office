@@ -1,4 +1,4 @@
-import { generate, ident, lexer, parse, walk } from "css-tree";
+import { fork, generate, ident, lexer, walk } from "css-tree";
 import type { CssNode, Declaration } from "css-tree";
 import type { DocumentReadLimits } from "../runtime.js";
 import { DocumentError } from "../errors.js";
@@ -19,6 +19,57 @@ const properties = new Set([
 const functions = new Set(["var", "calc", "min", "max", "clamp", "rgb", "rgba", "hsl", "hsla"]);
 
 export interface CssBudget { nodes: number }
+
+// CSS Tree's public syntax fork lets us guard each node parser before it
+// allocates children. Its parser is synchronous; the per-call state is released
+// even on failure and never retained between documents.
+const parseBoundedCss = (() => {
+  let active: { nodes: number; depth: number; limits: DocumentReadLimits; parsed: WeakSet<CssNode> } | undefined;
+  type NodeParser = (this: unknown, ...args: unknown[]) => CssNode;
+  const syntax = fork((config) => {
+    for (const definition of Object.values(config.node ?? {})) {
+      const node = definition as { parse?: NodeParser };
+      const parse = node.parse;
+      if (!parse) continue;
+      node.parse = function (...args) {
+        const state = active!;
+        checkLimit(++state.nodes, state.limits.maxCssNodes);
+        checkLimit(++state.depth, state.limits.maxDepth);
+        try {
+          const result = parse.apply(this, args);
+          // Some parsers also create nodes directly, such as an attribute's
+          // name or whitespace. Count these without revisiting parsed subtrees.
+          walk(result, function (child) {
+            if (child === result) return undefined;
+            if (state.parsed.has(child)) return this.skip;
+            checkLimit(++state.nodes, state.limits.maxCssNodes);
+            return undefined;
+          });
+          state.parsed.add(result);
+          return result;
+        } finally {
+          state.depth--;
+        }
+      };
+    }
+    return config;
+  });
+  return (source: string, context: "stylesheet" | "declarationList", limits: DocumentReadLimits, budget: CssBudget): CssNode => {
+    active = { nodes: budget.nodes, depth: 0, limits, parsed: new WeakSet() };
+    try {
+      return syntax.parse(source, {
+        context,
+        parseCustomProperty: true,
+        onParseError: (error) => {
+          if (error instanceof DocumentError) throw error;
+          invalid("The CSS source is malformed.");
+        },
+      });
+    } finally {
+      active = undefined;
+    }
+  };
+})();
 
 function validateDeclaration(node: Declaration): void {
   const property = ident.decode(node.property);
@@ -52,11 +103,7 @@ function validateDeclaration(node: Declaration): void {
 /** Parse and validate without resolving the cascade or materializing computed styles. */
 export function normalizeCss(source: string, context: "stylesheet" | "declarationList", limits: DocumentReadLimits, budget: CssBudget): string {
   try {
-    const ast = parse(source, {
-      context,
-      parseCustomProperty: true,
-      onParseError: () => invalid("The CSS source is malformed."),
-    });
+    const ast = parseBoundedCss(source, context, limits, budget);
     let depth = 0;
     walk(ast, {
       enter(node: CssNode) {

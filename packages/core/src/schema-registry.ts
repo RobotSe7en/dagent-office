@@ -79,19 +79,57 @@ function checkEnvelope(name: ContractName, input: unknown): void {
   }
 }
 
+// Zod collects every array item's issues before returning. Preflight arrays one
+// item at a time, including arrays nested in objects and contract variants, so
+// invalid input cannot build an issue list proportional to the array's length.
+function checkArrayItems(schema: z.core.$ZodType, input: unknown, path: PropertyKey[], fail: (issues: z.ZodIssue[]) => never): void {
+  if (schema instanceof z.ZodOptional) {
+    if (input !== undefined) checkArrayItems(schema.unwrap(), input, path, fail);
+  } else if (schema instanceof z.ZodDiscriminatedUnion) {
+    const data = object(input);
+    if (!data) return;
+    const discriminator = schema.def.discriminator;
+    for (const option of schema.options) {
+      if (option instanceof z.ZodObject && option.shape[discriminator].safeParse(data[discriminator]).success) {
+        checkArrayItems(option, input, path, fail);
+        break;
+      }
+    }
+  } else if (schema instanceof z.ZodObject) {
+    const data = object(input);
+    if (!data) return;
+    for (const [key, child] of Object.entries(schema.shape)) {
+      checkArrayItems(child as z.core.$ZodType, data[key], [...path, key], fail);
+    }
+  } else if (schema instanceof z.ZodArray && Array.isArray(input)) {
+    for (let index = 0; index < input.length; index++) {
+      const itemPath = [...path, index];
+      checkArrayItems(schema.element, input[index], itemPath, fail);
+      const result = z.safeParse(schema.element, input[index]);
+      if (!result.success) {
+        fail(result.error.issues.map((issue) => ({ ...issue, path: [...itemPath, ...issue.path] })));
+      }
+    }
+  }
+}
+
 /** Structural validation only; it does not open a package or execute an operation. */
 export function parseContract<Name extends ContractName>(name: Name, input: unknown): ContractValue<Name> {
   const schema = schemaFor(name);
   checkEnvelope(name, input);
+  const code: DocumentErrorCode = name === "edit-proposal" ? "InvalidProposal"
+    : ["content-operation", "document-operation", "document-transaction"].includes(name)
+      ? "InvalidOperation" : "InvalidDocument";
+  const fail = (issues: z.ZodIssue[]): never => {
+    throw new DocumentError(code, "Invalid " + name + " data.", summarizeIssues(issues));
+  };
+  checkArrayItems(schema, input, [], fail);
   const result = schema.safeParse(input);
   if (result.success) {
     // The selected registry entry determines the corresponding generic output.
     return result.data as ContractValue<Name>;
   }
-  const code: DocumentErrorCode = name === "edit-proposal" ? "InvalidProposal"
-    : ["content-operation", "document-operation", "document-transaction"].includes(name)
-      ? "InvalidOperation" : "InvalidDocument";
-  throw new DocumentError(code, "Invalid " + name + " data.", summarizeIssues(result.error.issues));
+  return fail(result.error.issues);
 }
 
 /** Each call produces a self-contained schema with no network references or relaxed checks. */

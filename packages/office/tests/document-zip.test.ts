@@ -126,6 +126,18 @@ describe("document ZIP roundtrips", () => {
     expect([...readDocumentZip(rawZip(names.map((name) => ({ name })))).keys()]).toEqual(names);
   });
 
+  test("reads deeply nested paths without rebuilding every ancestor", () => {
+    const path = "a/".repeat(32_000) + "b";
+    const archive = rawZip([{ name: path, data: new Uint8Array() }]);
+    expect([...readDocumentZip(archive)]).toEqual([[path, new Uint8Array()]]);
+  }, 2000);
+
+  test("preserves sibling path prefixes and explicit parent directories", () => {
+    const names = ["a-copy", "a/b", "ab", "a/c", "a/"];
+    const archive = rawZip(names.map((name) => ({ name, data: new Uint8Array() })));
+    expect([...readDocumentZip(archive).keys()]).toEqual(names.filter((name) => !name.endsWith("/")));
+  });
+
   test("rejects missing declared resources when exporting and never rewrites unknown-version input", () => {
     const input = files();
     input.delete("assets/sample.png");
@@ -135,6 +147,18 @@ describe("document ZIP roundtrips", () => {
     input.set("manifest.json", changed);
     expect(() => writeDocumentZip(input)).toThrow(expect.toSatisfy(error("UnsupportedVersion")));
     expect(input.get("manifest.json")).toBe(changed);
+  });
+
+  test.each([false, true])("core and ZIP writing reject file ancestors before persistence in either order: %s", (reverse) => {
+    const input = files();
+    const manifest = JSON.parse(new TextDecoder().decode(input.get("manifest.json")));
+    input.set("content.html/metadata.json", input.get("metadata.json")!);
+    input.set("manifest.json", encoder.encode(JSON.stringify({ ...manifest, metadata: "content.html/metadata.json" })));
+    const ordered = reverse ? new Map([...input].reverse()) : input;
+    const before = new Map([...ordered].map(([path, bytes]) => [path, new Uint8Array(bytes)]));
+    expect(() => openDocument(ordered)).toThrow(expect.toSatisfy(error("InvalidDocument")));
+    expect(() => writeDocumentZip(ordered)).toThrow(expect.toSatisfy(error("InvalidDocument")));
+    expect(ordered).toEqual(before);
   });
 });
 
@@ -152,6 +176,9 @@ describe("ZIP validation before path normalization or full decompression", () =>
   test.each([
     { entries: [{ name: "a" }, { name: "a/b" }] },
     { entries: [{ name: "a" }, { name: "a/", data: new Uint8Array() }] },
+    { entries: [{ name: "a/", data: new Uint8Array() }, { name: "a" }] },
+    { entries: [{ name: "a/b" }, { name: "a-copy" }, { name: "a" }] },
+    { entries: [{ name: "a/b/", data: new Uint8Array() }, { name: "a" }] },
     { entries: [{ name: "safe", localName: "../private text" }] },
     { entries: [{ name: "bad", rawName: new Uint8Array([0xff]) }] },
   ])("rejects ambiguous or conflicting entries %j", ({ entries }) => {
