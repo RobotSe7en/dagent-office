@@ -1,0 +1,19 @@
+{
+  "name": "@dagent-office/playground",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --project tsconfig.json && vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@dagent-office/core": "workspace:*",
+    "@dagent-office/editor": "workspace:*",
+    "@dagent-office/office": "workspace:*",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  }
+}

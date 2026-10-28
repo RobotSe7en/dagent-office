@@ -1,0 +1,17 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/core"
+    },
+    {
+      "path": "./packages/editor"
+    },
+    {
+      "path": "./packages/office"
+    },
+    {
+      "path": "./packages/node"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "name": "dagent-office-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@10.28.2",
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=10.28.2 <11"
+  },
+  "scripts": {
+    "dev": "pnpm build:packages && pnpm --parallel --filter './packages/*' --filter @dagent-office/playground run dev",
+    "build:packages": "tsc --build tsconfig.json",
+    "build": "pnpm build:packages && pnpm --filter @dagent-office/playground build",
+    "typecheck": "pnpm build:packages && tsc --project apps/playground/tsconfig.json && tsc --project tsconfig.tools.json",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "test": "pnpm build:packages && vitest run",
+    "test:watch": "pnpm build:packages && vitest",
+    "browser:install": "node scripts/playwright.mjs install chromium --only-shell",
+    "test:browser": "pnpm build && node scripts/playwright.mjs test",
+    "pack:packages": "pnpm build:packages && node scripts/pack.mjs",
+    "check": "pnpm check:boundaries && pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "typescript": "6.0.3",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  }
+}

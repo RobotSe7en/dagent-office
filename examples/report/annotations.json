@@ -1,0 +1,27 @@
+[
+  {
+    "annotationId": "a-summary",
+    "documentId": "report-demo",
+    "baseRevision": 0,
+    "status": "open",
+    "anchor": {
+      "kind": "text",
+      "nodeId": "n-summary",
+      "from": 0,
+      "to": 12,
+      "quote": "项目计划于第三季度完成。"
+    },
+    "instruction": "改为第四季度完成，交付内容说明包含系统上线和用户培训。"
+  },
+  {
+    "annotationId": "a-heading",
+    "documentId": "report-demo",
+    "baseRevision": 0,
+    "status": "open",
+    "anchor": {
+      "kind": "node",
+      "nodeId": "n-title"
+    },
+    "instruction": "标题文字使用深蓝色。"
+  }
+]

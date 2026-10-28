@@ -1,0 +1,27 @@
+{
+  "name": "@dagent-office/node",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "description": "dagent-office node module — engineering scaffold",
+  "files": [
+    "dist"
+  ],
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "tsc --watch --project tsconfig.json --preserveWatchOutput"
+  },
+  "dependencies": {
+    "@dagent-office/core": "workspace:*",
+    "@dagent-office/office": "workspace:*"
+  }
+}

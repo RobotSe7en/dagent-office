@@ -1,0 +1,12 @@
+{
+  "format": "dagent-office",
+  "formatVersion": 1,
+  "documentId": "report-demo",
+  "kind": "document",
+  "revision": 0,
+  "entrypoint": "content.html",
+  "styles": ["styles.css"],
+  "metadata": "metadata.json",
+  "annotations": "annotations.json",
+  "assets": []
+}

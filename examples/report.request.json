@@ -1,0 +1,78 @@
+{
+  "protocolVersion": 1,
+  "requestId": "request-demo",
+  "documentId": "report-demo",
+  "baseRevision": 0,
+  "annotations": [
+    {
+      "annotationId": "a-summary",
+      "documentId": "report-demo",
+      "baseRevision": 0,
+      "status": "open",
+      "anchor": {
+        "kind": "text",
+        "nodeId": "n-summary",
+        "from": 0,
+        "to": 12,
+        "quote": "项目计划于第三季度完成。"
+      },
+      "instruction": "改为第四季度完成，交付内容说明包含系统上线和用户培训。"
+    },
+    {
+      "annotationId": "a-heading",
+      "documentId": "report-demo",
+      "baseRevision": 0,
+      "status": "open",
+      "anchor": {
+        "kind": "node",
+        "nodeId": "n-title"
+      },
+      "instruction": "标题文字使用深蓝色。"
+    }
+  ],
+  "context": {
+    "formatVersion": 1,
+    "kind": "document",
+    "blocks": [
+      {
+        "nodeId": "root",
+        "html": "<article data-node-id=\"root\" data-office-kind=\"document\">\n      <h1 data-node-id=\"n-title\">项目实施报告</h1>\n      <p data-node-id=\"n-summary\">项目计划于第三季度完成。</p>\n      <table data-node-id=\"n-deliverables\">\n        <thead>\n          <tr data-node-id=\"n-header-row\">\n            <th data-node-id=\"n-header-item\">交付项</th>\n            <th data-node-id=\"n-header-status\">状态</th>\n          </tr>\n        </thead>\n        <tbody>\n          <tr data-node-id=\"n-body-row\">\n            <td data-node-id=\"n-item\">业务系统</td>\n            <td data-node-id=\"n-status\">实施中</td>\n          </tr>\n        </tbody>\n      </table>\n    </article>"
+      }
+    ],
+    "styles": [
+      {
+        "path": "styles.css",
+        "css": ":root {\n  --body-color: #20252b;\n  --border-color: #c5ccd4;\n}\n\nbody {\n  margin: 0;\n  color: var(--body-color);\n  font-family: \"Noto Sans CJK SC\", \"Microsoft YaHei\", sans-serif;\n  font-size: 11pt;\n  line-height: 1.6;\n}\n\nh1 {\n  margin: 0 0 12pt;\n  font-size: 20pt;\n  font-weight: 700;\n}\n\np {\n  margin: 0 0 10pt;\n}\n\ntable {\n  width: 100%;\n  border-collapse: collapse;\n}\n\nth,\ntd {\n  padding: 6pt;\n  border: 0.5pt solid var(--border-color);\n  text-align: left;\n}\n"
+      }
+    ],
+    "metadata": {
+      "title": "项目实施报告",
+      "locale": "zh-CN",
+      "pageSetup": {
+        "unit": "pt",
+        "width": 595.276,
+        "height": 841.89,
+        "margins": {
+          "top": 56.693,
+          "right": 56.693,
+          "bottom": 56.693,
+          "left": 56.693
+        }
+      },
+      "sections": [
+        {
+          "sectionId": "section-main",
+          "rootNodeId": "root"
+        }
+      ]
+    },
+    "assets": []
+  },
+  "supportedOperations": [
+    "replaceText",
+    "replaceFragment",
+    "insertFragment",
+    "removeNode",
+    "setStyle"
+  ]
+}
