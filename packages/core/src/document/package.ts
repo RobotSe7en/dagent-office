@@ -26,6 +26,14 @@ export function copyPackage(input: DocumentPackage, limits: DocumentReadLimits):
     checkLimit(total, limits.maxPackageBytes);
     files.set(path, new Uint8Array(bytes));
   }
+  // A trailing slash groups a file with its descendants even when sibling names
+  // contain punctuation that sorts before '/'. No ancestor strings are rebuilt.
+  const paths = [...files.keys()].map((path) => path + "/").sort();
+  for (let index = 1; index < paths.length; index++) {
+    if (paths[index]!.startsWith(paths[index - 1]!)) {
+      invalid("Package file paths must not overlap with ancestor files.");
+    }
+  }
   return files;
 }
 

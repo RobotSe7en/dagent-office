@@ -152,11 +152,15 @@ export function inspectZip(bytes: Uint8Array, limits: DocumentReadLimits): ZipEn
     physicalOffset = entry.endOffset;
   }
   if (physicalOffset !== centralStart) invalidZip();
-  const files = new Set(entries.filter((entry) => !entry.directory).map((entry) => entry.path));
-  for (const entry of entries) {
-    if (entry.directory && files.has(entry.path)) invalidZip();
-    const parts = entry.path.split("/");
-    for (let index = 1; index < parts.length; index++) if (files.has(parts.slice(0, index).join("/"))) invalidZip();
+  // Sort terminated paths so every descendant follows its ancestor. Files sort
+  // before matching directory records, and directories do not hide a file prefix.
+  const paths = entries.map((entry) => ({ key: entry.path + "/", directory: entry.directory }))
+    .sort((left, right) => left.key < right.key ? -1 : left.key > right.key ? 1
+      : Number(left.directory) - Number(right.directory));
+  let filePrefix: string | undefined;
+  for (const entry of paths) {
+    if (filePrefix !== undefined && entry.key.startsWith(filePrefix)) invalidZip();
+    if (!entry.directory) filePrefix = entry.key;
   }
   return entries;
 }
