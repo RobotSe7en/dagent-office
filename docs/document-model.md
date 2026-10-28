@@ -35,6 +35,8 @@ HTML 的资源地址按入口所在目录解析，只做一次 URL 解码；允�
 
 ## HTML/CSS 支持范围
 
+以下列出当前读取器实际接受的子集，受[保真目标](document-format.md#保真目标)指导继续扩展。超出支持表的普通样式属于当前能力限制，不代表该样式不安全。当前仍会拒绝未支持的结构和样式，尚未实现任意安全样式的保留，也未完成 Office 视觉保真验收。
+
 正文元素采用[首轮基线](iteration-1.md#html元数据和样式基线)。保留 `id/class/title/lang/dir/style`、`data-*`、`aria-*`，以及图片的 `src/alt/width/height`、单元格的合并及 `scope`、列表的 `start/reversed/type/value`。其他属性需要显式增加支持；处理器、脚本、外部嵌入和外来命名空间均拒绝。样式表通过包内 `link` 引入，当前不接受 HTML `style` 元素。
 
 CSS Tree 解析和检查样式表及行内声明，保存声明顺序、级联源、`!important`、自定义属性与 `var()`。支持元素、类、`data-*` 属性存在/相等、后代、分组和 `:root` 选择器。当前不支持其他伪类、伪元素、ID 选择器、其他组合符、嵌套规则或 at-rule。
@@ -62,7 +64,7 @@ CSS Tree 解析和检查样式表及行内声明，保存声明顺序、级联�
 | `maxDepth` | 128 | HTML/CSS 树深度 |
 | `maxCssNodes` | 100000 | 所有样式表和行内样式累计的 AST 节点 |
 
-超限返回 `ResourceLimitExceeded`。规范化结果也检查字节预算，避免同一配置下产出无法重开的包。默认值通过冻结的 `DEFAULT_DOCUMENT_READ_LIMITS` 导出。
+HTML 在构建树时累计节点数并检查深度，超限立即中止解析并返回 `ResourceLimitExceeded`，不等完整树构建完毕。源标签若被解析器忽略而未生成元素，也会被拒绝；合法表格自动补全 `tbody` 等规范化仍受支持。规范化结果也检查字节预算，避免同一配置下产出无法重开的包。默认值通过冻结的 `DEFAULT_DOCUMENT_READ_LIMITS` 导出。
 
 ## 后续边界
 

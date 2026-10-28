@@ -238,6 +238,8 @@ describe("HTML model and resource references", () => {
 
   test.each([
     '<script>private text</script>', '<iframe src="https://example.test"></iframe>',
+    '<frame>', '<frame src="https://example.test" onload="private text">',
+    '<frameset><frame src="https://example.test"></frameset>',
     '<svg><script>private text</script></svg>', '<object></object>', '<style>p{color:red}</style>',
     '<p data-node-id="a" contenteditable="true">editor state</p>',
     '<img data-node-id="a" src="assets/a.png" srcset="https://example.test/a.png 2x">',
@@ -246,6 +248,25 @@ describe("HTML model and resource references", () => {
     const before = [...input.get("content.html")!];
     expect(JSON.stringify(failure(input, "UnsupportedFeature"))).not.toContain("private text");
     expect([...input.get("content.html")!]).toEqual(before);
+  });
+
+  test.each(["td", "th", "tr", "thead", "tbody", "tfoot"])("rejects a misplaced %s that parse5 would silently discard", (tag) => {
+    const input = body('<' + tag + ' data-node-id="discarded" style="color:red">private text</' + tag + '>');
+    const before = [...input.get("content.html")!];
+    expect(JSON.stringify(failure(input))).not.toContain("private text");
+    expect([...input.get("content.html")!]).toEqual(before);
+  });
+
+  test("preserves optional end tags and tag-like text in title and comments", () => {
+    const input = body('<p data-node-id="one">one<p data-node-id="two">two<!--<frame onload="text">-->');
+    const source = decoder.decode(input.get("content.html")!)
+      .replace("<title>测试</title>", '<title><frame src="https://example.test"> &lt;script&gt;</title>');
+    input.set("content.html", encoder.encode(source));
+    const document = openDocument(input);
+    expect(document.getNode("one")!.text).toBe("one");
+    expect(document.getNode("two")!.text).toBe("two");
+    expect(document.snapshot().html).toContain('<title>&lt;frame src="https://example.test"&gt; &lt;script&gt;</title>');
+    expect(openDocument(document.serialize()).snapshot()).toEqual(document.snapshot());
   });
 
   test("rejects missing image bytes while leaving digest and image decoding to the resource task", () => {
@@ -329,11 +350,34 @@ describe("bounded document input", () => {
     failure(input, "ResourceLimitExceeded", { maxCssNodes: 10 });
   });
 
-  test("bounds HTML depth before serializing nested content", () => {
-    const input = body(Array.from({ length: 20 }, (_, index) => '<div data-node-id="n' + index + '">').join("")
-      + "text" + "</div>".repeat(20));
+  test("stops deeply nested HTML before parsing the remaining source", () => {
+    const input = body(Array.from({ length: 30_000 }, (_, index) => '<div data-node-id="n' + index + '">').join("")
+      + "text" + "</div>".repeat(30_000) + '<br title="one" title="malformed tail">');
     input.set("styles.css", encoder.encode(""));
-    failure(input, "ResourceLimitExceeded", { maxDepth: 10 });
+    // A complete parse would reach the duplicate attribute and report InvalidDocument.
+    failure(input, "ResourceLimitExceeded");
+  });
+
+  test.each(["<br>", "<!--comment-->", "text<br>"])("stops excess HTML nodes before parsing the tail: %s", (content) => {
+    const input = body(content.repeat(2_000) + '<br title="one" title="malformed tail">');
+    input.set("styles.css", encoder.encode(""));
+    failure(input, "ResourceLimitExceeded", { maxNodes: 64 });
+  });
+
+  test.each([
+    ["", 10, 4],
+    ["one two", 11, 4],
+    ["<!--one--><!--two-->", 12, 4],
+    ["<br>", 11, 4],
+    ['<table data-node-id="t"><tr data-node-id="r"><td data-node-id="c">text</td></tr></table>', 15, 8],
+  ] as const)("counts exact HTML node and depth limits including implicit nodes: %s", (content, maxNodes, maxDepth) => {
+    const input = body(content);
+    input.set("styles.css", encoder.encode(""));
+    const limits = { maxNodes, maxDepth };
+    const document = openDocument(input, { limits });
+    expect(openDocument(document.serialize(), { limits }).snapshot()).toEqual(document.snapshot());
+    failure(input, "ResourceLimitExceeded", { ...limits, maxNodes: maxNodes - 1 });
+    failure(input, "ResourceLimitExceeded", { ...limits, maxDepth: maxDepth - 1 });
   });
 
   test("rejects normalized output that would exceed the same byte limits on reopen", () => {

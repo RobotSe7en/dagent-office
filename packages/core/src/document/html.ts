@@ -1,10 +1,11 @@
-import { parse, serialize, serializeOuter } from "parse5";
+import { serialize, serializeOuter } from "parse5";
 import type { DefaultTreeAdapterTypes } from "parse5";
 import type { DocumentManifest } from "../contracts/document.js";
 import type { DocumentNode, DocumentPackage, DocumentReadLimits } from "../runtime.js";
 import { DocumentError } from "../errors.js";
 import { normalizeCss } from "./css.js";
 import type { CssBudget } from "./css.js";
+import { parseHtmlTree } from "./html-parser.js";
 import { resolveReference } from "./package.js";
 import { checkLimit, freeze, invalid, unsupported } from "./validation.js";
 
@@ -15,6 +16,8 @@ const bodyTags = new Set([
   "strong", "em", "u", "s", "sub", "sup", "br", "ul", "ol", "li", "table",
   "thead", "tbody", "tfoot", "tr", "th", "td", "img",
 ]);
+const shellTags = new Set(["html", "head", "body", "meta", "title", "link"]);
+const supportedTags = new Set([...bodyTags, ...shellTags]);
 const structuralTags = new Set(["thead", "tbody", "tfoot", "br"]);
 const containers = new Set(["article", "section", "div"]);
 const globalAttributes = new Set(["id", "class", "title", "lang", "dir", "style"]);
@@ -60,7 +63,7 @@ export interface ParsedHtml {
 
 export function parseHtml(source: string, manifest: DocumentManifest, files: DocumentPackage, limits: DocumentReadLimits, cssBudget: CssBudget): ParsedHtml {
   try {
-    const tree = parse(source, { onParseError: () => invalid("The HTML source is malformed.") });
+    const tree = parseHtmlTree(source, limits, supportedTags);
     const html = tree.childNodes.find((node) => isElement(node) && node.tagName === "html") as Element | undefined;
     const head = html?.childNodes.find((node) => isElement(node) && node.tagName === "head") as Element | undefined;
     const body = html?.childNodes.find((node) => isElement(node) && node.tagName === "body") as Element | undefined;
@@ -90,7 +93,7 @@ export function parseHtml(source: string, manifest: DocumentManifest, files: Doc
       if (isElement(node)) {
         const tag = node.tagName;
         if (node.namespaceURI !== "http://www.w3.org/1999/xhtml") unsupported("Foreign HTML namespaces are not supported.");
-        if (inBody ? !bodyTags.has(tag) : !["html", "head", "body", "meta", "title", "link"].includes(tag)) {
+        if (inBody ? !bodyTags.has(tag) : !shellTags.has(tag)) {
           unsupported("The HTML element is outside the supported document structure.");
         }
         if (["meta", "title", "link"].includes(tag) && node.parentNode !== head) {
