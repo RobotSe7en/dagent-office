@@ -1,6 +1,6 @@
 # 本地开发与工程检查
 
-当前完成 R1-02 工程基础与 R1-03 结构契约。`core` 已提供数据校验、推导类型、JSON Schema 和运行时接口声明，其余库仍为工程入口。下一步 R1-04 实现文档包与模型；文档读取、编辑、事务执行及 Office 转换尚未实现。API 见[结构契约](contracts.md)，任务顺序见[第一轮实施细则](iteration-1.md)。
+当前完成 R1-02 工程基础、R1-03 结构契约及 R1-04 只读文档模型。`core` 提供数据校验、JSON Schema、HTML/CSS 解析、节点查询和保存重开，其余库仍为工程入口。下一步 R1-05 实现图片字节、摘要、完整资源与 ZIP；编辑、事务执行及 Office 转换尚未实现。API 见[结构契约](contracts.md)与[文档模型](document-model.md)，任务顺序见[第一轮实施细则](iteration-1.md)。
 
 ## 环境和安装
 
@@ -79,6 +79,6 @@ pnpm pack:packages
 
 ## 依赖与状态
 
-已安装 Zod、工具及直接依赖的版本、许可证见[技术选型](technology-selection.md)。HTML/CSS 解析器、Tiptap 和 Office 库按后续任务引入，不提前提供占位功能 API。
+已安装 Zod、HTML/CSS 解析器、工具及依赖的版本、许可证见[技术选型](technology-selection.md)。Tiptap 和 Office 库按后续任务引入，不提前提供占位功能 API。
 
 修改后运行相应的窄范围检查与 `git diff --check`。只有验证所覆盖的能力才可在 README 标为已实现，产品范围和宿主边界以[总体架构](architecture.md)及[交互协议](editing-protocol.md)为准。

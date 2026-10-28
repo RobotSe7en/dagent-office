@@ -1,0 +1,188 @@
+import { parse, serialize, serializeOuter } from "parse5";
+import type { DefaultTreeAdapterTypes } from "parse5";
+import type { DocumentManifest } from "../contracts/document.js";
+import type { DocumentNode, DocumentPackage, DocumentReadLimits } from "../runtime.js";
+import { DocumentError } from "../errors.js";
+import { normalizeCss } from "./css.js";
+import type { CssBudget } from "./css.js";
+import { resolveReference } from "./package.js";
+import { checkLimit, freeze, invalid, unsupported } from "./validation.js";
+
+type Element = DefaultTreeAdapterTypes.Element;
+type Node = DefaultTreeAdapterTypes.Node;
+const bodyTags = new Set([
+  "article", "section", "div", "h1", "h2", "h3", "h4", "h5", "h6", "p", "span",
+  "strong", "em", "u", "s", "sub", "sup", "br", "ul", "ol", "li", "table",
+  "thead", "tbody", "tfoot", "tr", "th", "td", "img",
+]);
+const structuralTags = new Set(["thead", "tbody", "tfoot", "br"]);
+const containers = new Set(["article", "section", "div"]);
+const globalAttributes = new Set(["id", "class", "title", "lang", "dir", "style"]);
+const tagAttributes: Readonly<Record<string, readonly string[]>> = {
+  img: ["src", "alt", "width", "height"],
+  td: ["colspan", "rowspan"],
+  th: ["colspan", "rowspan", "scope"],
+  ol: ["start", "reversed", "type"],
+  li: ["value"],
+  meta: ["charset"],
+  link: ["rel", "href"],
+};
+
+function isElement(node: Node): node is Element {
+  return "tagName" in node;
+}
+
+function attribute(node: Element, name: string): string | undefined {
+  return node.attrs.find((attr) => attr.name === name)?.value;
+}
+
+function textContent(node: Node): string {
+  const parts: string[] = [];
+  const stack = [node];
+  while (stack.length) {
+    const current = stack.pop()!;
+    if (current.nodeName === "#text" && "value" in current) parts.push(current.value);
+    else if (isElement(current) && current.tagName === "br") parts.push("\n");
+    else if (isElement(current) && current.tagName === "img") parts.push("\ufffc");
+    else if ("childNodes" in current) {
+      for (let index = current.childNodes.length - 1; index >= 0; index--) stack.push(current.childNodes[index]!);
+    }
+  }
+  return parts.join("");
+}
+
+export interface ParsedHtml {
+  readonly html: string;
+  getNode(nodeId: string): DocumentNode | undefined;
+  hasNode(nodeId: string): boolean;
+  isContainer(nodeId: string): boolean;
+}
+
+export function parseHtml(source: string, manifest: DocumentManifest, files: DocumentPackage, limits: DocumentReadLimits, cssBudget: CssBudget): ParsedHtml {
+  try {
+    const tree = parse(source, { onParseError: () => invalid("The HTML source is malformed.") });
+    const html = tree.childNodes.find((node) => isElement(node) && node.tagName === "html") as Element | undefined;
+    const head = html?.childNodes.find((node) => isElement(node) && node.tagName === "head") as Element | undefined;
+    const body = html?.childNodes.find((node) => isElement(node) && node.tagName === "body") as Element | undefined;
+    if (!html || !head || !body) invalid("The HTML document shell is missing.");
+    const roots = body.childNodes.filter(isElement);
+    const root = roots[0];
+    if (roots.length !== 1 || !root || !containers.has(root.tagName)
+      || attribute(root, "data-office-kind") !== "document"
+      || body.childNodes.some((node) => node.nodeName === "#text" && "value" in node && node.value.trim() !== "")) {
+      invalid("The body must contain one document root container.");
+    }
+    const index = new Map<string, { element: Element; parentId: string | null; children: string[] }>();
+    const domIds = new Set<string>();
+    const stylePaths: string[] = [];
+    const assets = new Set(manifest.assets.map((asset) => asset.path));
+    const stack: { node: Node; depth: number; inBody: boolean; parentId: string | null }[] = [
+      { node: tree, depth: 0, inBody: false, parentId: null },
+    ];
+    let count = 0;
+    let charsets = 0;
+    let titles = 0;
+    while (stack.length) {
+      const { node, depth, inBody, parentId } = stack.pop()!;
+      checkLimit(++count, limits.maxNodes);
+      checkLimit(depth, limits.maxDepth);
+      let childParentId = parentId;
+      if (isElement(node)) {
+        const tag = node.tagName;
+        if (node.namespaceURI !== "http://www.w3.org/1999/xhtml") unsupported("Foreign HTML namespaces are not supported.");
+        if (inBody ? !bodyTags.has(tag) : !["html", "head", "body", "meta", "title", "link"].includes(tag)) {
+          unsupported("The HTML element is outside the supported document structure.");
+        }
+        if (["meta", "title", "link"].includes(tag) && node.parentNode !== head) {
+          invalid("Document head elements must be inside head.");
+        }
+        for (const attr of node.attrs) {
+          if (attr.namespace || attr.prefix || attr.name.startsWith("on")) invalid("Executable or namespaced HTML attributes are not allowed.");
+          const extension = /^data-[a-z0-9-]+$/.test(attr.name) || /^aria-[a-z-]+$/.test(attr.name);
+          if (!globalAttributes.has(attr.name) && !extension && !tagAttributes[tag]?.includes(attr.name)) {
+            unsupported("The HTML attribute is outside the supported document structure.");
+          }
+          if (attr.name === "style") attr.value = normalizeCss(attr.value, "declarationList", limits, cssBudget);
+          if (attr.name === "dir" && !["ltr", "rtl", "auto"].includes(attr.value)) invalid("The HTML text direction is invalid.");
+          if (["width", "height", "colspan", "rowspan"].includes(attr.name)
+            && (!/^\d+$/.test(attr.value) || !Number.isSafeInteger(Number(attr.value))
+              || Number(attr.value) < (attr.name === "rowspan" ? 0 : 1))) {
+            invalid("HTML dimensions and table spans must be supported integer values.");
+          }
+          if (["start", "value"].includes(attr.name)
+            && (!/^-?\d+$/.test(attr.value) || !Number.isSafeInteger(Number(attr.value)))) {
+            invalid("HTML list numbering must be a safe integer.");
+          }
+          if (attr.name === "scope" && !["row", "col", "rowgroup", "colgroup"].includes(attr.value)) invalid("The table header scope is invalid.");
+          if (attr.name === "type" && !["1", "a", "A", "i", "I"].includes(attr.value)) invalid("The list numbering type is not supported.");
+        }
+        const domId = attribute(node, "id");
+        if (domId !== undefined) {
+          if (!domId || domIds.has(domId)) invalid("HTML id attributes must be nonempty and unique.");
+          domIds.add(domId);
+        }
+        const nodeId = attribute(node, "data-node-id");
+        if (!inBody && nodeId !== undefined) invalid("Document node identities belong inside the body root.");
+        if (inBody && !structuralTags.has(tag) && nodeId === undefined) invalid("A document element is missing its node identity.");
+        if (nodeId !== undefined) {
+          if (!nodeId || index.has(nodeId)) invalid("Document node identities must be nonempty and unique.");
+          index.set(nodeId, { element: node, parentId, children: [] });
+          if (parentId !== null) index.get(parentId)!.children.push(nodeId);
+          childParentId = nodeId;
+        }
+        if (tag === "meta") {
+          if (attribute(node, "charset")?.toLowerCase() !== "utf-8") unsupported("Only UTF-8 charset metadata is supported.");
+          charsets++;
+        }
+        if (tag === "title") titles++;
+        if (tag === "link") {
+          const href = attribute(node, "href");
+          if (attribute(node, "rel")?.toLowerCase() !== "stylesheet" || !href) unsupported("Only package stylesheet links are supported.");
+          stylePaths.push(resolveReference(href, manifest.entrypoint));
+        }
+        if (tag === "img") {
+          const src = attribute(node, "src");
+          if (!src) invalid("Document images require a package resource reference.");
+          const path = resolveReference(src, manifest.entrypoint);
+          if (!assets.has(path)) invalid("An image refers to an undeclared package resource.");
+          if (!files.has(path)) throw new DocumentError("AssetUnavailable", "A referenced image is not supplied in the package.");
+        }
+      } else if (node.nodeName === "#documentType" && "name" in node) {
+        if (node.name !== "html" || node.publicId || node.systemId) unsupported("Only the HTML5 doctype is supported.");
+      }
+      if ("childNodes" in node) {
+        for (let child = node.childNodes.length - 1; child >= 0; child--) {
+          stack.push({ node: node.childNodes[child]!, depth: depth + 1, inBody: inBody || node === body, parentId: childParentId });
+        }
+      }
+    }
+    if (charsets !== 1 || titles > 1) invalid("The HTML head requires one UTF-8 charset and at most one title.");
+    if (stylePaths.length !== manifest.styles.length || stylePaths.some((path, order) => path !== manifest.styles[order])) {
+      invalid("HTML stylesheet links must match the manifest order exactly.");
+    }
+    return {
+      html: serialize(tree),
+      hasNode: (nodeId) => index.has(nodeId),
+      isContainer: (nodeId) => {
+        const element = index.get(nodeId)?.element;
+        return element !== undefined && containers.has(element.tagName);
+      },
+      getNode: (nodeId) => {
+        const entry = index.get(nodeId);
+        if (!entry) return undefined;
+        return freeze({
+          nodeId,
+          tagName: entry.element.tagName,
+          attributes: Object.fromEntries(entry.element.attrs.map((attr) => [attr.name, attr.value])),
+          parentNodeId: entry.parentId,
+          childNodeIds: [...entry.children],
+          text: textContent(entry.element),
+          html: serializeOuter(entry.element),
+        });
+      },
+    };
+  } catch (error) {
+    if (error instanceof DocumentError) throw error;
+    return invalid("The HTML source could not be parsed or validated.");
+  }
+}

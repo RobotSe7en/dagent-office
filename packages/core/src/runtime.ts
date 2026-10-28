@@ -20,6 +20,37 @@ export interface DocumentSnapshot {
   readonly annotations: readonly DeepReadonly<Annotation>[];
 }
 
+export interface DocumentReadLimits {
+  readonly maxFiles: number;
+  readonly maxPackageBytes: number;
+  readonly maxFileBytes: number;
+  readonly maxNodes: number;
+  readonly maxDepth: number;
+  readonly maxCssNodes: number;
+}
+
+export interface OpenDocumentOptions {
+  readonly limits?: Partial<DocumentReadLimits>;
+}
+
+/** A derived node view. Text offsets use UTF-16; br is \n and img is U+FFFC. */
+export interface DocumentNode {
+  readonly nodeId: string;
+  readonly tagName: string;
+  readonly attributes: Readonly<Record<string, string>>;
+  readonly parentNodeId: string | null;
+  readonly childNodeIds: readonly string[];
+  readonly text: string;
+  readonly html: string;
+}
+
+/** Read-only document loading and serialization; editing belongs to DocumentSession. */
+export interface DocumentModel {
+  snapshot(): DocumentSnapshot;
+  getNode(nodeId: string): DocumentNode | undefined;
+  serialize(): DocumentPackage;
+}
+
 export interface DocumentSelection {
   readonly documentId: string;
   readonly baseRevision: number;
