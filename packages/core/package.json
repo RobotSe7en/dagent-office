@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "license": "UNLICENSED",
-  "description": "dagent-office core module — engineering scaffold",
+  "description": "Strict document and host-interaction contracts for dagent-office",
   "files": [
     "dist"
   ],
@@ -13,11 +13,27 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./schemas/asset-descriptor.json": "./dist/schemas/asset-descriptor.json",
+    "./schemas/document-manifest.json": "./dist/schemas/document-manifest.json",
+    "./schemas/document-metadata.json": "./dist/schemas/document-metadata.json",
+    "./schemas/anchor.json": "./dist/schemas/anchor.json",
+    "./schemas/annotation.json": "./dist/schemas/annotation.json",
+    "./schemas/annotations.json": "./dist/schemas/annotations.json",
+    "./schemas/content-operation.json": "./dist/schemas/content-operation.json",
+    "./schemas/document-operation.json": "./dist/schemas/document-operation.json",
+    "./schemas/document-transaction.json": "./dist/schemas/document-transaction.json",
+    "./schemas/interaction-request.json": "./dist/schemas/interaction-request.json",
+    "./schemas/edit-proposal.json": "./dist/schemas/edit-proposal.json",
+    "./schemas/document-error.json": "./dist/schemas/document-error.json",
+    "./schemas/document-event.json": "./dist/schemas/document-event.json"
   },
   "sideEffects": false,
   "scripts": {
-    "build": "tsc --build",
+    "build": "tsc --build && node ../../scripts/generate-schemas.mjs",
     "dev": "tsc --watch --project tsconfig.json --preserveWatchOutput"
+  },
+  "dependencies": {
+    "zod": "4.1.12"
   }
 }

@@ -48,8 +48,14 @@ beforeAll(() => {
   }, null, 2));
   const pnpm = process.env.npm_execpath;
   if (!pnpm) throw new Error("Run package-consumption tests through pnpm.");
+  const store = spawnSync(process.execPath, [pnpm, "store", "path"], {
+    cwd: repository, encoding: "utf8", timeout: 30_000,
+  });
+  if (store.error) throw store.error;
+  expect(store.status, store.stderr).toBe(0);
   run(process.execPath, [
-    pnpm, "install", "--offline", "--ignore-scripts", "--ignore-workspace", "--no-frozen-lockfile",
+    pnpm, "install", "--offline", "--ignore-scripts", "--ignore-workspace",
+    "--no-frozen-lockfile", "--store-dir", store.stdout.trim(),
   ], consumer);
 });
 
@@ -64,6 +70,15 @@ test("packed packages load in Node and reject access to their internal files", (
     "  const module = await import(name);",
     '  assert.equal(Object.prototype.toString.call(module), "[object Module]");',
     '  await assert.rejects(import(name + "/dist/index.js"), { code: "ERR_PACKAGE_PATH_NOT_EXPORTED" });',
+    "}",
+    'const { CONTRACT_NAMES, DocumentError, getContractJsonSchema, parseContract } = await import("@dagent-office/core");',
+    "const input = " + readFileSync(join(repository, "examples/report/manifest.json"), "utf8") + ";",
+    'assert.equal(parseContract("document-manifest", input).revision, 0);',
+    'assert.throws(() => parseContract("document-manifest", { ...input, formatVersion: 2 }),',
+    '  (error) => error instanceof DocumentError && error.code === "UnsupportedVersion");',
+    "for (const name of CONTRACT_NAMES) {",
+    '  const schema = await import("@dagent-office/core/schemas/" + name + ".json", { with: { type: "json" } });',
+    "  assert.deepEqual(schema.default, getContractJsonSchema(name));",
     "}",
   ].join("\n"));
   run(process.execPath, ["node.mjs"], consumer);
@@ -81,12 +96,18 @@ test("packed declarations resolve without borrowing workspace source or ambient 
     ["core", ["core"], ["ES2022"]],
     ["browser", ["core", "editor", "office"], ["ES2022", "DOM", "DOM.Iterable"]],
   ] as const) {
-    writeFileSync(join(consumer, name + ".ts"), imported.flatMap((module, index) => [
+    writeFileSync(join(consumer, name + ".ts"), [...imported.flatMap((module, index) => [
       "import * as Module" + index + ' from "@dagent-office/' + module + '";',
       "void Module" + index + ";",
       "// @ts-expect-error Internal paths are outside the public package contract.",
       "type Private" + index + ' = typeof import("@dagent-office/' + module + '/dist/index.js");',
-    ]).join("\n"));
+    ]), 'import { parseContract } from "@dagent-office/core";',
+      'const manifest = parseContract("document-manifest", {});',
+      "const version: 1 = manifest.formatVersion;",
+      "void version;",
+      "// @ts-expect-error The registry must preserve the selected output type.",
+      "manifest.proposalId;",
+    ].join("\n"));
     writeFileSync(join(consumer, "tsconfig." + name + ".json"), JSON.stringify({
       compilerOptions: {
         target: "ES2022", module: "NodeNext", moduleResolution: "NodeNext",
@@ -102,7 +123,9 @@ test("packed browser modules build in a plain JavaScript host without React", as
   writeFileSync(join(consumer, "index.html"), '<main>External browser host</main><script type="module" src="/browser.js"></script>');
   writeFileSync(join(consumer, "browser.js"), ["core", "editor", "office"].map(
     (module) => 'import "@dagent-office/' + module + '";',
-  ).join("\n"));
+  ).join("\n") + '\nimport { parseContract } from "@dagent-office/core";\n'
+    + "const input = " + readFileSync(join(repository, "examples/report/manifest.json"), "utf8") + ";\n"
+    + 'document.documentElement.dataset.revision = String(parseContract("document-manifest", input).revision);\n');
   await build({
     root: consumer,
     configFile: false,

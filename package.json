@@ -11,7 +11,7 @@
   },
   "scripts": {
     "dev": "pnpm build:packages && pnpm --parallel --filter './packages/*' --filter @dagent-office/playground run dev",
-    "build:packages": "tsc --build tsconfig.json",
+    "build:packages": "tsc --build tsconfig.json && node scripts/generate-schemas.mjs",
     "build": "pnpm build:packages && pnpm --filter @dagent-office/playground build",
     "typecheck": "pnpm build:packages && tsc --project apps/playground/tsconfig.json && tsc --project tsconfig.tools.json",
     "check:boundaries": "node scripts/check-boundaries.mjs",
@@ -28,6 +28,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",
+    "ajv": "8.20.0",
     "typescript": "6.0.3",
     "vite": "8.3.5",
     "vitest": "5.0.5"

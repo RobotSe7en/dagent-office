@@ -2,7 +2,9 @@
 
 人工操作和宿主智能体返回的修改共用文档操作协议。核心管理事务、修订、批注和撤销；编辑器提供选区、批注和差异界面；宿主负责智能体执行、身份授权和文件保存。
 
-本文是设计契约，接口尚未实现或发布。`protocolVersion: 1` 为当前设计值，首轮以 TypeScript 类型、运行时校验和导出的 JSON Schema 落地，首次发布前完成冻结。达智边界使用同一契约生成或校验 Pydantic 模型。
+结构契约、推导类型和 JSON Schema 已在 R1-03 实现，公开入口见[结构契约与 JSON Schema](contracts.md)。会话准备、提交、撤销、上下文生成和 UI 尚未实现。`protocolVersion: 1` 仍为未发布的开发设计值，首次发布前完成冻结；达智边界使用同一契约生成或校验 Pydantic 模型。
+
+所有协议对象严格拒绝未知字段，包括元数据和嵌套操作。不静默删字段、填默认值或强制转换类型；新增字段通过显式契约演进。结构校验通过不等于 HTML 安全、节点引用、授权或事务语义已经通过。
 
 ## 职责与接口
 
@@ -49,14 +51,14 @@ interface DocumentSession {
 | 跨节点文字 `text-set` | 按文档顺序排列的 `ranges`，每项使用同样的文字范围字段 |
 | 对象 `node` | `nodeId` |
 | 对象集合 `node-set` | 稳定、有序的 `nodeIds` |
-| 区域 `region` | `surfaceId`、pt 矩形、命中 `nodeIds` 和布局环境标记；真实分页后可附带 `pageId` |
+| 区域 `region` | `surfaceId`、pt 矩形 `rect`、命中 `nodeIds`、布局环境 `layoutKey`；真实分页后可附带 `pageId` |
 | 单元格范围 | 工作表 ID 与范围，进入工作簿迭代后实现 |
 
 文字偏移使用规范节点文本的 UTF-16 索引，与 JavaScript 字符串和 DOM Range 一致。换行占一个 `\n`，内嵌对象占一个 `U+FFFC`；初次导入规范化后不再隐式进行 Unicode 归一化。
 
 第一轮先完成连续内容编辑，再提供派生分页。连续视图使用文档根对应的逻辑渲染面；分页视图使用实际计算的页面及布局标记，不把自动分页写成正文节点。矩形坐标排除界面缩放和滚动偏移。区域可以命中多个节点，也可以位于空白；空白区域附带所属容器和相邻结构，Word 中通过正常文档流插入或受支持的文档布局操作表达修改。
 
-批注包含 `annotationId`、`documentId`、`baseRevision`、`anchor`、`instruction` 和 `status`，可附带回复。作者的可信信息由宿主绑定。最小状态为 `open`、`resolved` 和 `needs_reanchor`。
+批注包含 `annotationId`、`documentId`、`baseRevision`、`anchor`、`instruction` 和 `status`。回复及作者显示字段留待后续显式定义，当前结构契约不接收任意 `author` 或 `replies`；作者可信信息仍由宿主绑定。最小状态为 `open`、`resolved` 和 `needs_reanchor`。
 
 事务产生节点与文字偏移映射。能够明确定位的批注更新到新修订；目标删除、整体替换或区域布局变化后无法确定位置时进入 `needs_reanchor`。原摘录和原区域保留用于人工定位，不猜测语义位置。
 
@@ -77,6 +79,8 @@ interface DocumentSession {
 内容与批注操作均属于类型化事务。`DocumentOperation` 是 `DocumentContentOperation` 与 `AnnotationOperation` 的联合；提案只使用前者。交互请求向智能体声明当前格式和宿主配置允许的内容操作，不把批注管理操作开放为任意模型写入入口。提案应用产生的批注状态更新由核心附加。
 
 `setStyle` 在首轮写回目标节点的行内 CSS 声明，已有样式表继续参与级联。不在元数据中保存另一份颜色、字号等值。
+
+当前结构契约提供六种内容操作和三种批注操作，表中的几何与单元格操作属于后续计划。`insertFragment` 使用 `nodeId/position/html`，位置为同级的 `before/after` 或子内容的 `start/end`。`replaceAsset` 通过 `assetPath` 引用资源，未携带资源字节或新的访问权限。字段约束见[契约 API](contracts.md)。
 
 内容操作目标的节点 ID 必须来自事务基准快照。新插入或复制的节点由核心分配 ID，提案不能猜测并在同一批内引用这些新 ID。首轮不额外引入临时节点引用协议。
 
@@ -158,7 +162,7 @@ Agent Run 的提案文件遵循宿主既有产物保存规则；它与文档会�
 
 边界错误包含稳定 `code`、可读消息和有界详情。首轮至少区分 `UnsupportedFormat`、`UnsupportedVersion`、`UnsupportedFeature`、`InvalidDocument`、`InvalidOperation`、`InvalidProposal`、`AnchorNotFound`、`RevisionConflict`、`AssetUnavailable` 和 `ResourceLimitExceeded`。宿主提交、导出和存储分别使用 `HostSubmissionFailed`、`ExportFailed` 和 `HostCommitFailed`。
 
-核心事件包含 `annotationChanged`、`documentChanged` 和 `error`；编辑器补充 `selectionChanged`、`annotationsSubmitted` 和 `proposalReady`；导出与宿主保存分别反馈结果及未保存状态。事件携带相关文档和修订。智能体运行状态不由核心推断或持久化。
+核心事件包含 `annotationChanged`、`documentChanged` 和 `error`，结构携带 `protocolVersion/documentId/revision`；编辑器后续补充 `selectionChanged`、`annotationsSubmitted` 和 `proposalReady`。导出与宿主保存分别反馈结果及未保存状态，智能体运行状态不由核心推断或持久化。R1-03 只实现核心事件的数据契约，不表示事件生产和订阅已实现。
 
 每个会话隔离文档、请求及候选引用。组件创建的会话随卸载释放，外部传入会话由创建者管理。外部智能体任务的取消和晚到结果归宿主处理，回传时仍检查会话、请求和修订。
 
