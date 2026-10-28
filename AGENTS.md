@@ -2,7 +2,7 @@
 
 ## Scope
 
-`dagent-office` is an independent TypeScript SDK for HTML-based Office editing and human/AI collaboration. Read [README.md](README.md) and the task-relevant design documents before implementation. The core implements structural contracts and JSON Schemas; document parsing, session execution and editors are not implemented yet.
+`dagent-office` is an independent TypeScript SDK for HTML-based Office editing and human/AI collaboration. Read [README.md](README.md) and the task-relevant design documents before implementation. The core implements structural contracts, JSON Schemas and a read-only HTML/CSS document package model; session execution and editors are not implemented yet.
 
 ## Working with the user
 

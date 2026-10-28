@@ -11,6 +11,11 @@ import { packPackages } from "../scripts/pack.mjs";
 const repository = fileURLToPath(new URL("../", import.meta.url));
 const require = createRequire(import.meta.url);
 const modules = ["core", "editor", "office", "node"];
+const reportSources = Object.fromEntries(
+  ["manifest.json", "content.html", "styles.css", "metadata.json", "annotations.json"].map(
+    (path) => [path, readFileSync(join(repository, "examples/report", path), "utf8")],
+  ),
+);
 let temporary: string;
 let consumer: string;
 
@@ -71,11 +76,16 @@ test("packed packages load in Node and reject access to their internal files", (
     '  assert.equal(Object.prototype.toString.call(module), "[object Module]");',
     '  await assert.rejects(import(name + "/dist/index.js"), { code: "ERR_PACKAGE_PATH_NOT_EXPORTED" });',
     "}",
-    'const { CONTRACT_NAMES, DocumentError, getContractJsonSchema, parseContract } = await import("@dagent-office/core");',
+    'const { CONTRACT_NAMES, DocumentError, getContractJsonSchema, openDocument, parseContract } = await import("@dagent-office/core");',
     "const input = " + readFileSync(join(repository, "examples/report/manifest.json"), "utf8") + ";",
     'assert.equal(parseContract("document-manifest", input).revision, 0);',
     'assert.throws(() => parseContract("document-manifest", { ...input, formatVersion: 2 }),',
     '  (error) => error instanceof DocumentError && error.code === "UnsupportedVersion");',
+    "const sources = " + JSON.stringify(reportSources) + ";",
+    "const files = new Map(Object.entries(sources).map(([path, source]) => [path, new TextEncoder().encode(source)]));",
+    "const document = openDocument(files);",
+    'assert.equal(document.getNode("n-summary").text, "项目计划于第三季度完成。");',
+    "assert.deepEqual(openDocument(document.serialize()).snapshot(), document.snapshot());",
     "for (const name of CONTRACT_NAMES) {",
     '  const schema = await import("@dagent-office/core/schemas/" + name + ".json", { with: { type: "json" } });',
     "  assert.deepEqual(schema.default, getContractJsonSchema(name));",
@@ -101,12 +111,18 @@ test("packed declarations resolve without borrowing workspace source or ambient 
       "void Module" + index + ";",
       "// @ts-expect-error Internal paths are outside the public package contract.",
       "type Private" + index + ' = typeof import("@dagent-office/' + module + '/dist/index.js");',
-    ]), 'import { parseContract } from "@dagent-office/core";',
+    ]), 'import { openDocument, parseContract } from "@dagent-office/core";',
       'const manifest = parseContract("document-manifest", {});',
       "const version: 1 = manifest.formatVersion;",
       "void version;",
       "// @ts-expect-error The registry must preserve the selected output type.",
       "manifest.proposalId;",
+      "declare const files: ReadonlyMap<string, Uint8Array>;",
+      "const document = openDocument(files);",
+      'const text: string | undefined = document.getNode("n")?.text;',
+      "void text;",
+      "// @ts-expect-error Parser-specific AST is not part of the public node interface.",
+      'document.getNode("n")?.childNodes;',
     ].join("\n"));
     writeFileSync(join(consumer, "tsconfig." + name + ".json"), JSON.stringify({
       compilerOptions: {
@@ -123,9 +139,12 @@ test("packed browser modules build in a plain JavaScript host without React", as
   writeFileSync(join(consumer, "index.html"), '<main>External browser host</main><script type="module" src="/browser.js"></script>');
   writeFileSync(join(consumer, "browser.js"), ["core", "editor", "office"].map(
     (module) => 'import "@dagent-office/' + module + '";',
-  ).join("\n") + '\nimport { parseContract } from "@dagent-office/core";\n'
+  ).join("\n") + '\nimport { openDocument, parseContract } from "@dagent-office/core";\n'
     + "const input = " + readFileSync(join(repository, "examples/report/manifest.json"), "utf8") + ";\n"
-    + 'document.documentElement.dataset.revision = String(parseContract("document-manifest", input).revision);\n');
+    + 'document.documentElement.dataset.revision = String(parseContract("document-manifest", input).revision);\n'
+    + "const sources = " + JSON.stringify(reportSources) + ";\n"
+    + "const files = new Map(Object.entries(sources).map(([path, source]) => [path, new TextEncoder().encode(source)]));\n"
+    + 'document.documentElement.dataset.documentId = openDocument(files).snapshot().manifest.documentId;\n');
   await build({
     root: consumer,
     configFile: false,

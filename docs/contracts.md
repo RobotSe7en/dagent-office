@@ -1,6 +1,6 @@
 # 结构契约与 JSON Schema
 
-R1-03 提供 `core` 的数据结构校验、推导类型、JSON Schema、稳定校验错误，以及会话等运行时接口的类型声明。文档包打开、HTML/CSS 解析、引用检查、事务执行和界面尚未实现。
+R1-03 提供 `core` 的数据结构校验、推导类型、JSON Schema、稳定校验错误，以及会话等运行时接口的类型声明。R1-04 的文档包打开、HTML/CSS 解析、节点与元数据引用检查见[文档模型](document-model.md)；事务执行和界面尚未实现。
 
 ## 公开入口
 
@@ -84,18 +84,19 @@ import proposalSchema from "@dagent-office/core/schemas/edit-proposal.json"
 
 文档结构错误使用 `InvalidDocument`，操作及事务使用 `InvalidOperation`，提案使用 `InvalidProposal`。格式标识不支持为 `UnsupportedFormat`，当前没有实现的交互类型或契约为 `UnsupportedFeature`。读取或校验错误不改变原始字节和输入对象。
 
-运行时接口只声明职责：
+运行时类型的职责与实现状态：
 
 - `DocumentPackage` 为只读路径到字节的 Map，`manifest.json` 在其中，避免另一份可独立修改的 manifest。
 - `DocumentSnapshot` 为文档源的派生只读视图，不是新的保存格式。
+- `DocumentModel` 由 `openDocument` 创建，已实现 `snapshot/getNode/serialize`；返回值冻结或独立复制，第三方 AST 不进入公共接口。
 - `CandidateChange` 是非序列化的候选类型；实际会话仍需私有状态验证候选所有权和修订，类型标记不代表授权。
 - `DocumentSession` 声明查询、准备、提交、撤销、序列化和释放，当前没有工厂或执行实现。
 - 核心事件声明 `protocolVersion/documentId/revision`，文档变化携带节点 ID，批注变化携带批注 ID，错误携带结构化错误数据。
 
 ## 校验边界与后续任务
 
-R1-03 只证明字段、类型、枚举和结构约束正确。它不解析 HTML/CSS、不证明脚本安全、不验证 SHA-256 字节、不读取包资源、不验证节点存在，也不执行提案、撤销或宿主保存。
+`parseContract` 和导出的 JSON Schema 只证明字段、类型、枚举和结构约束正确。它们不解析 HTML/CSS、不证明脚本安全、不验证 SHA-256 字节、不读取包资源、不验证节点存在，也不执行提案、撤销或宿主保存。
 
-R1-04/R1-05 实现文档解析、规范化、引用和资源；R1-06/R1-07 实现操作、原子性、修订、历史及锚点映射；请求/提案关联、支持操作子集和跨文档匹配在 R1-09 的实际交互中校验。只有经过后续完整边界校验的数据才能进入可执行编辑或浏览器视图。
+R1-04 的 `openDocument` 已实现受支持 HTML/CSS 的解析与拒绝策略、节点索引、元数据及非失效批注的节点引用和规范化保存；R1-05 后续验证图片字节、摘要、完整资源及 ZIP。R1-06/R1-07 实现操作、原子性、修订、历史及锚点映射；请求/提案关联、支持操作子集和跨文档匹配在 R1-09 的实际交互中校验。结构校验不能代替这些执行及渲染边界。
 
 主协议见[编辑与宿主交互协议](editing-protocol.md)，格式见[文档格式](document-format.md)，构建和测试见[本地开发](development.md)。
