@@ -16,6 +16,35 @@ import {
 import type { XmlNode } from "./xml.js";
 
 export type Css = Record<string, string>;
+type TabStops = WordMetadata["tabs"][number]["stops"];
+/** Tab declarations amend the inherited set by position, including removals. */
+export function mergeTabs(
+  inherited: TabStops = [],
+  properties?: XmlNode,
+): TabStops {
+  const stops = new Map(inherited.map((stop) => [stop.position, stop]));
+  check(properties, ["tab"]);
+  for (const stop of elements(properties, "tab")) {
+    const alignment = attr(stop, "val") ?? "left";
+    const leader = attr(stop, "leader") ?? "none";
+    if (
+      !["left", "center", "right", "decimal", "clear"].includes(alignment) ||
+      !["none", "dot", "hyphen", "underscore", "heavy", "middleDot"].includes(
+        leader,
+      )
+    )
+      unsupported(stop, "A tab alignment or leader is not supported.");
+    const position = number(attr(stop, "pos"), stop) / 20;
+    if (alignment === "clear") stops.delete(position);
+    else
+      stops.set(position, {
+        position,
+        alignment: alignment as TabStops[number]["alignment"],
+        leader: leader as TabStops[number]["leader"],
+      });
+  }
+  return [...stops.values()].sort((left, right) => left.position - right.position);
+}
 export function nonInheritedRun(css: Css): Css {
   return Object.fromEntries(
     Object.entries(css).filter(
@@ -58,7 +87,7 @@ export interface StyleValues {
   table: Css;
   cell: Css;
   numbering?: { id: string; level: number };
-  tabs?: XmlNode;
+  tabs?: TabStops;
   outline?: number;
 }
 const empty = (): StyleValues => ({ p: {}, r: {}, table: {}, cell: {} });
@@ -168,6 +197,10 @@ export class DocxStyles {
       this.defaults.p,
       this.paragraph(child(child(docDefaults, "pPrDefault"), "pPr")),
     );
+    this.defaults.tabs = mergeTabs(
+      [],
+      child(child(child(docDefaults, "pPrDefault"), "pPr"), "tabs"),
+    );
     for (const style of elements(root, "style")) {
       const id = attr(style, "styleId");
       const kind = attr(style, "type");
@@ -257,11 +290,20 @@ export class DocxStyles {
         const row = child(region, "trPr");
         if (row && elements(row).length)
           unsupported(row, "Conditional row properties are not supported.");
+        const table = child(region, "tblPr");
+        if (type !== "wholeTable" && child(table, "tblInd"))
+          unsupported(
+            table!,
+            "Table indentation cannot vary by conditional cell region.",
+          );
         const values: StyleValues = {
           p: this.paragraph(child(region, "pPr")),
           r: this.run(child(region, "rPr")),
-          table: this.table(child(region, "tblPr")),
-          cell: this.cell(child(region, "tcPr")),
+          table: this.table(table),
+          cell: {
+            ...this.margins(child(table, "tblCellMar")),
+            ...this.cell(child(region, "tcPr")),
+          },
         };
         if (Object.keys(nonInheritedRun(values.r)).length)
           unsupported(
@@ -480,7 +522,6 @@ export class DocxStyles {
     const css: Css = {};
     const fonts = child(properties, "rFonts");
     if (fonts) {
-      const families: string[] = [];
       for (const [name, themeName] of [
         ["ascii", "asciiTheme"],
         ["hAnsi", "hAnsiTheme"],
@@ -499,21 +540,19 @@ export class DocxStyles {
             : /^zh-(?:TW|HK|MO|Hant)/i.test(language)
               ? "Hant"
               : "Hans";
-        const face =
-          attr(fonts, name!) ??
-          (role
-            ? (this.themeFonts.get(role) ??
-              this.themeFonts.get(role + ":" + script))
-            : undefined);
+        const face = role
+          ? (this.themeFonts.get(role) ??
+            this.themeFonts.get(role + ":" + script))
+          : attr(fonts, name!);
         if (role && !face)
           unsupported(fonts, "A theme font cannot be resolved.");
         if (face) {
           css["--word-font-" + name!] = quoteFont(face);
-          if (!families.includes(face)) families.push(face);
         }
       }
-      if (families.length)
-        css["font-family"] = families.map(quoteFont).join(",");
+      if (css["--word-font-ascii"] || css["--word-font-hAnsi"])
+        css["font-family"] =
+          "var(--word-font-ascii,var(--word-font-hAnsi,inherit))";
     }
     for (const [name, property, active, inactive] of [
       ["b", "font-weight", "bold", "normal"],
@@ -575,9 +614,14 @@ export class DocxStyles {
     const shade = child(properties, "shd");
     if (shade && attr(shade, "fill") !== "auto") {
       const fill = this.color(shade, "fill");
-      if (fill) css["background-color"] = fill;
+      if (fill) {
+        css["--word-run-shading"] = fill;
+        css["background-color"] = fill;
+      }
     }
     const highlight = val(child(properties, "highlight"));
+    if (highlight === "none")
+      css["background-color"] = "var(--word-run-shading,transparent)";
     if (highlight && highlight !== "none") {
       const colors: Record<string, string> = {
         yellow: "#ffff00",
@@ -934,6 +978,7 @@ export class DocxStyles {
     ]);
     if (child(properties, "tblpPr") || on(child(properties, "bidiVisual")))
       unsupported(properties, "Floating or bidi tables are not supported.");
+    this.cellSpacing(properties);
     const result: Css = { "border-collapse": "collapse" };
     Object.assign(result, this.borders(child(properties, "tblBorders")));
     const width = child(properties, "tblW");
@@ -953,10 +998,19 @@ export class DocxStyles {
     } else if (align === "right") result["margin-left"] = "auto";
     else if (align && align !== "left" && align !== "start")
       unsupported(properties);
+    const indent = child(properties, "tblInd");
+    if (indent)
+      result["margin-left"] =
+        this.width(indent, "margin-left")["margin-left"] ?? "0pt";
     const shade = child(properties, "shd");
     if (shade && attr(shade, "fill") !== "auto")
       result["background-color"] = this.color(shade, "fill") ?? "transparent";
     return result;
+  }
+  cellSpacing(properties: XmlNode | undefined): void {
+    const spacing = child(properties, "tblCellSpacing");
+    if (spacing && number(attr(spacing, "w"), spacing, 0) !== 0)
+      unsupported(spacing, "Nonzero table cell spacing is not supported.");
   }
   cell(properties: XmlNode | undefined): Css {
     if (!properties) return {};
@@ -1040,13 +1094,19 @@ export class DocxStyles {
     const numPr = child(pPr, "numPr");
     const num = val(child(numPr, "numId"));
     const outline = child(pPr, "outlineLvl");
+    const tableProperties = child(source, "tblPr");
+    this.cellSpacing(child(source, "trPr"));
     const result: StyleValues = {
       p: { ...parent.p, ...this.paragraph(pPr) },
       r: { ...parent.r, ...this.run(child(source, "rPr"), parent.r, true) },
-      table: { ...parent.table, ...this.table(child(source, "tblPr")) },
-      cell: { ...parent.cell, ...this.cell(child(source, "tcPr")) },
+      table: { ...parent.table, ...this.table(tableProperties) },
+      cell: {
+        ...parent.cell,
+        ...this.margins(child(tableProperties, "tblCellMar")),
+        ...this.cell(child(source, "tcPr")),
+      },
       ...(parent.numbering ? { numbering: parent.numbering } : {}),
-      ...(parent.tabs ? { tabs: parent.tabs } : {}),
+      tabs: mergeTabs(parent.tabs ?? this.defaults.tabs, child(pPr, "tabs")),
       ...(parent.outline !== undefined ? { outline: parent.outline } : {}),
       ...(num
         ? {
@@ -1056,7 +1116,6 @@ export class DocxStyles {
             },
           }
         : {}),
-      ...(child(pPr, "tabs") ? { tabs: child(pPr, "tabs")! } : {}),
       ...(outline ? { outline: number(val(outline), outline) } : {}),
     };
     visiting.delete(id);

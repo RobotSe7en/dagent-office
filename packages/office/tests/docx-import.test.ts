@@ -374,7 +374,7 @@ test("maps Word theme tints and Chinese theme fonts using source language", () =
   files["word/document.xml"] = strToU8(
     strFromU8(files["word/document.xml"]!).replace(
       "<w:b/>",
-      '<w:b/><w:rFonts w:asciiTheme="minorAscii" w:eastAsiaTheme="minorEastAsia"/><w:color w:themeColor="accent2" w:themeTint="99"/>',
+      '<w:b/><w:rFonts w:ascii="OldLatin" w:asciiTheme="minorAscii" w:hAnsi="OldHAnsi" w:hAnsiTheme="minorHAnsi" w:eastAsia="OldFace" w:eastAsiaTheme="minorEastAsia"/><w:color w:themeColor="accent2" w:themeTint="99"/>',
     ),
   );
   const source = openDocument(
@@ -382,6 +382,10 @@ test("maps Word theme tints and Chinese theme fonts using source language", () =
   ).snapshot().html;
   expect(source).toContain("#95b3d7");
   expect(source).toContain("Noto Serif CJK SC");
+  expect(source).toContain("Liberation Serif");
+  expect(source).not.toContain("OldLatin");
+  expect(source).not.toContain("OldHAnsi");
+  expect(source).not.toContain("OldFace");
   expect(source).not.toContain("Japanese fixture face");
 });
 

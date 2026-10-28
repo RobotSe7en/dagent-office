@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import {
+  mutateDocx, nestedFieldFixture, sectionPackageFixture, styleInheritanceFixture,
+} from "../../packages/office/tests/regression-fixtures.js";
 
 const samples = fileURLToPath(new URL("../../examples/docx/", import.meta.url));
 const cases = JSON.parse(
@@ -158,3 +161,124 @@ test("releases image URLs when switching documents", async ({ page }) => {
     ),
   ).toEqual({ created: 3, revoked: 3 });
 });
+
+test("previews partial font overrides, cleared highlighting, inherited tabs and table margins", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("打开文件").setInputFiles({
+    name: "style-inheritance.docx",
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    buffer: Buffer.from(styleInheritanceFixture()),
+  });
+  await expect(page.getByRole("status")).toContainText("已打开");
+  const frame = page.frameLocator("iframe");
+  const run = frame.locator("[data-word-run]").filter({ hasText: "ABCé中文" });
+  const font = await run.evaluate((node) => ({
+    latin: getComputedStyle(node).fontFamily,
+    highAnsi: getComputedStyle(node.querySelector('[data-word-script="hAnsi"]')!).fontFamily,
+    eastAsia: getComputedStyle(node.querySelector('[data-word-script="eastAsia"]')!).fontFamily,
+    background: getComputedStyle(node).backgroundColor,
+  }));
+  expect(font.latin).toContain("Liberation Serif");
+  expect(font.highAnsi).toContain("Noto Sans CJK SC");
+  expect(font.eastAsia).toContain("Noto Serif CJK SC");
+  expect(font.background).toBe("rgba(0, 0, 0, 0)");
+  await expect(frame.locator("[data-word-run]").filter({ hasText: "cleared" }))
+    .toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  for (const text of ["shaded direct", "shaded style"])
+    await expect(frame.locator("[data-word-run]").filter({ hasText: text }))
+      .toHaveCSS("background-color", "rgb(221, 238, 255)");
+  const tabPosition = await frame.locator("[data-word-tab]").evaluate((tab) => {
+    const paragraph = tab.closest("p")!;
+    return (tab.getBoundingClientRect().right - paragraph.getBoundingClientRect().left) * 72 / 96;
+  });
+  expect(tabPosition).toBeCloseTo(100, 1);
+  const cell = frame.locator("td").first();
+  await expect(cell).toHaveCSS("padding-left", "40px");
+  await expect(cell).toHaveCSS("padding-right", /53\.33/);
+  await expect(cell).toHaveCSS("padding-top", /2\.66/);
+  await expect(cell).toHaveCSS("padding-bottom", "4px");
+  await expect(frame.locator("table")).toHaveCSS("margin-left", "40px");
+  await expect(frame.locator("article")).toHaveScreenshot("style-inheritance.png", {
+    animations: "disabled", maxDiffPixelRatio: 0.005, threshold: 0.2,
+  });
+});
+
+for (const simple of [false, true]) {
+  test("hides the complete nested instruction cache, including breaks and images: simple=" + simple, async ({ page }) => {
+    await page.goto("/");
+    await page.getByLabel("打开文件").setInputFiles({
+      name: "nested-field.docx",
+      mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      buffer: Buffer.from(nestedFieldFixture(simple)),
+    });
+    await expect(page.getByRole("status")).toContainText("已打开");
+    const frame = page.frameLocator("iframe");
+    await expect(frame.getByText("outer result", { exact: true })).toBeVisible();
+    await expect(frame.getByText("cache", { exact: true })).toBeHidden();
+    await expect(frame.getByText("child cache", { exact: true })).toBeHidden();
+    await expect(frame.locator("br")).toBeHidden();
+    await expect(frame.locator("img")).toBeHidden();
+    await expect(frame.locator("[data-word-tab]")).toBeHidden();
+    expect(await frame.locator("p").evaluate((node) => node.getBoundingClientRect().height))
+      .toBeLessThan(40);
+  });
+}
+
+test("uses each section's width and margins in continuous view", async ({ page }) => {
+  const bytes = mutateDocx("04-styles-sections.docx", {
+    "word/document.xml": (source) => source
+      .replace('<w:sectPr><w:pgSz w:w="11906" w:h="16838"/>',
+        '<w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>')
+      .replace('<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"',
+        '<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="720" w:right="960" w:bottom="1080" w:left="960"')
+      .replace("第二节正文", "第二节正文 ".repeat(25)),
+  });
+  await page.goto("/");
+  await page.locator("main").evaluate((node) => {
+    node.style.width = "calc(100% - 2rem)";
+  });
+  await page.getByLabel("打开文件").setInputFiles({
+    name: "section-geometry.docx",
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    buffer: Buffer.from(bytes),
+  });
+  await expect(page.getByRole("status")).toContainText("已打开");
+  const frame = page.frameLocator("iframe");
+  const geometry = await frame.locator("section").evaluateAll((sections) => sections.map((node) => {
+    const computed = getComputedStyle(node);
+    return {
+      width: parseFloat(computed.width) * 72 / 96,
+      padding: [computed.paddingTop, computed.paddingRight, computed.paddingBottom, computed.paddingLeft]
+        .map((value) => parseFloat(value) * 72 / 96),
+      contentWidth: node.querySelector("p:last-child")!.getBoundingClientRect().width * 72 / 96,
+    };
+  }));
+  expect(geometry).toHaveLength(2);
+  expect(geometry[0]!.width).toBeCloseTo(595.3, 1);
+  expect(geometry[0]!.padding).toEqual([72, 72, 72, 72]);
+  expect(geometry[0]!.contentWidth).toBeCloseTo(451.3, 1);
+  expect(geometry[1]!.width).toBeCloseTo(841.9, 1);
+  expect(geometry[1]!.padding).toEqual([36, 48, 54, 48]);
+  expect(geometry[1]!.contentWidth).toBeCloseTo(745.9, 1);
+  await expect(frame.locator("article")).toHaveScreenshot("section-geometry.png", {
+    animations: "disabled", maxDiffPixelRatio: 0.005, threshold: 0.2,
+  });
+});
+
+for (const articleRoot of [false, true]) {
+  test("applies package section geometry and document defaults: article root=" + articleRoot, async ({ page }) => {
+    await page.goto("/");
+    await page.getByLabel("打开文件").setInputFiles({
+      name: "section-package.zip",
+      mimeType: "application/zip",
+      buffer: Buffer.from(sectionPackageFixture(articleRoot)),
+    });
+    await expect(page.getByRole("status")).toContainText("已打开");
+    const frame = page.frameLocator("iframe");
+    const widths = await frame.locator(articleRoot ? "article" : "section").evaluateAll(
+      (nodes) => nodes.map((node) => node.getBoundingClientRect().width * 72 / 96),
+    );
+    expect(widths[0]).toBeCloseTo(841.9, 1);
+    if (!articleRoot) expect(widths[1]).toBeCloseTo(595.3, 1);
+  });
+}

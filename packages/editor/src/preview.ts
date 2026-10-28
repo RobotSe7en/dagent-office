@@ -209,7 +209,10 @@ function decorate(
       );
       for (const id of definition?.resultNodeIds ?? []) {
         const node = byId.get(id);
-        if (node) node.hidden = true;
+        if (node) {
+          node.hidden = true;
+          node.style.display = "none";
+        }
       }
     }
   }
@@ -219,6 +222,7 @@ function decorate(
     for (const tab of paragraph.querySelectorAll<HTMLElement>(
       "[data-word-tab]",
     )) {
+      if (tab.closest("[hidden]")) continue;
       const start = paragraph.getBoundingClientRect();
       const box = tab.getBoundingClientRect();
       const cursor = ((box.left - start.left) * 72) / 96;
@@ -294,6 +298,39 @@ export function mountDocumentPreview(
   const setup = snapshot.metadata.pageSetup;
   frameStyle.textContent = `html{background:#eceef1}body{margin:0;padding:24px;font-family:'Noto Sans CJK SC',serif;font-size:12pt}article{box-sizing:border-box;margin:0 auto;width:${setup.width}pt;background:white;padding:${setup.margins.top}pt ${setup.margins.right}pt ${setup.margins.bottom}pt ${setup.margins.left}pt}p,h1,h2,h3,h4,h5,h6{margin:0;font-weight:inherit;line-height:normal}td,th{padding:0;font-weight:inherit;text-align:inherit}p{min-height:1em}.sdk-section{box-sizing:border-box}.sdk-story-label{font:600 12px sans-serif!important;color:#58606b!important;margin:24px 0 8px!important;padding:12px 0 0!important;border-top:1px solid #ccc!important}.sdk-auxiliary{border-left:2px solid #ddd;padding-left:12px}[data-word-field]{background:#f5f4ee}ins{color:#006400;text-decoration:underline}del{color:#a00000;text-decoration:line-through}[data-word-break="page"]{display:block;border-top:1px dashed #bbb;margin:18px 0}.sdk-number-marker{pointer-events:none}`;
   parsed.head.insertBefore(frameStyle, style);
+  const byId = new Map(
+    [...parsed.querySelectorAll<HTMLElement>("[data-node-id]")].map(
+      (node) => [node.dataset.nodeId!, node],
+    ),
+  );
+  let maximumWidth = setup.width;
+  const sectionNodes: HTMLElement[] = [];
+  for (const section of snapshot.metadata.sections) {
+    const effectiveSetup = section.pageSetup ?? setup;
+    const node = byId.get(section.rootNodeId);
+    if (!node) continue;
+    maximumWidth = Math.max(maximumWidth, effectiveSetup.width);
+    const { width, margins } = effectiveSetup;
+    node.classList.add("sdk-section");
+    node.style.boxSizing = "border-box";
+    node.style.width = width + "pt";
+    node.style.margin = "0 auto";
+    node.style.padding = `${margins.top}pt ${margins.right}pt ${margins.bottom}pt ${margins.left}pt`;
+    sectionNodes.push(node);
+  }
+  const article = parsed.querySelector("article");
+  if (article && sectionNodes.length && !sectionNodes.includes(article)) {
+    article.style.width = maximumWidth + "pt";
+    article.style.padding = "0";
+    const auxiliary = parsed.createElement("div");
+    auxiliary.style.padding = `0 ${setup.margins.right}pt ${setup.margins.bottom}pt ${setup.margins.left}pt`;
+    for (const node of [...article.children])
+      if (
+        !sectionNodes.some((section) => node === section || node.contains(section))
+      )
+        auxiliary.append(node);
+    if (auxiliary.children.length) article.append(auxiliary);
+  }
   const urls: string[] = [];
   for (const image of parsed.querySelectorAll("img")) {
     const path = packagePath(

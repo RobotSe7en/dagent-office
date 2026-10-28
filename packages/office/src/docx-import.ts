@@ -22,6 +22,7 @@ import {
   escapeHtml,
   pt,
   inheritedRun,
+  mergeTabs,
   tableLookMask,
 } from "./ooxml/styles.js";
 import type { Css } from "./ooxml/styles.js";
@@ -110,6 +111,10 @@ class Importer {
   private readonly auxiliary: Html[] = [];
   private readonly comments = new Map<string, CommentState>();
   private readonly activeComments = new Set<string>();
+  private commentRangeCount = 0;
+  private commentRangeBytes = 0;
+  private fieldResultCount = 0;
+  private fieldResultBytes = 0;
   private readonly fieldStack: FieldState[] = [];
   private readonly bookmarkStarts = new Map<
     string,
@@ -196,41 +201,48 @@ class Importer {
     if (!value) return;
     const from = this.offset(node, value);
     let content = node;
-    const field = this.fieldStack[this.fieldStack.length - 1];
-    if (field?.result) {
+    const field = this.fieldStack.filter((item) => item.result).pop();
+    if (field) {
       content = this.make("span", {
         "data-word-field-result": field.definition.nodeId,
       });
       node.children.push(content);
-      (field.definition.resultNodeIds ??= []).push(this.id(content));
+      this.fieldResult(content);
     }
     if (node.tag === "span" && !node.attrs["data-word-tab"]) {
-      const parts: { eastAsian: boolean; text: string }[] = [];
+      const parts: { script: "ascii" | "hAnsi" | "eastAsia"; text: string }[] = [];
       for (const character of value) {
         const code = character.codePointAt(0)!;
         const previous = parts[parts.length - 1];
         const eastAsian =
-          (/\p{Mark}/u.test(character)
-            ? (previous?.eastAsian ?? false)
-            : false) ||
           (code >= 0x2e80 && code <= 0xa4cf) ||
           (code >= 0xac00 && code <= 0xd7af) ||
           (code >= 0xf900 && code <= 0xfaff) ||
           (code >= 0xfe10 && code <= 0xfe6f) ||
           (code >= 0xff00 && code <= 0xffef) ||
           (code >= 0x20000 && code <= 0x323af);
-        if (previous?.eastAsian === eastAsian) previous.text += character;
-        else parts.push({ eastAsian, text: character });
+        const script =
+          /\p{Mark}/u.test(character) && previous
+            ? previous.script
+            : eastAsian
+              ? "eastAsia"
+              : code <= 0x7f
+                ? "ascii"
+                : "hAnsi";
+        if (previous?.script === script) previous.text += character;
+        else parts.push({ script, text: character });
       }
       for (const part of parts) {
-        if (part.eastAsian)
+        if (part.script !== "ascii")
           content.children.push(
             this.make(
               "span",
               {
                 style:
-                  "font-family:var(--word-font-eastAsia,var(--word-font-ascii,var(--word-font-hAnsi,inherit)))",
-                "data-word-script": "eastAsia",
+                  "font-family:var(--word-font-" +
+                  part.script +
+                  ",var(--word-font-ascii,var(--word-font-hAnsi,inherit)))",
+                "data-word-script": part.script,
               },
               [part.text],
             ),
@@ -239,6 +251,25 @@ class Importer {
       }
     } else content.children.push(value);
     this.record(node, from, value);
+  }
+  private fieldResult(node: Html): void {
+    // Ancestor results also own nested fields' cached content.
+    for (const field of this.fieldStack)
+      if (field.result) {
+        const bytes = 16 + this.id(node).length * 6;
+        if (
+          this.fieldResultCount + 1 > this.opc.limits.maxNodes ||
+          this.fieldResultBytes + bytes >
+            Math.min(this.opc.limits.maxFileBytes, this.opc.limits.maxPackageBytes)
+        )
+          throw new DocumentError(
+            "ResourceLimitExceeded",
+            "Generated field result references exceed the configured node or byte budget.",
+          );
+        this.fieldResultCount++;
+        this.fieldResultBytes += bytes;
+        (field.definition.resultNodeIds ??= []).push(this.id(node));
+      }
   }
   private record(node: Html, from: number, value: string): void {
     for (const id of this.activeComments) {
@@ -249,16 +280,33 @@ class Importer {
           "A comment range refers to a missing comment.",
         );
       const previous = comment.ranges[comment.ranges.length - 1];
-      if (previous?.nodeId === this.id(node) && previous.to === from) {
+      const extend = previous?.nodeId === this.id(node) && previous.to === from;
+      // Six bytes per UTF-16 unit bounds JSON escaping and UTF-8. The fixed
+      // allowance covers keys, offsets and pretty-printing before allocation.
+      const bytes =
+        value.length * 6 + (extend ? 0 : 256 + this.id(node).length * 6);
+      if (
+        this.commentRangeCount + (extend ? 0 : 1) > this.opc.limits.maxNodes ||
+        this.commentRangeBytes + bytes >
+          Math.min(this.opc.limits.maxFileBytes, this.opc.limits.maxPackageBytes)
+      )
+        throw new DocumentError(
+          "ResourceLimitExceeded",
+          "Generated comment ranges exceed the configured node or byte budget.",
+        );
+      this.commentRangeBytes += bytes;
+      if (extend) {
         previous.to += value.length;
         previous.quote += value;
-      } else
+      } else {
+        this.commentRangeCount++;
         comment.ranges.push({
           nodeId: this.id(node),
           from,
           to: from + value.length,
           quote: value,
         });
+      }
     }
   }
   private story(
@@ -553,25 +601,9 @@ class Importer {
       /^\d+(?:\.\d+)?$/.test(effectiveParagraph["line-height"])
     )
       paragraph.attrs["data-word-line-rule"] = "auto";
-    const tabs = child(properties, "tabs") ?? style.tabs;
-    const stops: WordMetadata["tabs"][number]["stops"] = [];
-    for (const stop of elements(tabs, "tab")) {
-      const alignment = attr(stop, "val") ?? "left";
-      const leader = attr(stop, "leader") ?? "none";
-      if (
-        !["left", "center", "right", "decimal", "clear"].includes(alignment) ||
-        !["none", "dot", "hyphen", "underscore", "heavy", "middleDot"].includes(
-          leader,
-        )
-      )
-        unsupported(stop, "A tab alignment or leader is not supported.");
-      stops.push({
-        position: number(attr(stop, "pos"), stop) / 20,
-        alignment: alignment as (typeof stops)[number]["alignment"],
-        leader: leader as (typeof stops)[number]["leader"],
-      });
-    }
-    if (tabs || this.hasTab(source))
+    const tabs = child(properties, "tabs");
+    const stops = mergeTabs(style.tabs ?? this.styles.defaults.tabs, tabs);
+    if (stops.length || tabs || this.hasTab(source))
       this.word.tabs.push({
         paragraphNodeId: this.id(paragraph),
         defaultInterval: this.defaultTab,
@@ -751,12 +783,14 @@ class Importer {
         );
         const offset = this.offset(parent, "\n");
         parent.children.push(mark);
+        this.fieldResult(mark);
         this.record(parent, offset, "\n");
         break;
       }
       case "tab": {
         const tab = this.make("span", { "data-word-tab": "true" });
         parent.children.push(tab);
+        this.fieldResult(tab);
         this.addText(tab, "\t");
         break;
       }
@@ -770,6 +804,7 @@ class Importer {
         const image = this.image(source);
         const offset = this.offset(parent, "\ufffc");
         parent.children.push(image);
+        this.fieldResult(image);
         this.record(parent, offset, "\ufffc");
         break;
       }
@@ -825,16 +860,34 @@ class Importer {
         break;
       }
       case "fldSimple": {
+        if (this.fieldStack.length >= this.opc.limits.maxDepth)
+          throw new DocumentError(
+            "ResourceLimitExceeded",
+            "Field nesting exceeds the configured depth.",
+          );
         const field = this.make("span", { "data-word-field": "simple" });
         parent.children.push(field);
-        this.word.fields.push({
+        this.fieldResult(field);
+        const definition: WordMetadata["fields"][number] = {
           nodeId: this.id(field),
           instruction: attr(source, "instr") ?? "",
           resultState: "cached",
           ...this.fieldFlags(source),
-        });
+          resultNodeIds: [],
+        };
+        const active = this.fieldStack[this.fieldStack.length - 1];
+        if (active && !active.result)
+          (active.definition.instructionFields ??= []).push({
+            offset: active.definition.instruction.length,
+            fieldNodeId: definition.nodeId,
+          });
+        this.word.fields.push(definition);
+        const state = { definition, result: true };
+        this.fieldStack.push(state);
         for (const item of this.compat(source))
           this.inline(item, field, paragraphStyle);
+        if (this.fieldStack.pop() !== state)
+          fail(source, "A simple field has unbalanced nested controls.");
         break;
       }
       case "fldChar": {
@@ -1190,6 +1243,30 @@ class Importer {
     if (child(fill, "tile", A))
       unsupported(fill!, "Tiled picture fills are not supported.");
     const shape = child(picture, "spPr", PIC);
+    if (shape) {
+      if (attr(shape, "bwMode", "") && attr(shape, "bwMode", "") !== "auto")
+        unsupported(
+          shape,
+          "Picture black-and-white rendering is not supported.",
+        );
+      for (const appearance of this.compat(shape)) {
+        if (
+          appearance.uri !== A ||
+          !["xfrm", "prstGeom", "noFill", "ln", "effectLst"].includes(appearance.name)
+        )
+          unsupported(appearance, "The picture appearance is not supported.");
+        if (
+          appearance.name === "ln" &&
+          (!child(appearance, "noFill", A) ||
+            this.compat(appearance).some(
+              (item) => item.uri !== A || item.name !== "noFill",
+            ))
+        )
+          unsupported(appearance, "Picture outlines are not supported.");
+        if (appearance.name === "noFill" && this.compat(appearance).length)
+          unsupported(appearance, "The picture fill is not supported.");
+      }
+    }
     const geometry = child(shape, "prstGeom", A);
     if (
       child(shape, "custGeom", A) ||
@@ -1197,7 +1274,7 @@ class Importer {
     )
       unsupported(shape!, "Nonrectangular picture geometry is not supported.");
     const effectList = child(shape, "effectLst", A);
-    if (effectList && elements(effectList, undefined, A).length)
+    if (effectList && this.compat(effectList).length)
       unsupported(effectList, "Picture effects are not supported.");
     const crop = child(fill, "srcRect", A);
     if (
@@ -1247,6 +1324,52 @@ class Importer {
       style: "width:" + pt(width) + ";height:" + pt(height),
     });
   }
+  private validateMergeContinuation(cell: XmlNode): void {
+    // Only empty paragraphs/runs may disappear into the spanning cell. Text
+    // extraction alone misses breaks, drawings, range markers and revisions.
+    for (const paragraph of this.compat(cell)) {
+      if (paragraph.uri === W && paragraph.name === "tcPr") continue;
+      if (paragraph.uri !== W || paragraph.name !== "p")
+        unsupported(
+          paragraph,
+          "A vertical merge continuation has independent content.",
+        );
+      const properties = child(paragraph, "pPr");
+      this.styles.paragraph(properties);
+      this.styles.run(child(properties, "rPr"));
+      this.styles.get(
+        attr(child(properties, "pStyle"), "val") ?? this.styles.defaultParagraph,
+      );
+      mergeTabs(undefined, child(properties, "tabs"));
+      if (child(properties, "sectPr"))
+        unsupported(
+          properties!,
+          "A merged cell cannot contain section properties.",
+        );
+      for (const run of this.compat(paragraph)) {
+        if (run.uri === W && run.name === "pPr") continue;
+        if (run.uri !== W || run.name !== "r")
+          unsupported(
+            run,
+            "A vertical merge continuation has independent content.",
+          );
+        this.styles.run(child(run, "rPr"));
+        for (const content of this.compat(run)) {
+          if (content.uri === W && content.name === "rPr") continue;
+          if (
+            content.uri !== W ||
+            content.name !== "t" ||
+            content.content.some((item) => typeof item !== "string") ||
+            text(content) !== ""
+          )
+            unsupported(
+              content,
+              "A vertical merge continuation has independent content.",
+            );
+        }
+      }
+    }
+  }
   private table(source: XmlNode): Html {
     check(source, ["tblPr", "tblGrid", "tr"]);
     const properties = child(source, "tblPr");
@@ -1256,12 +1379,9 @@ class Importer {
     const tableCss: Css = {
       "margin-left": "-5.4pt",
       ...style.table,
+      ...this.styles.tableRegion(styleId, []).table,
       ...this.styles.table(properties),
     };
-    const indent = child(properties, "tblInd");
-    if (indent)
-      tableCss["margin-left"] =
-        this.styles.width(indent, "margin-left")["margin-left"] ?? "0pt";
     const table = this.make("table", {
       style: declarations(tableCss),
       ...(styleId
@@ -1324,6 +1444,7 @@ class Importer {
           "Row-level table property exceptions are not yet supported.",
         );
       const rowProperties = child(row, "trPr");
+      this.styles.cellSpacing(rowProperties);
       check(rowProperties, [
         "cnfStyle",
         "divId",
@@ -1360,6 +1481,7 @@ class Importer {
       const next = new Map<number, { cell: Html; span: number }>();
       for (const cell of elements(row, "tc")) {
         const props = child(cell, "tcPr");
+        const cellCss = this.styles.cell(props);
         const span = number(attr(child(props, "gridSpan"), "val"), cell, 1);
         if (span < 1 || column + span > grid.length)
           fail(cell, "A table cell exceeds its grid.");
@@ -1372,11 +1494,7 @@ class Importer {
           const above = previous.get(column);
           if (!above || above.span !== span)
             fail(cell, "A vertical merge has no matching cell above.");
-          if (text(cell).trim())
-            unsupported(
-              cell,
-              "A vertical merge continuation has independent content.",
-            );
+          this.validateMergeContinuation(cell);
           above.cell.attrs.rowspan = String(
             Number(above.cell.attrs.rowspan ?? 1) + 1,
           );
@@ -1435,7 +1553,6 @@ class Importer {
           );
           const conditional = this.styles.tableRegion(styleId, regions);
           const inner: Css = {};
-          const tableCss = { ...style.table, ...this.styles.table(properties) };
           if (tableCss["--word-border-inside-h"] && table.children.length > 1)
             inner["border-top"] = "var(--word-border-inside-h)";
           if (tableCss["--word-border-inside-v"] && column > 0)
@@ -1448,7 +1565,7 @@ class Importer {
             ...conditional.cell,
             ...inner,
             ...this.styles.margins(child(properties, "tblCellMar")),
-            ...this.styles.cell(props),
+            ...cellCss,
           };
           const htmlCell = this.make(
             on(child(rowProperties, "tblHeader")) ? "th" : "td",
