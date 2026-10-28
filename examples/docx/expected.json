@@ -1,0 +1,87 @@
+[
+  {
+    "file": "01-text-numbering.docx",
+    "requiredText": [
+      "实施报告",
+      "中文与 emoji 😀，粗体和斜体",
+      "第一项",
+      "子项",
+      "第二项",
+      "从四开始"
+    ]
+  },
+  {
+    "file": "02-table-merges.docx",
+    "requiredText": [
+      "合并标题",
+      "第三列",
+      "纵向合并",
+      "甲",
+      "乙",
+      "丙",
+      "丁"
+    ]
+  },
+  {
+    "file": "03-images.docx",
+    "requiredText": [
+      "图片样例"
+    ]
+  },
+  {
+    "file": "04-styles-sections.docx",
+    "requiredText": [
+      "继承样式",
+      "直接覆盖颜色",
+      "第一节结束",
+      "第二节正文",
+      "报告页眉",
+      "报告页脚"
+    ]
+  },
+  {
+    "file": "05-long-page-break.docx",
+    "requiredText": [
+      "长文档",
+      "第40段：固定字体与明确分页验证。",
+      "明确分页前",
+      "明确分页后"
+    ]
+  },
+  {
+    "file": "06-links-tabs.docx",
+    "requiredText": [
+      "书签目标",
+      "内部链接",
+      "外部链接",
+      "左侧",
+      "右侧"
+    ]
+  },
+  {
+    "file": "07-fields.docx",
+    "requiredText": [
+      "3",
+      "7",
+      "正确",
+      "缓存目录第一项",
+      "缓存目录第二项"
+    ]
+  },
+  {
+    "file": "08-comments-revisions.docx",
+    "requiredText": [
+      "第三季度完成项目",
+      "旧安排",
+      "新安排",
+      "请修改时间安排"
+    ]
+  },
+  {
+    "file": "09-chinese-fonts.docx",
+    "requiredText": [
+      "中西文混排 ABCxyz，全角标点。（测试）𠀀",
+      "缺失中文字体回退 ABC"
+    ]
+  }
+]

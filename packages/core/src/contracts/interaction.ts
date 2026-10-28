@@ -31,7 +31,10 @@ export const DocumentInteractionRequestSchema = z.strictObject({
   requestId: IdentifierSchema,
   documentId: IdentifierSchema,
   baseRevision: RevisionSchema,
-  annotations: z.array(AnnotationSchema.extend({ status: z.literal("open") })),
+  annotations: z.array(z.union([
+    AnnotationSchema.options[0].extend({ status: z.literal("open") }),
+    AnnotationSchema.options[1].extend({ status: z.literal("open") }),
+  ])),
   context: InteractionContextSchema,
   supportedOperations: z.array(ContentOperationNameSchema),
 });

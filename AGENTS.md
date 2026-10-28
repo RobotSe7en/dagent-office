@@ -2,13 +2,20 @@
 
 ## Scope
 
-`dagent-office` is an independent TypeScript SDK for HTML-based Office editing and human/AI collaboration. Read [README.md](README.md) and the task-relevant design documents before implementation. The core implements structural contracts, JSON Schemas, a read-only HTML/CSS document package model and resource validation/collection; office implements bounded package ZIP adapters. Session execution, editors and OOXML conversion are not implemented yet.
+`dagent-office` is an independent TypeScript SDK for HTML-based Office editing and human/AI collaboration. Read [README.md](README.md) and the task-relevant design documents before implementation. The core implements structural contracts, JSON Schemas, Word semantics, a read-only HTML/CSS document package model and resource validation/collection; office implements bounded package ZIP adapters and DOCX import. Editor provides a scriptless read-only preview. Three-format model design and declared DOCX import acceptance are complete; R1-06 is next. Session execution, rich-text editing, automatic pagination and Office/PDF export are not implemented yet.
 
 ## Working with the user
 
 - Complete authorized work and meaningful verification autonomously. Existing user decisions persist; do not add approval steps for routine implementation.
 - Do not use sub-agents unless the user explicitly requests them for the current task.
 - Keep changes focused. Never overwrite user changes or commit to `main` without explicit instruction. Do not publish packages or push unless requested.
+
+## Current implementation order
+
+- Design the complete V1 model for Word, PPT and Excel first (R1-05A); implement Word in the current stage.
+- Complete R1-10 DOCX reading, style mapping, read-only preview and import acceptance before R1-06 or subsequent editing work. Keep existing task IDs.
+- Import preserves fields and cached results, classic comments, and text insertion/deletion revisions. Unsupported content fails explicitly; no default partial import. Export remains R1-13.
+- See [data model](docs/data-model.md) and [iteration 1](docs/iteration-1.md) for detailed contracts and gates.
 
 ## Architecture and design principles
 
@@ -33,6 +40,8 @@
 - Treat generated HTML as data. Reject executable scripts, handlers and unauthorized resource references.
 - Keep import, editing, export and model orchestration separate. Use adapters for format libraries; never invent a second agent runtime.
 - Preserve supported package readers once published; reject unknown versions without modifying their bytes. Do not rewrite immutable revisions in place.
+
+- Chinese typography must preserve Latin/east-Asian font roles, source font names, UTF-16 text and variation sequences. Report preview substitutions and missing glyphs; pin and record fonts for visual fixtures. Do not silently download fonts.
 
 ## Verification
 

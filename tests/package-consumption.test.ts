@@ -44,6 +44,7 @@ beforeAll(() => {
     expect(archive).toBeDefined();
     dependencies[manifest.name] = "file:" + archive;
   }
+  writeFileSync(join(consumer, "input.docx"),readFileSync(join(repository,"examples/docx/08-comments-revisions.docx")));
   writeFileSync(join(consumer, "package.json"), JSON.stringify({
     name: "external-consumer",
     private: true,
@@ -71,6 +72,7 @@ afterAll(() => {
 test("packed packages load in Node and reject access to their internal files", () => {
   writeFileSync(join(consumer, "node.mjs"), [
     'import assert from "node:assert/strict";',
+    'import { readFile } from "node:fs/promises";',
     "for (const name of " + JSON.stringify(modules.map((name) => "@dagent-office/" + name)) + ") {",
     "  const module = await import(name);",
     '  assert.equal(Object.prototype.toString.call(module), "[object Module]");',
@@ -87,7 +89,11 @@ test("packed packages load in Node and reject access to their internal files", (
     'assert.equal(document.getNode("n-summary").text, "项目计划于第三季度完成。");',
     "assert.deepEqual(openDocument(document.serialize()).snapshot(), document.snapshot());",
     'const { createAssetDescriptor, collectDocumentAssets } = await import("@dagent-office/core");',
-    'const { readDocumentZip, writeDocumentZip } = await import("@dagent-office/office");',
+    'const { importDocx, readDocumentZip, writeDocumentZip } = await import("@dagent-office/office");',
+    'const native = openDocument(importDocx(new Uint8Array(await readFile("input.docx")), {documentId:"packed-docx"}));',
+    'assert.equal(native.snapshot().annotations[0].author.name, "审阅者");',
+    'assert.equal(native.snapshot().metadata.word.revisions.length, 2);',
+    'assert.deepEqual(openDocument(native.serialize()).snapshot(), native.snapshot());',
     'assert.equal(createAssetDescriptor("assets/a.bin", "application/octet-stream", new Uint8Array([97,98,99])).sha256, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");',
     'const collected = await collectDocumentAssets(files, { async readAsset() { throw new Error("Unexpected host read"); } });',
     'assert.deepEqual(openDocument(readDocumentZip(writeDocumentZip(collected))).snapshot(), document.snapshot());',

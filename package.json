@@ -20,7 +20,10 @@
     "browser:install": "node scripts/playwright.mjs install chromium --only-shell",
     "test:browser": "pnpm build && node scripts/playwright.mjs test",
     "pack:packages": "pnpm build:packages && node scripts/pack.mjs",
-    "check": "pnpm check:boundaries && pnpm typecheck && pnpm test && pnpm build"
+    "check": "pnpm check:boundaries && pnpm typecheck && pnpm test && pnpm build",
+    "fixtures:docx": "python3 scripts/generate-docx-fixtures.py",
+    "check:docx-reference": "python3 scripts/docx-reference.py",
+    "record:docx-reference": "python3 scripts/docx-reference.py --record"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",

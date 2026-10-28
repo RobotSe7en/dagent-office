@@ -9,6 +9,8 @@ const properties = new Set([
   "text-decoration", "text-decoration-line", "text-decoration-color", "text-decoration-style",
   "text-align", "text-indent", "line-height", "letter-spacing", "word-spacing", "white-space",
   "vertical-align", "width", "height", "min-width", "max-width", "min-height", "max-height",
+  "widows", "orphans", "table-layout", "list-style-type", "list-style-position", "break-before", "break-after", "break-inside",
+  "text-transform", "font-variant", "tab-size", "overflow-wrap",
   "margin", "margin-top", "margin-right", "margin-bottom", "margin-left",
   "padding", "padding-top", "padding-right", "padding-bottom", "padding-left",
   "border", "border-width", "border-style", "border-color", "border-collapse", "border-spacing",

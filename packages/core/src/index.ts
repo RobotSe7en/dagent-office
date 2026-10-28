@@ -1,6 +1,7 @@
 export { FORMAT_VERSION, PROTOCOL_VERSION, DocumentKindSchema, PackagePathSchema, RectangleSchema } from "./contracts/primitives.js";
 export type { DocumentKind, Rectangle } from "./contracts/primitives.js";
 export * from "./contracts/document.js";
+export * from "./contracts/word.js";
 export * from "./contracts/annotations.js";
 export * from "./contracts/operations.js";
 export * from "./contracts/interaction.js";

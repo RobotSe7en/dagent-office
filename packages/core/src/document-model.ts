@@ -3,6 +3,7 @@ import type { DocumentModel, DocumentPackage, DocumentSnapshot, OpenDocumentOpti
 import { normalizeCss } from "./document/css.js";
 import { parseHtml } from "./document/html.js";
 import { validateAssets } from "./document/assets.js";
+import { validateWord } from "./document/word.js";
 import { readManifest } from "./document/manifest.js";
 import { copyPackage, encode, readJson, readText } from "./document/package.js";
 import { checkLimit, freeze, invalid, readLimits, unsupported } from "./document/validation.js";
@@ -49,6 +50,7 @@ export function openDocument(input: DocumentPackage, options: OpenDocumentOption
     }
   }
 
+  validateWord(metadata, annotations, html);
   const snapshot: DocumentSnapshot = freeze({ manifest, html: html.html, styles, metadata, annotations });
   files.set("manifest.json", encode(JSON.stringify(manifest, null, 2) + "\n"));
   files.set(manifest.entrypoint, encode(snapshot.html));

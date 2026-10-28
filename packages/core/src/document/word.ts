@@ -1,0 +1,265 @@
+import type { DocumentMetadata } from "../contracts/document.js";
+import type { Annotation } from "../contracts/annotations.js";
+import type { ParsedHtml } from "./html.js";
+import { invalid } from "./validation.js";
+
+/** Validate native semantic references against the same HTML source, never an XML copy. */
+export function validateWord(
+  metadata: DocumentMetadata,
+  annotations: readonly Annotation[],
+  html: ParsedHtml,
+): void {
+  const word = metadata.word;
+  const node = (id: string) => {
+    const result = html.peekNode(id);
+    if (!result) invalid("A Word semantic reference targets a missing node.");
+    return result;
+  };
+  const unique = <T>(
+    values: readonly T[],
+    key: (item: T) => string,
+  ): Map<string, T> => {
+    const map = new Map<string, T>();
+    for (const item of values) {
+      const id = key(item);
+      if (map.has(id)) invalid("Word semantic identities must be unique.");
+      map.set(id, item);
+    }
+    return map;
+  };
+  if (word) {
+    const stories = unique(word.stories, (item) => item.storyId);
+    const storyRoots = unique(word.stories, (item) => item.rootNodeId);
+    const order = new Map(html.nodeIds().map((id, index) => [id, index]));
+    const storyOf = (id: string): string | undefined => {
+      let current: string | null = id;
+      while (current !== null) {
+        if (storyRoots.has(current)) return current;
+        current = node(current).parentNodeId;
+      }
+      return undefined;
+    };
+    if (word.stories.filter((story) => story.kind === "main").length !== 1)
+      invalid("Word requires exactly one main story.");
+    for (const story of word.stories) {
+      const root = node(story.rootNodeId);
+      if (
+        !html.isContainer(root.nodeId) ||
+        root.attributes["data-office-story"] !== story.kind
+      )
+        invalid("A Word story requires a matching content container.");
+      for (
+        let parent = root.parentNodeId;
+        parent !== null;
+        parent = node(parent).parentNodeId
+      ) {
+        if (storyRoots.has(parent)) invalid("Word stories cannot be nested.");
+      }
+    }
+    const main = word.stories.find((story) => story.kind === "main")!;
+    for (const section of metadata.sections) {
+      let parent: string | null = section.rootNodeId;
+      while (parent !== null && parent !== main.rootNodeId)
+        parent = node(parent).parentNodeId;
+      if (parent === null) invalid("A section must belong to the main story.");
+      for (const [kind, references] of [
+        ["header", section.headers],
+        ["footer", section.footers],
+      ] as const) {
+        for (const id of Object.values(references ?? {})) {
+          if (id !== undefined && stories.get(id)?.kind !== kind)
+            invalid(
+              "A section refers to a missing or wrong-kind auxiliary story.",
+            );
+        }
+      }
+    }
+    const styles = unique(word.styles, (item) => item.styleId);
+    const visited = new Set<string>();
+    for (const style of word.styles) {
+      for (const reference of [
+        style.basedOn,
+        style.linkedStyleId,
+        style.nextStyleId,
+      ]) {
+        if (reference !== undefined && !styles.has(reference))
+          invalid("A native style refers to a missing style.");
+      }
+      let current: typeof style | undefined = style;
+      const chain = new Set<string>();
+      while (current && !visited.has(current.styleId)) {
+        if (chain.has(current.styleId))
+          invalid("Native style inheritance is cyclic.");
+        chain.add(current.styleId);
+        current = current.basedOn ? styles.get(current.basedOn) : undefined;
+      }
+      for (const id of chain) visited.add(id);
+    }
+    const numbering = unique(word.numbering, (item) => item.numberingId);
+    for (const definition of word.numbering)
+      unique(definition.levels, (level) => String(level.level));
+    const links = unique(word.hyperlinks, (item) => item.nodeId);
+    const fields = unique(word.fields, (item) => item.nodeId);
+    const revisions = unique(word.revisions, (item) => item.nodeId);
+    const tabs = unique(word.tabs, (item) => item.paragraphNodeId);
+    const bookmarks = unique(word.bookmarks, (item) => item.bookmarkId);
+    unique(word.bookmarks, (item) => item.name);
+    const names = new Set(
+      [...bookmarks.values()].map((bookmark) => bookmark.name),
+    );
+    for (const bookmark of bookmarks.values()) {
+      node(bookmark.startNodeId);
+      node(bookmark.endNodeId);
+      if (
+        storyOf(bookmark.startNodeId) !== storyOf(bookmark.endNodeId) ||
+        order.get(bookmark.startNodeId)! > order.get(bookmark.endNodeId)!
+      )
+        invalid("A bookmark range crosses stories or is reversed.");
+    }
+    for (const link of links.values()) {
+      node(link.nodeId);
+      if (!link.target && !link.bookmark)
+        invalid("A hyperlink requires a target.");
+      if (
+        link.target &&
+        (!/^(https?:|mailto:)/i.test(link.target) ||
+          /[\u0000-\u001f\u007f]/.test(link.target))
+      )
+        invalid("A hyperlink has an unsupported or executable target.");
+      if (!link.target && link.bookmark && !names.has(link.bookmark))
+        invalid("A hyperlink refers to a missing bookmark.");
+    }
+    for (const field of fields.values()) {
+      if (node(field.nodeId).attributes["data-word-field"] === undefined)
+        invalid("A field requires its source marker or container.");
+      if (
+        node(field.nodeId).attributes["data-word-field"] === "begin" &&
+        field.endNodeId === undefined
+      )
+        invalid("A complex field requires its closing marker.");
+      if (field.endNodeId !== undefined) {
+        if (
+          node(field.endNodeId).attributes["data-word-field-end"] !==
+            field.nodeId ||
+          storyOf(field.endNodeId) !== storyOf(field.nodeId) ||
+          order.get(field.endNodeId)! < order.get(field.nodeId)!
+        )
+          invalid("A field end does not match its start.");
+      }
+      for (const id of field.resultNodeIds ?? []) {
+        node(id);
+        if (storyOf(id) !== storyOf(field.nodeId))
+          invalid("A field result crosses a story boundary.");
+      }
+      for (const nested of field.instructionFields ?? []) {
+        if (
+          !fields.has(nested.fieldNodeId) ||
+          nested.offset > field.instruction.length ||
+          nested.fieldNodeId === field.nodeId
+        )
+          invalid("A nested field instruction reference is invalid.");
+      }
+    }
+    const fieldDone = new Set<string>();
+    const activeFields = new Set<string>();
+    for (const root of fields.keys()) {
+      const stack: { id: string; exit: boolean }[] = [
+        { id: root, exit: false },
+      ];
+      while (stack.length) {
+        const entry = stack.pop()!;
+        if (entry.exit) {
+          activeFields.delete(entry.id);
+          fieldDone.add(entry.id);
+          continue;
+        }
+        if (fieldDone.has(entry.id)) continue;
+        if (activeFields.has(entry.id))
+          invalid("Field instruction references are cyclic.");
+        activeFields.add(entry.id);
+        stack.push({ id: entry.id, exit: true });
+        for (const nested of fields.get(entry.id)!.instructionFields ?? [])
+          stack.push({ id: nested.fieldNodeId, exit: false });
+      }
+    }
+    for (const revision of revisions.values()) {
+      if (
+        node(revision.nodeId).tagName !==
+        (revision.kind === "insert" ? "ins" : "del")
+      )
+        invalid("A revision must refer to the matching revision container.");
+    }
+    for (const tab of tabs.values()) {
+      if (
+        !["p", "h1", "h2", "h3", "h4", "h5", "h6"].includes(
+          node(tab.paragraphNodeId).tagName,
+        )
+      )
+        invalid("Tab stops require a paragraph.");
+      unique(tab.stops, (stop) => String(stop.position));
+    }
+    for (const table of unique(word.tables, (item) => item.nodeId).values()) {
+      if (node(table.nodeId).tagName !== "table")
+        invalid("A table grid requires a table node.");
+    }
+    for (const id of html.nodeIds()) {
+      const current = node(id);
+      const attrs = current.attributes;
+      if (attrs["data-word-style"] && !styles.has(attrs["data-word-style"]))
+        invalid("A node refers to a missing native style.");
+      if (attrs["data-word-numbering"]) {
+        const level = Number(attrs["data-word-level"]);
+        if (
+          !numbering
+            .get(attrs["data-word-numbering"])
+            ?.levels.some((item) => item.level === level)
+        )
+          invalid("A paragraph refers to a missing numbering level.");
+      }
+      if (attrs["data-word-field"] !== undefined && !fields.has(id))
+        invalid("A field has no semantic definition.");
+      if (attrs["data-word-link"] !== undefined && !links.has(id))
+        invalid("A link has no semantic definition.");
+      if (["ins", "del"].includes(current.tagName) && !revisions.has(id))
+        invalid("A revision has no semantic definition.");
+    }
+  } else {
+    for (const id of html.nodeIds()) {
+      const current = node(id);
+      if (["ins", "del"].includes(current.tagName))
+        invalid("Native revision containers require Word metadata.");
+    }
+  }
+  for (const annotation of annotations) {
+    if (annotation.bodyNodeId !== undefined) {
+      if (
+        !word?.stories.some(
+          (story) =>
+            story.kind === "comment" &&
+            story.rootNodeId === annotation.bodyNodeId,
+        )
+      )
+        invalid("A rich annotation requires its comment story.");
+    }
+    if (
+      annotation.status !== "needs_reanchor" &&
+      ["text", "text-set"].includes(annotation.anchor.kind)
+    ) {
+      const ranges =
+        annotation.anchor.kind === "text"
+          ? [annotation.anchor]
+          : annotation.anchor.kind === "text-set"
+            ? annotation.anchor.ranges
+            : [];
+      for (const range of ranges) {
+        const text = html.getNode(range.nodeId)!.text;
+        if (
+          range.from > range.to ||
+          range.to > text.length ||
+          text.slice(range.from, range.to) !== range.quote
+        )
+          invalid("An annotation text range does not match its source.");
+      }
+    }
+  }
+}

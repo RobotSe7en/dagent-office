@@ -1,6 +1,6 @@
 # 技术选型
 
-第一版采用 TypeScript 和浏览器 HTML/CSS 排版。文档协议、批注、事务、提案校验及 DOCX/PPTX/XLSX 的 OOXML 读写和样式映射由本项目实现；文本输入、浏览器渲染及 ZIP/XML/哈希等通用能力复用成熟基础库。宿主智能体负责模型调用和运行，SDK 不引入模型供应商依赖。R1-02 至 R1-05 已锁定工程、结构校验、HTML/CSS、资源哈希及 ZIP 依赖；编辑、XML 与公式计算依赖按后续任务验证。
+第一版采用 TypeScript 和浏览器 HTML/CSS 排版。文档协议、批注、事务、提案校验及 DOCX/PPTX/XLSX 的 OOXML 读写和样式映射由本项目实现；文本输入、浏览器渲染及 ZIP/XML/哈希等通用能力复用成熟基础库。宿主智能体负责模型调用和运行，SDK 不引入模型供应商依赖。R1-02 至 R1-05 已锁定工程、结构校验、HTML/CSS、资源哈希及 ZIP 依赖；R1-10 增加 XML 适配器；编辑与公式计算依赖仍按后续任务验证。
 
 ## 已锁定的结构校验依赖
 
@@ -33,6 +33,17 @@
 
 资源 MIME 识别和基本容器边界由内部轻量适配器检查，不实现像素解码。ZIP 适配层在解压前按原始记录检查路径、重复项、结构及预算，压缩解压由 fflate 执行；不能只依赖上层解包 Map，因为此时重复名可能已被覆盖。版本与许可来自已安装包，支持范围见[资源与 ZIP](resources-and-zip.md)。[fflate](https://github.com/101arrowz/fflate)、[noble-hashes](https://github.com/paulmillr/noble-hashes)
 
+## 已锁定的 XML 依赖与参考字体
+
+| 依赖 | 版本 | 用途 | 许可证 |
+| --- | --- | --- | --- |
+| saxes | 6.0.0 | 命名空间感知的 XML 事件解析，内部适配器执行预算和语义检查 | ISC |
+| xmlchars | 2.2.0 | saxes 间接依赖，XML 字符规则 | MIT |
+
+`saxes 6.0.0` 的上游声明在当前严格 TypeScript 配置下存在泛型约束及 `exactOptionalPropertyTypes` 问题。通过仓库 `patches` 和 pnpm `patchedDependencies` 只修正声明，不改运行时代码；继续保持 `skipLibCheck: false`，公开接口不泄露解析器类型。许可证来自已安装包。
+
+固定视觉环境使用 Noto Sans CJK SC、Noto Serif CJK SC 和 Liberation Serif，其字体许可均为 SIL OFL 1.1；依据本机字体包的版权文件核对。字体二进制不随 SDK 分发，具体文件和 SHA-256 见[参考记录](../examples/docx/reference.json)。参考渲染工具 LibreOffice/Poppler 只用于开发验收，不成为 SDK 依赖。
+
 ## 已锁定的工程依赖
 
 | 依赖 | 版本 | 用途 | 许可证 |
@@ -62,7 +73,7 @@ TypeScript 暂用 6.0.3，以保留工程边界检查所需的编译器 API；7.
 | PPT 编辑 | HTML 定位布局、SVG、自有对象操作 | 几何、层级、框选、组合、母版与主题 |
 | Excel 编辑 | 虚拟网格、自有单元格适配器 | HTML 文档源和计算器数据间的转换 |
 | Excel 计算 | 优先验证 Univer 基础公式能力 | 支持函数矩阵、计算状态和依赖更新桥接 |
-| OOXML 公共基础 | fflate（已锁定）；XML 解析器待验证，如 fast-xml-parser | 自行实现 OPC 包、关系及三格式映射 |
+| OOXML 公共基础 | fflate（已锁定）；saxes 6.0.0（已锁定） | 自行实现 OPC 包、关系及三格式映射 |
 | DOCX 读写 | 自研 OOXML 适配器 | 原生段落、文字、样式、编号、节和页面语义 |
 | PPTX 读写 | 自研 OOXML 适配器 | 原生对象、主题、母版、对象树和几何映射 |
 | XLSX 读写 | 自研 OOXML 适配器 | 原生单元格、公式、样式、工作表及关系映射 |
@@ -87,7 +98,7 @@ Office 转换路线已确定为自研 OOXML，不采用 docx、PptxGenJS、Excel
 
 每个格式适配器声明自己支持的导入、编辑和导出特性，记录具体库版本与许可证。基础库没有覆盖的样式和对象由适配层补齐，无法完成的转换返回明确结果。
 
-第一轮按“HTML 基础 → 独立 Word 闭环 → 达智智能体验证”推进。DOCX、Tiptap 和 PDF 纳入第一轮正式验收，PPTX 和 XLSX 先做小型验证。ZIP 候选还须验证原始路径、重复项和有界展开，不能仅以库能成功打开文件作为通过标准。详细任务见[第一轮实施细则](iteration-1.md)。
+第一轮按“已有 HTML 包基础 → 三格式模型设计 → DOCX 读取映射与只读验收 → 事务交互及独立 Word 闭环 → 达智智能体验证”推进。DOCX、Tiptap 和 PDF 纳入第一轮正式验收，PPTX 和 XLSX 先做小型验证。ZIP 候选还须验证原始路径、重复项和有界展开，不能仅以库能成功打开文件作为通过标准。详细任务见[第一轮实施细则](iteration-1.md)。
 
 独立发布前确定本项目许可证，并提供依赖及字体许可清单。尚未确定第一方许可证，当前目录不代表已作出开源授权。
 

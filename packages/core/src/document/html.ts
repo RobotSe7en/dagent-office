@@ -15,7 +15,7 @@ type Node = DefaultTreeAdapterTypes.Node;
 const bodyTags = new Set([
   "article", "section", "div", "h1", "h2", "h3", "h4", "h5", "h6", "p", "span",
   "strong", "em", "u", "s", "sub", "sup", "br", "ul", "ol", "li", "table",
-  "thead", "tbody", "tfoot", "tr", "th", "td", "img",
+  "thead", "tbody", "tfoot", "tr", "th", "td", "img", "ins", "del",
 ]);
 const shellTags = new Set(["html", "head", "body", "meta", "title", "link"]);
 const supportedTags = new Set([...bodyTags, ...shellTags]);
@@ -57,6 +57,8 @@ function textContent(node: Node): string {
 
 export interface ParsedHtml {
   readonly html: string;
+  nodeIds(): readonly string[];
+  peekNode(nodeId: string): Omit<DocumentNode, "text" | "html"> | undefined;
   getNode(nodeId: string): DocumentNode | undefined;
   hasNode(nodeId: string): boolean;
   isContainer(nodeId: string): boolean;
@@ -168,6 +170,11 @@ export function parseHtml(source: string, manifest: DocumentManifest, files: Doc
     }
     return {
       html: serialize(tree),
+      nodeIds: () => [...index.keys()],
+      peekNode: (nodeId) => {
+        const entry = index.get(nodeId);
+        return entry ? { nodeId, tagName: entry.element.tagName, attributes: Object.fromEntries(entry.element.attrs.map((attr) => [attr.name, attr.value])), parentNodeId: entry.parentId, childNodeIds: entry.children } : undefined;
+      },
       hasNode: (nodeId) => index.has(nodeId),
       isContainer: (nodeId) => {
         const element = index.get(nodeId)?.element;

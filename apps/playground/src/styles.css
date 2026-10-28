@@ -33,3 +33,10 @@ p {
   color: #525d6b;
   font-size: 0.875rem;
 }
+main { width: min(1100px, calc(100% - 2rem)); margin: 2rem auto; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
+button, input { font: inherit; }
+button { padding: .5rem .8rem; cursor: pointer; }
+label { display: flex; gap: .5rem; align-items: center; }
+[role="alert"] { color: #a00000; overflow-wrap: anywhere; }
+.preview { overflow: auto; }

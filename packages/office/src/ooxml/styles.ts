@@ -1,0 +1,1254 @@
+import { DocumentError } from "@dagent-office/core";
+import type { WordMetadata, WordNumberLevel } from "@dagent-office/core";
+import type { OpcPackage } from "./package.js";
+import {
+  A,
+  W,
+  attr,
+  check,
+  child,
+  elements,
+  fail,
+  number,
+  on,
+  unsupported,
+} from "./xml.js";
+import type { XmlNode } from "./xml.js";
+
+export type Css = Record<string, string>;
+export function nonInheritedRun(css: Css): Css {
+  return Object.fromEntries(
+    Object.entries(css).filter(
+      ([name]) =>
+        name === "background-color" || name.startsWith("text-decoration"),
+    ),
+  );
+}
+export function inheritedRun(css: Css): Css {
+  return Object.fromEntries(
+    Object.entries(css).filter(
+      ([name]) =>
+        name !== "background-color" && !name.startsWith("text-decoration"),
+    ),
+  );
+}
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+export function declarations(css: Css): string {
+  return Object.entries(css)
+    .map(([name, value]) => name + ":" + value)
+    .join(";");
+}
+export function pt(value: number): string {
+  return String(Math.round(value * 10000) / 10000) + "pt";
+}
+const val = (node: XmlNode | undefined): string | undefined =>
+  attr(node, "val");
+const quoteFont = (name: string): string =>
+  '"' + name.replace(/["\\]/g, "\\$&").replace(/[\u0000-\u001f]/g, "") + '"';
+export interface StyleValues {
+  runClasses?: string[];
+  p: Css;
+  r: Css;
+  table: Css;
+  cell: Css;
+  numbering?: { id: string; level: number };
+  tabs?: XmlNode;
+  outline?: number;
+}
+const empty = (): StyleValues => ({ p: {}, r: {}, table: {}, cell: {} });
+
+export function tableLookMask(node: XmlNode | undefined): number | undefined {
+  if (!node) return undefined;
+  const value = attr(node, "val");
+  if (value !== undefined && !/^[0-9a-f]{1,4}$/i.test(value))
+    fail(node, "A table look mask is invalid.");
+  let mask = parseInt(value ?? "0000", 16);
+  for (const [name, bit] of [
+    ["firstRow", 32],
+    ["lastRow", 64],
+    ["firstColumn", 128],
+    ["lastColumn", 256],
+    ["noHBand", 512],
+    ["noVBand", 1024],
+  ] as const) {
+    const flag = attr(node, name);
+    if (flag !== undefined) {
+      if (!["0", "1", "true", "false", "on", "off"].includes(flag))
+        fail(node, "A table look flag is invalid.");
+      mask = ["1", "true", "on"].includes(flag) ? mask | bit : mask & ~bit;
+    }
+  }
+  return mask;
+}
+export class DocxStyles {
+  readonly css: string[] = [];
+  readonly styles: WordMetadata["styles"] = [];
+  readonly numbering: WordMetadata["numbering"] = [];
+  readonly defaults: StyleValues;
+  readonly defaultParagraph: string | undefined;
+  readonly defaultCharacter: string | undefined;
+  readonly defaultTable: string | undefined;
+  private readonly conditional = new Map<string, Map<string, StyleValues>>();
+  private readonly numberProperties = new Map<string, Css>();
+  private readonly definitions = new Map<string, XmlNode>();
+  private readonly resolved = new Map<string, StyleValues>();
+  private readonly themeColors = new Map<string, string>();
+  private readonly themeFonts = new Map<string, string>();
+  private readonly locale: string;
+  readonly language: string | undefined;
+
+  constructor(opc: OpcPackage, main: string) {
+    const stylePath = opc.related(main, "styles");
+    const styleRoot = stylePath ? opc.read(stylePath) : undefined;
+    const defaultLanguage = child(
+      child(child(child(styleRoot, "docDefaults"), "rPrDefault"), "rPr"),
+      "lang",
+    );
+    this.language = attr(defaultLanguage, "val");
+    this.locale =
+      attr(defaultLanguage, "eastAsia") ??
+      attr(defaultLanguage, "val") ??
+      "en-US";
+    const themePath = opc.related(main, "theme");
+    if (themePath) {
+      const root = opc.read(themePath);
+      const theme = child(root, "themeElements", A);
+      for (const color of elements(
+        child(theme, "clrScheme", A),
+        undefined,
+        A,
+      )) {
+        const values = elements(color, undefined, A);
+        const item = values[0];
+        const value = attr(
+          item,
+          item?.name === "sysClr" ? "lastClr" : "val",
+          "",
+        );
+        if (value && /^[0-9a-f]{6}$/i.test(value))
+          this.themeColors.set(color.name, value);
+      }
+      const fonts = child(theme, "fontScheme", A);
+      for (const family of ["major", "minor"]) {
+        const group = child(fonts, family + "Font", A);
+        for (const [suffix, name] of [
+          ["Ascii", "latin"],
+          ["HAnsi", "latin"],
+          ["EastAsia", "ea"],
+          ["Bidi", "cs"],
+        ]) {
+          const face = attr(child(group, name!, A), "typeface", "");
+          if (face) this.themeFonts.set(family + suffix, face);
+        }
+        for (const font of elements(group, "font", A)) {
+          const script = attr(font, "script", "");
+          const face = attr(font, "typeface", "");
+          if (script && face)
+            this.themeFonts.set(family + "EastAsia:" + script, face);
+        }
+      }
+    }
+    const root = styleRoot;
+    if (root && (root.uri !== W || root.name !== "styles"))
+      fail(root, "The styles part has an invalid root.");
+    check(root, ["docDefaults", "latentStyles", "style"]);
+    const docDefaults = child(root, "docDefaults");
+    this.defaults = empty();
+    Object.assign(
+      this.defaults.r,
+      this.run(child(child(docDefaults, "rPrDefault"), "rPr")),
+    );
+    Object.assign(
+      this.defaults.p,
+      this.paragraph(child(child(docDefaults, "pPrDefault"), "pPr")),
+    );
+    for (const style of elements(root, "style")) {
+      const id = attr(style, "styleId");
+      const kind = attr(style, "type");
+      if (
+        !id ||
+        !kind ||
+        !["paragraph", "character", "table", "numbering"].includes(kind) ||
+        this.definitions.has(id)
+      )
+        fail(style, "A native style identity or type is invalid.");
+      check(style, [
+        "name",
+        "aliases",
+        "basedOn",
+        "next",
+        "link",
+        "autoRedefine",
+        "hidden",
+        "uiPriority",
+        "semiHidden",
+        "unhideWhenUsed",
+        "qFormat",
+        "locked",
+        "personal",
+        "personalCompose",
+        "personalReply",
+        "rsid",
+        "pPr",
+        "rPr",
+        "tblPr",
+        "trPr",
+        "tcPr",
+        "tblStylePr",
+      ]);
+
+      this.definitions.set(id, style);
+      const basedOn = val(child(style, "basedOn"));
+      const linkedStyleId = val(child(style, "link"));
+      const nextStyleId = val(child(style, "next"));
+      const conditions: NonNullable<
+        WordMetadata["styles"][number]["conditions"]
+      > = [];
+      const conditional = new Map<string, StyleValues>();
+      this.styles.push({
+        styleId: id,
+        kind: kind as "paragraph" | "character" | "table" | "numbering",
+        cssClass: "ws" + this.styles.length,
+        ...(basedOn ? { basedOn } : {}),
+        ...(linkedStyleId ? { linkedStyleId } : {}),
+        ...(nextStyleId ? { nextStyleId } : {}),
+        conditions,
+      });
+      const metadata = this.styles[this.styles.length - 1]!;
+      const tblPr = child(style, "tblPr");
+      const look = tableLookMask(child(tblPr, "tblLook"));
+      if (look !== undefined) metadata.tableLookMask = look;
+      for (const [name, key] of [
+        ["tblStyleRowBandSize", "rowBandSize"],
+        ["tblStyleColBandSize", "columnBandSize"],
+      ] as const) {
+        const value = child(tblPr, name);
+        if (value) metadata[key] = number(val(value), value);
+      }
+      for (const region of elements(style, "tblStylePr")) {
+        const type = attr(region, "type");
+        if (
+          !type ||
+          ![
+            "wholeTable",
+            "firstRow",
+            "lastRow",
+            "firstCol",
+            "lastCol",
+            "band1Vert",
+            "band2Vert",
+            "band1Horz",
+            "band2Horz",
+            "neCell",
+            "nwCell",
+            "seCell",
+            "swCell",
+          ].includes(type) ||
+          conditional.has(type)
+        )
+          fail(region, "A conditional table region is invalid.");
+        check(region, ["pPr", "rPr", "tblPr", "tcPr", "trPr"]);
+        const row = child(region, "trPr");
+        if (row && elements(row).length)
+          unsupported(row, "Conditional row properties are not supported.");
+        const values: StyleValues = {
+          p: this.paragraph(child(region, "pPr")),
+          r: this.run(child(region, "rPr")),
+          table: this.table(child(region, "tblPr")),
+          cell: this.cell(child(region, "tcPr")),
+        };
+        if (Object.keys(nonInheritedRun(values.r)).length)
+          unsupported(
+            region,
+            "Conditional character shading and decoration are not yet supported.",
+          );
+        conditional.set(type, values);
+        const cssClass = metadata.cssClass + "-" + type;
+        conditions.push({
+          region: type as NonNullable<
+            typeof metadata.conditions
+          >[number]["region"],
+          cssClass,
+        });
+        this.css.push(
+          "." +
+            cssClass +
+            "{" +
+            declarations({
+              ...values.p,
+              ...values.r,
+              ...values.table,
+              ...values.cell,
+            }) +
+            "}",
+        );
+      }
+      this.conditional.set(id, conditional);
+      if (["1", "true", "on"].includes(attr(style, "default") ?? "")) {
+        if (kind === "paragraph") this.defaultParagraph = id;
+        if (kind === "character") this.defaultCharacter = id;
+        if (kind === "table") this.defaultTable = id;
+      }
+    }
+    this.css.unshift(
+      ".word-main{" + declarations(inheritedRun(this.defaults.r)) + "}",
+      "p,h1,h2,h3,h4,h5,h6{" + declarations(this.defaults.p) + "}",
+      ".word-default-run{" +
+        declarations(nonInheritedRun(this.defaults.r)) +
+        "}",
+    );
+    for (const style of this.styles) {
+      const value = this.resolve(style.styleId);
+      const definition = this.definitions.get(style.styleId)!;
+      const parent = style.basedOn ? this.resolve(style.basedOn) : empty();
+      style.paragraphProperties = Object.keys(
+        this.paragraph(child(definition, "pPr")),
+      );
+      style.runProperties = Object.keys(
+        this.run(child(definition, "rPr"), parent.r, true),
+      );
+      const weight =
+        style.kind === "character" ? 4 : style.kind === "paragraph" ? 3 : 1;
+      const rules =
+        style.kind === "character"
+          ? value.r
+          : style.kind === "table"
+            ? { ...value.table, ...inheritedRun(value.r) }
+            : { ...value.p, ...inheritedRun(value.r) };
+      this.css.push(
+        ("." + style.cssClass).repeat(weight) + "{" + declarations(rules) + "}",
+      );
+      if (style.kind !== "character") {
+        const special = nonInheritedRun(value.r);
+        if (Object.keys(special).length) {
+          style.runCssClass = style.cssClass + "-run";
+          this.css.push(
+            ("." + style.runCssClass).repeat(
+              style.kind === "paragraph" ? 3 : 1,
+            ) +
+              "{" +
+              declarations(special) +
+              "}",
+          );
+        }
+      }
+    }
+    const numPath = opc.related(main, "numbering");
+    if (numPath) this.readNumbering(opc.read(numPath));
+  }
+  color(node: XmlNode, attribute = "val"): string | undefined {
+    if (attribute === "fill") {
+      const pattern = attr(node, "val");
+      if (pattern === "nil") return "transparent";
+      if (pattern && pattern !== "clear")
+        unsupported(node, "Pattern shading is not yet supported.");
+    }
+    const theme = attr(node, attribute === "fill" ? "themeFill" : "themeColor");
+    const roles: Record<string, string> = {
+      dark1: "dk1",
+      light1: "lt1",
+      dark2: "dk2",
+      light2: "lt2",
+      text1: "dk1",
+      background1: "lt1",
+      text2: "dk2",
+      background2: "lt2",
+      hyperlink: "hlink",
+      followedHyperlink: "folHlink",
+    };
+    let value = theme
+      ? this.themeColors.get(roles[theme] ?? theme)
+      : attr(node, attribute);
+    if (value === "auto") return undefined;
+    if (!value || !/^[0-9a-f]{6}$/i.test(value))
+      return unsupported(
+        node,
+        "A document color or theme role cannot be resolved.",
+      );
+    const tint = attr(
+      node,
+      attribute === "fill" ? "themeFillTint" : "themeTint",
+    );
+    const shade = attr(
+      node,
+      attribute === "fill" ? "themeFillShade" : "themeShade",
+    );
+    const modifier = tint ?? shade;
+    if (modifier !== undefined) {
+      if (!/^[0-9a-f]{2}$/i.test(modifier))
+        fail(node, "A theme color modifier is invalid.");
+      // Word applies tint in preference to shade and changes HSL luminance.
+      const rgb = [0, 2, 4].map(
+        (start) => parseInt(value!.slice(start, start + 2), 16) / 255,
+      );
+      const [red, green, blue] = rgb as [number, number, number];
+      const maximum = Math.max(...rgb),
+        minimum = Math.min(...rgb),
+        delta = maximum - minimum;
+      const lightness = (maximum + minimum) / 2;
+      const saturation =
+        delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1));
+      const hue =
+        delta === 0
+          ? 0
+          : maximum === red
+            ? ((green - blue) / delta + 6) % 6
+            : maximum === green
+              ? (blue - red) / delta + 2
+              : (red - green) / delta + 4;
+      const factor = parseInt(modifier, 16) / 255;
+      const resultLightness =
+        tint !== undefined ? 1 - (1 - lightness) * factor : lightness * factor;
+      const chroma = (1 - Math.abs(2 * resultLightness - 1)) * saturation;
+      const x = chroma * (1 - Math.abs((hue % 2) - 1)),
+        offset = resultLightness - chroma / 2;
+      const channels =
+        hue < 1
+          ? [chroma, x, 0]
+          : hue < 2
+            ? [x, chroma, 0]
+            : hue < 3
+              ? [0, chroma, x]
+              : hue < 4
+                ? [0, x, chroma]
+                : hue < 5
+                  ? [x, 0, chroma]
+                  : [chroma, 0, x];
+      value = channels
+        .map((channel) =>
+          Math.round((channel + offset) * 255)
+            .toString(16)
+            .padStart(2, "0"),
+        )
+        .join("");
+    }
+    return "#" + value.toLowerCase();
+  }
+  run(
+    properties: XmlNode | undefined,
+    inherited: Css = {},
+    toggle = false,
+  ): Css {
+    if (!properties) return {};
+    check(properties, [
+      "rStyle",
+      "rFonts",
+      "b",
+      "bCs",
+      "i",
+      "iCs",
+      "caps",
+      "smallCaps",
+      "strike",
+      "dstrike",
+      "outline",
+      "shadow",
+      "emboss",
+      "imprint",
+      "noProof",
+      "snapToGrid",
+      "vanish",
+      "webHidden",
+      "color",
+      "spacing",
+      "w",
+      "kern",
+      "position",
+      "sz",
+      "szCs",
+      "highlight",
+      "u",
+      "effect",
+      "bdr",
+      "shd",
+      "fitText",
+      "vertAlign",
+      "rtl",
+      "cs",
+      "em",
+      "lang",
+      "eastAsianLayout",
+      "specVanish",
+      "oMath",
+    ]);
+    const css: Css = {};
+    const fonts = child(properties, "rFonts");
+    if (fonts) {
+      const families: string[] = [];
+      for (const [name, themeName] of [
+        ["ascii", "asciiTheme"],
+        ["hAnsi", "hAnsiTheme"],
+        ["eastAsia", "eastAsiaTheme"],
+        ["cs", "cstheme"],
+      ]) {
+        const role = attr(fonts, themeName!);
+        const language =
+          attr(child(properties, "lang"), "eastAsia") ??
+          attr(child(properties, "lang"), "val") ??
+          this.locale;
+        const script = /^ja/i.test(language)
+          ? "Jpan"
+          : /^ko/i.test(language)
+            ? "Hang"
+            : /^zh-(?:TW|HK|MO|Hant)/i.test(language)
+              ? "Hant"
+              : "Hans";
+        const face =
+          attr(fonts, name!) ??
+          (role
+            ? (this.themeFonts.get(role) ??
+              this.themeFonts.get(role + ":" + script))
+            : undefined);
+        if (role && !face)
+          unsupported(fonts, "A theme font cannot be resolved.");
+        if (face) {
+          css["--word-font-" + name!] = quoteFont(face);
+          if (!families.includes(face)) families.push(face);
+        }
+      }
+      if (families.length)
+        css["font-family"] = families.map(quoteFont).join(",");
+    }
+    for (const [name, property, active, inactive] of [
+      ["b", "font-weight", "bold", "normal"],
+      ["i", "font-style", "italic", "normal"],
+      ["caps", "text-transform", "uppercase", "none"],
+      ["smallCaps", "font-variant", "small-caps", "normal"],
+    ]) {
+      const item = child(properties, name!);
+      if (item) {
+        const enabled = on(item);
+        if (toggle && !enabled) continue;
+        css[property!] = (
+          toggle && enabled && inherited[property!] === active ? false : enabled
+        )
+          ? active!
+          : inactive!;
+      }
+    }
+    for (const feature of [
+      "outline",
+      "shadow",
+      "emboss",
+      "imprint",
+      "effect",
+      "fitText",
+      "eastAsianLayout",
+      "oMath",
+    ]) {
+      const item = child(properties, feature);
+      if (item && (feature === "effect" ? val(item) !== "none" : on(item)))
+        unsupported(item);
+    }
+    for (const feature of ["vanish", "webHidden", "rtl", "cs", "specVanish"])
+      if (on(child(properties, feature)))
+        unsupported(child(properties, feature)!);
+    const kerning = child(properties, "kern");
+    if (kerning)
+      css["--word-kerning-threshold"] = pt(number(val(kerning), kerning) / 2);
+    const complexSize = child(properties, "szCs");
+    if (complexSize)
+      css["--word-font-size-cs"] = pt(
+        number(val(complexSize), complexSize) / 2,
+      );
+    for (const [name, key] of [
+      ["bCs", "--word-bold-cs"],
+      ["iCs", "--word-italic-cs"],
+    ] as const) {
+      const value = child(properties, name);
+      if (value) css[key] = on(value) ? "1" : "0";
+    }
+    const size = child(properties, "sz");
+    if (size) {
+      const value = number(val(size), size);
+      if (value <= 0) fail(size, "Font size must be positive.");
+      css["font-size"] = pt(value / 2);
+    }
+    const color = child(properties, "color");
+    if (color) css.color = this.color(color) ?? "#000000";
+    const shade = child(properties, "shd");
+    if (shade && attr(shade, "fill") !== "auto") {
+      const fill = this.color(shade, "fill");
+      if (fill) css["background-color"] = fill;
+    }
+    const highlight = val(child(properties, "highlight"));
+    if (highlight && highlight !== "none") {
+      const colors: Record<string, string> = {
+        yellow: "#ffff00",
+        green: "#00ff00",
+        cyan: "#00ffff",
+        magenta: "#ff00ff",
+        blue: "#0000ff",
+        red: "#ff0000",
+        darkBlue: "#000080",
+        darkCyan: "#008080",
+        darkGreen: "#008000",
+        darkMagenta: "#800080",
+        darkRed: "#800000",
+        darkYellow: "#808000",
+        darkGray: "#808080",
+        lightGray: "#c0c0c0",
+        black: "#000000",
+        white: "#ffffff",
+      };
+      if (!colors[highlight])
+        unsupported(properties, "An unknown highlight color is used.");
+      css["background-color"] = colors[highlight]!;
+    }
+    const underline = child(properties, "u");
+    const strike = child(properties, "strike"),
+      doubleStrike = child(properties, "dstrike");
+    if (underline || strike || doubleStrike) {
+      const lines = new Set(
+        (inherited["text-decoration-line"] ?? "")
+          .split(/\s+/)
+          .filter((value) => value && value !== "none"),
+      );
+      const type = val(underline) ?? "single";
+      if (underline) {
+        if (
+          !["none", "single", "double", "dotted", "dash", "wave"].includes(type)
+        )
+          unsupported(underline);
+        if (type === "none") lines.delete("underline");
+        else lines.add("underline");
+      }
+      const strikeNode = doubleStrike ?? strike;
+      if (strikeNode) {
+        const enabled = on(strikeNode);
+        if (!toggle || enabled) {
+          if (enabled && !(toggle && lines.has("line-through")))
+            lines.add("line-through");
+          else lines.delete("line-through");
+        }
+      }
+      css["text-decoration-line"] = [...lines].join(" ") || "none";
+      if (
+        doubleStrike &&
+        on(doubleStrike) &&
+        underline &&
+        !["none", "double"].includes(type)
+      )
+        unsupported(
+          properties,
+          "Mixed underline and double-strike decoration styles are not supported.",
+        );
+      if (doubleStrike && on(doubleStrike))
+        css["text-decoration-style"] = "double";
+      else if (underline)
+        css["text-decoration-style"] =
+          type === "double"
+            ? "double"
+            : type === "dotted"
+              ? "dotted"
+              : type === "dash"
+                ? "dashed"
+                : type === "wave"
+                  ? "wavy"
+                  : "solid";
+      if (
+        underline &&
+        (attr(underline, "color") || attr(underline, "themeColor"))
+      )
+        css["text-decoration-color"] =
+          this.color(underline, "color") ?? "currentColor";
+    }
+    const align = val(child(properties, "vertAlign"));
+    if (align) {
+      if (!["baseline", "superscript", "subscript"].includes(align))
+        unsupported(properties);
+      css["vertical-align"] =
+        align === "superscript"
+          ? "super"
+          : align === "subscript"
+            ? "sub"
+            : "baseline";
+    }
+    const spacing = child(properties, "spacing");
+    if (spacing) css["letter-spacing"] = pt(number(val(spacing), spacing) / 20);
+    for (const feature of ["w", "position", "bdr", "em"]) {
+      const item = child(properties, feature);
+      if (
+        item &&
+        !(feature === "w" && val(item) === "100") &&
+        !(feature === "position" && val(item) === "0") &&
+        !(feature === "em" && val(item) === "none")
+      )
+        unsupported(item);
+    }
+    return css;
+  }
+  paragraph(properties: XmlNode | undefined): Css {
+    if (!properties) return {};
+    check(properties, [
+      "pStyle",
+      "keepNext",
+      "keepLines",
+      "pageBreakBefore",
+      "framePr",
+      "widowControl",
+      "numPr",
+      "suppressLineNumbers",
+      "pBdr",
+      "shd",
+      "tabs",
+      "suppressAutoHyphens",
+      "kinsoku",
+      "wordWrap",
+      "overflowPunct",
+      "topLinePunct",
+      "autoSpaceDE",
+      "autoSpaceDN",
+      "bidi",
+      "adjustRightInd",
+      "snapToGrid",
+      "spacing",
+      "ind",
+      "contextualSpacing",
+      "mirrorIndents",
+      "suppressOverlap",
+      "jc",
+      "textDirection",
+      "textAlignment",
+      "textboxTightWrap",
+      "outlineLvl",
+      "divId",
+      "cnfStyle",
+      "rPr",
+      "sectPr",
+    ]);
+    for (const name of [
+      "kinsoku",
+      "wordWrap",
+      "topLinePunct",
+      "autoSpaceDE",
+      "autoSpaceDN",
+      "adjustRightInd",
+      "contextualSpacing",
+      "mirrorIndents",
+      "suppressOverlap",
+      "textAlignment",
+      "textboxTightWrap",
+      "cnfStyle",
+    ]) {
+      const item = child(properties, name);
+      if (item)
+        unsupported(item, "This paragraph layout property is not yet mapped.");
+    }
+    const css: Css = {};
+    const overflowPunctuation = child(properties, "overflowPunct");
+    if (overflowPunctuation) {
+      if (on(overflowPunctuation))
+        unsupported(
+          overflowPunctuation,
+          "Hanging punctuation is not yet supported.",
+        );
+      css["--word-overflow-punctuation"] = "0";
+    }
+    const suppressHyphens = child(properties, "suppressAutoHyphens");
+    if (suppressHyphens)
+      css["--word-suppress-auto-hyphens"] = on(suppressHyphens) ? "1" : "0";
+    const align = val(child(properties, "jc"));
+    if (align) {
+      const values: Record<string, string> = {
+        left: "left",
+        start: "start",
+        right: "right",
+        end: "end",
+        center: "center",
+        both: "justify",
+        distribute: "justify",
+      };
+      if (!values[align])
+        unsupported(properties, "A paragraph alignment is not supported.");
+      css["text-align"] = values[align]!;
+    }
+    const spacing = child(properties, "spacing");
+    if (spacing) {
+      for (const [name, property] of [
+        ["before", "margin-top"],
+        ["after", "margin-bottom"],
+      ]) {
+        const value = attr(spacing, name!);
+        if (value !== undefined)
+          css[property!] = pt(number(value, spacing) / 20);
+      }
+      if (
+        attr(spacing, "beforeLines") ||
+        attr(spacing, "afterLines") ||
+        attr(spacing, "beforeAutospacing") === "1" ||
+        attr(spacing, "afterAutospacing") === "1"
+      )
+        unsupported(spacing, "Automatic paragraph spacing is not supported.");
+      const line = attr(spacing, "line");
+      if (line) {
+        const rule = attr(spacing, "lineRule") ?? "auto";
+        if (rule === "atLeast")
+          unsupported(spacing, "Minimum line spacing is not supported.");
+        if (!["auto", "exact"].includes(rule))
+          fail(spacing, "A line spacing rule is invalid.");
+        css["line-height"] =
+          rule === "auto"
+            ? String(number(line, spacing) / 240)
+            : pt(number(line, spacing) / 20);
+      }
+    }
+    const indent = child(properties, "ind");
+    if (indent) {
+      for (const [name, property] of [
+        ["left", "margin-left"],
+        ["right", "margin-right"],
+        ["start", "margin-left"],
+        ["end", "margin-right"],
+        ["firstLine", "text-indent"],
+      ]) {
+        const value = attr(indent, name!);
+        if (value !== undefined)
+          css[property!] = pt(number(value, indent) / 20);
+      }
+      const hanging = attr(indent, "hanging");
+      if (hanging !== undefined)
+        css["text-indent"] = pt(-number(hanging, indent) / 20);
+      if (
+        ["leftChars", "rightChars", "firstLineChars", "hangingChars"].some(
+          (name) => attr(indent, name) !== undefined,
+        )
+      )
+        unsupported(indent, "Character-unit indentation is not supported.");
+    }
+    if (child(properties, "keepNext"))
+      css["break-after"] = on(child(properties, "keepNext")) ? "avoid" : "auto";
+    if (child(properties, "keepLines"))
+      css["break-inside"] = on(child(properties, "keepLines"))
+        ? "avoid"
+        : "auto";
+    if (child(properties, "pageBreakBefore"))
+      css["break-before"] = on(child(properties, "pageBreakBefore"))
+        ? "page"
+        : "auto";
+    if (child(properties, "widowControl")) {
+      const count = on(child(properties, "widowControl")) ? "2" : "1";
+      css.widows = count;
+      css.orphans = count;
+    }
+    if (
+      child(properties, "framePr") ||
+      on(child(properties, "bidi")) ||
+      (val(child(properties, "textDirection")) &&
+        val(child(properties, "textDirection")) !== "lrTb")
+    )
+      unsupported(
+        properties,
+        "A paragraph frame or writing direction is not supported.",
+      );
+    Object.assign(css, this.borders(child(properties, "pBdr")));
+    const shade = child(properties, "shd");
+    if (shade && attr(shade, "fill") !== "auto")
+      css["background-color"] = this.color(shade, "fill") ?? "transparent";
+    return css;
+  }
+  borders(properties: XmlNode | undefined): Css {
+    if (!properties) return {};
+    const result: Css = {};
+    for (const border of elements(properties)) {
+      const sides: Record<string, string> = {
+        top: "top",
+        bottom: "bottom",
+        left: "left",
+        right: "right",
+        start: "left",
+        end: "right",
+      };
+      if (border.name === "between")
+        return unsupported(
+          border,
+          "Between-paragraph borders are not yet supported.",
+        );
+      if (!sides[border.name] && !["insideH", "insideV"].includes(border.name))
+        unsupported(border);
+      if (
+        number(attr(border, "space"), border, 0) !== 0 ||
+        ["shadow", "frame"].some((name) =>
+          ["true", "1", "on"].includes(attr(border, name) ?? ""),
+        )
+      )
+        unsupported(
+          border,
+          "Border spacing and border effects are not supported.",
+        );
+      const style = val(border) ?? "single";
+      const styles: Record<string, string> = {
+        nil: "none",
+        none: "none",
+        single: "solid",
+        double: "double",
+        dotted: "dotted",
+        dashed: "dashed",
+        dashSmallGap: "dashed",
+        thick: "solid",
+      };
+      if (!styles[style])
+        unsupported(border, "A border style is not supported.");
+      const width = number(attr(border, "sz"), border, 4) / 8;
+      result[
+        border.name === "insideH"
+          ? "--word-border-inside-h"
+          : border.name === "insideV"
+            ? "--word-border-inside-v"
+            : "border-" + sides[border.name]
+      ] =
+        pt(width) +
+        " " +
+        styles[style] +
+        " " +
+        (this.color(border, "color") ?? "#000000");
+    }
+    return result;
+  }
+  table(properties: XmlNode | undefined): Css {
+    if (!properties) return {};
+    check(properties, [
+      "tblStyle",
+      "tblpPr",
+      "tblOverlap",
+      "bidiVisual",
+      "tblStyleRowBandSize",
+      "tblStyleColBandSize",
+      "tblW",
+      "jc",
+      "tblCellSpacing",
+      "tblInd",
+      "tblBorders",
+      "shd",
+      "tblLayout",
+      "tblCellMar",
+      "tblLook",
+      "tblCaption",
+      "tblDescription",
+    ]);
+    if (child(properties, "tblpPr") || on(child(properties, "bidiVisual")))
+      unsupported(properties, "Floating or bidi tables are not supported.");
+    const result: Css = { "border-collapse": "collapse" };
+    Object.assign(result, this.borders(child(properties, "tblBorders")));
+    const width = child(properties, "tblW");
+    if (width) Object.assign(result, this.width(width, "width"));
+    const layout =
+      val(child(properties, "tblLayout")) ??
+      attr(child(properties, "tblLayout"), "type");
+    if (layout) {
+      if (!["fixed", "autofit"].includes(layout))
+        fail(properties, "Table layout is invalid.");
+      result["table-layout"] = layout === "fixed" ? "fixed" : "auto";
+    }
+    const align = val(child(properties, "jc"));
+    if (align === "center") {
+      result["margin-left"] = "auto";
+      result["margin-right"] = "auto";
+    } else if (align === "right") result["margin-left"] = "auto";
+    else if (align && align !== "left" && align !== "start")
+      unsupported(properties);
+    const shade = child(properties, "shd");
+    if (shade && attr(shade, "fill") !== "auto")
+      result["background-color"] = this.color(shade, "fill") ?? "transparent";
+    return result;
+  }
+  cell(properties: XmlNode | undefined): Css {
+    if (!properties) return {};
+    check(properties, [
+      "cnfStyle",
+      "tcW",
+      "gridSpan",
+      "hMerge",
+      "vMerge",
+      "tcBorders",
+      "shd",
+      "noWrap",
+      "tcMar",
+      "textDirection",
+      "tcFitText",
+      "vAlign",
+      "hideMark",
+    ]);
+    if (child(properties, "hMerge") || on(child(properties, "tcFitText")))
+      unsupported(properties);
+    const result: Css = { ...this.borders(child(properties, "tcBorders")) };
+    const width = child(properties, "tcW");
+    if (width) Object.assign(result, this.width(width, "width"));
+    const shade = child(properties, "shd");
+    if (shade && attr(shade, "fill") !== "auto")
+      result["background-color"] = this.color(shade, "fill") ?? "transparent";
+    const align = val(child(properties, "vAlign"));
+    if (align) {
+      if (!["top", "center", "bottom"].includes(align)) unsupported(properties);
+      result["vertical-align"] = align === "center" ? "middle" : align;
+    }
+    if (on(child(properties, "noWrap"))) result["white-space"] = "nowrap";
+    if (
+      val(child(properties, "textDirection")) &&
+      val(child(properties, "textDirection")) !== "lrTb"
+    )
+      unsupported(properties);
+    Object.assign(result, this.margins(child(properties, "tcMar")));
+    return result;
+  }
+  margins(properties: XmlNode | undefined): Css {
+    const result: Css = {};
+    for (const item of elements(properties)) {
+      const name =
+        item.name === "start"
+          ? "left"
+          : item.name === "end"
+            ? "right"
+            : item.name;
+      if (!["top", "bottom", "left", "right"].includes(name)) unsupported(item);
+      Object.assign(result, this.width(item, "padding-" + name));
+    }
+    return result;
+  }
+  width(node: XmlNode, property: string): Css {
+    const type = attr(node, "type") ?? "dxa";
+    const raw = attr(node, "w");
+    if (type === "auto" || type === "nil") return {};
+    if (type === "pct")
+      return { [property]: String(number(raw, node) / 50) + "%" };
+    if (type !== "dxa")
+      return unsupported(node, "An OOXML width unit is not supported.");
+    return { [property]: pt(number(raw, node) / 20) };
+  }
+  resolve(id: string, visiting: Set<string> = new Set<string>()): StyleValues {
+    const cached = this.resolved.get(id);
+    if (cached) return cached;
+    const source = this.definitions.get(id);
+    if (!source)
+      throw new DocumentError(
+        "InvalidDocument",
+        "A referenced native style is missing.",
+      );
+    if (visiting.has(id)) return fail(source, "Style inheritance is cyclic.");
+    visiting.add(id);
+    const parentId = val(child(source, "basedOn"));
+    if (parentId && !this.definitions.has(parentId))
+      fail(source, "A native base style is missing.");
+    const parent = parentId ? this.resolve(parentId, visiting) : empty();
+    const pPr = child(source, "pPr");
+    const numPr = child(pPr, "numPr");
+    const num = val(child(numPr, "numId"));
+    const outline = child(pPr, "outlineLvl");
+    const result: StyleValues = {
+      p: { ...parent.p, ...this.paragraph(pPr) },
+      r: { ...parent.r, ...this.run(child(source, "rPr"), parent.r, true) },
+      table: { ...parent.table, ...this.table(child(source, "tblPr")) },
+      cell: { ...parent.cell, ...this.cell(child(source, "tcPr")) },
+      ...(parent.numbering ? { numbering: parent.numbering } : {}),
+      ...(parent.tabs ? { tabs: parent.tabs } : {}),
+      ...(parent.outline !== undefined ? { outline: parent.outline } : {}),
+      ...(num
+        ? {
+            numbering: {
+              id: num,
+              level: number(val(child(numPr, "ilvl")), numPr!, 0),
+            },
+          }
+        : {}),
+      ...(child(pPr, "tabs") ? { tabs: child(pPr, "tabs")! } : {}),
+      ...(outline ? { outline: number(val(outline), outline) } : {}),
+    };
+    visiting.delete(id);
+    this.resolved.set(id, result);
+    return result;
+  }
+  hasStyle(id: string, kind: string): boolean {
+    return attr(this.definitions.get(id), "type") === kind;
+  }
+  runStyle(id: string | undefined, inherited: Css): Css {
+    if (!id) return { ...inherited };
+    const chain: XmlNode[] = [];
+    const seen = new Set<string>();
+    let current: string | undefined = id;
+    while (current) {
+      const definition = this.definitions.get(current);
+      if (!definition)
+        throw new DocumentError(
+          "InvalidDocument",
+          "A referenced native style is missing.",
+        );
+      if (seen.has(current)) fail(definition, "Style inheritance is cyclic.");
+      seen.add(current);
+      chain.push(definition);
+      current = val(child(definition, "basedOn"));
+    }
+    let result = { ...inherited };
+    for (const definition of chain.reverse())
+      result = {
+        ...result,
+        ...this.run(child(definition, "rPr"), result, true),
+      };
+    return result;
+  }
+  get(id: string | undefined): StyleValues {
+    return id ? this.resolve(id) : empty();
+  }
+  tableSetting(
+    id: string | undefined,
+    key: "tableLookMask" | "rowBandSize" | "columnBandSize",
+  ): number | undefined {
+    let current = id;
+    const seen = new Set<string>();
+    while (current && !seen.has(current)) {
+      seen.add(current);
+      const definition = this.styles.find((item) => item.styleId === current);
+      if (definition?.[key] !== undefined) return definition[key];
+      current = definition?.basedOn;
+    }
+    return undefined;
+  }
+  runClass(id: string | undefined): string[] {
+    const metadata = this.styles.find((item) => item.styleId === id);
+    return metadata?.runCssClass ? [metadata.runCssClass] : [];
+  }
+  styleClass(id: string): string {
+    const item = this.styles.find((style) => style.styleId === id);
+    if (!item) throw new Error("Missing style");
+    return item.cssClass;
+  }
+  tableRegion(id: string | undefined, regions: readonly string[]): StyleValues {
+    const result = empty();
+    if (!id) return result;
+    const chain: string[] = [];
+    let current: string | undefined = id;
+    const seen = new Set<string>();
+    while (current) {
+      if (seen.has(current))
+        throw new DocumentError(
+          "InvalidDocument",
+          "Table style inheritance is cyclic.",
+        );
+      seen.add(current);
+      chain.push(current);
+      current = this.styles.find((item) => item.styleId === current)?.basedOn;
+    }
+    for (const region of ["wholeTable", ...regions])
+      for (const style of [...chain].reverse()) {
+        const value = this.conditional.get(style)?.get(region);
+        if (value) {
+          Object.assign(result.p, value.p);
+          Object.assign(result.r, value.r);
+          Object.assign(result.table, value.table);
+          Object.assign(result.cell, value.cell);
+        }
+      }
+    return result;
+  }
+  numberingParagraph(id: string, level: number): Css {
+    return this.numberProperties.get(id + ":" + level) ?? {};
+  }
+  private readNumbering(root: XmlNode): void {
+    check(root, ["numPicBullet", "abstractNum", "num", "numIdMacAtCleanup"]);
+    if (elements(root, "numPicBullet").length)
+      unsupported(root, "Picture bullets are not supported.");
+    const abstract = new Map<string, XmlNode>();
+    for (const definition of elements(root, "abstractNum")) {
+      const id = attr(definition, "abstractNumId");
+      if (!id || abstract.has(id))
+        fail(definition, "An abstract numbering identity is invalid.");
+      check(definition, [
+        "nsid",
+        "multiLevelType",
+        "tmpl",
+        "name",
+        "styleLink",
+        "numStyleLink",
+        "lvl",
+      ]);
+      if (child(definition, "numStyleLink"))
+        unsupported(definition, "Numbering style links are not supported.");
+      abstract.set(id, definition);
+    }
+    const seen = new Set<string>();
+    for (const definition of elements(root, "num")) {
+      const id = attr(definition, "numId");
+      const ref = val(child(definition, "abstractNumId"));
+      if (!id || seen.has(id) || !ref || !abstract.has(ref))
+        fail(definition, "A numbering instance is invalid.");
+      seen.add(id);
+      const levels: WordNumberLevel[] = [];
+      for (const source of elements(abstract.get(ref), "lvl")) {
+        check(source, [
+          "start",
+          "numFmt",
+          "lvlRestart",
+          "pStyle",
+          "isLgl",
+          "suff",
+          "lvlText",
+          "lvlPicBulletId",
+          "legacy",
+          "lvlJc",
+          "pPr",
+          "rPr",
+        ]);
+        if (
+          child(source, "lvlPicBulletId") ||
+          child(source, "legacy") ||
+          on(child(source, "isLgl"))
+        )
+          unsupported(source);
+        const level = number(attr(source, "ilvl"), source);
+        const override = elements(definition, "lvlOverride").find(
+          (item) => number(attr(item, "ilvl"), item) === level,
+        );
+        if (child(override, "lvl"))
+          unsupported(
+            override!,
+            "Full numbering-level overrides are not supported.",
+          );
+        const format = val(child(source, "numFmt")) ?? "decimal";
+        if (
+          ![
+            "decimal",
+            "bullet",
+            "lowerLetter",
+            "upperLetter",
+            "lowerRoman",
+            "upperRoman",
+            "none",
+          ].includes(format)
+        )
+          unsupported(source, "The numbering format is not supported.");
+        const cssClass = "wn" + this.numbering.length + "l" + level;
+        const paragraph = this.paragraph(child(source, "pPr"));
+        this.numberProperties.set(id + ":" + level, paragraph);
+        this.css.push(
+          "." +
+            cssClass +
+            "{" +
+            declarations({ ...paragraph, ...this.run(child(source, "rPr")) }) +
+            "}",
+        );
+        const restart = child(source, "lvlRestart");
+        levels.push({
+          level,
+          start: number(
+            val(child(override, "startOverride")) ??
+              val(child(source, "start")),
+            source,
+            1,
+          ),
+          format: format as WordNumberLevel["format"],
+          text: val(child(source, "lvlText")) ?? "%" + (level + 1) + ".",
+          suffix: (val(child(source, "suff")) ??
+            "tab") as WordNumberLevel["suffix"],
+          cssClass,
+          ...(restart ? { restart: number(val(restart), restart) } : {}),
+        });
+      }
+      this.numbering.push({ numberingId: id, levels });
+    }
+  }
+}
