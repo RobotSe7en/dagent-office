@@ -2,7 +2,7 @@
 
 面向人和宿主智能体协作的通用办公文档 SDK 与可嵌入工作台。采用 TypeScript 和带语义的 HTML 文档格式，提供 Office 导入、保留样式的网页编辑、框选批注、结构化修改提案和可编辑 Office 导出。达智平台是首个宿主，SDK 同时面向其他应用独立发布。
 
-**当前状态：R1-02 工程骨架已建立。** 四个库模块的构建、类型入口、测试和打包可运行，Playground 可启动；库入口暂为空模块，尚未实现文档读取、编辑或 Office 转换，未发布 npm 包。
+**当前状态：R1-03 结构契约已实现。** `core` 提供严格数据校验、推导类型、13 份 JSON Schema 和运行时接口声明；四个模块的构建、测试与打包可运行。Playground 仍为工程页面，尚未实现文档打开、事务执行、编辑或 Office 转换，未发布 npm 包。
 
 ## 本地开发
 
@@ -34,6 +34,7 @@ pnpm dev
 | [总体架构](docs/architecture.md) | 产品边界、交付形态、模块职责、依赖方向、状态模型及运行位置 |
 | [文档格式](docs/document-format.md) | HTML 文档包、三种格式的表达和版本规则 |
 | [编辑与宿主交互协议](docs/editing-protocol.md) | 事务、锚点、批注请求、修改提案、事件及冲突 |
+| [结构契约与 JSON Schema](docs/contracts.md) | 已实现的校验 API、严格字段、类型、静态 Schema 与语义校验边界 |
 | [整体实施计划](docs/implementation-plan.md) | 五轮交付顺序、具体产物、能力范围和验收门槛 |
 | [第一轮实施细则](docs/iteration-1.md) | 首轮支持范围、公共契约、任务依赖、技术验证及演示脚本 |
 | [本地开发](docs/development.md) | 环境、启动、构建、类型检查、工程测试及本地打包 |

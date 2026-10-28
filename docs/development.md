@@ -1,6 +1,6 @@
 # 本地开发与工程检查
 
-当前完成 R1-02：四个库模块、React Playground、ESM 与类型入口、构建、测试和本地打包。库入口暂为空模块，尚未实现文档类型、读取、编辑、Office 转换或宿主交互能力。下一步是 R1-03 结构契约与 Schema，任务顺序见[第一轮实施细则](iteration-1.md)。
+当前完成 R1-02 工程基础与 R1-03 结构契约。`core` 已提供数据校验、推导类型、JSON Schema 和运行时接口声明，其余库仍为工程入口。下一步 R1-04 实现文档包与模型；文档读取、编辑、事务执行及 Office 转换尚未实现。API 见[结构契约](contracts.md)，任务顺序见[第一轮实施细则](iteration-1.md)。
 
 ## 环境和安装
 
@@ -21,7 +21,7 @@ Playground 只显示工程就绪信息，并通过公开入口导入浏览器可
 
 | 命令 | 行为 |
 | --- | --- |
-| `pnpm build:packages` | 按项目引用构建四个库，输出 JavaScript、声明和映射 |
+| `pnpm build:packages` | 按项目引用构建四个库，输出 JS、声明、映射和 13 份 JSON Schema |
 | `pnpm typecheck` | 检查库、Playground、工具配置和测试类型 |
 | `pnpm build` | 构建库和生产 Playground |
 | `pnpm check:boundaries` | 检查允许的依赖方向、公开入口及浏览器模块边界 |
@@ -33,6 +33,8 @@ Playground 只显示工程就绪信息，并通过公开入口导入浏览器可
 
 核心与格式库的类型环境仅包含 ES2022，无 DOM 和自动加载的 Node 类型；编辑器增加 DOM，Node 入口单独启用 Node 类型。工具和测试不参与库发布。
 
+核心通过 Zod 推导并生成普通声明，关闭该包的 `isolatedDeclarations` 限制，仍保持 `strict`、声明输出及 `skipLibCheck: false`。避免为满足隔离声明而手工维护第二份数据类型。静态 Schema 从编译后的同一契约生成；开发监听更新 JS 和声明，修改契约后运行 `pnpm build:packages` 刷新静态 JSON。
+
 ## 工程测试
 
 ```bash
@@ -40,11 +42,11 @@ pnpm test
 pnpm test:watch
 ```
 
-当前 Vitest 覆盖包边界及打包消费。边界用例检查反向依赖、未声明依赖、内部路径、跨包相对导入、Node 内置模块和不可静态检查的动态导入。
+当前 Vitest 覆盖结构契约、JSON Schema、包边界及打包消费。核心用例使用真实报告、请求和提案，并由独立 Ajv 校验器检查导出 Schema 对相同输入的接受/拒绝结果。边界用例检查反向依赖、未声明依赖、内部路径、跨包相对导入、Node 内置模块和不可静态检查的动态导入。
 
-打包用例在 workspace 外、包含空格的临时路径中安装四个 tarball，使用离线安装和明确的本地覆盖，不从注册表下载内部包。验证 Node ESM、公开声明、私有路径拒绝，以及不安装 React 的普通 JS 浏览器宿主构建。临时消费工程在测试结束后删除。
+打包用例在 workspace 外、包含空格的临时路径中安装四个 tarball，显式复用工作区 pnpm 依赖缓存并覆盖内部包来源，不从注册表下载内部包。验证真实校验 API、公开 JSON、ES2022 类型、私有路径拒绝，以及不安装 React 的普通 JS 浏览器宿主构建。临时消费工程在测试结束后删除。
 
-这些测试证明工程和打包链路，不代表文档、事务、批注或格式能力已实现。后续核心用例放入各包 `tests`，浏览器用例放入根 `tests/browser`。
+这些测试证明数据结构和工程链路，不代表文档解析、事务执行、批注交互或格式转换已实现。核心用例放入各包 `tests`，浏览器用例放入根 `tests/browser`。
 
 ## 浏览器烟测
 
@@ -77,6 +79,6 @@ pnpm pack:packages
 
 ## 依赖与状态
 
-已安装工具及直接依赖的版本、许可证见[技术选型](technology-selection.md)。Zod、HTML/CSS 解析器、Tiptap 和 Office 库按后续任务引入，不提前提供占位功能 API。
+已安装 Zod、工具及直接依赖的版本、许可证见[技术选型](technology-selection.md)。HTML/CSS 解析器、Tiptap 和 Office 库按后续任务引入，不提前提供占位功能 API。
 
 修改后运行相应的窄范围检查与 `git diff --check`。只有验证所覆盖的能力才可在 README 标为已实现，产品范围和宿主边界以[总体架构](architecture.md)及[交互协议](editing-protocol.md)为准。
