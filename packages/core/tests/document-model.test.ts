@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, expectTypeOf, test } from "vitest";
-import { DEFAULT_DOCUMENT_READ_LIMITS, DocumentError, openDocument, parseContract } from "@dagent-office/core";
+import { createAssetDescriptor, DEFAULT_DOCUMENT_READ_LIMITS, DocumentError, openDocument, parseContract } from "@dagent-office/core";
 import type { DocumentErrorCode, DocumentModel, DocumentPackage, DocumentReadLimits } from "@dagent-office/core";
 import { annotations, manifest, metadata, repository } from "./fixtures.js";
 
@@ -198,8 +198,9 @@ describe("HTML model and resource references", () => {
       + '中e\u0301😀<strong data-node-id="s">粗体</strong><br><img data-node-id="i" src="assets/%E5%9B%BE%20%E7%89%87.png" width="1" height="2" alt="图"></p>'
       + '<ol data-node-id="list" start="3" reversed><li data-node-id="li" value="4">列表</li></ol>'
       + '<table data-node-id="t"><tr data-node-id="tr"><td data-node-id="td" colspan="2" rowspan="2">单元格</td></tr></table>');
-    json(input, "manifest.json", { ...manifest, assets: [{ path: "assets/图 片.png", mimeType: "image/png", sha256: "a".repeat(64) }] });
-    input.set("assets/图 片.png", new Uint8Array([1, 2, 3]));
+    const image = new Uint8Array(readFileSync(join(repository, "examples/fidelity/assets/sample.png")));
+    json(input, "manifest.json", { ...manifest, assets: [createAssetDescriptor("assets/图 片.png", "image/png", image)] });
+    input.set("assets/图 片.png", image);
     const document = openDocument(input);
     expect(document.getNode("p")!.text).toBe("中e\u0301😀粗体\n\ufffc");
     expect(document.getNode("p")!.text.length).toBe(9);
@@ -208,7 +209,7 @@ describe("HTML model and resource references", () => {
     expect(document.getNode("td")!.attributes).toMatchObject({ colspan: "2", rowspan: "2" });
     expect(document.snapshot().html).toContain("<tbody>");
     expect(openDocument(document.serialize()).snapshot()).toEqual(document.snapshot());
-    expect([...document.serialize().get("assets/图 片.png")!]).toEqual([1, 2, 3]);
+    expect(document.serialize().get("assets/图 片.png")).toEqual(image);
   });
 
   test("treats opaque node identities as map keys", () => {
@@ -269,7 +270,7 @@ describe("HTML model and resource references", () => {
     expect(openDocument(document.serialize()).snapshot()).toEqual(document.snapshot());
   });
 
-  test("rejects missing image bytes while leaving digest and image decoding to the resource task", () => {
+  test("rejects missing declared image bytes", () => {
     const input = body('<img data-node-id="image" src="assets/image.png">');
     json(input, "manifest.json", { ...manifest, assets: [{ path: "assets/image.png", mimeType: "image/png", sha256: "a".repeat(64) }] });
     failure(input, "AssetUnavailable");

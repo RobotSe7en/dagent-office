@@ -2,7 +2,7 @@
 
 dagent-office 是可嵌入不同产品的通用文档协作 SDK 与工作台。它将 Office 文件转换为带语义的 HTML 文档包，在浏览器中完成编辑、批注和修改提案预览，再从当前文档源生成 Office 文件。
 
-本文描述目标架构。工程骨架、R1-03 [结构契约](contracts.md)及 R1-04 [只读文档模型](document-model.md)已实现，会话执行和编辑仍待实现；运行命令见[本地开发](development.md)。交付顺序见[整体实施计划](implementation-plan.md)，首轮支持范围见[第一轮实施细则](iteration-1.md)。
+本文描述目标架构。工程骨架、R1-03 [结构契约](contracts.md)、R1-04 [只读文档模型](document-model.md)及 R1-05 [资源与 ZIP](resources-and-zip.md)已实现，会话执行、编辑和 OOXML 转换仍待实现；运行命令见[本地开发](development.md)。交付顺序见[整体实施计划](implementation-plan.md)，首轮支持范围见[第一轮实施细则](iteration-1.md)。
 
 整体按五轮交付。第一轮将 HTML 协作基础与 Word 完整闭环合并：先完成独立 Playground 的 DOCX 导入、人工输入、分页、批注、提案和 DOCX/PDF 导出重开，再接入达智现有智能体验证；后续依次覆盖 PPT、Excel、正式宿主存储和发布准备。
 
@@ -157,7 +157,7 @@ SDK 只导出中性的上下文和操作协议。宿主负责对话、整体要�
 | XLSX | 单元格值、公式、样式、行列、合并和支持的对象写为工作簿 |
 | PDF | 浏览器打印或独立 PDF 输出适配器 |
 
-PPTX 导出需要逐对象编译。PptxGenJS 的 HTML 入口主要转换 HTML 表格，不能替代整页 HTML 的对象映射。Excel 的读写和公式计算也使用不同职责的适配器。具体基础库见[技术选型](technology-selection.md)。
+DOCX、PPTX、XLSX 的 OOXML 读写与样式映射由本项目依据公开格式标准实现，不使用 docx、PptxGenJS、ExcelJS。ZIP、XML、哈希等通用基础能力可复用成熟库并封装在适配器内。PPTX 逐对象编译为原生对象；Excel 的读写和公式计算使用不同职责的适配器。具体边界见[技术选型](technology-selection.md)。
 
 统一逻辑几何使用 pt；浏览器计算值以 CSS px 表示时按 `pt = px × 72 / 96` 转换，屏幕缩放不参与持久化。Excel 原生列宽同时保留其语义和字体度量，不能用统一像素常数覆盖。
 

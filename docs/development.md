@@ -1,6 +1,6 @@
 # 本地开发与工程检查
 
-当前完成 R1-02 工程基础、R1-03 结构契约及 R1-04 只读文档模型。`core` 提供数据校验、JSON Schema、HTML/CSS 解析、节点查询和保存重开，其余库仍为工程入口。下一步 R1-05 实现图片字节、摘要、完整资源与 ZIP；编辑、事务执行及 Office 转换尚未实现。API 见[结构契约](contracts.md)与[文档模型](document-model.md)，任务顺序见[第一轮实施细则](iteration-1.md)。
+当前完成 R1-02 至 R1-05。`core` 提供契约、JSON Schema、HTML/CSS 只读模型及资源校验与收集，`office` 提供文档包 ZIP 读写，其余库仍为工程入口。下一步 R1-06 实现核心操作与历史；编辑、事务执行及 Office 转换尚未实现。API 见[结构契约](contracts.md)、[文档模型](document-model.md)和[资源与 ZIP](resources-and-zip.md)，任务顺序见[第一轮实施细则](iteration-1.md)。
 
 ## 环境和安装
 
@@ -46,7 +46,7 @@ pnpm test:watch
 
 打包用例在 workspace 外、包含空格的临时路径中安装四个 tarball，显式复用工作区 pnpm 依赖缓存并覆盖内部包来源，不从注册表下载内部包。验证真实校验 API、公开 JSON、ES2022 类型、私有路径拒绝，以及不安装 React 的普通 JS 浏览器宿主构建。临时消费工程在测试结束后删除。
 
-这些测试证明数据结构和工程链路，不代表文档解析、事务执行、批注交互或格式转换已实现。核心用例放入各包 `tests`，浏览器用例放入根 `tests/browser`。
+测试还覆盖只读文档解析、资源摘要、宿主资源收集、ZIP 原始路径及大小校验、保真样例保存重开；不代表事务执行、批注交互、视觉排版或 Office 转换已实现。核心用例放入各包 `tests`，浏览器用例放入根 `tests/browser`。
 
 ## 浏览器烟测
 
@@ -79,6 +79,6 @@ pnpm pack:packages
 
 ## 依赖与状态
 
-已安装 Zod、HTML/CSS 解析器、工具及依赖的版本、许可证见[技术选型](technology-selection.md)。Tiptap 和 Office 库按后续任务引入，不提前提供占位功能 API。
+已安装 Zod、HTML/CSS 解析器、哈希、ZIP、工具及依赖的版本、许可证见[技术选型](technology-selection.md)。Tiptap、XML 等通用依赖按后续任务引入；Office OOXML 读写和样式映射自行实现，不提前提供占位功能 API。
 
 修改后运行相应的窄范围检查与 `git diff --check`。只有验证所覆盖的能力才可在 README 标为已实现，产品范围和宿主边界以[总体架构](architecture.md)及[交互协议](editing-protocol.md)为准。

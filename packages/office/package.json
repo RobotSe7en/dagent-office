@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "license": "UNLICENSED",
-  "description": "dagent-office office module — engineering scaffold",
+  "description": "Document-package ZIP adapters and future OOXML converters",
   "files": [
     "dist"
   ],
@@ -21,6 +21,7 @@
     "dev": "tsc --watch --project tsconfig.json --preserveWatchOutput"
   },
   "dependencies": {
-    "@dagent-office/core": "workspace:*"
+    "@dagent-office/core": "workspace:*",
+    "fflate": "0.8.3"
   }
 }

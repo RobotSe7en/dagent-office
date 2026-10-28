@@ -1,0 +1,21 @@
+{
+  "title": "样式与资源往返样例",
+  "locale": "zh-CN",
+  "pageSetup": {
+    "unit": "pt",
+    "width": 595.276,
+    "height": 841.89,
+    "margins": {
+      "top": 56.693,
+      "right": 56.693,
+      "bottom": 56.693,
+      "left": 56.693
+    }
+  },
+  "sections": [
+    {
+      "sectionId": "section-main",
+      "rootNodeId": "root"
+    }
+  ]
+}
