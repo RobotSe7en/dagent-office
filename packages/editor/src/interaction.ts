@@ -155,14 +155,18 @@ export function mountDocumentInteraction(
     options.onSelectionChange?.(selection);
     highlight();
   }
+  function clearSelection(): void {
+    cancelPointerSelection();
+    preview?.element.contentDocument?.getSelection()?.removeAllRanges();
+    setSelection(undefined);
+  }
   function setMode(value: DocumentInteractionMode): void {
     if (disposed) return;
     if (!["text", "node", "region"].includes(value)) throw new DocumentError("InvalidOperation", "未知选择模式。");
     mode = value;
-    cancelPointerSelection();
     for (const [key, control] of modeButtons) control.setAttribute("aria-pressed", String(key === value));
     if (source) source.root.style.userSelect = value === "text" ? "text" : "none";
-    setSelection(undefined);
+    clearSelection();
   }
   for (const [key, label] of [["text", "文字划选"], ["node", "对象选择"], ["region", "矩形框选"]] as const)
     modeButtons.set(key, button(label, () => setMode(key), toolbar));
@@ -190,7 +194,7 @@ export function mountDocumentInteraction(
     } }], chosen.baseRevision);
     draft.value = "";
   }, composer);
-  const clear = button("清除选择", () => setSelection(undefined), composer);
+  const clear = button("清除选择", clearSelection, composer);
 
   function updatePanel(): void {
     const snapshot = session.snapshot(), history = session.history();
@@ -230,6 +234,7 @@ export function mountDocumentInteraction(
           if (!input.value.trim()) throw new DocumentError("InvalidOperation", "请填写批注内容。");
           commit([{ op: "updateAnnotation", annotationId: annotation.annotationId, changes: { instruction: input.value } }], editing.baseRevision);
           editDrafts.delete(annotation.annotationId);
+          updatePanel();
         }, actions);
         cardButton("取消修改", () => { editDrafts.delete(annotation.annotationId); updatePanel(); }, actions);
         card.append(actions);
@@ -432,7 +437,7 @@ export function mountDocumentInteraction(
   function keydown(event: KeyboardEvent): void {
     const target = event.composedPath()[0] as HTMLElement;
     if (target?.matches?.("textarea,input,select")) return;
-    if (event.key === "Escape") { cancelPointerSelection(); setSelection(undefined); return; }
+    if (event.key === "Escape") { clearSelection(); return; }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
       event.preventDefault();
       attempt(() => { if (event.shiftKey) session.redo(); else session.undo(); });

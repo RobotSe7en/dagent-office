@@ -34,7 +34,8 @@ export class PreviewSource {
 
   constructor(document: Document, model: DocumentModel) {
     this.document = document;
-    const article = document.querySelector<HTMLElement>("article[data-node-id]")!;
+    const documentRoot = document.querySelector<HTMLElement>('body > [data-office-kind="document"][data-node-id]');
+    if (!documentRoot) throw new DocumentError("InvalidDocument", "预览文档缺少根容器。");
     let offset = 0;
     const visit = (node: Node): void => {
       const from = offset;
@@ -54,9 +55,9 @@ export class PreviewSource {
       }
       if (element?.dataset.nodeId) this.elements.set(element.dataset.nodeId, { element, from, to: offset });
     };
-    visit(article);
+    visit(documentRoot);
     const main = model.snapshot().metadata.word?.stories.find((story) => story.kind === "main");
-    this.root = main ? this.elements.get(main.rootNodeId)!.element : article;
+    this.root = main ? this.elements.get(main.rootNodeId)!.element : documentRoot;
   }
 
   /** Only the main content story participates in document selection. */
@@ -81,6 +82,7 @@ export class PreviewSource {
     if (!this.contains(range.startContainer) || !this.contains(range.endContainer))
       throw new DocumentError("InvalidOperation", "文字选择必须位于同一正文内容域。");
     const ranges: TextRange[] = [];
+    const ownerTexts = new Map<string, string>();
     for (const token of this.tokens) {
       if (!this.contains(token.node) || !this.visible(token) || !range.intersectsNode(token.node)) continue;
       const from = token.node.nodeType === 3 && range.startContainer === token.node ? range.startOffset : 0;
@@ -89,7 +91,11 @@ export class PreviewSource {
       const nodeId = token.owner.dataset.nodeId!;
       const source = this.elements.get(nodeId)!;
       const start = token.from - source.from + from, end = token.from - source.from + to;
-      const text = model.getNode(nodeId)!.text;
+      let text = ownerTexts.get(nodeId);
+      if (text === undefined) {
+        text = model.getNode(nodeId)!.text;
+        ownerTexts.set(nodeId, text);
+      }
       if (!boundary(text, start) || !boundary(text, end))
         throw new DocumentError("InvalidOperation", "选择不能拆开 UTF-16 代理对或字符的变体选择符。");
       const previous = ranges.at(-1);

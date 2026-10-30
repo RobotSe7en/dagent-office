@@ -13,19 +13,19 @@ let hostCode: string;
 const report = new Map(["manifest.json", "content.html", "styles.css", "metadata.json", "annotations.json"].map((path) => [
   path, new Uint8Array(readFileSync(new URL("../../examples/report/" + path, import.meta.url))),
 ]));
-function fixture(html?: string): DocumentPackage {
+function fixture(html?: string, rootTag = "article"): DocumentPackage {
   const files = new Map(report);
   files.set("annotations.json", new TextEncoder().encode("[]"));
   if (html) files.set("content.html", new TextEncoder().encode(new TextDecoder().decode(files.get("content.html")).replace(/<article[\s\S]*<\/article>/,
-    '<article data-node-id="root" data-office-kind="document">' + html + "</article>")));
+    '<' + rootTag + ' data-node-id="root" data-office-kind="document">' + html + '</' + rootTag + '>')));
   return files;
 }
 const entries = (files: DocumentPackage): [string, number[]][] => [...files].map(([path, bytes]) => [path, [...bytes]]);
-async function mount(page: Page, files = fixture()): Promise<void> {
+async function mount(page: Page, files = fixture(), readOnly = false): Promise<void> {
   await page.goto("/");
   await page.addScriptTag({ type: "module", content: hostCode });
   await page.waitForFunction(() => !!window.interactionHost);
-  await page.evaluate((input) => window.interactionHost.mount(input), entries(files));
+  await page.evaluate(({ input, readOnly }) => window.interactionHost.mount(input, readOnly), { input: entries(files), readOnly });
 }
 async function select(page: Page, startId: string, from: number, endId = startId, to?: number): Promise<void> {
   await page.frameLocator("iframe").locator("body").evaluate((_, input) => {
@@ -63,6 +63,24 @@ test.beforeAll(async () => {
   hostCode = output.flatMap((item) => item.type === "chunk" ? [item.code] : []).join("\n");
 });
 
+for (const rootTag of ["article", "section", "div"]) {
+  for (const readOnly of [false, true]) {
+    test(`${readOnly ? "read-only" : "interactive"} preview accepts a ${rootTag} document root`, async ({ page }) => {
+      await mount(page, fixture('<p data-node-id="a">合法正文</p>', rootTag), readOnly);
+      const frame = page.frameLocator("iframe");
+      await expect(frame.locator('body > [data-office-kind="document"]')).toHaveJSProperty("tagName", rootTag.toUpperCase());
+      await expect(frame.locator('[data-node-id="a"]')).toBeVisible();
+      if (!readOnly) {
+        await select(page, "a", 0);
+        expect(await page.evaluate(() => window.interactionHost.view!.selection()?.anchor)).toEqual({
+          kind: "text", nodeId: "a", from: 0, to: 4, quote: "合法正文",
+        });
+      }
+      expect(await page.evaluate(() => window.interactionHost.errors)).toEqual([]);
+    });
+  }
+}
+
 test("text selection, annotation editing, resolution and history use one session", async ({ page }) => {
   await mount(page);
   await select(page, "n-summary", 2, "n-summary", 8);
@@ -88,6 +106,25 @@ test("text selection, annotation editing, resolution and history use one session
   expect(reopened.snapshot().html).not.toContain("data-sdk-highlight");
   await page.getByRole("button", { name: "删除批注", exact: true }).click();
   await expect(page.getByLabel("会话状态")).toHaveText("修订 6 · 批注 0");
+});
+
+test("saving an unchanged annotation closes its editor without changing revision or history", async ({ page }) => {
+  await mount(page);
+  await select(page, "n-summary", 2, "n-summary", 8);
+  await page.getByLabel("新批注内容").fill("原说明");
+  await page.getByRole("button", { name: "添加批注", exact: true }).click();
+  await page.getByRole("button", { name: "标为已处理", exact: true }).click();
+  await page.getByRole("button", { name: "撤销", exact: true }).click();
+  const before = await page.evaluate(() => ({ snapshot: window.interactionHost.session!.snapshot(), history: window.interactionHost.session!.history() }));
+  await page.getByRole("button", { name: "修改批注", exact: true }).click();
+  await expect(page.getByLabel("修改批注内容")).toHaveValue("原说明");
+  await page.getByRole("button", { name: "保存批注", exact: true }).click();
+  await expect(page.getByLabel("修改批注内容")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "修改批注", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => ({ snapshot: window.interactionHost.session!.snapshot(), history: window.interactionHost.session!.history() }))).toEqual(before);
+  await page.getByRole("button", { name: "重做", exact: true }).click();
+  await expect(page.getByText("已处理", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => window.interactionHost.errors)).toEqual([]);
 });
 
 test("cross-paragraph and table ranges retain source order and UTF-16 quotes", async ({ page }) => {
@@ -124,6 +161,29 @@ test("inline styles, line breaks and embedded objects map to canonical text", as
     document.dispatchEvent(new Event("selectionchange"));
   });
   expect((await page.evaluate(() => window.interactionHost.view!.selection()))?.anchor).toEqual({ kind: "text", nodeId: "a", from: 0, to: 8, quote: "前加粗😀\n\ufffc后" });
+});
+
+test("selection mapping reads each owner once across thousands of inline runs", async ({ page }, info) => {
+  const runs = Array.from({ length: 2000 }, (_, index) => '<span data-node-id="run-' + index + '">中😀</span>').join("");
+  await mount(page, fixture('<p data-node-id="a">' + runs + '</p><p data-node-id="b">末尾</p>'));
+  const measured = await page.evaluate(() => {
+    const host = window.interactionHost, frame = host.view!.element.shadowRoot!.querySelector<HTMLIFrameElement>("iframe")!.contentDocument!;
+    const range = frame.createRange();
+    range.setStart(frame.querySelector('[data-node-id="a"]')!, 0);
+    range.setEnd(frame.querySelector('[data-node-id="b"]')!.firstChild!, 2);
+    frame.getSelection()!.removeAllRanges();
+    frame.getSelection()!.addRange(range);
+    const before = host.nodeReads.length, started = performance.now();
+    frame.dispatchEvent(new Event("selectionchange"));
+    return { reads: host.nodeReads.slice(before), durationMs: performance.now() - started, anchor: host.view!.selection()?.anchor };
+  });
+  await info.attach("selection-mapping", { body: JSON.stringify({ reads: measured.reads, durationMs: measured.durationMs }), contentType: "application/json" });
+  expect(measured.reads).toEqual(["a", "b"]);
+  expect(measured.anchor).toEqual({ kind: "text-set", ranges: [
+    { nodeId: "a", from: 0, to: 6000, quote: "中😀".repeat(2000) },
+    { nodeId: "b", from: 0, to: 2, quote: "末尾" },
+  ] });
+  expect(await page.evaluate(() => window.interactionHost.session!.history().undoSteps)).toBe(0);
 });
 
 test("DOCX numbering and tab leaders never become source text", async ({ page }) => {
@@ -203,6 +263,37 @@ test("native mouse selection and document keyboard shortcuts use the core histor
   await page.keyboard.press("Escape");
   await expect(page.getByLabel("当前选择")).toHaveText("尚未选择");
 });
+
+for (const action of ["clear button", "Escape in document", "Escape in toolbar", "mode change"]) {
+  test(`${action} clears native ranges and prevents an old selection from returning`, async ({ page }) => {
+    await mount(page);
+    await select(page, "n-summary", 2, "n-summary", 8);
+    await page.getByLabel("新批注内容").fill("焦点移走后保留选择");
+    await expect(page.getByLabel("当前选择")).toHaveText("计划于第三季");
+    await expect(page.getByRole("button", { name: "添加批注", exact: true })).toBeEnabled();
+    expect(await page.frameLocator("iframe").locator("body").evaluate(() => window.getSelection()!.isCollapsed)).toBe(false);
+    if (action === "clear button") await page.getByRole("button", { name: "清除选择", exact: true }).click();
+    else if (action === "mode change") {
+      await page.getByRole("button", { name: "对象选择", exact: true }).click();
+      await page.getByRole("button", { name: "文字划选", exact: true }).click();
+    } else {
+      if (action === "Escape in document") await page.locator("iframe").evaluate((node) => (node as HTMLIFrameElement).contentWindow!.focus());
+      else await page.getByRole("button", { name: "文字划选", exact: true }).focus();
+      await page.keyboard.press("Escape");
+    }
+    expect(await page.frameLocator("iframe").locator("body").evaluate(() => {
+      const selected = window.getSelection()!;
+      document.dispatchEvent(new Event("selectionchange"));
+      return { rangeCount: selected.rangeCount, isCollapsed: selected.isCollapsed };
+    })).toEqual({ rangeCount: 0, isCollapsed: true });
+    await page.evaluate(() => window.interactionHost.settle());
+    await expect(page.getByLabel("当前选择")).toHaveText("尚未选择");
+    await expect(page.getByRole("button", { name: "添加批注", exact: true })).toBeDisabled();
+    expect(await page.evaluate(() => window.interactionHost.view!.selection())).toBeUndefined();
+    expect(await page.evaluate(() => window.interactionHost.session!.snapshot().manifest.revision)).toBe(0);
+    expect(await page.evaluate(() => window.interactionHost.session!.history().undoSteps)).toBe(0);
+  });
+}
 
 test("native rich comments retain their body and auxiliary stories cannot enter a main selection", async ({ page }) => {
   const files = importDocx(readFileSync(new URL("../../examples/docx/08-comments-revisions.docx", import.meta.url)), { documentId: "comments" });
@@ -361,6 +452,7 @@ test("an external commit preserves an annotation draft and rejects saving its ol
   await expect(page.getByLabel("修改批注内容")).toHaveValue("尚未提交的草稿");
   await page.getByRole("button", { name: "保存批注", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("different document revision");
+  await expect(page.getByLabel("修改批注内容")).toHaveValue("尚未提交的草稿");
   expect(await page.evaluate(() => window.interactionHost.session!.snapshot().manifest.revision)).toBe(2);
   expect(await page.evaluate(() => window.interactionHost.session!.getAnnotations()[0]!.instruction)).toBe("原说明");
   await page.getByRole("button", { name: "取消修改", exact: true }).click();
