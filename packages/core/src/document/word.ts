@@ -241,25 +241,5 @@ export function validateWord(
       )
         invalid("A rich annotation requires its comment story.");
     }
-    if (
-      annotation.status !== "needs_reanchor" &&
-      ["text", "text-set"].includes(annotation.anchor.kind)
-    ) {
-      const ranges =
-        annotation.anchor.kind === "text"
-          ? [annotation.anchor]
-          : annotation.anchor.kind === "text-set"
-            ? annotation.anchor.ranges
-            : [];
-      for (const range of ranges) {
-        const text = html.getNode(range.nodeId)!.text;
-        if (
-          range.from > range.to ||
-          range.to > text.length ||
-          text.slice(range.from, range.to) !== range.quote
-        )
-          invalid("An annotation text range does not match its source.");
-      }
-    }
   }
 }

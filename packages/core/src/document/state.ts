@@ -4,6 +4,7 @@ import { normalizeCss } from "./css.js";
 import { parseHtml } from "./html.js";
 import { validateAssets } from "./assets.js";
 import { validateWord } from "./word.js";
+import { validateAnnotations } from "./annotations.js";
 import { readManifest } from "./manifest.js";
 import { encode, readJson, readText } from "./package.js";
 import { checkLimit, freeze, invalid, unsupported } from "./validation.js";
@@ -36,22 +37,7 @@ export function buildDocumentState(input: DocumentPackage, limits: DocumentReadL
     sectionIds.add(section.sectionId);
     sectionRoots.add(section.rootNodeId);
   }
-  const annotationIds = new Set<string>();
-  for (const annotation of annotations) {
-    if (annotationIds.has(annotation.annotationId) || annotation.documentId !== manifest.documentId
-      || annotation.baseRevision > manifest.revision) {
-      invalid("Annotations require unique identities and must belong to this document and its history.");
-    }
-    annotationIds.add(annotation.annotationId);
-    if (annotation.status !== "needs_reanchor") {
-      const anchor = annotation.anchor;
-      const nodeIds = anchor.kind === "text" || anchor.kind === "node" ? [anchor.nodeId]
-        : anchor.kind === "text-set" ? anchor.ranges.map((range) => range.nodeId) : anchor.nodeIds;
-      if (nodeIds.some((nodeId) => !html.hasNode(nodeId))) {
-        invalid("An active or resolved annotation refers to a missing document node.");
-      }
-    }
-  }
+  validateAnnotations(annotations, manifest, html);
 
   validateWord(metadata, annotations, html);
   const snapshot: DocumentSnapshot = freeze({ manifest, html: html.html, styles, metadata, annotations });

@@ -58,9 +58,9 @@ interface DocumentSession {
 
 第一轮先完成连续内容编辑，再提供派生分页。连续视图使用文档根对应的逻辑渲染面；分页视图使用实际计算的页面及布局标记，不把自动分页写成正文节点。矩形坐标排除界面缩放和滚动偏移。区域可以命中多个节点，也可以位于空白；空白区域附带所属容器和相邻结构，Word 中通过正常文档流插入或受支持的文档布局操作表达修改。
 
-批注包含 `annotationId`、`documentId`、`baseRevision`、`anchor`、`instruction` 和 `status`。回复及作者显示字段留待后续显式定义，当前结构契约不接收任意 `author` 或 `replies`；作者可信信息仍由宿主绑定。最小状态为 `open`、`resolved` 和 `needs_reanchor`。
+批注包含 `annotationId`、`documentId`、`baseRevision`、`anchor`、`instruction` 和 `status`。来源作者显示信息通过严格的 `author.name/initials` 保存，不能作为授权身份；回复字段尚未定义，契约不接收任意 `replies`。最小状态为 `open`、`resolved` 和 `needs_reanchor`。
 
-事务产生节点与文字偏移映射。能够明确定位的批注更新到新修订；目标删除、整体替换或区域布局变化后无法确定位置时进入 `needs_reanchor`。原摘录和原区域保留用于人工定位，不猜测语义位置。
+事务产生节点与文字偏移映射。能够明确定位的批注更新到新修订；目标删除、整体替换或区域布局变化后无法确定位置时进入 `needs_reanchor`。原摘录和原区域保留用于人工定位，不猜测语义位置。R1-07 已实现文字与结构操作的精确映射、跨节点整体失效及显式区域重定位；边界插入不纳入选区，局部修改更新摘录，完整覆盖范围时失效。完整规则见[锚点映射与重新定位](document-session.md#锚点映射与重新定位)。
 
 ## 文档操作
 

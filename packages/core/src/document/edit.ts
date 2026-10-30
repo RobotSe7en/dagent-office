@@ -9,6 +9,7 @@ import { parseHtmlFragment, parseHtmlTree } from "./html-parser.js";
 import { encode, resolveReference } from "./package.js";
 import type { DocumentState } from "./state.js";
 import { checkLimit } from "./validation.js";
+import { isTextBoundary, textPositions } from "./text.js";
 
 type Element = Tree.Element;
 type Node = Tree.Node;
@@ -59,14 +60,6 @@ function textLeaves(root: Node): TextLeaf[] {
   return leaves;
 }
 
-function boundary(text: string, offset: number): boolean {
-  const before = text.charCodeAt(offset - 1);
-  const after = text.charCodeAt(offset);
-  const code = text.codePointAt(offset);
-  return !(before >= 0xd800 && before <= 0xdbff && after >= 0xdc00 && after <= 0xdfff)
-    && !(offset > 0 && code !== undefined && (code >= 0xfe00 && code <= 0xfe0f || code >= 0xe0100 && code <= 0xe01ef));
-}
-
 /** Match import's source font roles, keeping marks and variation selectors with their base. */
 function scriptParts(value: string): { script: "ascii" | "eastAsia" | "hAnsi"; text: string }[] {
   const parts: ReturnType<typeof scriptParts> = [];
@@ -90,6 +83,8 @@ export class DocumentEdit {
   private readonly baseIds: ReadonlySet<string>;
   private createdNodes = 0;
   readonly textEdits: TextOffsetMapping[] = [];
+  readonly replacedTextNodes = new Set<string>();
+  readonly structuralTextNodes = new Set<string>();
 
   constructor(private readonly state: DocumentState, private readonly limits: DocumentReadLimits, private readonly allocate: () => string) {
     this.tree = parseHtmlTree(state.snapshot.html, limits, supportedTags);
@@ -141,13 +136,29 @@ export class DocumentEdit {
     return result;
   }
 
+  /** Record one splice for each surviving base node whose normalized text changes. */
+  private recordSplice(positions: ReturnType<typeof textPositions>, from: number, to: number, parent: Element, insertedLength: number, structural = false): void {
+    const insertionAncestors = new Set(ancestors(parent));
+    for (const [id, element] of this.index()) {
+      if (!this.baseIds.has(id)) continue;
+      const range = positions.get(element)!;
+      const begin = Math.max(range.from, from);
+      const end = Math.min(range.to, to);
+      const length = insertionAncestors.has(element) ? insertedLength : 0;
+      if (begin < end || length) {
+        this.textEdits.push({ nodeId: id, from: Math.max(0, begin - range.from), to: Math.max(0, end - range.from), insertedLength: length });
+        if (structural) this.structuralTextNodes.add(id);
+      }
+    }
+  }
+
   private replaceText(target: Element, operation: Extract<DocumentContentOperation, { op: "replaceText" }>): void {
     if (["img", "br"].includes(target.tagName)) fail("Text operations require a content element, not an inline object.");
     const { from, to, text, expectedText } = operation;
     const leaves = textLeaves(target);
     const original = leaves.map((leaf) => leaf.value).join("");
     if (from > to || to > original.length || original.slice(from, to) !== expectedText
-      || !boundary(original, from) || !boundary(original, to)) fail("The text range or expected source text does not match.");
+      || !isTextBoundary(original, from) || !isTextBoundary(original, to)) fail("The text range or expected source text does not match.");
     if ([...text].some((character) => character.length === 1 && character.charCodeAt(0) >= 0xd800 && character.charCodeAt(0) <= 0xdfff)
       || /[\u0000\r]/u.test(text)) fail("Replacement text must be well-formed Unicode with LF line breaks.");
     if (expectedText === text) return;
@@ -178,30 +189,9 @@ export class DocumentEdit {
     const inherited = ancestors(parent);
     const inheritedScript = inherited.map((item) => attr(item, "data-word-script")).find((script) => script !== undefined) ?? "ascii";
     const inserted = this.insertedText(text, inherited.some((item) => attr(item, "data-word-run") !== undefined || attr(item, "data-word-script") !== undefined), inheritedScript);
-    // Record sequential offsets for every existing node whose normalized text changes.
-    const allLeaves = textLeaves(this.tree);
-    const globalStart = start ? allLeaves.find((leaf) => leaf.node === start.node)!.start + from - start.start : 0;
-    const insertionAncestors = new Set(inherited);
-    const positions = new Map<Node, { start: number; end: number }>();
-    let cursor = 0;
-    const locate = (node: Node): void => {
-      const begin = cursor;
-      if (node.nodeName === "#text" && "value" in node) cursor += node.value.length;
-      else if (isElement(node) && ["br", "img"].includes(node.tagName)) cursor++;
-      else if ("childNodes" in node) for (const child of node.childNodes) locate(child);
-      positions.set(node, { start: begin, end: cursor });
-    };
-    locate(this.tree);
-    const globalFrom = start ? globalStart : positions.get(target)!.start;
-    const globalTo = globalFrom + to - from;
-    for (const [id, element] of this.index()) {
-      if (!this.baseIds.has(id)) continue;
-      const range = positions.get(element)!;
-      const begin = Math.max(range.start, globalFrom);
-      const end = Math.min(range.end, globalTo);
-      const length = insertionAncestors.has(element) ? text.length : 0;
-      if (begin < end || length) this.textEdits.push({ nodeId: id, from: Math.max(0, begin - range.start), to: Math.max(0, end - range.start), insertedLength: length });
-    }
+    const positions = textPositions(this.tree);
+    const globalFrom = start ? positions.get(start.node)!.from + from - start.start : positions.get(target)!.from;
+    this.recordSplice(positions, globalFrom, globalFrom + to - from, parent, text.length);
     if (!start) {
       for (const node of inserted) adapter.appendChild(target, node);
       return;
@@ -258,10 +248,14 @@ export class DocumentEdit {
         setAttribute(target, "src", relative);
         break;
       }
-      case "removeNode":
-        if (!target.parentNode || (isElement(target.parentNode) && target.parentNode.tagName === "body")) fail("The document root cannot be removed.");
+      case "removeNode": {
+        if (!target.parentNode || !isElement(target.parentNode) || target.parentNode.tagName === "body") fail("The document root cannot be removed.");
+        const positions = textPositions(this.tree);
+        const range = positions.get(target)!;
+        this.recordSplice(positions, range.from, range.to, target.parentNode, 0, true);
         adapter.detachNode(target);
         break;
+      }
       case "replaceFragment":
       case "insertFragment": {
         const sibling = operation.op === "insertFragment" && ["before", "after"].includes(operation.position);
@@ -277,13 +271,24 @@ export class DocumentEdit {
             if (style !== undefined) setAttribute(node, "style", normalizeCss(style, "declarationList", this.limits, cssBudget));
           }
         });
-        if (operation.op === "replaceFragment") {
-          for (const child of [...target.childNodes]) adapter.detachNode(child);
-        }
         const reference = operation.op === "replaceFragment" || operation.position === "end" ? undefined
           : operation.position === "start" ? target.childNodes[0]
             : operation.position === "before" ? target
               : parent.childNodes[parent.childNodes.indexOf(target) + 1];
+        const positions = textPositions(this.tree);
+        const range = positions.get(parent)!;
+        const from = operation.op === "replaceFragment" ? range.from : reference ? positions.get(reference)!.from : range.to;
+        const to = operation.op === "replaceFragment" ? range.to : from;
+        this.recordSplice(positions, from, to, parent, textPositions(fragment).get(fragment)!.to, true);
+        if (operation.op === "replaceFragment") {
+          visit(target, (node) => {
+            if (isElement(node)) {
+              const id = attr(node, "data-node-id");
+              if (id !== undefined && this.baseIds.has(id)) this.replacedTextNodes.add(id);
+            }
+          });
+          for (const child of [...target.childNodes]) adapter.detachNode(child);
+        }
         for (const child of [...fragment.childNodes]) {
           adapter.detachNode(child);
           if (reference) adapter.insertBefore(parent, child, reference);

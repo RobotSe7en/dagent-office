@@ -2,7 +2,7 @@
 
 面向人和宿主智能体协作的通用办公文档 SDK 与可嵌入工作台。采用 TypeScript 和带语义的 HTML 文档格式，提供 Office 导入、保留样式的网页编辑、框选批注、结构化修改提案和可编辑 Office 导出。达智平台是首个宿主，SDK 同时面向其他应用独立发布。
 
-**当前状态：R1-06 核心操作与历史已实现。** 三格式模型设计已明确，`core` 提供严格契约、13 份 JSON Schema、Word 语义及只读文档包；`office` 提供有界 ZIP 和 DOCX 导入，`editor` 提供无脚本只读预览。Playground 可打开 DOCX、下载文档包并重开，包含中文字体替代和缺字诊断。读取验收使用实际 DOCX、LibreOffice 重存文件与固定字体参考图，范围和限制见 [DOCX 读取](docs/docx-import.md)。`core` 已提供隔离候选、六类内容操作、批注事务、单调修订和撤销重做，见[核心事务与历史](docs/document-session.md)。下一步是 R1-07 精确锚点与批注映射；富文本编辑、自动分页和 DOCX/PDF 导出尚未实现，未发布 npm 包。
+**当前状态：R1-07 精确锚点与批注映射已实现。** 三格式模型设计已明确，`core` 提供严格契约、13 份 JSON Schema、Word 语义及只读文档包；`office` 提供有界 ZIP 和 DOCX 导入，`editor` 提供无脚本只读预览。Playground 可打开 DOCX、下载文档包并重开，包含中文字体替代和缺字诊断。读取验收使用实际 DOCX、LibreOffice 重存文件与固定字体参考图，范围和限制见 [DOCX 读取](docs/docx-import.md)。`core` 已提供隔离候选、六类内容操作、批注事务、单调修订和撤销重做，见[核心事务与历史](docs/document-session.md)。批注支持 UTF-16 精确偏移、跨节点映射及明确的区域失效与重定位规则。下一步是 R1-08 预览与交互；富文本编辑、自动分页和 DOCX/PDF 导出尚未实现，未发布 npm 包。
 
 ## 本地开发
 
