@@ -25,3 +25,23 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+
+  browser-interaction:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node scripts/playwright.mjs install --with-deps chromium --only-shell
+      - run: pnpm build
+      - run: node scripts/playwright.mjs test interaction.spec.ts
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-interaction-results
+          path: test-results/

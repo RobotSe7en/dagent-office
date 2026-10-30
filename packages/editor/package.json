@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "license": "UNLICENSED",
-  "description": "Scriptless document preview; editing and collaboration components planned",
+  "description": "Scriptless document preview, revision-bound selection and annotation interaction",
   "files": [
     "dist"
   ],

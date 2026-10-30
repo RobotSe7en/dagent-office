@@ -26,6 +26,9 @@
     "record:docx-reference": "python3 scripts/docx-reference.py --record"
   },
   "devDependencies": {
+    "@dagent-office/core": "workspace:*",
+    "@dagent-office/editor": "workspace:*",
+    "@dagent-office/office": "workspace:*",
     "@playwright/test": "1.64.1",
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",

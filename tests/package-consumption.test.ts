@@ -153,6 +153,13 @@ test("packed declarations resolve without borrowing workspace source or ambient 
       'const unpacked: ReadonlyMap<string, Uint8Array> = readDocumentZip(archive);',
       'const digest: string = createAssetDescriptor("assets/a.bin", "application/octet-stream", archive).sha256;',
       'void collected; void unpacked; void digest;',
+      ...(name === "browser" ? [
+        'import { mountDocumentInteraction } from "@dagent-office/editor";',
+        'import type { DocumentInteractionView } from "@dagent-office/editor";',
+        'declare const container: HTMLElement;',
+        'const view: DocumentInteractionView = mountDocumentInteraction(container, session, {onSelectionChange(selection) { void selection?.baseRevision; }});',
+        'view.setMode("region"); view.setZoom(1.25); view.selection(); view.fonts(); void view.ready; view.dispose();',
+      ] : []),
     ].join("\n"));
     writeFileSync(join(consumer, "tsconfig." + name + ".json"), JSON.stringify({
       compilerOptions: {
