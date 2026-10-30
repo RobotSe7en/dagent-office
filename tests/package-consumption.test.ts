@@ -60,7 +60,7 @@ beforeAll(() => {
   if (store.error) throw store.error;
   expect(store.status, store.stderr).toBe(0);
   run(process.execPath, [
-    pnpm, "install", "--offline", "--ignore-scripts", "--ignore-workspace",
+    pnpm, "install", "--prefer-offline", "--ignore-scripts", "--ignore-workspace",
     "--no-frozen-lockfile", "--store-dir", store.stdout.trim(),
   ], consumer);
 });
