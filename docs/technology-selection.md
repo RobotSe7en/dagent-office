@@ -69,7 +69,7 @@ TypeScript 暂用 6.0.3，以保留工程边界检查所需的编译器 API；7.
 | 协议与结构校验 | Zod 4 | 同源推导类型及 JSON Schema，业务语义另行校验 |
 | HTML 解析与序列化 | parse5 | 支持结构、规范化、稳定节点和内部文档树适配 |
 | CSS 解析与检查 | CSS Tree | 样式能力表、值和引用约束、变量及级联源保留 |
-| 文本编辑 | Tiptap 开源基础层及 ProseMirror | 文档节点、样式保留、事务映射、分页配合 |
+| 文本编辑 | 自研 beforeinput／组合输入／DOM Range 适配 | 文档节点、样式保留、事务映射、分页配合 |
 | PPT 编辑 | HTML 定位布局、SVG、自有对象操作 | 几何、层级、框选、组合、母版与主题 |
 | Excel 编辑 | 虚拟网格、自有单元格适配器 | HTML 文档源和计算器数据间的转换 |
 | Excel 计算 | 优先验证 Univer 基础公式能力 | 支持函数矩阵、计算状态和依赖更新桥接 |
@@ -86,7 +86,7 @@ parse5 提供 HTML 解析和序列化，CSS Tree 提供 CSS AST、遍历、生�
 
 编辑器以 DOM 组件实现，普通 JS 挂载和可选 React 包装共用同一 UI。React 不进入核心；非 React 宿主可直接挂载。四个库模块的依赖方向见[总体架构](architecture.md)。
 
-Tiptap 的开源核心采用 MIT 许可，官方也提供付费批注和 AI 扩展。本项目只使用基础编辑能力，公共批注和宿主交互协议自行实现；首轮先验证属性、中文输入和事务映射，再完成正式 Word 输入及分页，不采用独立的编辑器保存源或撤销历史。[官方概览](https://tiptap.dev/docs/editor/getting-started/overview)
+按用户决定，文本输入与版式渲染自行实现。浏览器提供 DOM/CSS 和输入事件基础能力；SDK 处理源节点身份、实际输入范围、组合输入、格式命令和事务映射，不引入另一份保存源或撤销历史。
 
 Univer 以插件和命令组织能力，并能在浏览器与 Node 环境使用。评估公式能力时只引入所需基础模块；其 Pro 转换与协同能力不作为本项目导入导出的前提。[基础概念](https://docs.univer.ai/guides/sheets/getting-started/quickstart)、[Node 运行](https://docs.univer.ai/guides/sheets/getting-started/node)
 
@@ -98,7 +98,7 @@ Office 转换路线已确定为自研 OOXML，不采用 docx、PptxGenJS、Excel
 
 每个格式适配器声明自己支持的导入、编辑和导出特性，记录具体库版本与许可证。基础库没有覆盖的样式和对象由适配层补齐，无法完成的转换返回明确结果。
 
-第一轮按“已有 HTML 包基础 → 三格式模型设计 → DOCX 读取映射与只读验收 → 事务交互及独立 Word 闭环 → 达智智能体验证”推进。DOCX、Tiptap 和 PDF 纳入第一轮正式验收，PPTX 和 XLSX 先做小型验证。ZIP 候选还须验证原始路径、重复项和有界展开，不能仅以库能成功打开文件作为通过标准。详细任务见[第一轮实施细则](iteration-1.md)。
+第一轮按“已有 HTML 包基础 → 三格式模型设计 → DOCX 读取映射与只读验收 → 事务交互及独立 Word 闭环 → 达智智能体验证”推进。DOCX、自研输入和 PDF 纳入第一轮正式验收，PPTX 和 XLSX 先做小型验证。ZIP 候选还须验证原始路径、重复项和有界展开，不能仅以库能成功打开文件作为通过标准。详细任务见[第一轮实施细则](iteration-1.md)。
 
 独立发布前确定本项目许可证，并提供依赖及字体许可清单。尚未确定第一方许可证，当前目录不代表已作出开源授权。
 
@@ -112,8 +112,8 @@ Office 转换路线已确定为自研 OOXML，不采用 docx、PptxGenJS、Excel
 
 ibisOffice 采用 AGPL-3.0-only 和商业双授权。本项目当前不依赖、复制或翻译其源码；根据本项目文档格式、公开标准和独立测试实现所需能力。[上游许可](https://github.com/ibisjp/ibis-office/blob/50287728b005ceb0ed8a4a8f7d825ac4824224ef/COMMERCIAL-LICENSE.md)
 
-## R1-11 富文本输入依赖
+## R1-11 输入实现
 
-`@tiptap/core` 与 `@tiptap/pm` 锁定 3.32.1（MIT），只用于浏览器输入适配器。自定义节点保留文档属性，实际输入转换为核心身份协调事务；没有注册独立的历史插件。公开接口不泄露 Tiptap 或 ProseMirror 对象。[节点 API](https://tiptap.dev/docs/editor/extensions/custom-extensions/create-new/node)、[编辑器 API](https://tiptap.dev/docs/editor/api/editor)
+输入适配器自行实现，依赖浏览器的 `contenteditable`、`beforeinput`、组合输入事件和 DOM Range。Tiptap／ProseMirror 已移除，锁文件不再包含相关直接或间接依赖。预览与输入复用自有 HTML/CSS 渲染及字体诊断，分页层也自行实现。
 
-间接依赖的实际版本为：prosemirror-model 1.25.12、state 1.4.4、view 1.42.8、transform 1.12.4、commands 1.7.2、keymap 1.2.3、tables 1.8.5、changeset 2.4.5、dropcursor 1.8.4、gapcursor 1.4.1、history/inputrules/schema-list 1.5.1、orderedmap 2.1.1、rope-sequence 1.3.4、w3c-keyname 2.2.8，均为 MIT。版本和许可从安装包 manifest 核对，并由锁文件固定；包含 history 依赖不表示启用其持久化历史。
+运行时显示的字体替代、编号、制表位引导符和表格列宽属于可逆的视图投影，不写回文档源。已有源 ID 与属性保留；新增 ID 由核心分配。基础 ZIP、XML、HTML/CSS 解析与哈希依赖沿用既有许可记录。

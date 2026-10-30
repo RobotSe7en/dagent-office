@@ -81,6 +81,6 @@ pnpm pack:packages
 
 ## 依赖与状态
 
-已安装 Zod、HTML/CSS 解析器、哈希、ZIP、工具及依赖的版本、许可证见[技术选型](technology-selection.md)。XML 已通过内部 saxes 适配器接入，Tiptap 3.32.1 已用于 R1-11，其他格式的编辑依赖仍按后续任务引入；Office OOXML 读写和样式映射自行实现，不提前提供占位功能 API。
+已安装 Zod、HTML/CSS 解析器、哈希、ZIP、工具及依赖的版本、许可证见[技术选型](technology-selection.md)。XML 已通过内部 saxes 适配器接入，R1-11 使用自研浏览器输入适配，其他格式的编辑适配仍按后续任务实现；Office OOXML 读写和样式映射自行实现，不提前提供占位功能 API。
 
 修改后运行相应的窄范围检查与 `git diff --check`。只有验证所覆盖的能力才可在 README 标为已实现，产品范围和宿主边界以[总体架构](architecture.md)及[交互协议](editing-protocol.md)为准。
