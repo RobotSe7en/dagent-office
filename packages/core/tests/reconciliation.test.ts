@@ -113,3 +113,15 @@ test("reconciliation preserves unchanged source font scopes instead of reclassif
   s.commit(prepare(s, reconcile(s.getNode("p")!.html + '<p data-node-id="q">更新</p>')));
   expect(s.getNode("s")!.html).toBe(original);
 });
+
+test("editing an existing font scope classifies inserted text while preserving original characters", () => {
+  const s = session("é");
+  s.commit(prepare(s, reconcile('<span data-node-id="s" data-word-run="true" data-word-script="ascii" style="font-family:CustomFace;--word-font-ascii:CustomFace;--word-font-hAnsi:OtherFace">é</span>', [], "p")));
+  const source = s.getNode("s")!.html;
+  s.commit(prepare(s, reconcile(source.replace(">é<", ">éA<"), ["p", "s"].map((nodeId) => ({ nodeId, from: 1, to: 1, expectedText: "", text: "A" })), "p")));
+  expect(s.getNode("s")!.childNodeIds).toEqual([]);
+  s.commit(prepare(s, reconcile(s.getNode("s")!.html.replace(">éA<", ">éA中<"), ["p", "s"].map((nodeId) => ({ nodeId, from: 2, to: 2, expectedText: "", text: "中" })), "p")));
+  expect(s.getNode("s")!.text).toBe("éA中");
+  expect(s.getNode("s")!.html).not.toContain('data-word-script="hAnsi"');
+  expect(s.getNode("s")!.html).toContain('data-word-script="eastAsia"');
+});

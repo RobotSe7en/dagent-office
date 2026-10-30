@@ -83,6 +83,17 @@ test("Enter splits paragraphs, cross-paragraph replacement and table input remai
   expect(await page.evaluate(() => window.textEditorHost.errors)).toEqual([]);
 });
 
+for (const offset of [1, 3]) {
+  test("typing after Enter stays in the new paragraph: split at " + offset, async ({ page }) => {
+    await mount(page); await selection(page, "a", offset); await page.keyboard.press("Enter"); await page.keyboard.insertText("新段");
+    const paragraphs = await page.evaluate(() => {
+      const s = window.textEditorHost.session!; return s.getNode("root")!.childNodeIds.map((id) => s.getNode(id)!.text);
+    });
+    expect(paragraphs).toEqual(["甲".repeat(offset), "新段" + "甲".repeat(3 - offset), "第二段"]);
+    expect(await page.evaluate(() => window.textEditorHost.errors)).toEqual([]);
+  });
+}
+
 test("formatting preserves plain text and identities while sharing one undo step", async ({ page }) => {
   await mount(page); await selection(page, "a", 1, "a", 2); await page.getByRole("button", { name: "加粗", exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.textEditorHost.session!.getNode("a")!.html)).toContain("font-weight:700");

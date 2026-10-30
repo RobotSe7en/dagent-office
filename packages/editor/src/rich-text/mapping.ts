@@ -32,8 +32,7 @@ export function transactionProofs(transaction: Transaction): ReconciledTextEdit[
 }
 
 /** Find the derived editor position corresponding to a canonical UTF-16 offset. */
-export function positionAtOffset(document: ProseMirrorNode, offset: number): number {
-  const locate = (node: ProseMirrorNode, position: number, requested: number): number => {
+function locate(node: ProseMirrorNode, position: number, requested: number): number {
     if (node.isText) return position + Math.max(0, Math.min(node.text!.length, requested));
     if (node.isLeaf) return position + (requested > 0 ? node.nodeSize : 0);
     let remaining = requested, found: number | undefined;
@@ -45,6 +44,53 @@ export function positionAtOffset(document: ProseMirrorNode, offset: number): num
       else remaining -= length;
     });
     return found ?? position + (node.type.name === "doc" ? node.content.size : node.nodeSize - 1);
-  };
+}
+export function positionAtOffset(document: ProseMirrorNode, offset: number): number {
   return Math.max(0, Math.min(document.content.size, locate(document, 0, offset)));
+}
+
+export interface TextBookmark {
+  readonly nodeId?: string;
+  readonly blockPath: readonly number[];
+  readonly offset: number;
+  readonly fallback: number;
+}
+
+/** Paragraph boundaries have the same plain-text offset; retain a structural location too. */
+export function textBookmark(document: ProseMirrorNode, position: number): TextBookmark {
+  const resolved = document.resolve(position), fallback = canonicalOffset(document, position);
+  let depth = resolved.depth;
+  while (depth > 0 && !resolved.node(depth).isTextblock) depth--;
+  if (!depth) return { blockPath: [], offset: fallback, fallback };
+  const node = resolved.node(depth), id = sourceId(node), path: number[] = [];
+  let identities = 0;
+  if (id) document.descendants((child) => { if (sourceId(child) === id) identities++; });
+  for (let level = 0; level < depth; level++) {
+    let ordinal = 0;
+    resolved.node(level).forEach((child, _offset, index) => { if (index < resolved.index(level) && child.isBlock) ordinal++; });
+    path.push(ordinal);
+  }
+  return { ...(id && identities === 1 ? { nodeId: id } : {}), blockPath: path,
+    offset: canonicalOffset(node, position - resolved.start(depth)), fallback };
+}
+
+export function bookmarkPosition(document: ProseMirrorNode, bookmark: TextBookmark): number {
+  let target: { node: ProseMirrorNode; position: number } | undefined;
+  if (bookmark.nodeId) document.descendants((node, position) => {
+    if (sourceId(node) === bookmark.nodeId && node.isTextblock) target = { node, position };
+  });
+  if (!target) {
+    let current = document, position = -1, valid = true;
+    for (const ordinal of bookmark.blockPath) {
+      let chosen: { node: ProseMirrorNode; position: number } | undefined, index = 0;
+      current.forEach((child, offset) => {
+        if (child.isBlock && index++ === ordinal) chosen = { node: child, position: position + 1 + offset };
+      });
+      if (!chosen) { valid = false; break; }
+      current = chosen.node; position = chosen.position;
+    }
+    if (valid && current.isTextblock) target = { node: current, position };
+  }
+  return target ? Math.max(0, Math.min(document.content.size, locate(target.node, target.position, bookmark.offset)))
+    : positionAtOffset(document, bookmark.fallback);
 }

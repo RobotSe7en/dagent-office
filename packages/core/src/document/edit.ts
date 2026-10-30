@@ -242,31 +242,55 @@ export class DocumentEdit {
       const style = attr(node, "style");
       if (style !== undefined) setAttribute(node, "style", normalizeCss(style, "declarationList", this.limits, cssBudget));
     });
-    const proofs = new Map<string, { value: string; edits: typeof operation.textEdits }>();
+    const proofs = new Map<string, { value: string; edits: typeof operation.textEdits; inserted: { from: number; to: number }[] }>();
     for (const edit of operation.textEdits) {
       if (!allowed.has(edit.nodeId) || !this.baseIds.has(edit.nodeId)) fail("Text mapping proof targets must belong to the base target subtree.");
-      const proof = proofs.get(edit.nodeId) ?? { value: before.getNode(edit.nodeId)!.text, edits: [] };
+      const proof = proofs.get(edit.nodeId) ?? { value: before.getNode(edit.nodeId)!.text, edits: [], inserted: [] };
       if (edit.from > edit.to || edit.to > proof.value.length || proof.value.slice(edit.from, edit.to) !== edit.expectedText
         || !isTextBoundary(proof.value, edit.from) || !isTextBoundary(proof.value, edit.to)
         || /[\u0000\r]/u.test(edit.text)
         || [...edit.text].some((character) => character.length === 1 && character.charCodeAt(0) >= 0xd800 && character.charCodeAt(0) <= 0xdfff))
         fail("Reconciled text mapping proof does not match the source text or Unicode boundaries.");
       proof.value = proof.value.slice(0, edit.from) + edit.text + proof.value.slice(edit.to);
-      if (edit.expectedText !== edit.text) proof.edits.push(edit);
+      if (edit.expectedText !== edit.text) {
+        proof.edits.push(edit);
+        const delta = edit.text.length - edit.to + edit.from, inserted: typeof proof.inserted = [];
+        for (const range of proof.inserted) {
+          if (range.to <= edit.from) inserted.push(range);
+          else if (range.from >= edit.to) inserted.push({ from: range.from + delta, to: range.to + delta });
+          else {
+            if (range.from < edit.from) inserted.push({ from: range.from, to: edit.from });
+            if (range.to > edit.to) inserted.push({ from: edit.from + edit.text.length, to: range.to + delta });
+          }
+        }
+        if (edit.text.length) inserted.push({ from: edit.from, to: edit.from + edit.text.length });
+        proof.inserted = inserted.sort((left, right) => left.from - right.from);
+      }
       proofs.set(edit.nodeId, proof);
     }
     for (const child of [...target.childNodes]) adapter.detachNode(child);
     for (const child of [...fragment.childNodes]) { adapter.detachNode(child); adapter.appendChild(target, child); }
     const textNodes: Tree.TextNode[] = [];
     visit(target, (node) => { if (node.nodeName === "#text" && "value" in node) textNodes.push(node); });
+    const positions = textPositions(this.tree);
     for (const node of textNodes) {
       const inherited = ancestors(node), word = inherited.some((item) => attr(item, "data-word-run") !== undefined || attr(item, "data-word-script") !== undefined);
       if (!word || !node.parentNode || !isElement(node.parentNode)) continue;
-      const existing = inherited.find((item) => { const id = attr(item, "data-node-id"); return id !== undefined && before.hasNode(id); });
-      if (existing && before.getNode(attr(existing, "data-node-id")!)!.text === textLeaves(existing).map((leaf) => leaf.value).join("")) continue;
+      const existing = inherited.find((item) => { const id = attr(item, "data-node-id"); return id !== undefined && proofs.has(id); });
+      if (!existing) continue;
+      const proof = proofs.get(attr(existing, "data-node-id")!)!, offset = positions.get(node)!.from - positions.get(existing)!.from;
+      const ranges = proof.inserted.map((range) => ({ from: Math.max(0, range.from - offset), to: Math.min(node.value.length, range.to - offset) }))
+        .filter((range) => range.from < range.to);
+      if (!ranges.length) continue;
       const script = inherited.map((item) => attr(item, "data-word-script")).find((value) => value !== undefined) ?? "ascii";
-      if (scriptParts(node.value).every((part) => part.script === script)) continue;
-      for (const part of this.insertedText(node.value, true, script)) adapter.insertBefore(node.parentNode, part, node);
+      if (ranges.every((range) => scriptParts(node.value.slice(range.from, range.to)).every((part) => part.script === script))) continue;
+      let cursor = 0;
+      for (const range of ranges) {
+        if (range.from > cursor) adapter.insertBefore(node.parentNode, this.text(node.value.slice(cursor, range.from)), node);
+        for (const part of this.insertedText(node.value.slice(range.from, range.to), true, script)) adapter.insertBefore(node.parentNode, part, node);
+        cursor = range.to;
+      }
+      if (cursor < node.value.length) adapter.insertBefore(node.parentNode, this.text(node.value.slice(cursor)), node);
       adapter.detachNode(node);
     }
     const after = parseHtml(this.html(), this.state.snapshot.manifest, this.state.files, this.limits, { nodes: 0 });

@@ -8,8 +8,9 @@ import { DocumentError } from "@dagent-office/core";
 import type { DocumentEditingSession, ReconciledTextEdit } from "@dagent-office/core";
 import { mountDocumentPreview } from "./preview.js";
 import type { DocumentPreview } from "./preview.js";
-import { attributes, canonicalOffset, editorExtensions, sourceHtml, sourceJson } from "./rich-text/source.js";
-import { positionAtOffset, transactionProofs } from "./rich-text/mapping.js";
+import { attributes, editorExtensions, sourceHtml, sourceJson } from "./rich-text/source.js";
+import { bookmarkPosition, textBookmark, transactionProofs } from "./rich-text/mapping.js";
+import type { TextBookmark } from "./rich-text/mapping.js";
 
 export interface DocumentTextEditorOptions { readonly onError?: (error: Error) => void }
 export interface DocumentTextEditor {
@@ -47,22 +48,21 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
     renderDocument = sourceDocument(); const root = rootElement(renderDocument); sourceRootId = root.dataset.nodeId!;
     return { type: "doc", content: [sourceJson(root)] };
   }
-  function refresh(anchor?: number, head?: number): void {
+  function refresh(selection?: { anchor: TextBookmark; head: TextBookmark }): void {
     if (!editor || disposed) return;
+    const bookmark = selection ?? { anchor: textBookmark(editor.state.doc, editor.state.selection.anchor), head: textBookmark(editor.state.doc, editor.state.selection.head) };
     suppressed = true;
     try {
       editor.commands.setContent(content(), { emitUpdate: false });
-      if (anchor !== undefined) {
-        const from = positionAtOffset(editor.state.doc, anchor), to = positionAtOffset(editor.state.doc, head ?? anchor);
-        editor.view.dispatch(editor.state.tr.setSelection(TextSelection.between(editor.state.doc.resolve(from), editor.state.doc.resolve(to))));
-      }
+      const from = bookmarkPosition(editor.state.doc, bookmark.anchor), to = bookmarkPosition(editor.state.doc, bookmark.head);
+      editor.view.dispatch(editor.state.tr.setSelection(TextSelection.between(editor.state.doc.resolve(from), editor.state.doc.resolve(to))));
       revision = session.snapshot().manifest.revision; proofs = [];
     } finally { suppressed = false; }
   }
   function flush(): void {
     if (!editor || disposed || suppressed || composing) return;
     const baseRevision = compositionRevision ?? revision;
-    const anchor = canonicalOffset(editor.state.doc, editor.state.selection.anchor), head = canonicalOffset(editor.state.doc, editor.state.selection.head);
+    const bookmark = { anchor: textBookmark(editor.state.doc, editor.state.selection.anchor), head: textBookmark(editor.state.doc, editor.state.selection.head) };
     try {
       if (baseRevision !== session.snapshot().manifest.revision) throw new DocumentError("RevisionConflict", "输入期间文档已变化，请基于当前修订重新输入。");
       const html = sourceHtml(document, editor.state.doc), template = document.createElement("template"); template.innerHTML = html;
@@ -104,7 +104,7 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
       committing = true;
       try { session.commit(candidate); } catch (reason) { session.discard(candidate); throw reason; }
       finally { committing = false; }
-      error.hidden = true; compositionRevision = undefined; refresh(anchor, head);
+      error.hidden = true; compositionRevision = undefined; refresh(bookmark);
     } catch (reason) { compositionRevision = undefined; proofs = []; refresh(); report(reason); }
   }
   function format(property: string, value: string): void {
