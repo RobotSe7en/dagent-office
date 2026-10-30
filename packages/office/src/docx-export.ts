@@ -8,12 +8,12 @@ import type { UnexportedAnnotation } from "./export/annotations.js";
 import { ExportCss } from "./export/css.js";
 import type { Css } from "./export/css.js";
 import { contentType, OutputOpc } from "./export/opc.js";
-import { cellProperties, difference, paragraphKeys, paragraphProperties, points, runKeys, runProperties, tableProperties, unsupported } from "./export/properties.js";
+import { cellProperties, difference, paragraphKeys, paragraphProperties, pick, points, runKeys, runProperties, tableProperties, unsupported } from "./export/properties.js";
 import { children, contains, element, parseSource } from "./export/source.js";
 import type { SourceElement, SourceNode, SourceTree } from "./export/source.js";
 import type { HtmlNumbering } from "./export/styles.js";
 import { ExportStyles } from "./export/styles.js";
-import { color, nativeInteger } from "./export/values.js";
+import { color, fontName, nativeInteger } from "./export/values.js";
 import { attributes, declaration, empty, escapeXml, namespaces, orderedProperties, value, XmlParts } from "./export/xml.js";
 
 export interface DocxExportOptions extends DocumentZipOptions {}
@@ -69,7 +69,7 @@ class Exporter {
     this.css = new ExportCss(this.snapshot.styles.map((style) => style.css), limits, new Set(word?.revisions.map((item) => item.nodeId)));
     for (const node of this.tree.elements) if (contains(this.tree.root, node)) this.assertFormatting(node, this.css.get(node));
     const main = word?.stories.filter((story) => story.kind === "main").map((story) => this.tree.byId.get(story.rootNodeId)!) ?? [this.tree.root];
-    this.styles = new ExportStyles(this.css, word, this.snapshot.metadata.locale, limits.maxDepth, this.css.get(main[0]!));
+    this.styles = new ExportStyles(this.css, word, this.snapshot.metadata.locale, limits, this.css.get(main[0]!));
     this.mainStories = main;
     const stories = word?.stories.filter((story) => story.kind !== "comment").map((story) => this.tree.byId.get(story.rootNodeId)!) ?? main;
     this.opc = new OutputOpc(new XmlParts(limits));
@@ -139,12 +139,23 @@ class Exporter {
     if (section.pageNumberStart !== undefined || section.pageNumberFormat) out += empty("w:pgNumType", { "w:start": section.pageNumberStart, "w:fmt": section.pageNumberFormat });
     out += value("titlePg", section.differentFirstPage ? "1" : "0") + "</w:sectPr>"; return out;
   }
-  private nativeRun(css: Css, expected: Css, character?: string, role?: string, language?: string): string {
+  private runDifference(css: Css, expected: Css): Record<string, string> {
     const properties = { ...difference(css, expected, runKeys) };
+    for (const key of ["font-family", "--word-font-ascii", "--word-font-hAnsi", "--word-font-eastAsia", "--word-font-cs"]) if (properties[key] && expected[key] && fontName(properties[key]) === fontName(expected[key])) delete properties[key];
+    if (properties.color && expected.color && color(properties.color) === color(expected.color)) delete properties.color;
+    const weight = (raw: string | undefined): number => raw === "bold" ? 700 : raw === "normal" ? 400 : Number(raw);
+    if (properties["font-weight"] && weight(properties["font-weight"]) === weight(expected["font-weight"])) delete properties["font-weight"];
     if (properties["text-decoration-color"] && expected["text-decoration-color"]?.toLowerCase() === "currentcolor" && color(properties["text-decoration-color"], css.color) === color(css.color!)) delete properties["text-decoration-color"];
+    return properties;
+  }
+  private nativeRun(css: Css, expected: Css, character?: string, role?: string, language?: string): string {
+    const properties = this.runDifference(css, expected);
     // A script span selects its source role. Preserve the other three source
     // families even when a host changes just one script's font-family.
-    if (role && css["font-family"] !== expected["--word-font-" + role]) properties["font-family"] = css["font-family"]!;
+    if (role) {
+      if (fontName(css["font-family"]!) !== fontName(expected["--word-font-" + role] ?? expected["font-family"]!)) properties["font-family"] = css["font-family"]!;
+      else delete properties["font-family"];
+    }
     const r = (character ? value("rStyle", this.styles.ids.get(character) ?? character) : "") + runProperties(properties, expected, false, role) + (language ? empty("w:lang", { "w:val": language }) : "");
     return r ? "<w:rPr>" + r + "</w:rPr>" : "";
   }
@@ -155,7 +166,7 @@ class Exporter {
       const end = boundaries[index + 1]; if (end === undefined || end <= start) continue;
       const textName = this.deleted ? "delText" : "t", raw = text.slice(start, end);
       const pieces = raw.split(/([\t\n])/);
-      this.add("<w:r>" + this.nativeRun(css, expected, character, role, language));
+      this.add("<w:r>" + this.nativeRun(css, expected, character, role ?? (/^[\u0000-\u007f]*$/.test(raw) ? "ascii" : undefined), language));
       for (const piece of pieces) if (piece) this.add(piece === "\t" ? "<w:tab/>" : piece === "\n" ? "<w:br/>" : "<w:" + textName + ' xml:space="preserve">' + escapeXml(piece) + "</w:" + textName + ">");
       this.add("</w:r>");
     }
@@ -171,7 +182,7 @@ class Exporter {
   private inline(node: SourceNode, paragraphStyle: string | undefined, character?: string, role?: string, language?: string): void {
     if (!element(node)) {
       const css = this.css.get(node.parent);
-      const textCss = ["td", "th"].includes(node.parent.tag) ? { ...css, "vertical-align": "baseline" } : css;
+      const textCss = ["td", "th"].includes(node.parent.tag) ? { ...css, "vertical-align": "baseline", "background-color": "transparent" } : css;
       this.emitText(node, node.text, textCss, this.styles.runContext(paragraphStyle, character), character, role, language); return;
     }
     const id = node.attrs["data-node-id"] ?? "", css = this.css.get(node);
@@ -241,12 +252,15 @@ class Exporter {
     let props = (style ? value("pStyle", this.styles.ids.get(style) ?? style) : "");
     const numId = node.attrs["data-word-numbering"] ? this.styles.numberingIds.get(node.attrs["data-word-numbering"]) : list?.id;
     if (numId) props += '<w:numPr>' + value("ilvl", node.attrs["data-word-level"] ?? list?.level ?? 0) + value("numId", numId) + "</w:numPr>";
-    props += paragraphProperties({ ...difference(css, this.styles.paragraphContext(style), [...paragraphKeys, ...borderKeys(css)]), "font-size": css["font-size"]! }, this.width);
+    const expectedParagraph = this.styles.paragraphContext(style), paragraphCss = { ...css };
+    for (const side of ["top", "right", "bottom", "left"]) if (!paragraphCss["border-" + side + "-style"] && expectedParagraph["border-" + side + "-style"] && expectedParagraph["border-" + side + "-style"] !== "none") { paragraphCss["border-" + side + "-style"] = "none"; paragraphCss["border-" + side + "-width"] = "0pt"; }
+    props += paragraphProperties({ ...difference(paragraphCss, expectedParagraph, [...paragraphKeys, ...borderKeys(paragraphCss)]), "font-size": css["font-size"]! }, this.width);
     const tabs = this.snapshot.metadata.word?.tabs.find((tab) => tab.paragraphNodeId === id);
     if (tabs) props += '<w:tabs>' + tabs.stops.map((tab) => empty("w:tab", { "w:val": tab.alignment, "w:leader": tab.leader, "w:pos": nativeInteger(tab.position) })).join("") + "</w:tabs>";
     if (/^h[1-6]$/.test(node.tag)) props += value("outlineLvl", Number(node.tag[1]) - 1);
     const mark = children(node).find((child) => child.attrs["data-word-paragraph-mark"]);
-    if (mark) props += "<w:rPr>" + runProperties(difference(this.css.get(mark), this.styles.runContext(style), runKeys)) + "</w:rPr>";
+    const markProperties = mark ? this.runDifference(this.css.get(mark), this.styles.runContext(style)) : pick(this.runDifference(css, this.styles.runContext(style)), runKeys.filter((key) => key !== "background-color" && !key.startsWith("text-decoration") && !["vertical-align", "letter-spacing", "--word-run-shading", "--word-kerning-threshold"].includes(key)));
+    if (Object.keys(markProperties).length) props += "<w:rPr>" + runProperties(markProperties, this.styles.runContext(style)) + "</w:rPr>";
     props += section ?? ""; this.add("<w:pPr>" + orderedProperties("pPr", props) + "</w:pPr>");
     this.add(this.annotations.at(node, 0));
     for (const child of node.children) this.inline(child, style);
@@ -265,7 +279,8 @@ class Exporter {
       } else {
         const parent = container ?? pending[0]!.parent!;
         const paragraph: SourceElement = { tag: "p", attrs: {}, parent, children: pending, from: pending[0]!.from, to: pending.at(-1)!.to };
-        this.flowStyles.set(paragraph, this.css.get(parent)); result.push(paragraph);
+        const css = this.css.get(parent);
+        this.flowStyles.set(paragraph, ["td", "th"].includes(parent.tag) ? { ...this.css.emptyStyle(), ...pick(css, [...runKeys, "text-align", "text-indent", "line-height", "widows", "orphans", ...Object.keys(css).filter((key) => key.startsWith("--"))]), "background-color": "transparent", "vertical-align": "baseline" } : css); result.push(paragraph);
       }
       pending = [];
     };

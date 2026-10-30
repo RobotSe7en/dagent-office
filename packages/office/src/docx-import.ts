@@ -747,7 +747,8 @@ class Importer {
           ]) {
             if (
               standalone[name] !== undefined &&
-              inherited[name] !== standalone[name]
+              inherited[name] !== standalone[name] &&
+              css[name] === undefined
             )
               css[name] = inherited[name]!;
           }

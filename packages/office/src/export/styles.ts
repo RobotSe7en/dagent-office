@@ -1,6 +1,10 @@
 import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WordMetadata } from "@dagent-office/core";
+import type { DeepReadonly, DocumentReadLimits, WordMetadata } from "@dagent-office/core";
+import { variables } from "./css.js";
 import type { Css, ExportCss } from "./css.js";
+import { DocxStyles } from "../ooxml/styles.js";
+import { xml } from "../ooxml/xml.js";
+import type { XmlNode } from "../ooxml/xml.js";
 import { cellMargins, cellProperties, paragraphKeys, paragraphProperties, pick, runKeys, runProperties, tableProperties } from "./properties.js";
 import { attributes, declaration, empty, escapeXml, namespaces, value } from "./xml.js";
 import { contentType } from "./opc.js";
@@ -15,7 +19,12 @@ export class ExportStyles {
   readonly numberingIds: Map<string, string> = new Map<string, string>();
   private readonly definitions: Map<string, Style>;
   private readonly native = new Map<string, { p: Css; r: Css }>();
-  constructor(readonly css: ExportCss, readonly word: DeepReadonly<WordMetadata> | undefined, private readonly locale: string | undefined, private readonly maxDepth: number, main: Css) {
+  private readonly contexts = new Map<string, Css>();
+  private contextWork = 0;
+  private readonly properties = new Map<string, { source: string; node: XmlNode }>();
+  private readonly propertyBudget = { nodes: 0 };
+  private readonly reader: DocxStyles;
+  constructor(readonly css: ExportCss, readonly word: DeepReadonly<WordMetadata> | undefined, private readonly locale: string | undefined, private readonly limits: DocumentReadLimits, main: Css) {
     this.definitions = new Map(word?.styles.map((style) => [style.styleId, style]) ?? []);
     this.ids = new Map([...this.definitions.keys()].map((id) => [id, id]));
     const special = runKeys.filter((key) => key === "background-color" || key.startsWith("text-decoration"));
@@ -23,16 +32,38 @@ export class ExportStyles {
     // Paragraph source nodes carry resolved defaults; a native default of zero
     // spacing is explicit so producers do not substitute their UI defaults.
     this.paragraphDefaults = { "margin-top": "0pt", "margin-bottom": "0pt" };
+    // Replay only our generated, theme-free run properties through the shared
+    // Word semantics. This reader has no external parts or I/O capability.
+    this.reader = new DocxStyles({ files: new Map(), limits, related: () => undefined, relationships: () => new Map(), contentType: () => undefined,
+      read: () => { throw new DocumentError("ExportFailed", "Native style baseline cannot read an external part."); } }, "word/document.xml");
     word?.numbering.forEach((definition, index) => this.numberingIds.set(definition.numberingId, String(index + 1)));
   }
   style(id: string | undefined): Style | undefined { return id ? this.definitions.get(id) : undefined; }
-  paragraphContext(id: string | undefined): Css { return { ...this.css.emptyStyle(), ...(id && this.style(id) ? this.nativeValues(this.style(id)!).p : {}) }; }
+  private paragraphStyle(id: string | undefined): Style | undefined { return this.style(id) ?? (!id ? [...this.definitions.values()].find((style) => style.kind === "paragraph" && style.styleId === "Normal") : undefined); }
+  paragraphContext(id: string | undefined): Css { const style = this.paragraphStyle(id); return { ...this.css.emptyStyle(), ...(style ? this.nativeValues(style).p : {}) }; }
   runContext(paragraph: string | undefined, character?: string): Css {
-    let result = this.defaults;
-    for (const id of [paragraph, character]) {
-      const definition = this.style(id); if (!definition) continue;
-      result = { ...result, ...this.nativeValues(definition).r };
-    }
+    const key = JSON.stringify([paragraph ?? null, character ?? null]), known = this.contexts.get(key); if (known) return known;
+    const paragraphStyle = this.paragraphStyle(paragraph);
+    let result = paragraphStyle ? this.nativeValues(paragraphStyle).r : this.defaults;
+    const chain: Style[] = []; let current = this.style(character);
+    while (current) { if (chain.length >= this.limits.maxDepth) throw new DocumentError("ResourceLimitExceeded", "Native style inheritance exceeds its depth budget."); chain.push(current); current = this.style(current.basedOn); }
+    this.contextWork += chain.length + 1;
+    if (this.contextWork > this.limits.maxNodes * 128) throw new DocumentError("ResourceLimitExceeded", "Native style mapping exceeds its work budget.");
+    for (const style of chain.reverse()) result = this.applyRun(style, result);
+    this.contexts.set(key, result);
+    return result;
+  }
+  private runSource(style: Style): { source: string; node: XmlNode } {
+    const known = this.properties.get(style.styleId); if (known) return known;
+    const css = this.values(style), parent = style.basedOn ? this.values(this.style(style.basedOn)!) : this.defaults;
+    const source = runProperties(this.own(style, "r", css, parent), parent, true);
+    const encoder = new (globalThis as unknown as { TextEncoder: new () => { encode(value: string): Uint8Array } }).TextEncoder();
+    const node = xml(encoder.encode(declaration + "<w:rPr" + namespaces + ">" + source + "</w:rPr>"), "generated-style-properties", this.limits, this.propertyBudget);
+    const result = { source, node }; this.properties.set(style.styleId, result); return result;
+  }
+  private applyRun(style: Style, inherited: Css): Css {
+    const result = { ...inherited, ...this.reader.run(this.runSource(style).node, { ...inherited }, true) };
+    for (const [key, raw] of Object.entries(result)) if (!key.startsWith("--") && raw.includes("var(")) result[key] = variables(raw, (name) => result[name], 0, this.limits.maxFileBytes) ?? inherited[key]!;
     return result;
   }
   private values(style: Style): Css {
@@ -48,11 +79,11 @@ export class ExportStyles {
   }
   private nativeValues(style: Style, depth = 0): { p: Css; r: Css } {
     const known = this.native.get(style.styleId); if (known) return known;
-    if (depth > this.maxDepth) throw new DocumentError("ResourceLimitExceeded", "Native style inheritance exceeds its depth budget.");
+    if (depth > this.limits.maxDepth) throw new DocumentError("ResourceLimitExceeded", "Native style inheritance exceeds its depth budget.");
     const css = this.values(style), parentStyle = style.basedOn ? this.style(style.basedOn) : undefined;
     const parent = parentStyle ? this.nativeValues(parentStyle, depth + 1) : { p: {}, r: this.defaults };
     const parentCss = parentStyle ? this.values(parentStyle) : this.defaults;
-    const result = { p: { ...parent.p, ...this.own(style, "p", css, parentCss) }, r: { ...parent.r, ...this.own(style, "r", css, parentCss) } };
+    const result = { p: { ...parent.p, ...this.own(style, "p", css, parentCss) }, r: this.applyRun(style, parent.r) };
     this.native.set(style.styleId, result); return result;
   }
   write(opc: OutputOpc): void {
@@ -64,7 +95,7 @@ export class ExportStyles {
       out.add("<w:style" + attributes({ "w:type": style.kind, "w:styleId": this.ids.get(style.styleId)!, ...(style.kind === "paragraph" && style.styleId === "Normal" ? { "w:default": 1 } : {}) }) + ">" + value("name", style.styleId));
       for (const [key, name] of [["basedOn", "basedOn"], ["linkedStyleId", "link"], ["nextStyleId", "next"]] as const) if (style[key]) out.add(value(name, this.ids.get(style[key])));
       out.add("<w:pPr>" + paragraphProperties({ ...this.own(style, "p", css, parent), "font-size": css["font-size"]! }) + "</w:pPr>");
-      out.add("<w:rPr>" + runProperties(this.own(style, "r", css, parent), parent, true) + "</w:rPr>");
+      out.add("<w:rPr>" + this.runSource(style).source + "</w:rPr>");
       if (style.kind === "table") {
         out.add("<w:tblPr>" + (style.rowBandSize ? value("tblStyleRowBandSize", style.rowBandSize) : "") + (style.columnBandSize ? value("tblStyleColBandSize", style.columnBandSize) : "") + tableProperties(css) + cellMargins(css, "tblCellMar") + (style.tableLookMask !== undefined ? empty("w:tblLook", { "w:val": style.tableLookMask.toString(16).padStart(4, "0") }) : "") + "</w:tblPr>");
         out.add("<w:tcPr>" + cellProperties(pick(css, Object.keys(css).filter((key) => key.startsWith("padding-")))) + "</w:tcPr>");

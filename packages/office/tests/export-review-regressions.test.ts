@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
 import { openDocument, DEFAULT_DOCUMENT_READ_LIMITS } from "@dagent-office/core";
+import type { DocumentMetadata, WordMetadata } from "@dagent-office/core";
 import { exportDocx, importDocx, readDocumentZip } from "@dagent-office/office";
 import { attr, child, elements, W, xml } from "../src/ooxml/xml.js";
 import type { XmlNode } from "../src/ooxml/xml.js";
@@ -17,7 +18,7 @@ function native(document: ReturnType<typeof openDocument>, path = "word/document
   return xml(readDocumentZip(exportDocx(document).bytes).get(path)!, path, DEFAULT_DOCUMENT_READ_LIMITS, { nodes: 0 });
 }
 const descendants = (node: XmlNode, name: string): XmlNode[] => node.content.flatMap((child) => typeof child === "string" ? [] : [...(child.uri === W && child.name === name ? [child] : []), ...descendants(child, name)]);
-const firstRun = (node: XmlNode) => descendants(node, "rPr")[0];
+const firstRun = (node: XmlNode) => child(descendants(node, "r")[0], "rPr");
 for (const [name, body] of [
   ["cell", '<table data-node-id="t"><tr data-node-id="r"><td data-node-id="c">A<strong data-node-id="b">B</strong> C</td></tr></table>'],
   ["container", '<div data-node-id="d">A<strong data-node-id="b">B</strong> C</div>'],
@@ -106,4 +107,50 @@ test("unused source class names cannot supply an implicit native baseline", () =
   expect(attr(child(descendants(native(document), "pPr")[0], "spacing"), "before")).toBe("200");
   const defaults = child(child(child(native(document, "word/styles.xml"), "docDefaults"), "rPrDefault"), "rPr");
   expect(attr(child(defaults, "sz"), "val")).toBe("24");
+});
+
+function wordSource(body: string, styles: WordMetadata["styles"], css: string) {
+  const model = authored('<div data-node-id="story" data-office-story="main"><section data-node-id="section">' + body + '</section></div>', css), files = new Map(model.serialize());
+  const metadata = JSON.parse(decoder.decode(files.get("metadata.json"))) as DocumentMetadata;
+  metadata.sections = [{ sectionId: "section", rootNodeId: "section" }];
+  metadata.word = { stories: [{ storyId: "main", kind: "main", rootNodeId: "story" }], styles, numbering: [], hyperlinks: [], bookmarks: [], fields: [], tabs: [], revisions: [], tables: [] };
+  files.set("metadata.json", encoder.encode(JSON.stringify(metadata))); return openDocument(files);
+}
+test.each([["font-style", "italic", "i"], ["font-weight", "bold", "b"]] as const)("character-style toggle chains use the actual native baseline: %s", (property, active, nativeName) => {
+  const document = wordSource('<p data-node-id="p" class="P" data-word-style="P"><span data-node-id="s" class="C" data-word-style="C">X</span></p>', [
+    { styleId: "P", kind: "paragraph", cssClass: "P", paragraphProperties: [], runProperties: [property] },
+    { styleId: "C", kind: "character", cssClass: "C", runProperties: [property] },
+  ], '.P{' + property + ':' + active + '}.C{' + property + ':' + active + '}');
+  const tree = native(document), textRun = descendants(tree, "r").find((run) => child(run, "t"));
+  expect(attr(child(child(textRun, "rPr"), nativeName), "val")).toBe("1");
+  const reopened = openDocument(importDocx(exportDocx(document).bytes, { documentId: "toggle" }));
+  expect(reopened.snapshot().html).toContain(property + ':' + active);
+});
+test("an anonymous cell paragraph inherits text formatting without duplicating its cell box", () => {
+  const tree = native(authored('<table data-node-id="t"><tr data-node-id="r"><td data-node-id="c" style="border:2pt solid red;background-color:#00ff00;padding:10pt">A<strong data-node-id="b">B</strong>C</td></tr></table>'));
+  const cell = descendants(tree, "tc")[0]!, paragraph = child(cell, "p")!;
+  expect(child(child(cell, "tcPr"), "tcBorders")).toBeDefined();
+  expect(child(child(cell, "tcPr"), "shd")).toBeDefined();
+  expect(child(child(paragraph, "pPr"), "pBdr")).toBeUndefined();
+  expect(child(child(paragraph, "pPr"), "shd")).toBeUndefined();
+  expect(child(child(paragraph, "pPr"), "ind")).toBeUndefined();
+});
+test("anonymous paragraphs compensate the implicit native Normal style", () => {
+  const document = wordSource('<table data-node-id="t"><tr data-node-id="r"><td data-node-id="c">TEXT</td></tr></table>', [
+    { styleId: "Normal", kind: "paragraph", cssClass: "N", paragraphProperties: ["margin-top", "line-height"], runProperties: ["font-size", "color"] },
+  ], '.N{font-size:30pt;color:red;margin-top:20pt;line-height:2}');
+  const tree = native(document), cell = descendants(tree, "tc")[0]!, paragraph = child(cell, "p")!, props = child(paragraph, "pPr"), run = child(paragraph, "r");
+  expect(attr(child(props, "spacing"), "before")).toBe("0");
+  expect(attr(child(props, "spacing"), "line")).toBe("240");
+  expect(attr(child(child(run, "rPr"), "sz"), "val")).toBe("24");
+  expect(attr(child(child(run, "rPr"), "color"), "val")).toBe("000000");
+});
+test("script font selection keeps paragraph-style inheritance without pinning Chinese runs", () => {
+  const document = wordSource('<p data-node-id="p" class="P" data-word-style="P"><span data-node-id="s" data-word-script="eastAsia" style="font-family:var(--word-font-eastAsia)">中文</span></p>', [
+    { styleId: "P", kind: "paragraph", cssClass: "P", paragraphProperties: [], runProperties: ["--word-font-ascii", "--word-font-eastAsia", "font-family"] },
+  ], '.P{--word-font-ascii:Arial;--word-font-eastAsia:"FandolFang";font-family:var(--word-font-ascii)}');
+  const tree = native(document), run = descendants(tree, "r").find((run) => child(run, "t"));
+  expect(child(child(run, "rPr"), "rFonts")).toBeUndefined();
+  const style = elements(native(document, "word/styles.xml"), "style").find((style) => attr(style, "styleId") === "P");
+  expect(attr(child(child(style, "rPr"), "rFonts"), "eastAsia")).toBe("FandolFang");
 });

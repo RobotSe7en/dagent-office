@@ -95,7 +95,8 @@ export function paragraphProperties(css: Css, width = 468): string {
   for (const [key, name] of [["--word-suppress-auto-hyphens", "suppressAutoHyphens"], ["--word-overflow-punctuation", "overflowPunct"]]) if (css[key!] !== undefined) out += toggle(name!, css[key!] === "1");
   const spacing: Record<string, string | number> = {};
   for (const [key, name] of [["margin-top", "before"], ["margin-bottom", "after"]]) if (css[key!] !== undefined) spacing["w:" + name!] = nativeInteger(points(css[key!]!, css, width), 20, 0);
-  if (css["line-height"] !== undefined && css["line-height"] !== "normal") {
+  if (css["line-height"] === "normal") { spacing["w:line"] = 240; spacing["w:lineRule"] = "auto"; }
+  else if (css["line-height"] !== undefined) {
     const line = css["line-height"];
     if (/^[\d.]+$/.test(line)) { spacing["w:line"] = nativeInteger(Number(line), 240, 1); spacing["w:lineRule"] = "auto"; }
     else { spacing["w:line"] = nativeInteger(points(line, css, parseFloat(css["font-size"] ?? "12pt")), 20, 1); spacing["w:lineRule"] = "exact"; }

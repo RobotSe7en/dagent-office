@@ -30,15 +30,28 @@ for (const producer of ["", "producer/"]) for (const name of readdirSync(join(ro
 const edited = createDocumentSession(cases.find((item) => item.filename === "08-comments-revisions.docx").source);
 const paragraph = [...edited.snapshot().html.matchAll(/data-node-id="([^"]+)"/g)].map((match) => edited.getNode(match[1])).find((node) => node.tagName === "p" && node.text);
 const operations = [{ op: "replaceText", nodeId: paragraph.nodeId, from: 0, to: 0, expectedText: "", text: "DOCX重新编辑确认 " },
-  { op: "insertFragment", nodeId: paragraph.nodeId, position: "after", html: '<div>INLINE <strong>A</strong> <em>B</em></div><table style="width:200pt;border-collapse:collapse"><tr><td>CELL <strong>A</strong> B</td></tr></table>' },
+  { op: "insertFragment", nodeId: paragraph.nodeId, position: "after", html: '<div>INLINE <strong>A</strong> <em>B</em></div><table style="width:200pt;border-collapse:collapse"><tr><td style="border:.5pt solid #336699;background-color:#eef4ff;padding:6pt">CELL <strong>A</strong> B</td></tr></table>' },
   ...edited.getAnnotations().map((annotation) => ({ op: "updateAnnotation", annotationId: annotation.annotationId, changes: { status: "resolved" } }))];
 edited.commit(edited.prepare({ protocolVersion: 1, documentId: "acceptance", baseRevision: 0, operations }));
 const native = exportDocx(edited); writeFileSync(join(cache, "native/edited-resolved.docx"), native.bytes);
 cases.push({ filename: "edited-resolved.docx", source: openDocument(edited.serialize()), inputSha256: null, exportSha256: digest(native.bytes), edited: true }); edited.dispose();
+for (const [property, active, variant] of [["font-style", "italic", "Italic"], ["font-weight", "bold", "Bold"]]) {
+  const encoder = new TextEncoder(), decoder = new TextDecoder();
+  const files = new Map(["manifest.json", "content.html", "styles.css", "metadata.json", "annotations.json"].map((name) => [name, new Uint8Array(readFileSync(join(root, "examples/report", name)))]));
+  const body = '<article data-node-id="root" data-office-kind="document"><div data-node-id="story" data-office-story="main"><section data-node-id="section"><p data-node-id="p" class="P" data-word-style="P"><span data-node-id="s" class="C" data-word-style="C">TOGGLE_' + variant.toUpperCase() + '</span></p></section></div></article>';
+  files.set("content.html", encoder.encode(decoder.decode(files.get("content.html")).replace(/<article[\s\S]*<\/article>/, body)));
+  files.set("styles.css", encoder.encode('article{font-family:"Liberation Serif";font-size:12pt}.P{' + property + ':' + active + '}.C{' + property + ':' + active + '}'));
+  files.set("annotations.json", encoder.encode("[]"));
+  const metadata = JSON.parse(decoder.decode(files.get("metadata.json"))); metadata.sections = [{ sectionId: "section", rootNodeId: "section" }];
+  metadata.word = { stories: [{ storyId: "main", kind: "main", rootNodeId: "story" }], styles: [{ styleId: "P", kind: "paragraph", cssClass: "P", paragraphProperties: [], runProperties: [property] }, { styleId: "C", kind: "character", cssClass: "C", runProperties: [property] }], numbering: [], hyperlinks: [], bookmarks: [], fields: [], tabs: [], revisions: [], tables: [] };
+  files.set("metadata.json", encoder.encode(JSON.stringify(metadata)));
+  const source = openDocument(files), output = exportDocx(source), filename = "toggle-" + active + ".docx";
+  writeFileSync(join(cache, "native", filename), output.bytes); cases.push({ filename, source, inputSha256: null, exportSha256: digest(output.bytes), edited: false, variant });
+}
 const profile = join(cache, "profile-" + process.pid), lo = ["-env:UserInstallation=" + pathToFileURL(profile).href, "--headless"];
 try {
   const inputs = cases.map((item) => join(cache, "native", item.filename));
-  run("libreoffice", [...lo, "--convert-to", "docx", "--outdir", join(cache, "source-reopened"), ...cases.filter((item) => !item.edited).map((item) => join(cache, "source", item.filename))]);
+  run("libreoffice", [...lo, "--convert-to", "docx", "--outdir", join(cache, "source-reopened"), ...cases.filter((item) => item.inputSha256 !== null).map((item) => join(cache, "source", item.filename))]);
   run("libreoffice", [...lo, "--convert-to", "docx", "--outdir", join(cache, "reopened"), ...inputs]);
   run("libreoffice", [...lo, "--convert-to", "pdf", "--outdir", join(cache, "pdf"), ...inputs]);
   const records = [];
@@ -58,11 +71,13 @@ try {
     const pdf = join(cache, "pdf", item.filename.replace(/\.docx$/, ".pdf")), info = run("pdfinfo", [pdf]), pages = Number(/Pages:\s+(\d+)/.exec(info)?.[1]);
     assert.ok(pages > 0, item.filename + " PDF pages");
     const text = run("pdftotext", [pdf, "-"]); assert.ok(text.trim(), item.filename + " searchable text");
+    if (item.variant) assert.ok(run("pdffonts", [pdf]).includes("LiberationSerif-" + item.variant), item.filename + " actual Office font variant");
     if (item.edited) {
       assert.ok(text.replace(/\s/g, "").includes("DOCX重新编辑确认")); assert.ok(after.annotations.every((annotation) => annotation.status === "resolved"));
       const ids = [...after.html.matchAll(/data-node-id="([^"]+)"/g)].map((match) => reopened.getNode(match[1]));
       const cell = ids.find((node) => node.tagName === "td" && node.text === "CELL A B"); assert.ok(cell, "edited inline cell text");
       assert.equal(cell.childNodeIds.map((id) => reopened.getNode(id)).filter((node) => node.tagName === "p").length, 1, "edited inline cell remains one paragraph after Office");
+      assert.ok(!cell.childNodeIds.map((id) => reopened.getNode(id)).filter((node) => node.tagName === "p").some((node) => node.attributes.style?.includes("border-")), "cell border must not become an inner paragraph border after Office");
       assert.ok(ids.some((node) => node.tagName === "p" && node.text === "INLINE A B"), "edited inline container remains one paragraph after Office");
     }
     if (!item.edited) {
