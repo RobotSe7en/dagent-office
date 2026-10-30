@@ -3,12 +3,16 @@ import { createDocumentSession, createOpaqueId, DocumentError, openDocument } fr
 import type { DocumentModel, DocumentSession, DocumentSnapshot } from "@dagent-office/core";
 import {
   importDocx,
+  DEFAULT_MAX_ZIP_BYTES,
   readDocumentZip,
   writeDocumentZip,
 } from "@dagent-office/office";
+import type { DocxExportReport } from "@dagent-office/office";
 import type { DocumentWorkbenchView } from "@dagent-office/editor";
 import { DocumentWorkbench } from "@dagent-office/editor/react";
 import { reportFiles, sampleProposal } from "./samples.js";
+import { exportCurrentDocx } from "./export-docx.js";
+import { downloadBytes } from "./download.js";
 const sample = import.meta.env.BASE_URL + "01-text-numbering.docx";
 function base64(bytes: Uint8Array): string {
   let value = ""; for (let offset = 0; offset < bytes.length; offset += 32768) value += String.fromCharCode(...bytes.subarray(offset, offset + 32768)); return btoa(value);
@@ -27,10 +31,12 @@ export function App() {
   const [session, setSession] = useState<DocumentSession>();
   const [submitted, setSubmitted] = useState(false);
   const generation = useRef(0);
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<"pdf" | "docx">();
+  const [docxReport, setDocxReport] = useState<DocxExportReport>();
   const exportRef = useRef<{ controller: AbortController; session: DocumentSession; revision: number }>(undefined);
   useEffect(() => {
     setSubmitted(false);
+    setDocxReport(undefined);
     if (!model) { setSession(undefined); return; }
     const session = createDocumentSession(model);
     sessionRef.current = session;
@@ -39,11 +45,14 @@ export function App() {
     const unsubscribe = session.subscribe((event) => {
       if (event.type !== "error") {
         setSnapshot(session.snapshot());
+        setDocxReport((report) => report?.revision === session.snapshot().manifest.revision ? report : undefined);
         if (exportRef.current?.session === session && exportRef.current.revision !== session.snapshot().manifest.revision) exportRef.current.controller.abort();
       }
     });
     return () => {
-      unsubscribe(); session.dispose();
+      unsubscribe();
+      if (exportRef.current?.session === session) { exportRef.current.controller.abort(); exportRef.current = undefined; setExporting(undefined); }
+      session.dispose();
       if (sessionRef.current === session) sessionRef.current = undefined;
     };
   }, [model]);
@@ -59,11 +68,9 @@ export function App() {
     kind: "docx" | "package",
   ): Promise<void> {
     const current = ++generation.current;
-    exportRef.current?.controller.abort(); exportRef.current = undefined; setExporting(false);
+    exportRef.current?.controller.abort(); exportRef.current = undefined; setExporting(undefined);
     setLoading(true);
     setError("");
-    setModel(undefined);
-    setSnapshot(undefined);
     try {
       const value = new Uint8Array(await bytes);
       const files =
@@ -90,25 +97,33 @@ export function App() {
   function download(): void {
     const session = sessionRef.current;
     if (!session) return;
-    const bytes = writeDocumentZip(session.serialize());
-    const buffer = new ArrayBuffer(bytes.length);
-    new Uint8Array(buffer).set(bytes);
-    const url = URL.createObjectURL(
-      new Blob([buffer], { type: "application/zip" }),
-    );
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "document.zip";
-    anchor.click();
-    setTimeout(() => URL.revokeObjectURL(url), 0);
+    try { downloadBytes(writeDocumentZip(session.serialize()), "document.zip", "application/zip"); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "文档包导出失败。"); }
   }
   async function openReport(): Promise<void> {
     const current = ++generation.current;
-    exportRef.current?.controller.abort(); exportRef.current = undefined; setExporting(false);
-    setLoading(true); setError(""); setModel(undefined);
+    exportRef.current?.controller.abort(); exportRef.current = undefined; setExporting(undefined);
+    setLoading(true); setError("");
     try { const files = await reportFiles(); if (current === generation.current) setModel(openDocument(files)); }
     catch (reason) { if (current === generation.current) setError(reason instanceof Error ? reason.message : "报告读取失败"); }
     finally { if (current === generation.current) setLoading(false); }
+  }
+  async function downloadDocx(): Promise<void> {
+    const active = sessionRef.current; if (!active || exportRef.current) return;
+    const current = generation.current, identity = active.snapshot().manifest;
+    const job = { controller: new AbortController(), session: active, revision: identity.revision };
+    exportRef.current = job; setExporting("docx"); setDocxReport(undefined); setError("");
+    try {
+      const result = await exportCurrentDocx(active.serialize(), createOpaqueId(), job.controller.signal);
+      if (current !== generation.current || exportRef.current !== job) return;
+      if (result.report.documentId !== identity.documentId || result.report.revision !== identity.revision) throw new Error("DOCX 导出结果与当前请求不匹配。");
+      if (active.snapshot().manifest.revision !== identity.revision) throw new Error("导出期间文档已变化，请重新导出。");
+      downloadBytes(result.bytes, "document.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      setDocxReport(result.report);
+    } catch (reason) {
+      if (current === generation.current && exportRef.current === job) setError(active.snapshot().manifest.revision !== identity.revision ? "导出期间文档已变化，请重新导出。"
+        : job.controller.signal.aborted ? "已取消 DOCX 导出。" : reason instanceof Error ? reason.message : "DOCX 导出失败。");
+    } finally { if (exportRef.current === job) { exportRef.current = undefined; setExporting(undefined); } }
   }
   async function loadSampleProposal(): Promise<void> {
     const current = generation.current, view = workbenchRef.current;
@@ -125,7 +140,7 @@ export function App() {
     const active = sessionRef.current; if (!active || exportRef.current) return;
     const current = generation.current, identity = active.snapshot().manifest;
     const job = { controller: new AbortController(), session: active, revision: identity.revision };
-    exportRef.current = job; setExporting(true); setError("");
+    exportRef.current = job; setExporting("pdf"); setError("");
     try {
       const taskId = createOpaqueId(), bytes = writeDocumentZip(active.serialize());
       const response = await fetch("/__dagent_office/convert", { method: "POST", signal: job.controller.signal,
@@ -139,16 +154,15 @@ export function App() {
         || result.output.report?.documentId !== identity.documentId || result.output.report?.revision !== identity.revision) throw new Error("PDF 导出结果与当前请求不匹配。");
       if (active.snapshot().manifest.revision !== identity.revision) throw new Error("导出期间文档已变化，请重新导出。");
       const content = Uint8Array.from(atob(result.output.bytesBase64), (character) => character.charCodeAt(0));
-      const url = URL.createObjectURL(new Blob([content.buffer], { type: "application/pdf" })), anchor = document.createElement("a");
-      anchor.href = url; anchor.download = "document.pdf"; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 0);
+      downloadBytes(content, "document.pdf", "application/pdf");
     } catch (reason) {
       if (current === generation.current && exportRef.current === job) setError(active.snapshot().manifest.revision !== identity.revision ? "导出期间文档已变化，请重新导出。"
         : job.controller.signal.aborted ? "已取消 PDF 导出。" : reason instanceof Error ? reason.message : "PDF 导出失败。");
-    } finally { if (exportRef.current === job) { exportRef.current = undefined; setExporting(false); } }
+    } finally { if (exportRef.current === job) { exportRef.current = undefined; setExporting(undefined); } }
   }
   return (
     <main>
-      <p className="eyebrow">DOCX 预览 · 批注请求 · 提案审阅</p>
+      <p className="eyebrow">Office 样式预览 · 正文编辑 · 批注协作 · 原生导出</p>
       <h1>dagent-office Playground</h1>
       <div className="toolbar">
         <label>
@@ -156,10 +170,12 @@ export function App() {
           <input
             aria-label="打开文件"
             type="file"
+            disabled={loading}
             accept=".docx,.zip"
             onChange={(event) => {
               const file = event.currentTarget.files?.[0];
-              if (file)
+              if (file && file.size > DEFAULT_MAX_ZIP_BYTES) setError("文件超过 64 MiB，无法打开。");
+              else if (file)
                 void load(
                   file.arrayBuffer(),
                   file.name.toLowerCase().endsWith(".docx")
@@ -186,10 +202,11 @@ export function App() {
         </button>
         <button disabled={loading} onClick={() => { void openReport(); }}>打开报告协作样例</button>
         <button disabled={!session} onClick={() => { void loadSampleProposal(); }}>载入固定示例提案</button>
-        <button disabled={!model} onClick={download}>
+        <button disabled={!session || loading} onClick={download}>
           下载文档包
         </button>
-        <button disabled={!session || exporting} onClick={() => { void exportPdf(); }}>{exporting ? "正在导出 PDF…" : "导出 PDF"}</button>
+        <button disabled={!session || loading || Boolean(exporting)} onClick={() => { void downloadDocx(); }}>{exporting === "docx" ? "正在导出 DOCX…" : "导出 DOCX"}</button>
+        <button disabled={!session || loading || Boolean(exporting)} onClick={() => { void exportPdf(); }}>{exporting === "pdf" ? "正在导出 PDF…" : "导出 PDF"}</button>
         {exporting && <button onClick={() => exportRef.current?.controller.abort()}>取消导出</button>}
         <label>显示方式 <select aria-label="显示方式" value={layout} onChange={(event) => {
           const value = event.currentTarget.value === "continuous" ? "continuous" : "pages"; setLayout(value);
@@ -209,6 +226,15 @@ export function App() {
         </p>
       )}
       {submitted && <p>Playground 已接收批注请求；使用固定提案验证返回与应用。</p>}
+      {docxReport && <section className="export-report" aria-label="DOCX 导出报告">
+        <p>已生成 DOCX · 修订 {docxReport.revision} · 保留原生批注 {docxReport.exportedAnnotationIds.length} 条。</p>
+        {docxReport.unexportedAnnotations.length > 0 && <>
+          <p>{docxReport.unexportedAnnotations.length} 条批注无法精确绑定到 Word 文字，已列入报告。下载文档包可完整保留这些批注。</p>
+          <ul>{docxReport.unexportedAnnotations.slice(0, 16).map((item) => <li key={item.annotationId}>{item.annotationId}：{{ region: "矩形批注", needs_reanchor: "需要重新定位", disjoint: "不连续的文字范围", cross_story: "跨正文或辅助内容的范围", unrepresentable: "没有可精确绑定的文字范围" }[item.reason]}</li>)}</ul>
+          {docxReport.unexportedAnnotations.length > 16 && <p>其余批注详见完整报告。</p>}
+        </>}
+        <button onClick={() => downloadBytes(new TextEncoder().encode(JSON.stringify(docxReport, null, 2)), "document.export-report.json", "application/json")}>下载导出报告</button>
+      </section>}
       {model && session && <DocumentWorkbench session={session} layout={layout} className="preview"
         onViewChange={(view) => { workbenchRef.current = view; }}
         onSubmitAnnotations={() => { setSubmitted(true); }}

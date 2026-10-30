@@ -59,7 +59,11 @@ export async function runConversionProcess(input: ConversionRequestV1, options: 
   });
 }
 
-export interface DevelopmentConverterOptions extends Omit<ConversionProcessOptions, "signal"> { readonly route?: string }
+export interface DevelopmentConverterOptions extends Omit<ConversionProcessOptions, "signal"> {
+  readonly route?: string;
+  /** Exact host-owned development origins. Empty keeps the loopback default. */
+  readonly allowedOrigins?: readonly string[];
+}
 export type DevelopmentConversionMiddleware = (request: IncomingMessage, response: ServerResponse, next: () => void) => void;
 function loopback(address: string | undefined): boolean { return address === "127.0.0.1" || address === "::1" || address === "::ffff:127.0.0.1"; }
 function readBody(request: IncomingMessage, maximum: number, signal: AbortSignal): Promise<Buffer> {
@@ -78,11 +82,22 @@ function readBody(request: IncomingMessage, maximum: number, signal: AbortSignal
     signal.addEventListener("abort", cancel, { once: true }); if (signal.aborted) cancel();
   });
 }
-/** Development-only loopback adapter. The SDK opens no network listener. */
+/** Development adapter; loopback by default, with explicit same-origin opt-in.
+ * The SDK opens no listener and this gate does not replace host authentication. */
 export function createDevelopmentConversionMiddleware(options: DevelopmentConverterOptions = {}): DevelopmentConversionMiddleware {
   const path = options.route ?? "/__dagent_office/convert", maximum = options.maxMessageBytes ?? 96 * 1024 * 1024, concurrency = options.maxConcurrency ?? 2;
   if (!Number.isSafeInteger(concurrency) || concurrency <= 0 || !Number.isSafeInteger(maximum) || maximum <= 0
     || options.timeoutMs !== undefined && (!Number.isSafeInteger(options.timeoutMs) || options.timeoutMs <= 0)) throw new ConversionError("InvalidRequest", "Development conversion quotas are invalid.");
+  if (options.allowedOrigins !== undefined && (!Array.isArray(options.allowedOrigins) || options.allowedOrigins.length > 32)) throw new ConversionError("InvalidRequest", "Development origins must be an explicit bounded list.");
+  const allowed = new Set<string>();
+  for (const source of options.allowedOrigins ?? []) {
+    try {
+      if (typeof source !== "string" || source.length > 2048) throw new Error();
+      const origin = new URL(source);
+      if (!["http:", "https:"].includes(origin.protocol) || origin.hostname.includes("*") || origin.username || origin.password || origin.pathname !== "/" || origin.search || origin.hash) throw new Error();
+      allowed.add(origin.origin);
+    } catch { throw new ConversionError("InvalidRequest", "Development origins must be explicit HTTP origins without credentials, paths or wildcards."); }
+  }
   let active = 0;
   return (request, response, next): void => {
     if (request.url?.split("?")[0] !== path) { next(); return; }
@@ -92,16 +107,18 @@ export function createDevelopmentConversionMiddleware(options: DevelopmentConver
       response.end(JSON.stringify(value), () => { if (status >= 400 && !request.complete) request.destroy(); });
     };
     const protocol = (request.socket as { encrypted?: boolean }).encrypted ? "https:" : "http:";
-    let sameOrigin = true, localHost = false, authority: URL | undefined;
+    let sameOrigin = true, localHost = false, validAuthority = false, authority: URL | undefined;
     try {
       authority = new URL(protocol + "//" + request.headers.host);
-      localHost = ["localhost", "127.0.0.1", "[::1]"].includes(authority.hostname) && !authority.username && !authority.password
+      validAuthority = !authority.username && !authority.password
         && authority.pathname === "/" && !authority.search && !authority.hash && Number(authority.port || (protocol === "https:" ? 443 : 80)) === request.socket.localPort;
+      localHost = ["localhost", "127.0.0.1", "[::1]"].includes(authority.hostname) && validAuthority;
     } catch { /* Invalid Host is rejected below. */ }
     if (request.headers.origin) {
       try { const origin = new URL(request.headers.origin); sameOrigin = origin.host === authority?.host && origin.protocol === protocol; } catch { sameOrigin = false; }
     }
-    if (!loopback(request.socket.remoteAddress) || !localHost || !sameOrigin || request.headers["x-dagent-office-dev"] !== "1") { send(403, { error: { code: "InvalidRequest", message: "Local same-origin development conversion is required." } }); return; }
+    const permitted = loopback(request.socket.remoteAddress) && localHost || Boolean(request.headers.origin && authority && allowed.has(authority.origin));
+    if (!validAuthority || !permitted || !sameOrigin || request.headers["x-dagent-office-dev"] !== "1") { send(403, { error: { code: "InvalidRequest", message: "An authorized same-origin development conversion is required." } }); return; }
     if (request.method !== "POST") { send(405, { error: { code: "InvalidRequest", message: "Use a POST conversion request." } }); return; }
     if (!/^application\/json(?:\s*;|$)/i.test(request.headers["content-type"] ?? "")) { send(415, { error: { code: "InvalidRequest", message: "Conversion requires application/json." } }); return; }
     if (active >= concurrency) { send(429, { error: { code: "Busy", message: "Development conversion capacity is in use." } }); return; }
