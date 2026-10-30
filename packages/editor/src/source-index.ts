@@ -106,24 +106,21 @@ export class PreviewSource {
     return [this.root, ...this.root.querySelectorAll<HTMLElement>("[data-node-id]")]
       .map((element) => element.dataset.nodeId!).filter((id) => wanted.has(id));
   }
-  scale(): number {
-    return this.root.getBoundingClientRect().width / this.root.offsetWidth || 1;
-  }
   point(clientX: number, clientY: number): { x: number; y: number } {
-    const rect = this.root.getBoundingClientRect(), scale = this.scale();
+    const rect = this.root.getBoundingClientRect();
     return {
-      x: Math.max(0, Math.min(rect.width, clientX - rect.left)) * 72 / 96 / scale,
-      y: Math.max(0, Math.min(rect.height, clientY - rect.top)) * 72 / 96 / scale,
+      x: Math.max(0, Math.min(rect.width, clientX - rect.left)) * 72 / 96,
+      y: Math.max(0, Math.min(rect.height, clientY - rect.top)) * 72 / 96,
     };
   }
   region(rect: Rectangle, layoutKey: string): Anchor {
-    const surface = this.root.getBoundingClientRect(), scale = this.scale();
+    const surface = this.root.getBoundingClientRect();
     const hits = [...this.root.querySelectorAll<HTMLElement>("[data-node-id]")].filter((element) => {
       if (!element.matches(hitTargets)) return false;
       return [...element.getClientRects()].some((box) => intersects(rect, {
-        x: (box.left - surface.left) * 72 / 96 / scale,
-        y: (box.top - surface.top) * 72 / 96 / scale,
-        width: box.width * 72 / 96 / scale, height: box.height * 72 / 96 / scale,
+        x: (box.left - surface.left) * 72 / 96,
+        y: (box.top - surface.top) * 72 / 96,
+        width: box.width * 72 / 96, height: box.height * 72 / 96,
       }));
     });
     return { kind: "region", surfaceId: this.root.dataset.nodeId!, rect,
@@ -134,9 +131,9 @@ export class PreviewSource {
     if (anchor.kind === "region") {
       const surface = this.elements.get(anchor.surfaceId)?.element;
       if (!surface) return [];
-      const box = surface.getBoundingClientRect(), scale = surface.getBoundingClientRect().width / surface.offsetWidth || 1;
-      return [new DOMRect(box.left + anchor.rect.x * 96 / 72 * scale, box.top + anchor.rect.y * 96 / 72 * scale,
-        anchor.rect.width * 96 / 72 * scale, anchor.rect.height * 96 / 72 * scale)];
+      const box = surface.getBoundingClientRect();
+      return [new DOMRect(box.left + anchor.rect.x * 96 / 72, box.top + anchor.rect.y * 96 / 72,
+        anchor.rect.width * 96 / 72, anchor.rect.height * 96 / 72)];
     }
     if (anchor.kind === "node" || anchor.kind === "node-set") {
       const ids = anchor.kind === "node" ? [anchor.nodeId] : anchor.nodeIds;

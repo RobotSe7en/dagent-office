@@ -1,6 +1,6 @@
 import { DocumentError } from "@dagent-office/core";
 import type {
-  Anchor, DeepReadonly, DocumentEditingSession, DocumentOperation, DocumentSelection, Rectangle,
+  Anchor, DeepReadonly, DocumentEditingSession, DocumentModel, DocumentOperation, DocumentSelection, Rectangle,
 } from "@dagent-office/core";
 import { mountPreview } from "./preview.js";
 import type { FontResolution } from "./fonts.js";
@@ -33,12 +33,19 @@ function immutable<Value>(value: Value): Value {
   return value;
 }
 const statusLabels = { open: "待处理", resolved: "已处理", needs_reanchor: "需要重新定位" };
-function anchorLabel(anchor: DeepReadonly<Anchor>): string {
+function anchorLabel(anchor: DeepReadonly<Anchor>, model: DocumentModel): string {
   if (anchor.kind === "text") return anchor.quote;
   if (anchor.kind === "text-set") return anchor.ranges.map((range) => range.quote).join(" … ");
-  if (anchor.kind === "node") return "对象：" + anchor.nodeId;
-  if (anchor.kind === "node-set") return "对象：" + anchor.nodeIds.join("、");
-  return (anchor.nodeIds.length ? "区域 · 命中 " + anchor.nodeIds.length + " 个节点" : "空白区域") + " · 容器 " + anchor.surfaceId;
+  const nodeLabel = (id: string): string => {
+    const node = model.getNode(id);
+    if (!node) return "原对象";
+    const text = node.tagName === "img" ? node.attributes.alt || "图片" : node.text.trim() || "文档对象";
+    const characters = Array.from(text);
+    return characters.slice(0, 80).join("") + (characters.length > 80 ? "…" : "");
+  };
+  if (anchor.kind === "node") return "对象：" + nodeLabel(anchor.nodeId);
+  if (anchor.kind === "node-set") return "对象：" + anchor.nodeIds.map(nodeLabel).join("、");
+  return anchor.nodeIds.length ? "正文区域 · 命中 " + anchor.nodeIds.length + " 个对象" : "正文空白区域";
 }
 
 /** Scriptless document preview plus revision-bound selection and annotation transactions. */
@@ -142,7 +149,7 @@ export function mountDocumentInteraction(
     // Painting a DOM highlight can itself emit selectionchange during native dragging.
     if (selectionText.textContent && JSON.stringify(selection) === JSON.stringify(next)) return;
     selection = next;
-    selectionText.textContent = selection ? anchorLabel(selection.anchor) : "尚未选择";
+    selectionText.textContent = selection ? anchorLabel(selection.anchor, session) : "尚未选择";
     add.disabled = !selection;
     clear.disabled = !selection;
     options.onSelectionChange?.(selection);
@@ -205,7 +212,7 @@ export function mountDocumentInteraction(
       const state = document.createElement("p");
       state.textContent = statusLabels[annotation.status];
       const quote = document.createElement("p");
-      quote.textContent = anchorLabel(annotation.anchor);
+      quote.textContent = anchorLabel(annotation.anchor, session);
       const content = document.createElement("p");
       content.textContent = annotation.instruction ?? session.getNode(annotation.bodyNodeId!)?.text ?? "";
       card.append(state, quote, content);

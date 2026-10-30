@@ -45,13 +45,13 @@ async function drag(page: Page, rect: Rectangle): Promise<void> {
   const displayScale = await frame.evaluate((node) => node.getBoundingClientRect().width / (node as HTMLElement).offsetWidth);
   const surface = await page.frameLocator("iframe").locator('[data-node-id="root"]').evaluate((node) => {
     const box = node.getBoundingClientRect();
-    return { x: box.left, y: box.top, scale: box.width / (node as HTMLElement).offsetWidth };
+    return { x: box.left, y: box.top };
   });
-  const x = box.x + (surface.x + rect.x * 96 / 72 * surface.scale) * displayScale;
-  const y = box.y + (surface.y + rect.y * 96 / 72 * surface.scale) * displayScale;
+  const x = box.x + (surface.x + rect.x * 96 / 72) * displayScale;
+  const y = box.y + (surface.y + rect.y * 96 / 72) * displayScale;
   await page.mouse.move(x, y);
   await page.mouse.down();
-  await page.mouse.move(x + rect.width * 96 / 72 * surface.scale * displayScale, y + rect.height * 96 / 72 * surface.scale * displayScale, { steps: 5 });
+  await page.mouse.move(x + rect.width * 96 / 72 * displayScale, y + rect.height * 96 / 72 * displayScale, { steps: 5 });
   await page.mouse.up();
 }
 
