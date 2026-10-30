@@ -138,6 +138,20 @@ for (const deferred of [false, true]) {
   });
 }
 
+for (const action of ["整批应用提案", "拒绝提案"]) {
+  test("late handoff completion preserves a proposal's final status after " + action, async ({ page }) => {
+    await mount(page);
+    await page.evaluate((value) => { window.workbenchHost.submissionProposal = value; window.workbenchHost.deferSubmission = true; }, exampleProposal);
+    await page.getByRole("button", { name: "统一提交批注" }).click();
+    await expect(page.getByRole("button", { name: action, exact: true })).toBeEnabled();
+    await page.getByRole("button", { name: action, exact: true }).click();
+    const before = await page.getByLabel("协作状态").textContent();
+    await page.evaluate(() => window.workbenchHost.release!());
+    await expect.poll(() => page.evaluate(() => window.workbenchHost.events.filter((type) => type === "annotationsSubmitted").length)).toBe(1);
+    await expect(page.getByLabel("协作状态")).toHaveText(before!);
+  });
+}
+
 test("malicious, mismatched and out-of-scope proposal files leave state intact", async ({ page }) => {
   await mount(page); const request = await generated(page);
   for (const value of [proposal(request, { requestId: "wrong" }), proposal(request, { operations: [{ op: "removeNode", nodeId: "n-item" }] }),

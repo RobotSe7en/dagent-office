@@ -52,7 +52,7 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
   shadow.append(style, interactionHost, collaboration); container.append(element);
   const controller = new AbortController();
   let choiceController = new AbortController(), disposed = false, pending = false, generation = 0, importSequence = 0;
-  let activeRequest: DocumentInteractionRequest | undefined, candidate: CandidateChange | undefined;
+  let activeRequest: DocumentInteractionRequest | undefined, deliveredRequest: DocumentInteractionRequest | undefined, candidate: CandidateChange | undefined;
   let candidatePreview: DocumentPreview | undefined, candidateReady: Promise<void> = Promise.resolve();
   const selected = new Map<string, boolean>();
 
@@ -112,7 +112,8 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
     const request = session.buildInteractionRequest({ annotationIds: annotationIds ?? [...selected].filter(([, value]) => value).map(([id]) => id),
       ...(options.supportedOperations ? { supportedOperations: options.supportedOperations } : {}),
       ...(options.contextLimits ? { limits: options.contextLimits } : {}) });
-    activeRequest = request; status.textContent = "已生成请求 · 修订 " + request.baseRevision + " · " + request.annotations.length + " 条批注";
+    activeRequest = request; deliveredRequest = undefined;
+    status.textContent = "已生成请求 · 修订 " + request.baseRevision + " · " + request.annotations.length + " 条批注";
     updateButtons(); return request;
   }
   async function submitAnnotations(annotationIds?: readonly string[]): Promise<void> {
@@ -125,7 +126,9 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
       await options.onSubmitAnnotations(request);
       if (!disposed && current === generation && activeRequest?.requestId === request.requestId
         && activeRequest.documentId === request.documentId && activeRequest.baseRevision === request.baseRevision) {
-        if (!candidate) status.textContent = request.baseRevision === session.snapshot().manifest.revision ? "请求已交给宿主，等待提案。" : "请求已交给宿主；文档已变化，返回提案将按旧修订拒绝。";
+        if (!deliveredRequest || deliveredRequest.requestId !== request.requestId
+          || deliveredRequest.documentId !== request.documentId || deliveredRequest.baseRevision !== request.baseRevision)
+          status.textContent = request.baseRevision === session.snapshot().manifest.revision ? "请求已交给宿主，等待提案。" : "请求已交给宿主；文档已变化，返回提案将按旧修订拒绝。";
         notify({ type: "annotationsSubmitted", request });
       }
     } catch {
@@ -152,7 +155,8 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
     let model: DocumentModel;
     try { model = previewModel(next); } catch (reason) { session.discard(next); throw reason; }
     candidatePreview?.dispose(); candidatePreview = undefined;
-    candidate = next; activeRequest = immutable(parseContract("interaction-request", request)); diff.replaceChildren(); diff.hidden = false;
+    candidate = next; activeRequest = immutable(parseContract("interaction-request", request)); deliveredRequest = activeRequest;
+    diff.replaceChildren(); diff.hidden = false;
     const title = document.createElement("h2"); title.textContent = "提案差异";
     const summary = document.createElement("p"); summary.textContent = proposal.summary;
     const list = document.createElement("ol");
@@ -218,7 +222,8 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
       if (disposed) return;
       disposed = true; generation++; unsubscribe(); controller.abort(); choiceController.abort();
       if (candidate) { try { session.discard(candidate); } catch { /* The host may have already disposed the session. */ } }
-      candidate = undefined; activeRequest = undefined; selected.clear(); candidatePreview?.dispose(); interaction.dispose(); element.remove();
+      candidate = undefined; activeRequest = undefined; deliveredRequest = undefined;
+      selected.clear(); candidatePreview?.dispose(); interaction.dispose(); element.remove();
     },
   };
 }
