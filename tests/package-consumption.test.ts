@@ -10,7 +10,7 @@ import { packPackages } from "../scripts/pack.mjs";
 
 const repository = fileURLToPath(new URL("../", import.meta.url));
 const require = createRequire(import.meta.url);
-const modules = ["core", "editor", "office", "node"];
+const modules = ["core", "render", "editor", "office", "node"];
 const reportSources = Object.fromEntries(
   ["manifest.json", "content.html", "styles.css", "metadata.json", "annotations.json"].map(
     (path) => [path, readFileSync(join(repository, "examples/report", path), "utf8")],
@@ -35,7 +35,7 @@ beforeAll(() => {
   consumer = join(temporary, "consumer");
   mkdirSync(consumer);
   const archives = packPackages(join(temporary, "archives"));
-  expect(archives).toHaveLength(4);
+  expect(archives).toHaveLength(modules.length);
   const dependencies: Record<string, string> = {};
   for (const module of modules) {
     const manifest = JSON.parse(readFileSync(join(repository, "packages", module, "package.json"), "utf8"));

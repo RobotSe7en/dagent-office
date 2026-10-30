@@ -1,0 +1,53 @@
+{
+  "environment": {
+    "node": "24.13.0",
+    "playwright": "1.64.1",
+    "chromium": "156.0.8078.4",
+    "firefox": "157.0",
+    "webkit": "27.2",
+    "legacyChromium": "109.0.5414.46",
+    "legacyArchiveSHA256": "1ec3528cecff35bd20184dc7fd07deb794624023607388b0ea8fda696730805d",
+    "dpi": 96,
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "managedViewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "fonts": [
+      {
+        "family": "Noto Sans CJK SC",
+        "file": "NotoSansCJK-Regular.ttc",
+        "sha256": "b76b0433203017ca80401b2ee0dd69350349871c4b19d504c34dbdd80541690a"
+      },
+      {
+        "family": "Noto Serif CJK SC",
+        "file": "NotoSerifCJK-Regular.ttc",
+        "sha256": "5d9c31a059600193c9d7968a998bde886ccdc77e934006ad243b41794c496a7d"
+      },
+      {
+        "family": "Liberation Serif",
+        "file": "LiberationSerif-Regular.ttf",
+        "sha256": "705903ae1382f0150f115d6f10a30f5b2f3d6ade649c474afe6366c39174fb65"
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "fixture": "tests/browser/fixtures/pagination-files.ts:longTable",
+      "image": "tests/browser/rendering.spec.ts-snapshots/repeated-table-page-linux.png",
+      "width": 400,
+      "height": 320,
+      "scale": 1,
+      "sha256": "1906ee85e2a38f81f593f1c1667afdc6a4fc3132455953a6e29455bde7bf7855"
+    }
+  ],
+  "acceptance": {
+    "libreOffice": "LibreOffice 25.8.1.1 580(Build:1)",
+    "word": "not verified",
+    "wps": "not verified",
+    "safari": "separate macOS15 CI driver; actual version recorded by job"
+  }
+}

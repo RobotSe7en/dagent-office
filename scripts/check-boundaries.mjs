@@ -7,10 +7,11 @@ import ts from "typescript";
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const layers = {
   "packages/core": [],
-  "packages/editor": ["packages/core"],
+  "packages/render": ["packages/core"],
+  "packages/editor": ["packages/core", "packages/render"],
   "packages/office": ["packages/core"],
-  "packages/node": ["packages/core", "packages/office"],
-  "apps/playground": ["packages/core", "packages/editor", "packages/office"],
+  "packages/node": ["packages/core", "packages/office", "packages/render"],
+  "apps/playground": ["packages/core", "packages/editor", "packages/office", "packages/node"],
 };
 
 function sourceFiles(directory) {

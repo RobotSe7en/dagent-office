@@ -84,7 +84,7 @@ Zod 4 支持原生 JSON Schema 转换；结构契约只使用可导出的类型�
 
 parse5 提供 HTML 解析和序列化，CSS Tree 提供 CSS AST、遍历、生成和语法检查。二者经内部适配层接入，不向公共接口暴露第三方 AST。浏览器打包及支持属性通过首轮样例验证。[parse5](https://parse5.js.org/)、[CSS Tree](https://github.com/csstree/csstree)
 
-编辑器以 DOM 组件实现，普通 JS 挂载和可选 React 包装共用同一 UI。React 不进入核心；非 React 宿主可直接挂载。四个库模块的依赖方向见[总体架构](architecture.md)。
+编辑器以 DOM 组件实现，普通 JS 挂载和可选 React 包装共用同一 UI。React 不进入核心；非 React 宿主可直接挂载。五个库模块的依赖方向见[总体架构](architecture.md)。
 
 按用户决定，文本输入与版式渲染自行实现。浏览器提供 DOM/CSS 和输入事件基础能力；SDK 处理源节点身份、实际输入范围、组合输入、格式命令和事务映射，不引入另一份保存源或撤销历史。
 
@@ -117,3 +117,7 @@ ibisOffice 采用 AGPL-3.0-only 和商业双授权。本项目当前不依赖、
 输入适配器自行实现，依赖浏览器的 `contenteditable`、`beforeinput`、组合输入事件和 DOM Range。Tiptap／ProseMirror 已移除，锁文件不再包含相关直接或间接依赖。预览与输入复用自有 HTML/CSS 渲染及字体诊断，分页层也自行实现。
 
 运行时显示的字体替代、编号、制表位引导符和表格列宽属于可逆的视图投影，不写回文档源。已有源 ID 与属性保留；新增 ID 由核心分配。基础 ZIP、XML、HTML/CSS 解析与哈希依赖沿用既有许可记录。
+
+## R1-12 分页与转换依赖
+
+分页、字段显示、共享字体和打印投影为自研 `render` 包，运行时只依赖 `core`。没有使用第三方富文本编辑器、分页库或 Office 转换器。`node` 使用 `playwright-core 1.64.1`（Apache-2.0）管理宿主安装的 Chromium；浏览器和字体不随 SDK 打包，也不由运行时下载。IIFE 使用既有 Vite 工程依赖构建。许可证取自已安装包 manifest，版本锁定于根锁文件。浏览器及字体基线、已验证范围与限制见[分页与渲染](pagination-rendering.md)。

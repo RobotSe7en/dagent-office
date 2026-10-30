@@ -3,6 +3,16 @@ import { readFileSync } from "node:fs";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import type { Plugin } from "vite";
+import { createDevelopmentConversionMiddleware } from "@dagent-office/node/dev";
+
+function localConversion(): Plugin {
+  const middleware = createDevelopmentConversionMiddleware({
+    browserCacheDirectory: fileURLToPath(new URL("../../.playwright/", import.meta.url)),
+    ...(process.env.DAGENT_OFFICE_CHROMIUM_EXECUTABLE ? { browserExecutable: process.env.DAGENT_OFFICE_CHROMIUM_EXECUTABLE } : {}),
+    maxMessageBytes: 16 * 1024 * 1024,
+  });
+  return { name: "local-office-conversion", configureServer(server) { server.middlewares.use(middleware); }, configurePreviewServer(server) { server.middlewares.use(middleware); } };
+}
 
 /** Public synthetic inputs belong to this development host, never to SDK runtime I/O. */
 function collaborationExamples(): Plugin {
@@ -27,7 +37,7 @@ function collaborationExamples(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), collaborationExamples()],
+  plugins: [react(), collaborationExamples(), localConversion()],
   publicDir: fileURLToPath(new URL("../../examples/docx/", import.meta.url)),
   build: { target: "es2022" },
 });

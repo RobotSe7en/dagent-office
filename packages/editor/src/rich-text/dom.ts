@@ -72,7 +72,7 @@ export function inputProofs(root: HTMLElement, step: InputStep, ignored: IgnoreN
   return result;
 }
 
-export interface CaretBookmark { readonly nodeId?: string; readonly path: readonly number[]; readonly offset: number }
+export interface CaretBookmark { readonly nodeId?: string; readonly path: readonly number[]; readonly offset: number; readonly affinity?: "forward" }
 export interface SelectionBookmark { readonly anchor: CaretBookmark; readonly focus: CaretBookmark }
 export function bookmark(root: HTMLElement, ignored: IgnoreNode): SelectionBookmark | undefined {
   const selected = root.ownerDocument.getSelection();
@@ -83,16 +83,17 @@ export function bookmark(root: HTMLElement, ignored: IgnoreNode): SelectionBookm
     const path: number[] = [];
     for (let child = target; child !== root && child.parentElement; child = child.parentElement)
       path.unshift([...child.parentElement.children].filter((item) => !ignored(item)).indexOf(child));
-    return { ...(target.dataset.nodeId ? { nodeId: target.dataset.nodeId } : {}), path, offset: offsetAt(target, node, offset, ignored) };
+    return { ...(target.dataset.nodeId ? { nodeId: target.dataset.nodeId } : {}), path, offset: offsetAt(target, node, offset, ignored), ...(node.nodeType === 3 && offset === 0 ? { affinity: "forward" as const } : {}) };
   };
   return { anchor: point(selected.anchorNode, selected.anchorOffset), focus: point(selected.focusNode, selected.focusOffset) };
 }
-export function caretAt(root: Node, requested: number, ignored: IgnoreNode): [Node, number] {
-  let remaining = requested;
+export function caretAt(root: Node, requested: number, ignored: IgnoreNode, affinity?: "forward"): [Node, number] {
+  let remaining = requested, fallback: [Node, number] | undefined;
   const visit = (node: Node): [Node, number] | undefined => {
     if (ignored(node)) return;
     if (node.nodeType === 3) {
-      if (remaining <= node.textContent!.length) return [node, remaining];
+      if (remaining < node.textContent!.length || remaining === node.textContent!.length && affinity !== "forward") return [node, remaining];
+      if (remaining === node.textContent!.length) fallback = [node, remaining];
       remaining -= node.textContent!.length; return;
     }
     if (node.nodeType === 1 && (node as Element).matches("br,img,[data-word-tab]")) {
@@ -102,7 +103,7 @@ export function caretAt(root: Node, requested: number, ignored: IgnoreNode): [No
     for (const child of node.childNodes) { const found = visit(child); if (found) return found; }
     return;
   };
-  return visit(root) ?? [root, root.childNodes.length];
+  return visit(root) ?? fallback ?? [root, root.childNodes.length];
 }
 export function restoreBookmark(root: HTMLElement, value: SelectionBookmark | undefined, ignored: IgnoreNode): void {
   if (!value) return;
@@ -113,7 +114,7 @@ export function restoreBookmark(root: HTMLElement, value: SelectionBookmark | un
       target = root;
       for (const ordinal of entry.path) target = [...target.children].filter((item) => !ignored(item))[ordinal] as HTMLElement ?? target;
     }
-    return caretAt(target, entry.offset, ignored);
+    return caretAt(target, entry.offset, ignored, entry.affinity);
   };
   const selected = root.ownerDocument.getSelection()!;
   selected.setBaseAndExtent(...point(value.anchor), ...point(value.focus));

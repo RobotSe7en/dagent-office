@@ -1,6 +1,6 @@
 # 预览与交互
 
-R1-08 在现有无脚本只读预览上提供文字划选、对象选择、矩形框选和批注面板。`editor` 的普通交互入口只依赖 `core`，普通 JavaScript 宿主通过公开入口挂载；Playground 使用可选 React 包装管理同一组件。请求生成、统一提交和提案界面见已实现的 [R1-09 工作台](workbench.md)，富文本输入见 [R1-11 正文输入](rich-text.md)，自动分页在 R1-12。
+R1-08 在现有无脚本只读预览上提供文字划选、对象选择、矩形框选和批注面板。`editor` 的普通交互入口只依赖 `core`，普通 JavaScript 宿主通过公开入口挂载；Playground 使用可选 React 包装管理同一组件。请求生成、统一提交和提案界面见已实现的 [R1-09 工作台](workbench.md)，富文本输入见 [R1-11 正文输入](rich-text.md)，R1-12 [共享画布与分页](pagination-rendering.md)也已实现，纯预览可直接使用 `render` 而无需编辑会话。
 
 ## 挂载与会话
 

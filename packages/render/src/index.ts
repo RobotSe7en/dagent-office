@@ -1,0 +1,10 @@
+export { decorate, mountDocumentPreview, mountPreview, packagePath } from "./preview.js";
+export type { DocumentPreview, DocumentPreviewOptions } from "./preview.js";
+export { resolvePreviewFonts } from "./fonts.js";
+export type { FontResolution } from "./fonts.js";
+export { PreviewSource } from "./source-index.js";
+export { SourceProjection } from "./projection.js";
+export { sourceSelectionText, stripClipboardIdentities } from "./clipboard.js";
+export { createLayoutFieldTransaction } from "./fields.js";
+export { DEFAULT_RENDER_LIMITS, renderLimits } from "./contracts.js";
+export type { DocumentRenderReport, LayoutDiagnostic, LayoutFieldResult, RenderedPage, RenderLimits } from "./contracts.js";

@@ -1,0 +1,31 @@
+{
+  "name": "@dagent-office/render",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "description": "Shared scriptless Office document canvas, pagination and rendering projection",
+  "files": [
+    "dist"
+  ],
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts.d.ts",
+      "import": "./dist/contracts.js"
+    },
+    "./browser-script": "./dist/browser-script.js"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "tsc --watch --project tsconfig.json --preserveWatchOutput"
+  },
+  "dependencies": {
+    "@dagent-office/core": "workspace:*"
+  }
+}

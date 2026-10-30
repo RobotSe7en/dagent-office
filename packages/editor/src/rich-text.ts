@@ -1,15 +1,18 @@
 import { DocumentError } from "@dagent-office/core";
 import type { DocumentEditingSession, ReconciledTextEdit } from "@dagent-office/core";
-import { decorate, mountDocumentPreview, packagePath } from "./preview.js";
-import { resolvePreviewFonts } from "./fonts.js";
+import { mountDocumentPreview } from "./preview.js";
+import { sourceSelectionText, stripClipboardIdentities } from "@dagent-office/render";
+import type { DocumentPreviewOptions } from "./preview.js";
+import type { DocumentRenderReport } from "@dagent-office/render";
 import { blockSelector, bookmark, caretAt, inputProofs, inputStep, offsetAt, restoreBookmark, sourceText } from "./rich-text/dom.js";
 import type { InputStep, SelectionBookmark } from "./rich-text/dom.js";
 import { SourceProjection } from "./rich-text/projection.js";
 
-export interface DocumentTextEditorOptions { readonly onError?: (error: Error) => void }
+export interface DocumentTextEditorOptions extends DocumentPreviewOptions { readonly onError?: (error: Error) => void }
 export interface DocumentTextEditor {
   readonly element: HTMLElement;
   readonly ready: Promise<void>;
+  layout(): DocumentRenderReport;
   focus(): void;
   /** Core owns persistent state and history. Disposal releases only this view. */
   dispose(): void;
@@ -31,9 +34,8 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
   let projection = new SourceProjection(), proofs: ReconciledTextEdit[] = [], pending: InputStep | undefined;
   let savedSelection: SelectionBookmark | undefined;
   let compositionInsertion: { from: number; to: number } | undefined;
+  let wholeStoryReplacement = false;
   const typingStyles = new Map<string, string>();
-  const layout = new Map<string, { property: string; original: string; rendered: string }[]>();
-  const imageUrls = new Map<string, string>();
   const report = (reason: unknown): void => {
     if (disposed) return;
     const value = reason instanceof Error ? reason : new Error("正文输入失败。");
@@ -58,44 +60,32 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
   };
   function refresh(selection = savedSelection): void {
     if (!root || !frame || disposed) return;
-    const source = rootElement(sourceDocument()), next = frame.importNode(source, true);
-    const snapshot = session.snapshot(), files = session.serialize(), used = new Set<string>();
-    const css = frame.querySelector("style[data-sdk-source-styles]");
-    if (css) css.textContent = snapshot.styles.map((item) => item.css).join("\n");
-    for (const node of [next, ...next.querySelectorAll<HTMLElement>("[data-node-id]")]) {
-      for (const item of layout.get(node.dataset.nodeId!) ?? [])
-        if (node.style.getPropertyValue(item.property) === item.original) node.style.setProperty(item.property, item.rendered);
-      if (node.localName === "img") {
-        const path = packagePath(node.getAttribute("src")!, snapshot.manifest.entrypoint), asset = snapshot.manifest.assets.find((item) => item.path === path)!;
-        const key = path + ":" + asset.sha256; used.add(key);
-        let url = imageUrls.get(key);
-        if (!url) {
-          const bytes = files.get(path)!, buffer = new ArrayBuffer(bytes.length); new Uint8Array(buffer).set(bytes);
-          url = URL.createObjectURL(new Blob([buffer], { type: asset.mimeType })); imageUrls.set(key, url);
-        }
-        node.setAttribute("src", url);
-      }
-    }
-    for (const [key, url] of imageUrls) if (!used.has(key)) { URL.revokeObjectURL(url); imageUrls.delete(key); }
+    const source = rootElement(sourceDocument());
     viewControls.abort(); viewControls = new AbortController();
-    root.replaceWith(next); root = next; projection = new SourceProjection();
-    resolvePreviewFonts(frame, "[data-node-id]"); decorate(frame, session.snapshot().metadata.word, root);
-    activate(source); revision = snapshot.manifest.revision; proofs = []; pending = undefined; typingStyles.clear(); compositionInsertion = undefined;
+    try {
+      preview.update(session); root = rootElement(frame); projection = new SourceProjection();
+      activate(source); revision = session.snapshot().manifest.revision; proofs = []; pending = undefined; typingStyles.clear(); compositionInsertion = undefined; wholeStoryReplacement = false;
+    } catch (reason) { root.contentEditable = "false"; report(reason); return; }
     root.focus(); restoreBookmark(root, selection, projection.ignored); savedSelection = bookmark(root, projection.ignored);
   }
   function normalizedRoot(): HTMLElement {
     const value = projection.serialize(root!), source = sourceDocument(), original = rootElement(source);
     const sections = session.snapshot().metadata.sections.map((section) => source.querySelector<HTMLElement>('[data-node-id="' + CSS.escape(section.rootNodeId) + '"]'))
-      .filter((section): section is HTMLElement => Boolean(section && section !== original && original.contains(section)));
+      .filter((section): section is HTMLElement => Boolean(section && section !== original && original.contains(section)))
+      .sort((a, b) => a.compareDocumentPosition(b) & 4 ? -1 : 1);
+    const survivingSections = sections.some((section) => value.querySelector('[data-node-id="' + CSS.escape(section.dataset.nodeId!) + '"]'));
+    const survivingOutside = [...original.querySelectorAll<HTMLElement>("[data-node-id]")].some((node) => !sections.some((section) => section === node || section.contains(node))
+      && value.querySelector('[data-node-id="' + CSS.escape(node.dataset.nodeId!) + '"]'));
     for (const [index, section] of sections.entries()) {
       if (value.querySelector('[data-node-id="' + CSS.escape(section.dataset.nodeId!) + '"]')) continue;
       let reference: Element | null = null;
-      for (const following of sections.slice(index + 1)) { reference = value.querySelector('[data-node-id="' + CSS.escape(following.dataset.nodeId!) + '"]'); if (reference) break; }
+      const following = section.parentElement === original ? [...original.children].slice([...original.children].indexOf(section) + 1) : sections.slice(index + 1);
+      for (const node of following) { const id = node.getAttribute("data-node-id"); if (id) reference = value.querySelector('[data-node-id="' + CSS.escape(id) + '"]'); if (reference) break; }
       while (reference?.parentElement && reference.parentElement !== value) reference = reference.parentElement;
       value.insertBefore(section.cloneNode(false), reference);
     }
     let target: Element = value;
-    if (sections.length) {
+    if (wholeStoryReplacement && sections.length && !survivingSections && !survivingOutside) {
       target = value.querySelector('[data-node-id="' + CSS.escape(sections[0]!.dataset.nodeId!) + '"]')!;
       for (const child of [...value.childNodes]) {
         if (child === target || child.nodeType === 1 && sections.some((section) => (child as Element).querySelector('[data-node-id="' + CSS.escape(section.dataset.nodeId!) + '"]') || (child as Element).getAttribute("data-node-id") === section.dataset.nodeId)) continue;
@@ -143,6 +133,7 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
   function mutate(range: Range, action: () => void, split = false): void {
     if (!root || composing || disposed) return;
     const step = inputStep(root, range, projection.ignored);
+    wholeStoryReplacement = step.from === 0 && step.to > 0 && step.to === sourceText(root, projection.ignored).length;
     const parent = range.startContainer.nodeType === 1 ? range.startContainer as Element : range.startContainer.parentElement;
     const block = parent?.closest(blockSelector);
     const moved = split && block && !block.matches("td,th,li")
@@ -166,6 +157,46 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
       const offset = first.childNodes.length;
       first.append(...last.childNodes); last.remove(); range.setStart(first, offset); range.collapse(true);
     }
+  }
+  function deletionRange(range: Range, kind: string): Range {
+    if (!root || !frame) return range;
+    const point = inputStep(root, range, projection.ignored);
+    if (point.from !== point.to) return range;
+    const blockAt = (node: Node): HTMLElement | null => (node.nodeType === 1 ? node as HTMLElement : node.parentElement)?.closest<HTMLElement>(blockSelector) ?? null;
+    const block = blockAt(range.startContainer), endBlock = blockAt(range.endContainer);
+    if (!block || block !== endBlock) return range;
+    const text = sourceText(block, projection.ignored), offset = offsetAt(block, range.startContainer, range.startOffset, projection.ignored), backward = kind.endsWith("Backward");
+    if (backward && offset === 0 || !backward && offset === text.length) {
+      let sibling = backward ? block.previousElementSibling : block.nextElementSibling;
+      while (sibling && projection.ignored(sibling)) sibling = backward ? sibling.previousElementSibling : sibling.nextElementSibling;
+      if (!block.matches("td,th,li") && sibling?.matches("p,h1,h2,h3,h4,h5,h6")) {
+        const joined = frame.createRange(), first = backward ? sibling : block, last = backward ? block : sibling;
+        joined.setStart(...caretAt(first, sourceText(first, projection.ignored).length, projection.ignored));
+        joined.setEnd(...caretAt(last, 0, projection.ignored, "forward")); return joined;
+      }
+      return range;
+    }
+    let from = offset, to = offset;
+    if (kind.includes("Word")) {
+      if (backward) from -= /(?:\S+\s*|\s+)$/.exec(text.slice(0, offset))?.[0].length ?? 0;
+      else to += /^(?:\s*\S+|\s+)/.exec(text.slice(offset))?.[0].length ?? 0;
+    } else {
+      const segmenter = typeof Intl.Segmenter === "function" ? new Intl.Segmenter(undefined, { granularity: "grapheme" }) : undefined;
+      const boundaries = segmenter ? [...segmenter.segment(text)].map((part) => part.index) : [0];
+      if (!segmenter) {
+        let position = 0, previous = "", regional = 0;
+        for (const character of text) {
+          const code = character.codePointAt(0)!, isRegional = code >= 0x1f1e6 && code <= 0x1f1ff;
+          if (position && !/[\p{Mark}\uFE00-\uFE0F\u{E0100}-\u{E01EF}\u200D]/u.test(character) && previous !== "\u200d"
+            && !(code >= 0x1f3fb && code <= 0x1f3ff) && !(isRegional && regional % 2 === 1)) boundaries.push(position);
+          regional = isRegional ? regional + 1 : 0; previous = character; position += character.length;
+        }
+      }
+      boundaries.push(text.length);
+      if (backward) from = boundaries.filter((value) => value < offset).at(-1) ?? 0;
+      else to = boundaries.find((value) => value > offset) ?? text.length;
+    }
+    const expanded = frame.createRange(); expanded.setStart(...caretAt(block, from, projection.ignored)); expanded.setEnd(...caretAt(block, to, projection.ignored, "forward")); return expanded;
   }
   function lineBreak(range: Range): void { insert(range, frame!.createElement("br")); }
   function paragraphBreak(range: Range): void {
@@ -255,25 +286,21 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
     event.preventDefault(); if (composing) return;
     const range = selectedRange(); if (!range || range.collapsed) return;
     const holder = frame.createElement("div");
-    let fragment: Node = range.cloneContents(), ancestor = range.commonAncestorContainer;
+    let fragment: Node = projection.serializeRange(range), ancestor = range.commonAncestorContainer;
     if (ancestor.nodeType !== 1) ancestor = ancestor.parentNode!;
     while (ancestor !== root && root.contains(ancestor)) {
       // A selection within a paragraph is inline. Only explicitly selected
       // blocks or table structure carry block wrappers to the clipboard.
       if ((ancestor as Element).matches(blockSelector + ",section,article,div,ul,ol")) break;
-      const wrapper = ancestor.cloneNode(false); wrapper.appendChild(fragment); fragment = wrapper;
+      const wrapper = projection.shell(ancestor as Element); if (wrapper) { wrapper.appendChild(fragment); fragment = wrapper; }
       if ((ancestor as Element).matches("table")) break;
       ancestor = ancestor.parentNode!;
     }
     holder.append(fragment);
-    // cloneContents creates new objects, so the projection WeakSet cannot identify
-    // their derived origin. Authored source elements already have core identities.
-    for (const node of holder.querySelectorAll(".sdk-number-marker,colgroup,.sdk-story-label"))
-      if (!node.hasAttribute("data-node-id")) node.remove();
-    const source = projection.serialize(holder);
-    for (const node of source.querySelectorAll("[data-node-id],[id]")) { node.removeAttribute("data-node-id"); node.removeAttribute("id"); }
+    const source = holder;
+    stripClipboardIdentities(source);
     event.clipboardData.setData("text/html", source.innerHTML);
-    event.clipboardData.setData("text/plain", [...source.childNodes].map((node) => sourceText(node, () => false)).join("\n"));
+    event.clipboardData.setData("text/plain", sourceSelectionText(source));
     if (cut) mutate(range, () => { deleteRange(range); select(range.startContainer, range.startOffset); });
   }
   function keydown(event: KeyboardEvent): void {
@@ -289,17 +316,21 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
     if (event.key === "Enter") { event.preventDefault(); mutate(range, () => event.shiftKey ? lineBreak(range) : paragraphBreak(range), !event.shiftKey); }
     if (event.key === "Tab") {
       const parent = range.startContainer.nodeType === 1 ? range.startContainer as Element : range.startContainer.parentElement;
-      const cell = parent?.closest("td,th"), cells = [...root.querySelectorAll("td,th")];
+      const cell = parent?.closest("td,th"), cells = [...root.querySelectorAll("td,th")].filter((node) => !projection.ignored(node));
       if (cell && cells.includes(cell)) { event.preventDefault(); const next = cells[cells.indexOf(cell) + (event.shiftKey ? -1 : 1)]; if (next) select(...caretAt(next, 0, projection.ignored)); }
     }
   }
   function beforeinput(event: InputEvent): void {
     if (!root) return;
     let range = selectedRange();
-    const target = event.getTargetRanges()[0];
+    const target = event.getTargetRanges?.()[0];
     if (target) { range = frame!.createRange(); range.setStart(target.startContainer, target.startOffset); range.setEnd(target.endContainer, target.endOffset); }
     if (!range || !root.contains(range.commonAncestorContainer)) { event.preventDefault(); return; }
-    if (composing || event.isComposing || event.inputType === "insertCompositionText") { pending = inputStep(root, range, projection.ignored); return; }
+    if (composing || event.isComposing || event.inputType === "insertCompositionText") {
+      pending = inputStep(root, range, projection.ignored);
+      wholeStoryReplacement ||= pending.from === 0 && pending.to > 0 && pending.to === sourceText(root, projection.ignored).length;
+      return;
+    }
     event.preventDefault();
     if (event.inputType === "historyUndo" || event.inputType === "historyRedo") {
       try { if (event.inputType === "historyUndo") session.undo(); else session.redo(); } catch (reason) { report(reason); } return;
@@ -309,7 +340,10 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
       if (typingStyles.size) { const span = frame!.createElement("span"); for (const [property, value] of typingStyles) span.style.setProperty(property, value); span.append(content); content = span; }
       insert(range!, content);
     });
-    else if (event.inputType.startsWith("delete")) mutate(range, () => { deleteRange(range!); select(range!.startContainer, range!.startOffset); });
+    else if (event.inputType.startsWith("delete")) {
+      range = deletionRange(range, event.inputType);
+      mutate(range, () => { deleteRange(range!); select(range!.startContainer, range!.startOffset); });
+    }
     else if (["insertParagraph", "insertLineBreak"].includes(event.inputType)) mutate(range, () => event.inputType === "insertParagraph" ? paragraphBreak(range!) : lineBreak(range!), event.inputType === "insertParagraph");
     else report(new DocumentError("UnsupportedFeature", "当前不支持此输入操作：" + event.inputType));
   }
@@ -318,8 +352,14 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
     root.contentEditable = "true"; root.setAttribute("data-office-editor", ""); root.setAttribute("role", "textbox"); root.setAttribute("aria-label", "文档正文"); root.setAttribute("aria-multiline", "true"); root.spellcheck = false;
     for (const marker of root.querySelectorAll<HTMLElement>(".sdk-number-marker,[data-word-tab]")) marker.contentEditable = "false";
     projection.capture(root, source);
+    if (!frame.querySelector("style[data-sdk-input]")) {
+      const viewStyle = frame.createElement("style"); viewStyle.setAttribute("data-sdk-input", "");
+      viewStyle.textContent = "[data-office-editor]:focus{outline:none}[data-office-editor]{min-height:100px}[data-office-editor] [data-word-tab]{user-select:all}"; frame.head.append(viewStyle);
+    }
     if (!root.querySelector(blockSelector)) {
-      const paragraph = frame.createElement("p"); paragraph.append(...root.childNodes); root.append(paragraph);
+      const first = session.snapshot().metadata.sections[0]!.rootNodeId;
+      const target = first === root.dataset.nodeId ? root.querySelector(".sdk-page-flow") ?? root : root.querySelector('[data-node-id="' + CSS.escape(first) + '"]') ?? root;
+      const paragraph = frame.createElement("p"); paragraph.append(...target.childNodes); target.append(paragraph);
       if (!paragraph.childNodes.length) { const filler = frame.createElement("br"); projection.markDerived(filler); paragraph.append(filler); }
     }
     root.addEventListener("beforeinput", beforeinput as EventListener, { signal: viewControls.signal });
@@ -350,26 +390,17 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
     }); }, { signal: viewControls.signal });
   }
   const unsubscribe = session.subscribe((event) => { if (event.type !== "error" && !committing && !disposed && !composing) refresh(); });
-  const preview = mountDocumentPreview(stage, session, { title: "正文编辑" });
+  const preview = mountDocumentPreview(stage, session, { ...options, title: "正文编辑" });
   const ready = preview.ready.then(() => {
     if (disposed) return;
     frame = preview.element.contentDocument!; root = rootElement(frame);
     const source = rootElement(new DOMParser().parseFromString(initial.html, "text/html"));
-    for (const node of [root, ...root.querySelectorAll<HTMLElement>("[data-node-id]")]) {
-      const original = node.dataset.nodeId === source.dataset.nodeId ? source : source.querySelector<HTMLElement>('[data-node-id="' + CSS.escape(node.dataset.nodeId!) + '"]');
-      if (!original) continue;
-      if (session.snapshot().metadata.sections.some((section) => section.rootNodeId === node.dataset.nodeId))
-        layout.set(node.dataset.nodeId!, [...node.style].filter((property) => node.style.getPropertyValue(property) !== original.style.getPropertyValue(property))
-          .map((property) => ({ property, original: original.style.getPropertyValue(property), rendered: node.style.getPropertyValue(property) })));
-    }
-    const viewStyle = frame.createElement("style"); viewStyle.textContent = "[data-office-editor]:focus{outline:none}[data-office-editor]{min-height:100px}[data-office-editor] [data-word-tab]{user-select:all}"; frame.head.append(viewStyle);
     activate(source);
     if (revision !== session.snapshot().manifest.revision) refresh();
     frame.addEventListener("selectionchange", () => { if (root) savedSelection = bookmark(root, projection.ignored) ?? savedSelection; }, { signal: controls.signal });
   }).catch((reason: unknown) => { report(reason); throw reason; });
-  return { element, ready, focus: () => { root?.focus(); }, dispose: () => {
+  return { element, ready, layout: () => preview.layout(), focus: () => { root?.focus(); }, dispose: () => {
     if (disposed) return; disposed = true; unsubscribe(); controls.abort(); viewControls.abort(); preview.dispose();
-    for (const url of imageUrls.values()) URL.revokeObjectURL(url); imageUrls.clear();
     root = undefined; frame = undefined; proofs = []; pending = undefined; savedSelection = undefined; element.remove();
   } };
 }

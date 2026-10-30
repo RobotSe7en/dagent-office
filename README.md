@@ -2,7 +2,7 @@
 
 面向人和宿主智能体协作的通用办公文档 SDK 与可嵌入工作台。采用 TypeScript 和带语义的 HTML 文档格式，提供 Office 导入、保留样式的网页编辑、框选批注、结构化修改提案和可编辑 Office 导出。达智平台是首个宿主，SDK 同时面向其他应用独立发布。
 
-**当前状态：R1-11 富文本输入已实现。** 三格式模型设计已明确，`core` 提供严格契约、13 份 JSON Schema、Word 语义及文档包；`office` 提供有界 ZIP 和 DOCX 导入。`editor` 提供无脚本预览、文字／对象／矩形选择、批注面板与重定位，见[预览与交互](docs/preview-interaction.md)。Playground 可打开 DOCX、添加或管理批注、缩放、撤销重做、下载文档包并重开，包含中文字体替代和缺字诊断。读取验收使用实际 DOCX、LibreOffice 重存文件与固定字体参考图，范围和限制见 [DOCX 读取](docs/docx-import.md)。隔离候选、七类内容操作、批注事务、单调修订和精确锚点映射见[核心事务与历史](docs/document-session.md)。工作台支持多批注请求、固定提案导入、候选差异和整批应用，见[工作台与协议](docs/workbench.md)。连续正文与表格支持富文本及中文输入，见[正文输入](docs/rich-text.md)。下一步是 R1-12 分页与渲染；自动分页和 DOCX/PDF 导出尚未实现，未发布 npm 包。
+**当前状态：R1-12 自研分页与 PDF/PNG 渲染已实现。** 三格式模型设计已明确，`core` 提供严格契约、13 份 JSON Schema、Word 语义及文档包；`office` 提供有界 ZIP 和 DOCX 导入。`editor` 提供无脚本预览、文字／对象／矩形选择、批注面板与重定位，见[预览与交互](docs/preview-interaction.md)。Playground 可打开 DOCX、添加或管理批注、缩放、撤销重做、下载文档包并重开，包含中文字体替代和缺字诊断。读取验收使用实际 DOCX、LibreOffice 重存文件与固定字体参考图，范围和限制见 [DOCX 读取](docs/docx-import.md)。隔离候选、七类内容操作、批注事务、单调修订和精确锚点映射见[核心事务与历史](docs/document-session.md)。工作台支持多批注请求、固定提案导入、候选差异和整批应用，见[工作台与协议](docs/workbench.md)。连续正文与表格支持富文本及中文输入，见[正文输入](docs/rich-text.md)。`render` 提供独立只读预览和共享页面画布，`node` 提供受管理的 Chromium、PDF/PNG 与字节协议，见[分页与渲染](docs/pagination-rendering.md)。预览直接显示 HTML，分页覆盖旧 Chromium、Firefox 和 WebKit。下一步为 R1-13 原生 DOCX 导出；尚未发布 npm 包。
 
 ## 本地开发
 
@@ -42,6 +42,7 @@ pnpm dev
 | [正文富文本输入](docs/rich-text.md) | 自研输入适配、中文输入法、身份保留、跨段落与表格输入及统一历史 |
 | [工作台与协议](docs/workbench.md) | 多批注请求、宿主提交、提案校验、差异应用及 React 包装 |
 | [预览与交互](docs/preview-interaction.md) | 普通 JS 挂载、文字与对象选择、矩形坐标、批注面板、布局失效与生命周期 |
+| [分页与渲染](docs/pagination-rendering.md) | 纯预览、页面画布、字段、Node PDF/PNG、CLI、浏览器与预算边界 |
 | [中文字体](docs/fonts.md) | 常用宋体、仿宋、楷体名称保留、开源字体环境与预览替代 |
 | [DOCX 读取与只读预览](docs/docx-import.md) | 导入 API、范围、中文字体、样例、参考渲染和限制 |
 | [资源与 ZIP](docs/resources-and-zip.md) | 资源摘要、图片容器识别、宿主资源收集、ZIP 预算及保真样例 |
@@ -69,7 +70,7 @@ HTML 文档包
 
 ## 计划中的交付方式
 
-使用一个 TypeScript monorepo，组织 `core`、`editor`、`office`、`node` 四个库模块，并提供独立 Playground。编辑器提供普通 JavaScript 挂载、可选 React 包装和底层 API；其他产品主要适配批注提交、提案回传、授权资源和存储。Node 转换进程用于服务端导出和浏览器渲染，具体运行方式由宿主选择。包名、第一方许可证及正式版本在初次发布时确定。
+使用一个 TypeScript monorepo，组织 `core`、`render`、`editor`、`office`、`node` 五个库模块，并提供独立 Playground。编辑器提供普通 JavaScript 挂载、可选 React 包装和底层 API；其他产品主要适配批注提交、提案回传、授权资源和存储。Node 转换进程用于服务端导出和浏览器渲染，具体运行方式由宿主选择。包名、第一方许可证及正式版本在初次发布时确定。
 
 第一轮先完成三格式数据模型设计，再完成 DOCX 读取、样式映射及独立只读预览验收；通过后进入 R1-06 事务与历史，继续完成富文本、分页、批注、提案、DOCX/PDF 导出与重开，最后接入达智现有智能体验证。PPT、Excel、正式宿主存储和发布准备依次进入第二至第五轮。Playground 使用固定提案文件，不提供独立模型服务。
 

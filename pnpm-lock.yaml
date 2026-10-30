@@ -19,9 +19,15 @@ importers:
       '@dagent-office/editor':
         specifier: workspace:*
         version: link:packages/editor
+      '@dagent-office/node':
+        specifier: workspace:*
+        version: link:packages/node
       '@dagent-office/office':
         specifier: workspace:*
         version: link:packages/office
+      '@dagent-office/render':
+        specifier: workspace:*
+        version: link:packages/render
       '@playwright/test':
         specifier: 1.64.1
         version: 1.64.1
@@ -67,6 +73,10 @@ importers:
       react-dom:
         specifier: 19.3.1
         version: 19.3.1(react@19.3.1)
+    devDependencies:
+      '@dagent-office/node':
+        specifier: workspace:*
+        version: link:../../packages/node
 
   packages/core:
     dependencies:
@@ -92,6 +102,9 @@ importers:
       '@dagent-office/core':
         specifier: workspace:*
         version: link:../core
+      '@dagent-office/render':
+        specifier: workspace:*
+        version: link:../render
       react:
         specifier: '>=18.2.0 <20'
         version: 19.3.1
@@ -108,6 +121,12 @@ importers:
       '@dagent-office/office':
         specifier: workspace:*
         version: link:../office
+      '@dagent-office/render':
+        specifier: workspace:*
+        version: link:../render
+      playwright-core:
+        specifier: 1.64.1
+        version: 1.64.1
 
   packages/office:
     dependencies:
@@ -120,6 +139,12 @@ importers:
       saxes:
         specifier: 6.0.0
         version: 6.0.0(patch_hash=70475d62791419524500c8ceb49dd00060d7844990e6603e323fb53a26ee1afd)
+
+  packages/render:
+    dependencies:
+      '@dagent-office/core':
+        specifier: workspace:*
+        version: link:../core
 
 packages:
 

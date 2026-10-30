@@ -7,6 +7,7 @@ export * from "./contracts/operations.js";
 export * from "./contracts/interaction.js";
 export * from "./contracts/events.js";
 export { DocumentError } from "./errors.js";
+export { createOpaqueId } from "./identifiers.js";
 export * from "./schema-registry.js";
 export { DEFAULT_DOCUMENT_READ_LIMITS, openDocument } from "./document-model.js";
 export { createDocumentSession, DEFAULT_DOCUMENT_SESSION_LIMITS, DEFAULT_INTERACTION_LIMITS } from "./document-session.js";

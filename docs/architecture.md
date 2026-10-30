@@ -2,7 +2,7 @@
 
 dagent-office 是可嵌入不同产品的通用文档协作 SDK 与工作台。它将 Office 文件转换为带语义的 HTML 文档包，在浏览器中完成编辑、批注和修改提案预览，再从当前文档源生成 Office 文件。
 
-本文描述目标架构。工程骨架、R1-03 [结构契约](contracts.md)、R1-04 [只读文档模型](document-model.md)及 R1-05 [资源与 ZIP](resources-and-zip.md)已实现，DOCX 导入和只读预览见[读取说明](docx-import.md)；[核心事务、历史和精确锚点映射](document-session.md)及 R1-08 [预览与交互](preview-interaction.md)已实现；[请求／提案执行及工作台](workbench.md)已实现，[富文本输入](rich-text.md)已实现，自动分页和 Office 导出仍待实现；运行命令见[本地开发](development.md)。交付顺序见[整体实施计划](implementation-plan.md)，首轮支持范围见[第一轮实施细则](iteration-1.md)。
+本文描述目标架构。工程骨架、R1-03 [结构契约](contracts.md)、R1-04 [只读文档模型](document-model.md)及 R1-05 [资源与 ZIP](resources-and-zip.md)已实现，DOCX 导入和只读预览见[读取说明](docx-import.md)；[核心事务、历史和精确锚点映射](document-session.md)及 R1-08 [预览与交互](preview-interaction.md)已实现；[请求／提案执行及工作台](workbench.md)已实现，[富文本输入](rich-text.md)已实现，[分页、共享画布及 PDF/PNG](pagination-rendering.md)已实现，原生 DOCX 导出仍待实现；运行命令见[本地开发](development.md)。交付顺序见[整体实施计划](implementation-plan.md)，首轮支持范围见[第一轮实施细则](iteration-1.md)。
 
 整体按五轮交付。第一轮将 HTML 协作基础与 Word 完整闭环合并：先完成独立 Playground 的 DOCX 导入、人工输入、分页、批注、提案和 DOCX/PDF 导出重开，再接入达智现有智能体验证；后续依次覆盖 PPT、Excel、正式宿主存储和发布准备。
 
@@ -13,7 +13,7 @@ dagent-office 是可嵌入不同产品的通用文档协作 SDK 与工作台。�
 | 交付形态 | SDK 提供 | 宿主需要提供 |
 | --- | --- | --- |
 | 默认文档工作台 | 预览、选择、批注列表、统一提交、提案差异、应用、撤销重做 | 页面容器、提交与回传绑定、授权输入、保存行为 |
-| 独立预览组件 | 文档展示、缩放和可选选区 | 文档会话与容器 |
+| 独立预览组件 | 文档展示、缩放和可选选区 | 只读模型与容器；需要交互时再提供会话 |
 | 底层 API | 文档读取、上下文、事务、批注、提案及序列化 | 自定义交互界面 |
 | 格式转换与 Node 入口 | Office 导入导出、CLI、渲染及 PDF | 运行环境、授权字节、进程和部署管理 |
 
@@ -26,7 +26,7 @@ dagent-office 是可嵌入不同产品的通用文档协作 SDK 与工作台。�
 
 达智是首个真实智能体宿主；独立 Playground 验证同一组件与 API 能脱离达智运行。其他产品无需引入达智的后端类型、路由或业务模型。
 
-[三格式模型设计](data-model.md)、DOCX 读取、样式映射和声明范围的独立只读验收已先行完成，R1-06 至 R1-08 的事务、历史、精确锚点映射及交互也已完成，R1-09 工作台与协议闭环也已完成，R1-11 富文本输入已完成，下一步进入 R1-12 分页与渲染。只读预览接受 `DocumentModel`，交互组件接受宿主拥有的 `DocumentEditingSession`，复用同一渲染实现；完整工作台接受 `DocumentSession` 并复用同一渲染及事务边界。
+[三格式模型设计](data-model.md)、DOCX 读取、样式映射和声明范围的独立只读验收已先行完成，R1-06 至 R1-08 的事务、历史、精确锚点映射及交互也已完成，R1-09 工作台与协议闭环也已完成，R1-11 富文本输入已完成，R1-12 自研分页与 PDF 渲染已完成，下一步进入 R1-13 原生 DOCX 导出。只读预览接受 `DocumentModel`，交互组件接受宿主拥有的 `DocumentEditingSession`，复用同一渲染实现；完整工作台接受 `DocumentSession` 并复用同一渲染及事务边界。
 
 ## 模块关系
 
@@ -36,9 +36,12 @@ flowchart TB
     Host --> Office[office：按需使用]
     Playground[独立 Playground] --> Editor
     Playground --> Office
-    Editor --> Core[core]
+    Editor --> Render[render]
+    Render --> Core[core]
+    Editor --> Core
     Office --> Core
     Node[node] --> Office
+    Node --> Render
     Node --> Core
 ```
 
@@ -49,6 +52,7 @@ flowchart TB
 ```text
 packages/
   core/             文档格式、运行时树、事务、锚点、批注、交互协议、历史
+  render/           共享预览画布、字体、派生分页、字段及打印投影
   editor/           文档工作台、预览、格式编辑适配器、JS 挂载及 React 包装
   office/           ZIP/XML 基础能力、三格式导入导出
   node/             CLI、本地转换进程、Chromium 渲染与 PDF 导出
@@ -59,9 +63,10 @@ apps/
 | 模块 | 职责 | 运行环境 | 项目内依赖 |
 | --- | --- | --- | --- |
 | `core` | 文档模型、契约、事务、锚点、批注、上下文、提案和历史 | 浏览器、Node | 无 |
-| `editor` | 预览、选区、批注、差异、工作台及格式编辑适配 | 浏览器 | `core` |
+| `render` | 只读画布、字体、分页、字段、源投影和打印投影 | 浏览器；DOM 无关契约可在 Node 使用 | `core` |
+| `editor` | 选区、批注、差异、工作台及格式编辑适配 | 浏览器 | `core`、`render` |
 | `office` | 文档包 ZIP、OOXML 公共基础和各格式导入导出 | 浏览器、Node | `core` |
-| `node` | 文件系统、CLI、受管理的转换进程、Chromium 渲染及 PDF | Node | `core`、`office` |
+| `node` | 文件系统、CLI、受管理的转换进程、Chromium 渲染及 PDF | Node | `core`、`office`、`render` |
 
 `core` 不依赖 React、DOM、文件系统、模型厂商或宿主业务代码。`editor` 的只读预览接收文档模型，后续工作台接收文档会话，不依赖具体 Office 库。`office` 通过文档源和明确的渲染接口转换，不依赖编辑器。`node` 复用相同的核心和格式适配器。
 
