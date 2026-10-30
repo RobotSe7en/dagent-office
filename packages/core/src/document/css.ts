@@ -9,6 +9,8 @@ const properties = new Set([
   "text-decoration", "text-decoration-line", "text-decoration-color", "text-decoration-style",
   "text-align", "text-indent", "line-height", "letter-spacing", "word-spacing", "white-space",
   "vertical-align", "width", "height", "min-width", "max-width", "min-height", "max-height",
+  "widows", "orphans", "table-layout", "list-style-type", "list-style-position", "break-before", "break-after", "break-inside",
+  "text-transform", "font-variant", "tab-size", "overflow-wrap",
   "margin", "margin-top", "margin-right", "margin-bottom", "margin-left",
   "padding", "padding-top", "padding-right", "padding-bottom", "padding-left",
   "border", "border-width", "border-style", "border-color", "border-collapse", "border-spacing",
@@ -160,4 +162,30 @@ export function normalizeCss(source: string, context: "stylesheet" | "declaratio
     if (error instanceof DocumentError) throw error;
     return invalid("The CSS source could not be parsed or validated.");
   }
+}
+
+/** Set exactly one declaration, without allowing property/value text to inject siblings. */
+export function setInlineStyle(source: string, property: string, value: string, limits: DocumentReadLimits): string {
+  if (!/^(?:--[a-zA-Z0-9_-]+|[a-zA-Z][a-zA-Z-]*)$/.test(property)) {
+    throw new DocumentError("InvalidOperation", "A style operation requires one CSS property name.");
+  }
+  const name = property.startsWith("--") ? property : property.toLowerCase();
+  const normalized = normalizeCss(name + ":" + value, "declarationList", limits, { nodes: 0 });
+  const incoming = parseBoundedCss(normalized, "declarationList", limits, { nodes: 0 });
+  if (incoming.type !== "DeclarationList" || incoming.children.size !== 1
+    || incoming.children.first?.type !== "Declaration" || incoming.children.first.property !== name) {
+    throw new DocumentError("InvalidOperation", "A style operation must contain exactly one declaration.");
+  }
+  const ast = parseBoundedCss(source, "declarationList", limits, { nodes: 0 });
+  if (ast.type !== "DeclarationList") throw new DocumentError("InvalidOperation", "The inline style is invalid.");
+  const declaration = incoming.children.first;
+  // Append after existing shorthands so the explicitly set longhand takes effect.
+  ast.children.forEach((node, item, list) => {
+    if (node.type !== "Declaration") return;
+    const existing = ident.decode(node.property);
+    if ((existing.startsWith("--") ? existing : existing.toLowerCase()) !== name) return;
+    list.remove(item);
+  });
+  ast.children.appendData(declaration);
+  return normalizeCss(generate(ast), "declarationList", limits, { nodes: 0 });
 }

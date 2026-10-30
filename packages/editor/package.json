@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "license": "UNLICENSED",
-  "description": "dagent-office editor module — engineering scaffold",
+  "description": "Scriptless document preview; editing and collaboration components planned",
   "files": [
     "dist"
   ],

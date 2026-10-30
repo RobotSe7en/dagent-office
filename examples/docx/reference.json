@@ -1,0 +1,153 @@
+{
+  "environment": {
+    "libreOffice": "LibreOffice 25.8.1.1 580(Build:1)",
+    "chromium": "Google Chrome for Testing 156.0.8078.4",
+    "dpi": 96,
+    "fonts": [
+      {
+        "family": "Noto Sans CJK SC",
+        "file": "NotoSansCJK-Regular.ttc",
+        "sha256": "b76b0433203017ca80401b2ee0dd69350349871c4b19d504c34dbdd80541690a"
+      },
+      {
+        "family": "Noto Serif CJK SC",
+        "file": "NotoSerifCJK-Regular.ttc",
+        "sha256": "5d9c31a059600193c9d7968a998bde886ccdc77e934006ad243b41794c496a7d"
+      },
+      {
+        "family": "Liberation Serif",
+        "file": "LiberationSerif-Regular.ttf",
+        "sha256": "705903ae1382f0150f115d6f10a30f5b2f3d6ade649c474afe6366c39174fb65"
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "file": "01-text-numbering.docx",
+      "sha256": "4bdf9e199cef667fef056fd147ce099394aab21a51bf06f0bad397d509824ad5",
+      "pages": 1,
+      "images": [
+        {
+          "file": "01-text-numbering-1.png",
+          "sha256": "53f8fd5f741ff899e2bd3372bf0bd6cdc3d4615259999d85e9433d242f286b0f"
+        }
+      ],
+      "producerFile": "producer/01-text-numbering.docx"
+    },
+    {
+      "file": "02-table-merges.docx",
+      "sha256": "c8adc76b8ebce0242d1d96237cb27d6fcdc072878ab4bddb747144fe18610bb3",
+      "pages": 1,
+      "images": [
+        {
+          "file": "02-table-merges-1.png",
+          "sha256": "9ab3023e39fa2afe011ed16dd9c43ef8c433331449accb9d0847c5d9d390fb05"
+        }
+      ],
+      "producerFile": "producer/02-table-merges.docx"
+    },
+    {
+      "file": "03-images.docx",
+      "sha256": "3ade9c8626c1ae42f564acb052c546e133f7c8975b05d89d850a039f5bc1e967",
+      "pages": 1,
+      "images": [
+        {
+          "file": "03-images-1.png",
+          "sha256": "2e84b713e6080fb76a41ef83a403db54011e28c50cb8c5d4538f09bd4d3f96f3"
+        }
+      ],
+      "producerFile": "producer/03-images.docx"
+    },
+    {
+      "file": "04-styles-sections.docx",
+      "sha256": "e6f475ea6f5ec0cd98009d842becdc5dc0d1a1b8a1c54219b002d3c5de5323b2",
+      "pages": 2,
+      "images": [
+        {
+          "file": "04-styles-sections-1.png",
+          "sha256": "fcbf64c562a2f4de7c60749a8b1afa1609fd145be85be94b42ba3e5b8e292463"
+        },
+        {
+          "file": "04-styles-sections-2.png",
+          "sha256": "874f108f2c76d9f5d82d19e4e01890e01c2cdb4773dd4c1146fae8874e942e39"
+        }
+      ],
+      "producerFile": "producer/04-styles-sections.docx"
+    },
+    {
+      "file": "05-long-page-break.docx",
+      "sha256": "81efff91918b2a0f40e91fdd4e0686520894ef3a8ec9884b9143f40ceb623bde",
+      "pages": 3,
+      "images": [
+        {
+          "file": "05-long-page-break-1.png",
+          "sha256": "5f3d104af6fe532844f32a740cdc4f045f3b63f4e8664d253ae74f00c052a845"
+        },
+        {
+          "file": "05-long-page-break-2.png",
+          "sha256": "ab706f78c9687e2ef57c483f8a5aeb1416f3c596ef27bc5c9313a7830f8c3542"
+        },
+        {
+          "file": "05-long-page-break-3.png",
+          "sha256": "ef0189e3ff8574c15cceccc9573ab3a589b23ff2b728c0eb2a9073e54176d595"
+        }
+      ],
+      "producerFile": "producer/05-long-page-break.docx"
+    },
+    {
+      "file": "06-links-tabs.docx",
+      "sha256": "cc8935aabda0aed3c1e8fdd3c3e8467b739aca05a4cc598d269468798603e492",
+      "pages": 1,
+      "images": [
+        {
+          "file": "06-links-tabs-1.png",
+          "sha256": "e1042b620f0ba666e620fdb6a03f4b84d107546ab050eb90be64d35e3862b0d0"
+        }
+      ],
+      "producerFile": "producer/06-links-tabs.docx"
+    },
+    {
+      "file": "07-fields.docx",
+      "sha256": "ce60be884ca12a382dc287bff86c9a3eeb47c7207b47d639cbed8d7edb261c2a",
+      "pages": 1,
+      "images": [
+        {
+          "file": "07-fields-1.png",
+          "sha256": "18c6ef2011a28f25762566eb1bad496289aa238e31126fa22fddef7ebce6d060"
+        }
+      ],
+      "producerFile": "producer/07-fields.docx"
+    },
+    {
+      "file": "08-comments-revisions.docx",
+      "sha256": "c29141440a66d6b60cbf16c91b2a5c060df20a7ef5b6ecd38644fcf87f94affc",
+      "pages": 1,
+      "images": [
+        {
+          "file": "08-comments-revisions-1.png",
+          "sha256": "561e988e341ced10521c9db179318315256ab3d89f5ba16dff33b2edac405eaf"
+        }
+      ],
+      "producerFile": "producer/08-comments-revisions.docx"
+    },
+    {
+      "file": "09-chinese-fonts.docx",
+      "sha256": "5c3590db9627e39fdd54678d9fbda6214865ea295dc030bfb9570c8b76c7d7d9",
+      "pages": 1,
+      "images": [
+        {
+          "file": "09-chinese-fonts-1.png",
+          "sha256": "7faadb02bb0bbdd1318d15316ab5db68206334604b86b9657eafd6d5ec6b925e"
+        }
+      ],
+      "producerFile": "producer/09-chinese-fonts.docx"
+    }
+  ],
+  "limits": [
+    "Continuous preview is not automatic pagination.",
+    "Fields are checked against source caches, not LibreOffice updates.",
+    "Insertion/deletion marks are checked structurally; PDF review display can differ.",
+    "Fixture 09 intentionally requires font substitution and includes a missing CJK glyph.",
+    "Word and WPS acceptance is not recorded by this local reference."
+  ]
+}

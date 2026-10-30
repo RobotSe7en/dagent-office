@@ -1,5 +1,7 @@
 # 文档包读取与模型
 
+三格式模型及来源规则见[数据模型](data-model.md)。DOCX 读取及只读验收已前移至 R1-06 前，当前状态与细则见[第一轮计划](iteration-1.md)。
+
 R1-04 提供 `document` 类型、格式版本 1 的只读文档模型，R1-05 增加[资源校验、宿主资源收集和 ZIP 适配](resources-and-zip.md)。输入是宿主已授权的虚拟文件 Map；核心不访问文件系统、网络或模型服务。
 
 ```ts
@@ -38,6 +40,8 @@ HTML 的资源地址按入口所在目录解析，只做一次 URL 解码；允�
 
 以下列出当前读取器实际接受的子集，受[保真目标](document-format.md#保真目标)指导继续扩展。超出支持表的普通样式属于当前能力限制，不代表该样式不安全。当前仍会拒绝未支持的结构和样式，尚未实现任意安全样式的保留，也未完成 Office 视觉保真验收。
 
+Word 原生语义通过可选元数据及 `ins/del` 容器保存；打开时校验内容域、样式图、编号、字段、链接、表格和富文本批注的引用，缺失或循环引用拒绝。原生批注文字范围还须匹配 UTF-16 原文，变更后的映射仍在 R1-07。
+
 正文元素采用[首轮基线](iteration-1.md#html元数据和样式基线)。保留 `id/class/title/lang/dir/style`、`data-*`、`aria-*`，以及图片的 `src/alt/width/height`、单元格的合并及 `scope`、列表的 `start/reversed/type/value`。其他属性需要显式增加支持；处理器、脚本、外部嵌入和外来命名空间均拒绝。样式表通过包内 `link` 引入，当前不接受 HTML `style` 元素。
 
 CSS Tree 解析和检查样式表及行内声明，保存声明顺序、级联源、`!important`、自定义属性与 `var()`。支持元素、类、`data-*` 属性存在/相等、后代、分组和 `:root` 选择器。当前不支持其他伪类、伪元素、ID 选择器、其他组合符、嵌套规则或 at-rule。
@@ -45,6 +49,7 @@ CSS Tree 解析和检查样式表及行内声明，保存声明顺序、级联�
 支持的属性为：
 
 - 文字：`color`、`font-family/size/weight/style`、`text-decoration` 及其 `line/color/style`、`text-align/indent`、`line-height`、`letter-spacing`、`word-spacing`、`white-space`、`vertical-align`。
+- 原生映射扩展：`font-variant`、`text-transform`、`tab-size`、`overflow-wrap`、`table-layout`、`list-style-type/position`、`break-before/after/inside`、`widows/orphans`。
 - 尺寸：`width/height` 及其 `min/max`。
 - 盒模型：`margin/padding` 及四边属性，`background-color`。
 - 表格和边框：`border`、`border-width/style/color`、四边及四边的 `width/style/color`、`border-collapse/spacing`。
@@ -69,6 +74,6 @@ HTML 和 CSS 在构建树时累计节点数并检查深度，超限立即中止�
 
 ## 后续边界
 
-本入口不创建编辑会话、不执行操作或提案，不提供历史和界面。批注的范围匹配、失效映射和区域布局语义在 R1-07 实现；不会在读取时猜测新位置或改写批注状态。
+本入口不创建编辑会话、不执行操作或提案，不提供历史和界面。R1-06 的 `createDocumentSession(model)` 提供[事务与历史](document-session.md)，复用同一文档包来源。已有文字范围的原文匹配已校验；编辑后的失效映射和区域布局语义在 R1-07 实现；不会在读取时猜测新位置或改写批注状态。
 
-资源缺失时先通过[宿主资源收集器](resources-and-zip.md#资源校验与收集)补齐；同步打开不隐式读取宿主存储。ZIP 读写、原始路径/重复项检查及有界解压由 `office` 提供，见[资源与 ZIP](resources-and-zip.md#zip-读取与保存)。完整图像解码、浏览器样式隔离、有效样式及布局计算留给后续适配器。
+资源缺失时先通过[宿主资源收集器](resources-and-zip.md#资源校验与收集)补齐；同步打开不隐式读取宿主存储。ZIP 读写、原始路径/重复项检查及有界解压由 `office` 提供，见[资源与 ZIP](resources-and-zip.md#zip-读取与保存)。只读浏览器样式隔离与基础测量已在 `editor` 实现，见[DOCX 读取](docx-import.md)。完整图像解码及自动分页仍由后续适配器负责。

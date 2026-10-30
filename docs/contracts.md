@@ -1,6 +1,8 @@
 # 结构契约与 JSON Schema
 
-R1-03 提供 `core` 的数据结构校验、推导类型、JSON Schema、稳定校验错误，以及会话等运行时接口的类型声明。R1-04 的文档包打开、HTML/CSS 解析、节点与元数据引用检查见[文档模型](document-model.md)；事务执行和界面尚未实现。
+三格式模型及来源规则见[数据模型](data-model.md)。DOCX 读取及只读验收已前移至 R1-06 前，当前状态与细则见[第一轮计划](iteration-1.md)。
+
+R1-03 提供 `core` 的数据结构校验、推导类型、JSON Schema、稳定校验错误，以及会话等运行时接口的类型声明。R1-04 的文档包打开、HTML/CSS 解析、节点与元数据引用检查见[文档模型](document-model.md)；DOCX 语义扩展及只读预览已在 R1-10 实现，见[读取说明](docx-import.md)；R1-06 已实现[事务执行与历史](document-session.md)，精确锚点映射、请求/提案执行和编辑协作界面仍待实现。
 
 ## 公开入口
 
@@ -27,7 +29,7 @@ const proposalSchema = getContractJsonSchema("edit-proposal");
 | --- | --- |
 | `asset-descriptor` | 资源的 `path`、`mimeType` 和小写十六进制 `sha256` |
 | `document-manifest` | 当前版本单 HTML 入口的文档清单 |
-| `document-metadata` | Word 页面设置和节引用；标题及语言可选 |
+| `document-metadata` | Word 页面/节、内容域、样式图、编号、字段、链接、制表位、表格及修订语义；标题及语言可选 |
 | `anchor` | 单节点文字、跨节点文字、节点、节点集合和区域 |
 | `annotation`、`annotations` | 批注及批注列表 |
 | `content-operation` | 当前六种内容操作 |
@@ -46,7 +48,7 @@ const proposalSchema = getContractJsonSchema("edit-proposal");
 
 格式和协议的当前设计版本均为 1。显式声明其他整数版本时，SDK 入口返回 `UnsupportedVersion`；缺少版本或把版本写成字符串属于结构错误，不猜测版本。
 
-清单的类型枚举识别 `document`、`presentation`、`workbook`，但识别名称不代表已实现相应文档读取。当前元数据和交互上下文只定义 Word 类型；PPT/Excel 的上下文、几何与单元格操作在对应任务显式加入。分块清单、编号、复杂样式映射、页眉页脚、批注回复和作者显示字段也须在对应任务定义后接收，当前不能通过额外 JSON 字段绕过。
+清单的类型枚举识别 `document`、`presentation`、`workbook`，但识别名称不代表已实现相应文档读取。当前元数据和交互上下文只定义 Word 类型；PPT/Excel 的上下文、几何与单元格操作在对应任务显式加入。Word 语义、作者/时间和富文本批注已由 R1-10 显式定义；分块、PPT/Excel 和现代批注回复仍按对应任务加入，不能通过额外 JSON 字段绕过。
 
 开发草案尚未发布，后续任务可以显式调整契约。发布冻结后，影响严格读取器的新增字段采用显式版本演进和支持的读取器，不能依赖忽略未知字段实现兼容。
 
@@ -64,6 +66,8 @@ const proposalSchema = getContractJsonSchema("edit-proposal");
 - 请求只接收 `open` 批注。提案只接收内容操作，不能直接提交批注状态管理操作。
 
 数组结构允许空事务与空提案；是否净变化、是否更新批注由未来执行层判断。跨节点范围排序、重复 ID、范围先后及原文匹配也是后续语义检查，不由结构校验推断。
+
+原纯文本批注继续使用 `instruction`；导入的富文本批注使用 `bodyNodeId` 引用 comment 内容域，两种来源互斥。作者显示名、缩写、来源时间及来源 ID 不映射为宿主主体。Word 扩展由严格的 `word` 子对象定义，完整引用规则见[模型](data-model.md)和[DOCX 读取](docx-import.md)。
 
 ## JSON Schema 产物
 
@@ -91,8 +95,8 @@ import proposalSchema from "@dagent-office/core/schemas/edit-proposal.json"
 - `DocumentPackage` 为只读路径到字节的 Map，`manifest.json` 在其中，避免另一份可独立修改的 manifest。
 - `DocumentSnapshot` 为文档源的派生只读视图，不是新的保存格式。
 - `DocumentModel` 由 `openDocument` 创建，已实现 `snapshot/getNode/serialize`；返回值冻结或独立复制，第三方 AST 不进入公共接口。
-- `CandidateChange` 是非序列化的候选类型；实际会话仍需私有状态验证候选所有权和修订，类型标记不代表授权。
-- `DocumentSession` 声明查询、准备、提交、撤销、序列化和释放，当前没有工厂或执行实现。
+- `CandidateChange` 是非序列化的候选类型；当前会话使用私有运行时状态验证候选所有权、消费状态和修订，类型标记不代表授权。
+- `createDocumentSession` 返回已实现的 `DocumentEditingSession`，包含查询、候选、提交、历史、序列化和释放；`DocumentSession` 继续声明完整协作契约，请求生成和 `prepareProposal` 尚未实现。
 - 核心事件声明 `protocolVersion/documentId/revision`，文档变化携带节点 ID，批注变化携带批注 ID，错误携带结构化错误数据。
 
 ## 校验边界与后续任务

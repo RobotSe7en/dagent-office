@@ -2,7 +2,7 @@
 
 面向人和宿主智能体协作的通用办公文档 SDK 与可嵌入工作台。采用 TypeScript 和带语义的 HTML 文档格式，提供 Office 导入、保留样式的网页编辑、框选批注、结构化修改提案和可编辑 Office 导出。达智平台是首个宿主，SDK 同时面向其他应用独立发布。
 
-**当前状态：R1-05 资源与 ZIP 已实现。** `core` 提供严格结构契约、13 份 JSON Schema、HTML/CSS 只读模型、资源摘要与图片容器检查及宿主资源收集；`office` 提供有界文档包 ZIP 读写。报告和保真样例可保存重开。四个模块的构建、测试与打包可运行。Playground 仍为工程页面，事务执行、编辑和 Office 转换尚未实现，未发布 npm 包。
+**当前状态：R1-06 核心操作与历史已实现。** 三格式模型设计已明确，`core` 提供严格契约、13 份 JSON Schema、Word 语义及只读文档包；`office` 提供有界 ZIP 和 DOCX 导入，`editor` 提供无脚本只读预览。Playground 可打开 DOCX、下载文档包并重开，包含中文字体替代和缺字诊断。读取验收使用实际 DOCX、LibreOffice 重存文件与固定字体参考图，范围和限制见 [DOCX 读取](docs/docx-import.md)。`core` 已提供隔离候选、六类内容操作、批注事务、单调修订和撤销重做，见[核心事务与历史](docs/document-session.md)。下一步是 R1-07 精确锚点与批注映射；富文本编辑、自动分页和 DOCX/PDF 导出尚未实现，未发布 npm 包。
 
 ## 本地开发
 
@@ -33,10 +33,14 @@ pnpm dev
 | 文档 | 内容 |
 | --- | --- |
 | [总体架构](docs/architecture.md) | 产品边界、交付形态、模块职责、依赖方向、状态模型及运行位置 |
+| [三格式数据模型](docs/data-model.md) | 唯一持久化来源、公共基座及 Word/PPT/Excel 语义 |
 | [文档格式](docs/document-format.md) | HTML 文档包、三种格式的表达和版本规则 |
 | [编辑与宿主交互协议](docs/editing-protocol.md) | 事务、锚点、批注请求、修改提案、事件及冲突 |
 | [结构契约与 JSON Schema](docs/contracts.md) | 已实现的校验 API、严格字段、类型、静态 Schema 与语义校验边界 |
 | [文档包读取与模型](docs/document-model.md) | 只读打开、节点查询、HTML/CSS 支持范围、引用、预算和保存重开 |
+| [核心事务与历史](docs/document-session.md) | 编辑会话、操作、候选、修订、历史、事件及预算 |
+| [中文字体](docs/fonts.md) | 常用宋体、仿宋、楷体名称保留、开源字体环境与预览替代 |
+| [DOCX 读取与只读预览](docs/docx-import.md) | 导入 API、范围、中文字体、样例、参考渲染和限制 |
 | [资源与 ZIP](docs/resources-and-zip.md) | 资源摘要、图片容器识别、宿主资源收集、ZIP 预算及保真样例 |
 | [整体实施计划](docs/implementation-plan.md) | 五轮交付顺序、具体产物、能力范围和验收门槛 |
 | [第一轮实施细则](docs/iteration-1.md) | 首轮支持范围、公共契约、任务依赖、技术验证及演示脚本 |
@@ -48,7 +52,7 @@ pnpm dev
 
 ## 最小示例
 
-[examples/report](examples/report/) 是一份 `document` 类型的文档包目录，包含中文报告、表格和两条批注。[report.request.json](examples/report.request.json) 表示统一交给宿主的请求，[report.proposal.json](examples/report.proposal.json) 表示宿主智能体针对该请求返回的修改提案。三者共享文档身份和基准修订。报告包已能通过 `openDocument` 读取、查询和保存重开，请求与提案执行尚未实现。
+[examples/report](examples/report/) 是一份 `document` 类型的文档包目录，包含中文报告、表格和两条批注。[report.request.json](examples/report.request.json) 表示统一交给宿主的请求，[report.proposal.json](examples/report.proposal.json) 表示宿主智能体针对该请求返回的修改提案。三者共享文档身份和基准修订。报告包已能通过 `openDocument` 读取、查询和保存重开，示例提案中的内容操作已能通过 `prepare/commit` 执行；请求生成和关联提案的 `prepareProposal` 尚未实现。
 
 ```text
 Office 文件
@@ -64,6 +68,6 @@ HTML 文档包
 
 使用一个 TypeScript monorepo，组织 `core`、`editor`、`office`、`node` 四个库模块，并提供独立 Playground。编辑器提供普通 JavaScript 挂载、可选 React 包装和底层 API；其他产品主要适配批注提交、提案回传、授权资源和存储。Node 转换进程用于服务端导出和浏览器渲染，具体运行方式由宿主选择。包名、第一方许可证及正式版本在初次发布时确定。
 
-第一轮合并 HTML 协作基础与完整 Word 链路：先在独立 Playground 完成 HTML/DOCX 导入、富文本编辑、分页、批注、提案、DOCX/PDF 导出与重开，再接入达智现有智能体验证。PPT、Excel、正式宿主存储和发布准备依次进入第二至第五轮。Playground 使用固定提案文件，不提供独立模型服务。
+第一轮先完成三格式数据模型设计，再完成 DOCX 读取、样式映射及独立只读预览验收；通过后进入 R1-06 事务与历史，继续完成富文本、分页、批注、提案、DOCX/PDF 导出与重开，最后接入达智现有智能体验证。PPT、Excel、正式宿主存储和发布准备依次进入第二至第五轮。Playground 使用固定提案文件，不提供独立模型服务。
 
 第一版正式交付覆盖 DOCX、PPTX 和 XLSX 的常见办公内容。WPS 生成的这三种文件走同一条路径；`.wps`、`.et`、`.dps` 通过可选格式转换适配器导入，第一版统一导出标准 OOXML 文件。

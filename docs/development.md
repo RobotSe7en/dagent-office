@@ -1,6 +1,6 @@
 # 本地开发与工程检查
 
-当前完成 R1-02 至 R1-05。`core` 提供契约、JSON Schema、HTML/CSS 只读模型及资源校验与收集，`office` 提供文档包 ZIP 读写，其余库仍为工程入口。下一步 R1-06 实现核心操作与历史；编辑、事务执行及 Office 转换尚未实现。API 见[结构契约](contracts.md)、[文档模型](document-model.md)和[资源与 ZIP](resources-and-zip.md)，任务顺序见[第一轮实施细则](iteration-1.md)。
+当前完成 R1-02 至 R1-06、R1-05A 模型设计与 R1-10 声明范围的 DOCX 读取验收。`core` 提供严格契约、Word 语义和只读文档包，`office` 提供 ZIP 与 DOCX 导入，`editor` 提供只读预览；`node` 仍为工程入口。`core` 还提供[编辑会话、事务及历史](document-session.md)；下一步是 R1-07 精确锚点映射，输入、自动分页及 DOCX/PDF 导出尚未实现。API 见[DOCX 读取](docx-import.md)，顺序见[第一轮细则](iteration-1.md)。
 
 ## 环境和安装
 
@@ -13,7 +13,7 @@ pnpm dev
 
 `pnpm dev` 先构建库，再同时运行库编译监听与 Vite。开发服务器绑定本机，访问终端显示的地址；停止命令时一并结束监听进程。
 
-Playground 只显示工程就绪信息，并通过公开入口导入浏览器可用的库；不提供尚未实现的文档按钮。它使用 React，SDK 的 `core`、`office` 和 `node` 不依赖 React；编辑器 React 包装将在对应任务实现。
+Playground 通过公开入口打开 DOCX/文档包、只读预览、下载文档包及重开。开发宿主将公开合成样例作为静态资源提供；SDK 不自行访问样例目录。它使用 React，SDK 的 `core`、`office` 和 `node` 不依赖 React；编辑器 React 包装将在对应任务实现。
 
 内部 workspace 暂用 `@dagent-office/core`、`@dagent-office/editor`、`@dagent-office/office` 和 `@dagent-office/node`。版本均为 `0.0.0`，包均设为 `private`，许可证字段为 `UNLICENSED`；正式名称和第一方许可证仍按发布计划确定。
 
@@ -46,7 +46,7 @@ pnpm test:watch
 
 打包用例在 workspace 外、包含空格的临时路径中安装四个 tarball，显式复用工作区 pnpm 依赖缓存并覆盖内部包来源，不从注册表下载内部包。验证真实校验 API、公开 JSON、ES2022 类型、私有路径拒绝，以及不安装 React 的普通 JS 浏览器宿主构建。临时消费工程在测试结束后删除。
 
-测试还覆盖只读文档解析、资源摘要、宿主资源收集、ZIP 原始路径及大小校验、保真样例保存重开；不代表事务执行、批注交互、视觉排版或 Office 转换已实现。核心用例放入各包 `tests`，浏览器用例放入根 `tests/browser`。
+测试还覆盖只读文档解析、资源摘要、宿主资源收集、ZIP 原始路径及大小校验、保真样例保存重开；DOCX 用例覆盖实际格式输入、独立生产者版本、样式、字段、批注、修订及保存重开；事务用例另覆盖隔离候选、操作、原子性、历史、冲突和预算，以及 DOCX 编辑后文档包重开；输入、自动分页和 Office 导出仍待实现。核心用例放入各包 `tests`，浏览器用例放入根 `tests/browser`。
 
 ## 浏览器烟测
 
@@ -57,7 +57,7 @@ pnpm test:browser
 
 浏览器安装和测试通过同一包装脚本运行。默认将 Playwright 浏览器保存在仓库的 `.playwright` 缓存，禁用浏览器缓存回收；可用显式的 `PLAYWRIGHT_BROWSERS_PATH` 覆盖路径。
 
-浏览器测试先构建生产 Playground，再启动严格占用本机 4173 端口的临时预览服务，验证 React 页面实际加载且无浏览器错误。服务由 Playwright 管理，测试结束后关闭，不借用已有预览服务。
+浏览器测试先构建生产 Playground，再启动严格占用本机 4173 端口的临时预览服务，验证 React 挂载、实际 DOCX 读取、文档包下载重开、字体诊断及连续预览截图。服务由 Playwright 管理，测试结束后关闭，不借用已有预览服务。
 
 本机已经安装 Google Chrome 时，可显式选择其渠道：
 
@@ -65,7 +65,7 @@ pnpm test:browser
 DAGENT_OFFICE_BROWSER_CHANNEL=chrome pnpm test:browser
 ```
 
-未设置渠道时使用对应 Playwright 版本的 Chromium，不进行自动渠道回退。当前工程烟测用本机 Chrome 渠道验证；后续固定字体和视觉基线使用锁定的渲染环境，不把该烟测当作布局兼容性结论。
+未设置渠道时使用对应 Playwright 版本的 Chromium，不进行自动渠道回退。当前截图基线使用锁定的 Chromium 与 Noto 中文字体；补充的仿宋/楷体浏览器用例还需要[固定开源字体环境](fonts.md)。环境和字体摘要见[参考记录](../examples/docx/reference.json)。使用 Chrome 渠道只能作额外验证，不能静默刷新固定基线。独立参考检查使用 `pnpm check:docx-reference`，更新方法见[DOCX 读取](docx-import.md#独立样例与验收)。
 
 ## 本地打包
 
@@ -79,6 +79,6 @@ pnpm pack:packages
 
 ## 依赖与状态
 
-已安装 Zod、HTML/CSS 解析器、哈希、ZIP、工具及依赖的版本、许可证见[技术选型](technology-selection.md)。Tiptap、XML 等通用依赖按后续任务引入；Office OOXML 读写和样式映射自行实现，不提前提供占位功能 API。
+已安装 Zod、HTML/CSS 解析器、哈希、ZIP、工具及依赖的版本、许可证见[技术选型](technology-selection.md)。XML 已通过内部 saxes 适配器接入，Tiptap 等依赖仍按后续任务引入；Office OOXML 读写和样式映射自行实现，不提前提供占位功能 API。
 
 修改后运行相应的窄范围检查与 `git diff --check`。只有验证所覆盖的能力才可在 README 标为已实现，产品范围和宿主边界以[总体架构](architecture.md)及[交互协议](editing-protocol.md)为准。

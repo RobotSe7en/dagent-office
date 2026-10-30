@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  saxes@6.0.0:
+    hash: 70475d62791419524500c8ceb49dd00060d7844990e6603e323fb53a26ee1afd
+    path: patches/saxes@6.0.0.patch
+
 importers:
 
   .:
@@ -96,6 +101,9 @@ importers:
       fflate:
         specifier: 0.8.3
         version: 0.8.3
+      saxes:
+        specifier: 6.0.0
+        version: 6.0.0(patch_hash=70475d62791419524500c8ceb49dd00060d7844990e6603e323fb53a26ee1afd)
 
 packages:
 
@@ -466,6 +474,10 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
+  saxes@6.0.0:
+    resolution: {integrity: sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA==}
+    engines: {node: '>=v12.22.7'}
+
   scheduler@0.28.0:
     resolution: {integrity: sha512-juorfCmIkIw8tT+p5BXSm6PJjQF/ycEYmKyzURCIt/RaZIhL+PulbQ9Yu2z1HdOJDdqDTlxA1+xKBmHXJsczAw==}
 
@@ -584,6 +596,9 @@ packages:
     resolution: {integrity: sha512-Tb2FUhB4vUsGQlfSquQLYkApkuPAFQXGFzxWKHHumVz2dK+X1RUm/HnID4+TfIGYJ1kTcwOaCk/buYCEJr6YjQ==}
     engines: {node: '>=20.11'}
     hasBin: true
+
+  xmlchars@2.2.0:
+    resolution: {integrity: sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw==}
 
   zod@4.1.12:
     resolution: {integrity: sha512-JInaHOamG8pt5+Ey8kGmdcAcg3OL9reK8ltczgHTAwNhMys/6ThXHityHxVV2p3fkw/c+MAvBHFVYHFZDmjMCQ==}
@@ -847,6 +862,10 @@ snapshots:
       '@rolldown/binding-win32-arm64-msvc': 1.2.15
       '@rolldown/binding-win32-x64-msvc': 1.2.15
 
+  saxes@6.0.0(patch_hash=70475d62791419524500c8ceb49dd00060d7844990e6603e323fb53a26ee1afd):
+    dependencies:
+      xmlchars: 2.2.0
+
   scheduler@0.28.0: {}
 
   source-map-js@1.2.2: {}
@@ -899,5 +918,7 @@ snapshots:
       - msw
 
   why-is-node-running@3.2.1: {}
+
+  xmlchars@2.2.0: {}
 
   zod@4.1.12: {}

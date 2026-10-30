@@ -1,0 +1,305 @@
+import { defaultTreeAdapter as adapter, serialize } from "parse5";
+import type { DefaultTreeAdapterTypes as Tree } from "parse5";
+import type { DocumentContentOperation } from "../contracts/operations.js";
+import type { DocumentReadLimits, TextOffsetMapping } from "../runtime.js";
+import { DocumentError } from "../errors.js";
+import { normalizeCss, setInlineStyle } from "./css.js";
+import { bodyTags, parseHtml, supportedTags } from "./html.js";
+import { parseHtmlFragment, parseHtmlTree } from "./html-parser.js";
+import { encode, resolveReference } from "./package.js";
+import type { DocumentState } from "./state.js";
+import { checkLimit } from "./validation.js";
+
+type Element = Tree.Element;
+type Node = Tree.Node;
+type Child = Tree.ChildNode;
+const blocks = new Set(["article", "section", "div", "p", "h1", "h2", "h3", "h4", "h5", "h6", "li", "td", "th"]);
+const isElement = (node: Node): node is Element => "tagName" in node;
+const attr = (node: Element, name: string) => node.attrs.find((item) => item.name === name)?.value;
+function fail(message: string): never { throw new DocumentError("InvalidOperation", message); }
+
+function setAttribute(node: Element, name: string, value: string): void {
+  const existing = node.attrs.find((item) => item.name === name);
+  if (existing) existing.value = value;
+  else node.attrs.push({ name, value });
+}
+
+function visit(root: Node, callback: (node: Node) => void): void {
+  const stack = [root];
+  while (stack.length) {
+    const node = stack.pop()!;
+    callback(node);
+    if ("childNodes" in node) {
+      for (let index = node.childNodes.length - 1; index >= 0; index--) stack.push(node.childNodes[index]!);
+    }
+  }
+}
+
+function ancestors(node: Node): Element[] {
+  const result: Element[] = [];
+  for (let current: Node | null = node; current; current = "parentNode" in current ? current.parentNode : null) {
+    if (isElement(current)) result.push(current);
+  }
+  return result;
+}
+
+interface TextLeaf { node: Tree.TextNode | Element; start: number; end: number; value: string }
+function textLeaves(root: Node): TextLeaf[] {
+  const leaves: TextLeaf[] = [];
+  let offset = 0;
+  visit(root, (node) => {
+    const value = node.nodeName === "#text" && "value" in node ? node.value
+      : isElement(node) && node.tagName === "br" ? "\n"
+        : isElement(node) && node.tagName === "img" ? "\ufffc" : undefined;
+    if (value !== undefined) {
+      leaves.push({ node: node as TextLeaf["node"], start: offset, end: offset + value.length, value });
+      offset += value.length;
+    }
+  });
+  return leaves;
+}
+
+function boundary(text: string, offset: number): boolean {
+  const before = text.charCodeAt(offset - 1);
+  const after = text.charCodeAt(offset);
+  const code = text.codePointAt(offset);
+  return !(before >= 0xd800 && before <= 0xdbff && after >= 0xdc00 && after <= 0xdfff)
+    && !(offset > 0 && code !== undefined && (code >= 0xfe00 && code <= 0xfe0f || code >= 0xe0100 && code <= 0xe01ef));
+}
+
+/** Match import's source font roles, keeping marks and variation selectors with their base. */
+function scriptParts(value: string): { script: "ascii" | "eastAsia" | "hAnsi"; text: string }[] {
+  const parts: ReturnType<typeof scriptParts> = [];
+  for (const character of value) {
+    const code = character.codePointAt(0)!;
+    const previous = parts.at(-1);
+    const eastAsian = code >= 0x2e80 && code <= 0xa4cf || code >= 0xac00 && code <= 0xd7af
+      || code >= 0xf900 && code <= 0xfaff || code >= 0xfe10 && code <= 0xfe6f
+      || code >= 0xff00 && code <= 0xffef || code >= 0x20000 && code <= 0x323af;
+    const script = /\p{Mark}/u.test(character) && previous ? previous.script
+      : eastAsian ? "eastAsia" : code <= 0x7f ? "ascii" : "hAnsi";
+    if (previous?.script === script) previous.text += character;
+    else parts.push({ script, text: character });
+  }
+  return parts;
+}
+
+/** Private mutable tree for one preparation. No parser objects escape the core. */
+export class DocumentEdit {
+  private readonly tree: Tree.Document;
+  private readonly baseIds: ReadonlySet<string>;
+  private createdNodes = 0;
+  readonly textEdits: TextOffsetMapping[] = [];
+
+  constructor(private readonly state: DocumentState, private readonly limits: DocumentReadLimits, private readonly allocate: () => string) {
+    this.tree = parseHtmlTree(state.snapshot.html, limits, supportedTags);
+    this.baseIds = new Set(state.html.nodeIds());
+  }
+
+  private index(): Map<string, Element> {
+    const index = new Map<string, Element>();
+    visit(this.tree, (node) => {
+      if (isElement(node)) {
+        const id = attr(node, "data-node-id");
+        if (id !== undefined) index.set(id, node);
+      }
+    });
+    return index;
+  }
+
+  private make(tag: string, attributes: { name: string; value: string }[] = []): Element {
+    checkLimit(++this.createdNodes, this.limits.maxNodes);
+    return adapter.createElement(tag, "http://www.w3.org/1999/xhtml" as Element["namespaceURI"], [
+      { name: "data-node-id", value: this.allocate() }, ...attributes,
+    ]);
+  }
+
+  private text(value: string): Tree.TextNode {
+    checkLimit(++this.createdNodes, this.limits.maxNodes);
+    return { nodeName: "#text", value, parentNode: null };
+  }
+
+  private insertedText(value: string, word: boolean, inheritedScript: string): Child[] {
+    const result: Child[] = [];
+    for (const [index, line] of value.split("\n").entries()) {
+      if (index) result.push(this.make("br"));
+      if (!line) continue;
+      if (!word) result.push(this.text(line));
+      else for (const part of scriptParts(line)) {
+        if (part.script === inheritedScript) {
+          result.push(this.text(part.text));
+          continue;
+        }
+        const span = this.make("span", [
+          { name: "data-word-script", value: part.script },
+          { name: "style", value: "font-family:var(--word-font-" + part.script + ",var(--word-font-ascii,var(--word-font-hAnsi,inherit)))" },
+        ]);
+        adapter.appendChild(span, this.text(part.text));
+        result.push(span);
+      }
+    }
+    return result;
+  }
+
+  private replaceText(target: Element, operation: Extract<DocumentContentOperation, { op: "replaceText" }>): void {
+    if (["img", "br"].includes(target.tagName)) fail("Text operations require a content element, not an inline object.");
+    const { from, to, text, expectedText } = operation;
+    const leaves = textLeaves(target);
+    const original = leaves.map((leaf) => leaf.value).join("");
+    if (from > to || to > original.length || original.slice(from, to) !== expectedText
+      || !boundary(original, from) || !boundary(original, to)) fail("The text range or expected source text does not match.");
+    if ([...text].some((character) => character.length === 1 && character.charCodeAt(0) >= 0xd800 && character.charCodeAt(0) <= 0xdfff)
+      || /[\u0000\r]/u.test(text)) fail("Replacement text must be well-formed Unicode with LF line breaks.");
+    if (expectedText === text) return;
+    const selected = leaves.filter((leaf) => leaf.end > from && leaf.start < to);
+    const start = leaves.find((leaf) => leaf.start <= from && leaf.end > from) ?? leaves.at(-1);
+    if (selected.some((leaf) => isElement(leaf.node) && leaf.node.tagName === "img")) {
+      fail("Inline objects must be changed through structural or asset operations.");
+    }
+    if (selected.some((leaf) => ancestors(leaf.node).some((node) => attr(node, "data-word-tab") !== undefined
+      || attr(node, "data-word-break") !== undefined))) fail("Native tabs and explicit page breaks require structural operations.");
+    const context = (node: Node) => ancestors(node).find((item) => blocks.has(item.tagName));
+    const semantic = (node: Node) => ancestors(node).find((item) => ["ins", "del"].includes(item.tagName)
+      || attr(item, "data-word-link") !== undefined || attr(item, "data-word-field") !== undefined
+      || attr(item, "data-word-field-result") !== undefined);
+    if (start && selected.some((leaf) => context(leaf.node) !== context(start.node) || semantic(leaf.node) !== semantic(start.node))) {
+      fail("Text replacement cannot cross paragraphs, cells, stories or native semantic boundaries.");
+    }
+    // Empty markers are source boundaries too; text replacement must not move them silently.
+    let offset = 0;
+    visit(target, (node) => {
+      if (isElement(node) && node.attrs.some((item) => ["data-word-field", "data-word-field-end", "data-word-bookmark", "data-word-comment-mark", "data-word-tab", "data-word-break"].includes(item.name))
+        && offset > from && offset < to) fail("Text replacement crosses a native Word marker.");
+      if (node.nodeName === "#text" && "value" in node) offset += node.value.length;
+      else if (isElement(node) && ["br", "img"].includes(node.tagName)) offset++;
+    });
+    const parent = start ? start.node.parentNode : target;
+    if (!parent || !isElement(parent)) fail("The text insertion point is not an editable element.");
+    const inherited = ancestors(parent);
+    const inheritedScript = inherited.map((item) => attr(item, "data-word-script")).find((script) => script !== undefined) ?? "ascii";
+    const inserted = this.insertedText(text, inherited.some((item) => attr(item, "data-word-run") !== undefined || attr(item, "data-word-script") !== undefined), inheritedScript);
+    // Record sequential offsets for every existing node whose normalized text changes.
+    const allLeaves = textLeaves(this.tree);
+    const globalStart = start ? allLeaves.find((leaf) => leaf.node === start.node)!.start + from - start.start : 0;
+    const insertionAncestors = new Set(inherited);
+    const positions = new Map<Node, { start: number; end: number }>();
+    let cursor = 0;
+    const locate = (node: Node): void => {
+      const begin = cursor;
+      if (node.nodeName === "#text" && "value" in node) cursor += node.value.length;
+      else if (isElement(node) && ["br", "img"].includes(node.tagName)) cursor++;
+      else if ("childNodes" in node) for (const child of node.childNodes) locate(child);
+      positions.set(node, { start: begin, end: cursor });
+    };
+    locate(this.tree);
+    const globalFrom = start ? globalStart : positions.get(target)!.start;
+    const globalTo = globalFrom + to - from;
+    for (const [id, element] of this.index()) {
+      if (!this.baseIds.has(id)) continue;
+      const range = positions.get(element)!;
+      const begin = Math.max(range.start, globalFrom);
+      const end = Math.min(range.end, globalTo);
+      const length = insertionAncestors.has(element) ? text.length : 0;
+      if (begin < end || length) this.textEdits.push({ nodeId: id, from: Math.max(0, begin - range.start), to: Math.max(0, end - range.start), insertedLength: length });
+    }
+    if (!start) {
+      for (const node of inserted) adapter.appendChild(target, node);
+      return;
+    }
+    const reference = start.node;
+    if (isElement(reference) && ["img", "br"].includes(reference.tagName) && from === to) {
+      const next = from >= start.end ? parent.childNodes[parent.childNodes.indexOf(reference) + 1] : reference;
+      for (const node of inserted) {
+        if (next) adapter.insertBefore(parent, node, next);
+        else adapter.appendChild(parent, node);
+      }
+      return;
+    }
+    if (reference.nodeName === "#text" && "value" in reference) {
+      const local = Math.max(0, from - start.start);
+      if (local) adapter.insertBefore(parent, this.text(reference.value.slice(0, local)), reference);
+      reference.value = reference.value.slice(local);
+    }
+    for (const node of inserted) adapter.insertBefore(parent, node, reference);
+    for (const leaf of leaves) {
+      const begin = Math.max(from, leaf.start);
+      const end = Math.min(to, leaf.end);
+      if (begin >= end) continue;
+      if (leaf.node.nodeName === "#text" && "value" in leaf.node) {
+        // The starting leaf's prefix was already split off above.
+        leaf.node.value = leaf.node === reference
+          ? leaf.value.slice(end - leaf.start)
+          : leaf.value.slice(0, begin - leaf.start) + leaf.value.slice(end - leaf.start);
+      } else adapter.detachNode(leaf.node);
+    }
+  }
+
+  apply(operation: DocumentContentOperation): void {
+    this.createdNodes = 0;
+    if (!this.baseIds.has(operation.nodeId)) fail("Operation targets must belong to the transaction's base snapshot.");
+    const target = this.index().get(operation.nodeId);
+    if (!target) fail("An earlier operation removed the target node.");
+    switch (operation.op) {
+      case "replaceText": this.replaceText(target, operation); break;
+      case "setStyle": {
+        const style = setInlineStyle(attr(target, "style") ?? "", operation.property, operation.value, this.limits);
+        setAttribute(target, "style", style);
+        break;
+      }
+      case "replaceAsset": {
+        if (target.tagName !== "img") fail("Asset replacement requires an image node.");
+        const asset = this.state.snapshot.manifest.assets.find((item) => item.path === operation.assetPath);
+        if (!asset || !this.state.files.has(operation.assetPath)) throw new DocumentError("AssetUnavailable", "The replacement asset is not declared and available in this session.");
+        const directory = this.state.snapshot.manifest.entrypoint.split("/").slice(0, -1);
+        const parts = operation.assetPath.split("/");
+        while (directory.length && directory[0] === parts[0]) { directory.shift(); parts.shift(); }
+        const relative = [...directory.map(() => ".."), ...parts.map(encodeURIComponent)].join("/");
+        if (resolveReference(relative, this.state.snapshot.manifest.entrypoint) !== asset.path) fail("The image path cannot be resolved.");
+        setAttribute(target, "src", relative);
+        break;
+      }
+      case "removeNode":
+        if (!target.parentNode || (isElement(target.parentNode) && target.parentNode.tagName === "body")) fail("The document root cannot be removed.");
+        adapter.detachNode(target);
+        break;
+      case "replaceFragment":
+      case "insertFragment": {
+        const sibling = operation.op === "insertFragment" && ["before", "after"].includes(operation.position);
+        const parent = sibling ? target.parentNode : target;
+        if (!parent || !isElement(parent) || parent.tagName === "body") fail("Fragments must remain inside the document root.");
+        const fragment = parseHtmlFragment(operation.html, parent, this.limits, bodyTags);
+        const cssBudget = { nodes: 0 };
+        visit(fragment, (node) => {
+          if (isElement(node)) {
+            if (attr(node, "data-node-id") !== undefined) fail("Fragment node identities must be allocated by the core.");
+            setAttribute(node, "data-node-id", this.allocate());
+            const style = attr(node, "style");
+            if (style !== undefined) setAttribute(node, "style", normalizeCss(style, "declarationList", this.limits, cssBudget));
+          }
+        });
+        if (operation.op === "replaceFragment") {
+          for (const child of [...target.childNodes]) adapter.detachNode(child);
+        }
+        const reference = operation.op === "replaceFragment" || operation.position === "end" ? undefined
+          : operation.position === "start" ? target.childNodes[0]
+            : operation.position === "before" ? target
+              : parent.childNodes[parent.childNodes.indexOf(target) + 1];
+        for (const child of [...fragment.childNodes]) {
+          adapter.detachNode(child);
+          if (reference) adapter.insertBefore(parent, child, reference);
+          else adapter.appendChild(parent, child);
+        }
+        break;
+      }
+    }
+    const source = serialize(this.tree);
+    checkLimit(source.length, this.limits.maxFileBytes);
+    checkLimit(encode(source).byteLength, this.limits.maxFileBytes);
+    // Catch browser tree correction instead of silently moving or dropping inserted content.
+    if (parseHtml(source, this.state.snapshot.manifest, this.state.files, this.limits, { nodes: 0 }).html !== source) {
+      fail("The operation produces an unstable HTML structure.");
+    }
+  }
+
+  html(): string { return serialize(this.tree); }
+}

@@ -1,0 +1,1684 @@
+import {
+  createAssetDescriptor,
+  DocumentError,
+  openDocument,
+} from "@dagent-office/core";
+import type {
+  Annotation,
+  DocumentManifest,
+  DocumentMetadata,
+  DocumentPackage,
+  DocumentSection,
+  PageSetup,
+  TextRange,
+  WordMetadata,
+} from "@dagent-office/core";
+import type { DocumentZipOptions } from "./document-zip.js";
+import { openOpc } from "./ooxml/package.js";
+import type { OpcPackage } from "./ooxml/package.js";
+import {
+  DocxStyles,
+  declarations,
+  escapeHtml,
+  pt,
+  inheritedRun,
+  mergeTabs,
+  tableLookMask,
+} from "./ooxml/styles.js";
+import type { Css } from "./ooxml/styles.js";
+import {
+  A,
+  MC,
+  PIC,
+  R,
+  W,
+  WP,
+  attr,
+  check,
+  child,
+  elements,
+  fail,
+  number,
+  on,
+  text,
+  unsupported,
+} from "./ooxml/xml.js";
+import type { XmlNode } from "./ooxml/xml.js";
+
+export interface DocxImportOptions extends DocumentZipOptions {
+  readonly documentId: string;
+}
+interface Html {
+  tag: string;
+  attrs: Record<string, string>;
+  children: (Html | string)[];
+}
+interface FieldState {
+  definition: WordMetadata["fields"][number];
+  result: boolean;
+}
+interface CommentState {
+  source: XmlNode;
+  bodyNodeId: string;
+  ranges: TextRange[];
+  point?: string;
+}
+/** Serialized HTML size without allocating an escaped string or UTF-8 buffer. */
+function htmlBytes(value: string): number {
+  let bytes = 0;
+  for (const character of value) {
+    const code = character.codePointAt(0)!;
+    bytes += character === "&" ? 5 : character === '"' ? 6
+      : character === "<" || character === ">" ? 4
+        : code <= 0x7f ? 1 : code <= 0x7ff ? 2 : code <= 0xffff ? 3 : 4;
+  }
+  return bytes;
+}
+const serialize = (node: Html): string => {
+  const attributes = Object.entries(node.attrs)
+    .map(([name, value]) => " " + name + '="' + escapeHtml(value) + '"')
+    .join("");
+  return (
+    "<" +
+    node.tag +
+    attributes +
+    ">" +
+    (["img", "br"].includes(node.tag)
+      ? ""
+      : node.children
+          .map((item) =>
+            typeof item === "string" ? escapeHtml(item) : serialize(item),
+          )
+          .join("") +
+        "</" +
+        node.tag +
+        ">")
+  );
+};
+const emptyWord = (): WordMetadata => ({
+  stories: [],
+  styles: [],
+  numbering: [],
+  hyperlinks: [],
+  bookmarks: [],
+  fields: [],
+  tabs: [],
+  revisions: [],
+  tables: [],
+});
+
+class Importer {
+  private serial = 0;
+  private generatedNodes = 0;
+  private generatedBytes = 0;
+  private readonly textLengths = new WeakMap<Html, number>();
+  private currentRun: Html | undefined;
+  private paragraphRunClasses: string[] = ["word-default-run"];
+  private readonly files = new Map<string, Uint8Array>();
+  private readonly word: WordMetadata = emptyWord();
+  private readonly sections: DocumentSection[] = [];
+  private readonly assetSources = new Map<string, string>();
+  private readonly assets: DocumentManifest["assets"] = [];
+  private readonly styles: DocxStyles;
+  private readonly root: Html;
+  private readonly auxiliary: Html[] = [];
+  private readonly comments = new Map<string, CommentState>();
+  private activeComments = new Set<string>();
+  private commentRangeCount = 0;
+  private commentRangeBytes = 0;
+  private fieldResultCount = 0;
+  private fieldResultBytes = 0;
+  private fieldStack: FieldState[] = [];
+  private bookmarkStarts = new Map<
+    string,
+    { name: string; nodeId: string }
+  >();
+  private readonly loadedStories = new Map<string, string>();
+  private readonly settings: XmlNode | undefined;
+  private readonly defaultTab: number;
+  private currentPart: string;
+  private currentStory = "";
+  constructor(
+    private readonly opc: OpcPackage,
+    private readonly main: string,
+    private readonly documentId: string,
+  ) {
+    this.currentPart = main;
+    this.styles = new DocxStyles(opc, main);
+    this.word.evenAndOddHeaders = on(
+      child(
+        opc.related(main, "settings")
+          ? opc.read(opc.related(main, "settings")!)
+          : undefined,
+        "evenAndOddHeaders",
+      ),
+    );
+    this.word.defaultRunCssClass = "word-default-run";
+    this.word.styles = this.styles.styles;
+    this.word.numbering = this.styles.numbering;
+    this.root = this.make("article", { "data-office-kind": "document" });
+    const settingsPath = opc.related(main, "settings");
+    this.settings = settingsPath ? opc.read(settingsPath) : undefined;
+    if (
+      this.settings &&
+      (this.settings.uri !== W || this.settings.name !== "settings")
+    )
+      fail(this.settings, "The settings part has an invalid root.");
+    this.defaultTab =
+      number(
+        attr(child(this.settings, "defaultTabStop"), "val"),
+        this.settings ?? opc.read(main),
+        720,
+      ) / 20;
+    this.word.automaticHyphenation = on(
+      child(this.settings, "autoHyphenation"),
+    );
+    for (const name of [
+      "documentProtection",
+      "writeProtection",
+      "mailMerge",
+      "attachedTemplate",
+    ]) {
+      if (child(this.settings, name))
+        unsupported(
+          child(this.settings, name)!,
+          "Protected or externally dependent document settings are not supported.",
+        );
+    }
+  }
+  private make(
+    tag: string,
+    attrs: Record<string, string> = {},
+  ): Html {
+    const id = "n" + (this.serial + 1);
+    let bytes = (["img", "br"].includes(tag) ? tag.length + 2 : tag.length * 2 + 5)
+      + ' data-node-id=""'.length + id.length;
+    for (const [name, value] of Object.entries(attrs))
+      bytes += name.length + 4 + htmlBytes(value);
+    this.reserveHtml(1, bytes);
+    this.serial++;
+    return {
+      tag,
+      attrs: { "data-node-id": id, ...attrs },
+      children: [],
+    };
+  }
+  private reserveHtml(nodes: number, bytes: number): void {
+    if (
+      this.generatedNodes + nodes > this.opc.limits.maxNodes ||
+      this.generatedBytes + bytes >
+        Math.min(this.opc.limits.maxFileBytes, this.opc.limits.maxPackageBytes)
+    )
+      throw new DocumentError(
+        "ResourceLimitExceeded",
+        "Generated HTML exceeds the configured node or byte budget.",
+      );
+    this.generatedNodes += nodes;
+    this.generatedBytes += bytes;
+  }
+  private id(node: Html): string {
+    return node.attrs["data-node-id"]!;
+  }
+  private offset(node: Html, value: string): number {
+    const from = this.textLengths.get(node) ?? 0;
+    this.textLengths.set(node, from + value.length);
+    if (this.currentRun && this.currentRun !== node)
+      this.textLengths.set(
+        this.currentRun,
+        (this.textLengths.get(this.currentRun) ?? 0) + value.length,
+      );
+    return from;
+  }
+  private addText(node: Html, value: string): void {
+    if (!value) return;
+    const from = this.offset(node, value);
+    let content = node;
+    const field = this.fieldStack.filter((item) => item.result).pop();
+    if (field) {
+      content = this.make("span", {
+        "data-word-field-result": field.definition.nodeId,
+      });
+      node.children.push(content);
+      this.fieldResult(content);
+    }
+    if (node.tag === "span" && !node.attrs["data-word-tab"]) {
+      // Flush one script part at a time; reserve text and wrapper budgets before
+      // creating substrings or HTML nodes. Never build an unbounded parts array.
+      let script: "ascii" | "hAnsi" | "eastAsia" | undefined;
+      let start = 0, end = 0, bytes = 0;
+      const append = (): void => {
+        if (!script) return;
+        this.reserveHtml(1, bytes);
+        let target = content;
+        if (script !== "ascii") {
+          target = this.make("span", {
+            style: "font-family:var(--word-font-" + script +
+              ",var(--word-font-ascii,var(--word-font-hAnsi,inherit)))",
+            "data-word-script": script,
+          });
+          content.children.push(target);
+        }
+        target.children.push(value.slice(start, end));
+      };
+      for (const character of value) {
+        const code = character.codePointAt(0)!;
+        const eastAsian =
+          (code >= 0x2e80 && code <= 0xa4cf) ||
+          (code >= 0xac00 && code <= 0xd7af) ||
+          (code >= 0xf900 && code <= 0xfaff) ||
+          (code >= 0xfe10 && code <= 0xfe6f) ||
+          (code >= 0xff00 && code <= 0xffef) ||
+          (code >= 0x20000 && code <= 0x323af);
+        const nextScript =
+          /\p{Mark}/u.test(character) && script
+            ? script
+            : eastAsian
+              ? "eastAsia"
+              : code <= 0x7f
+                ? "ascii"
+                : "hAnsi";
+        if (script !== nextScript) {
+          append();
+          start = end;
+          bytes = 0;
+          script = nextScript;
+        }
+        end += character.length;
+        bytes += htmlBytes(character);
+      }
+      append();
+    } else {
+      this.reserveHtml(1, htmlBytes(value));
+      content.children.push(value);
+    }
+    this.record(node, from, value);
+  }
+  private fieldResult(node: Html): void {
+    // Ancestor results also own nested fields' cached content.
+    for (const field of this.fieldStack)
+      if (field.result) {
+        const bytes = 16 + this.id(node).length * 6;
+        if (
+          this.fieldResultCount + 1 > this.opc.limits.maxNodes ||
+          this.fieldResultBytes + bytes >
+            Math.min(this.opc.limits.maxFileBytes, this.opc.limits.maxPackageBytes)
+        )
+          throw new DocumentError(
+            "ResourceLimitExceeded",
+            "Generated field result references exceed the configured node or byte budget.",
+          );
+        this.fieldResultCount++;
+        this.fieldResultBytes += bytes;
+        (field.definition.resultNodeIds ??= []).push(this.id(node));
+      }
+  }
+  private record(node: Html, from: number, value: string): void {
+    for (const id of this.activeComments) {
+      const comment = this.comments.get(id);
+      if (!comment)
+        throw new DocumentError(
+          "InvalidDocument",
+          "A comment range refers to a missing comment.",
+        );
+      const previous = comment.ranges[comment.ranges.length - 1];
+      const extend = previous?.nodeId === this.id(node) && previous.to === from;
+      // Six bytes per UTF-16 unit bounds JSON escaping and UTF-8. The fixed
+      // allowance covers keys, offsets and pretty-printing before allocation.
+      const bytes =
+        value.length * 6 + (extend ? 0 : 256 + this.id(node).length * 6);
+      if (
+        this.commentRangeCount + (extend ? 0 : 1) > this.opc.limits.maxNodes ||
+        this.commentRangeBytes + bytes >
+          Math.min(this.opc.limits.maxFileBytes, this.opc.limits.maxPackageBytes)
+      )
+        throw new DocumentError(
+          "ResourceLimitExceeded",
+          "Generated comment ranges exceed the configured node or byte budget.",
+        );
+      this.commentRangeBytes += bytes;
+      if (extend) {
+        previous.to += value.length;
+        previous.quote += value;
+      } else {
+        this.commentRangeCount++;
+        comment.ranges.push({
+          nodeId: this.id(node),
+          from,
+          to: from + value.length,
+          quote: value,
+        });
+      }
+    }
+  }
+  private story(
+    kind: "main" | "header" | "footer" | "comment",
+    storyId: string,
+  ): Html {
+    const root = this.make("div", { "data-office-story": kind });
+    this.word.stories.push({ storyId, kind, rootNodeId: this.id(root) });
+    return root;
+  }
+  private compat(node: XmlNode): XmlNode[] {
+    const result: XmlNode[] = [];
+    for (const item of node.content) {
+      if (typeof item === "string") {
+        if (item.trim()) fail(node, "Unexpected OOXML text.");
+        continue;
+      }
+      if (item.uri === MC && item.name === "AlternateContent") {
+        const supported = new Set([W, R, A, WP, PIC]);
+        const branch =
+          elements(item, "Choice", MC).find((choice) =>
+            (attr(choice, "Requires", "") ?? "")
+              .split(/\s+/)
+              .filter(Boolean)
+              .every((prefix) =>
+                supported.has(choice.namespaces[prefix] ?? ""),
+              ),
+          ) ?? child(item, "Fallback", MC);
+        if (!branch)
+          unsupported(
+            item,
+            "No supported compatibility alternative is available.",
+          );
+        result.push(...this.compat(branch));
+      } else result.push(item);
+    }
+    return result;
+  }
+  import(): DocumentPackage {
+    const source = this.opc.read(this.main);
+    if (source.uri !== W || source.name !== "document")
+      fail(source, "The main part is not a Word document.");
+    check(source, ["background", "body"]);
+    if (child(source, "background"))
+      unsupported(
+        child(source, "background")!,
+        "Document backgrounds are not supported.",
+      );
+    const fontTable = this.opc.related(this.main, "fontTable");
+    if (fontTable) {
+      const table = this.opc.read(fontTable);
+      for (const font of elements(table, "font"))
+        for (const item of elements(font))
+          if (item.name.startsWith("embed"))
+            unsupported(
+              item,
+              "Embedded fonts require an authorized font adapter and are not supported by this reader.",
+            );
+    }
+    const mainStory = this.story("main", "main");
+    this.currentStory = "main";
+    for (const type of [
+      "commentsExtended",
+      "commentsExtensible",
+      "commentsIds",
+      "people",
+    ]) {
+      if (this.opc.related(this.main, type))
+        unsupported(source, "Modern comment threads are not supported.");
+    }
+    this.readComments();
+    const body = child(source, "body");
+    if (!body) fail(source, "A Word body is missing.");
+    let section = this.make("section");
+    mainStory.children.push(section);
+    let settings: XmlNode | undefined;
+    const addSection = (properties: XmlNode | undefined): void => {
+      const item = this.section(properties, section);
+      this.sections.push(item);
+    };
+    for (const item of this.compat(body)) {
+      if (item.uri === W && item.name === "sectPr") {
+        if (settings) fail(item, "A body has repeated section properties.");
+        settings = item;
+        continue;
+      }
+      if (settings)
+        fail(item, "Body content follows final section properties.");
+      const blocks = this.blocks([item]);
+      section.children.push(...blocks);
+      const properties =
+        item.uri === W && item.name === "p"
+          ? child(child(item, "pPr"), "sectPr")
+          : undefined;
+      if (properties) {
+        addSection(properties);
+        section = this.make("section");
+        mainStory.children.push(section);
+      }
+    }
+    addSection(settings);
+    if (
+      this.fieldStack.length ||
+      this.activeComments.size ||
+      this.bookmarkStarts.size
+    )
+      fail(source, "A field, comment range or bookmark is not closed.");
+    this.root.children.push(mainStory, ...this.auxiliary);
+    const annotations: Annotation[] = [];
+    for (const [id, comment] of this.comments) {
+      if (!comment.ranges.length && !comment.point)
+        fail(comment.source, "An imported comment has no anchor.");
+      const author = attr(comment.source, "author");
+      const initials = attr(comment.source, "initials");
+      const date = attr(comment.source, "date");
+      annotations.push({
+        annotationId: "comment-" + id,
+        documentId: this.documentId,
+        baseRevision: 0,
+        status: "open",
+        bodyNodeId: comment.bodyNodeId,
+        sourceId: id,
+        ...(author !== undefined
+          ? {
+              author: {
+                name: author,
+                ...(initials !== undefined ? { initials } : {}),
+              },
+            }
+          : {}),
+        ...(date !== undefined ? { date } : {}),
+        anchor:
+          comment.ranges.length === 1
+            ? { kind: "text", ...comment.ranges[0]! }
+            : comment.ranges.length
+              ? { kind: "text-set", ranges: comment.ranges }
+              : { kind: "node", nodeId: comment.point! },
+      });
+    }
+    const metadata: DocumentMetadata = {
+      ...(this.styles.language ? { locale: this.styles.language } : {}),
+      pageSetup: this.sections[0]!.pageSetup!,
+      sections: this.sections,
+      word: this.word,
+    };
+    const core = this.opc.related("", "metadata/core-properties");
+    if (core) {
+      const properties = this.opc.read(core);
+      const title = elements(
+        properties,
+        "title",
+        "http://purl.org/dc/elements/1.1/",
+      )[0];
+      if (title) metadata.title = text(title);
+      const language = elements(
+        properties,
+        "language",
+        "http://purl.org/dc/elements/1.1/",
+      )[0];
+      if (language && text(language)) metadata.locale = text(language);
+    }
+    const manifest: DocumentManifest = {
+      format: "dagent-office",
+      formatVersion: 1,
+      documentId: this.documentId,
+      kind: "document",
+      revision: 0,
+      entrypoint: "content.html",
+      styles: ["styles.css"],
+      metadata: "metadata.json",
+      annotations: "annotations.json",
+      assets: this.assets,
+    };
+    const css =
+      ".word-main{white-space:normal}.word-main p,.word-main h1,.word-main h2,.word-main h3,.word-main h4,.word-main h5,.word-main h6{white-space:pre-wrap}.word-main table{border-collapse:collapse}.word-main td{vertical-align:top}.word-main ins{text-decoration:underline;color:#006400}.word-main del{text-decoration:line-through;color:#a00000}\n" +
+      this.styles.css.join("\n");
+    mainStory.attrs.class = "word-main";
+
+    this.put("manifest.json", JSON.stringify(manifest, null, 2));
+    this.put("metadata.json", JSON.stringify(metadata, null, 2));
+    this.put("annotations.json", JSON.stringify(annotations, null, 2));
+    this.put("styles.css", css);
+    this.put(
+      "content.html",
+      "<!doctype html><html" +
+        (metadata.locale ? ' lang="' + escapeHtml(metadata.locale) + '"' : "") +
+        '><head><meta charset="utf-8"><link rel="stylesheet" href="styles.css"></head><body>' +
+        serialize(this.root) +
+        "</body></html>",
+    );
+    return openDocument(this.files, { limits: this.opc.limits }).serialize();
+  }
+  private put(path: string, value: string): void {
+    const codecs = globalThis as unknown as {
+      TextEncoder: new () => { encode(value: string): Uint8Array };
+    };
+    this.files.set(path, new codecs.TextEncoder().encode(value));
+  }
+  private blocks(
+    items: readonly XmlNode[],
+    inherited: { p: Css; r: Css; runClasses?: readonly string[] } = {
+      p: {},
+      r: {},
+    },
+  ): Html[] {
+    const result: Html[] = [];
+    for (const item of items) {
+      if (item.uri !== W) unsupported(item);
+      if (item.name === "p") result.push(this.paragraph(item, inherited));
+      else if (item.name === "tbl") result.push(this.table(item));
+      else if (item.name === "sdt") {
+        const properties = child(item, "sdtPr");
+        check(properties, ["docPartObj", "id", "alias", "tag"]);
+        const object = child(properties, "docPartObj");
+        if (
+          !object ||
+          attr(child(object, "docPartGallery"), "val") !== "Table of Contents"
+        )
+          unsupported(
+            item,
+            "Only the table-of-contents content wrapper is supported.",
+          );
+        check(object, ["docPartGallery", "docPartUnique"]);
+        const wrapper = this.make("div", {
+          "data-word-content-control": "toc",
+        });
+        for (const name of ["id", "alias", "tag"]) {
+          const value = attr(child(properties, name), "val");
+          if (value !== undefined)
+            wrapper.attrs["data-word-control-" + name] = value;
+        }
+        const content = child(item, "sdtContent");
+        if (!content) fail(item, "A content control has no content.");
+        wrapper.children.push(...this.blocks(this.compat(content), inherited));
+        result.push(wrapper);
+      } else if (
+        item.name === "bookmarkStart" ||
+        item.name === "bookmarkEnd" ||
+        item.name === "commentRangeStart" ||
+        item.name === "commentRangeEnd"
+      ) {
+        const marker = this.make("div");
+        this.inline(item, marker);
+        result.push(marker);
+      } else unsupported(item);
+    }
+    return result;
+  }
+  private paragraph(
+    source: XmlNode,
+    inherited: { p: Css; r: Css; runClasses?: readonly string[] } = {
+      p: {},
+      r: {},
+    },
+  ): Html {
+    const properties = child(source, "pPr");
+    const styleId =
+      attr(child(properties, "pStyle"), "val") ?? this.styles.defaultParagraph;
+    const style = this.styles.get(styleId);
+    const paragraphRun = this.styles.runStyle(styleId, {
+      ...this.styles.defaults.r,
+      ...inherited.r,
+    });
+    const contextualParagraph = Object.fromEntries(
+      Object.entries(inherited.p).filter(
+        ([name]) => style.p[name] === undefined,
+      ),
+    );
+    const css: Css = {
+      ...contextualParagraph,
+      ...this.styles.paragraph(properties),
+    };
+    const effectiveParagraph = {
+      ...this.styles.defaults.p,
+      ...inherited.p,
+      ...style.p,
+      ...css,
+    };
+    const outline = child(properties, "outlineLvl");
+    const level = outline
+      ? number(attr(outline, "val"), outline)
+      : style.outline;
+    const tag = level !== undefined && level < 6 ? "h" + (level + 1) : "p";
+    const paragraph = this.make(tag, {
+      style: declarations(css),
+      ...(styleId
+        ? { "data-word-style": styleId, class: this.styles.styleClass(styleId) }
+        : {}),
+    });
+    if (
+      effectiveParagraph["line-height"] &&
+      /^\d+(?:\.\d+)?$/.test(effectiveParagraph["line-height"])
+    )
+      paragraph.attrs["data-word-line-rule"] = "auto";
+    const tabs = child(properties, "tabs");
+    const stops = mergeTabs(style.tabs ?? this.styles.defaults.tabs, tabs);
+    if (stops.length || tabs || this.hasTab(source))
+      this.word.tabs.push({
+        paragraphNodeId: this.id(paragraph),
+        defaultInterval: this.defaultTab,
+        stops,
+      });
+    const numPr = child(properties, "numPr");
+    const id = attr(child(numPr, "numId"), "val") ?? style.numbering?.id;
+    if (id && id !== "0") {
+      const numberLevel = number(
+        attr(child(numPr, "ilvl"), "val"),
+        numPr ?? source,
+        style.numbering?.level ?? 0,
+      );
+      const definition = this.word.numbering
+        .find((item) => item.numberingId === id)
+        ?.levels.find((item) => item.level === numberLevel);
+      if (!definition) fail(source, "A paragraph refers to missing numbering.");
+      paragraph.attrs["data-word-numbering"] = id;
+      paragraph.attrs["data-word-level"] = String(numberLevel);
+      paragraph.attrs.style = declarations({
+        ...css,
+        ...this.styles.numberingParagraph(id, numberLevel),
+        ...this.styles.paragraph(properties),
+      });
+    }
+    const oldRunClasses = this.paragraphRunClasses;
+    this.paragraphRunClasses = [
+      "word-default-run",
+      ...(inherited.runClasses ?? []),
+      ...this.styles.runClass(styleId),
+    ];
+    for (const item of this.compat(source)) {
+      if (item.uri === W && item.name === "pPr") continue;
+      this.inline(item, paragraph, paragraphRun);
+    }
+    const mark = child(properties, "rPr");
+    if (mark)
+      paragraph.children.push(
+        this.make("span", {
+          "data-word-paragraph-mark": "true",
+          style: declarations(this.styles.run(mark, paragraphRun)),
+        }),
+      );
+    this.paragraphRunClasses = oldRunClasses;
+    return paragraph;
+  }
+  private hasTab(source: XmlNode): boolean {
+    return source.content.some(
+      (item) =>
+        typeof item !== "string" &&
+        ((item.uri === W && item.name === "tab") || this.hasTab(item)),
+    );
+  }
+  private fieldFlags(
+    source: XmlNode,
+  ): Pick<WordMetadata["fields"][number], "locked" | "dirty"> {
+    const result: Pick<WordMetadata["fields"][number], "locked" | "dirty"> = {};
+    for (const [name, key] of [
+      ["fldLock", "locked"],
+      ["dirty", "dirty"],
+    ] as const) {
+      const value = attr(source, name);
+      if (value !== undefined) {
+        if (!["0", "1", "true", "false", "on", "off"].includes(value))
+          fail(source, "A field flag is invalid.");
+        result[key] = ["1", "true", "on"].includes(value);
+      }
+    }
+    return result;
+  }
+  private inline(
+    source: XmlNode,
+    parent: Html,
+    paragraphStyle: Css = {},
+  ): void {
+    if (source.uri !== W) unsupported(source);
+    switch (source.name) {
+      case "r": {
+        const properties = child(source, "rPr");
+        const requestedStyleId = attr(child(properties, "rStyle"), "val");
+        const styleId =
+          requestedStyleId &&
+          this.styles.hasStyle(requestedStyleId, "character")
+            ? requestedStyleId
+            : undefined;
+        const inherited = this.styles.runStyle(
+          styleId ?? this.styles.defaultCharacter,
+          { ...this.styles.defaults.r, ...paragraphStyle },
+        );
+        const css = this.styles.run(properties, inherited);
+        // Character-style toggles are relative to paragraph formatting; other
+        // inherited font/color values remain inherited CSS rather than copies.
+        if (styleId) {
+          const standalone = this.styles.get(styleId).r;
+          for (const name of [
+            "font-weight",
+            "font-style",
+            "font-variant",
+            "text-transform",
+          ]) {
+            if (
+              standalone[name] !== undefined &&
+              inherited[name] !== standalone[name]
+            )
+              css[name] = inherited[name]!;
+          }
+        }
+        const classes = [
+          ...this.paragraphRunClasses,
+          ...(styleId ? [this.styles.styleClass(styleId)] : []),
+        ];
+        const run = this.make("span", {
+          style: declarations(css),
+          class: classes.join(" "),
+          "data-word-run": "true",
+          ...(styleId
+            ? {
+                "data-word-style": styleId,
+              }
+            : {}),
+        });
+        if (requestedStyleId && !styleId)
+          run.attrs["data-word-ignored-character-style"] = requestedStyleId;
+        parent.children.push(run);
+        const language = attr(child(properties, "lang"), "val");
+        if (language) run.attrs.lang = language;
+        const previousRun = this.currentRun;
+        this.currentRun = run;
+        const contentNames = [
+          "t",
+          "delText",
+          "br",
+          "cr",
+          "tab",
+          "noBreakHyphen",
+          "softHyphen",
+          "drawing",
+          "fldChar",
+          "instrText",
+          "commentReference",
+          "lastRenderedPageBreak",
+          "annotationRef",
+        ];
+        for (const item of this.compat(source)) {
+          if (item.uri === W && item.name === "rPr") continue;
+          if (item.uri !== W || !contentNames.includes(item.name))
+            unsupported(
+              item,
+              "The run contains unsupported or invalid inline content.",
+            );
+          this.inline(item, run, paragraphStyle);
+        }
+        this.currentRun = previousRun;
+        break;
+      }
+      case "t":
+      case "delText": {
+        if (source.content.some((item) => typeof item !== "string"))
+          fail(source, "A text node contains XML elements.");
+        const active = this.fieldStack[this.fieldStack.length - 1];
+        if (active && !active.result)
+          fail(
+            source,
+            "A complex field contains result text before its separator.",
+          );
+        this.addText(parent, text(source));
+        break;
+      }
+      case "br":
+      case "cr": {
+        const type = attr(source, "type") ?? "textWrapping";
+        if (!["textWrapping", "page"].includes(type))
+          unsupported(source, "Column breaks are not supported.");
+        const mark = this.make(
+          "br",
+          type === "page" ? { "data-word-break": "page" } : {},
+        );
+        const offset = this.offset(parent, "\n");
+        parent.children.push(mark);
+        this.fieldResult(mark);
+        this.record(parent, offset, "\n");
+        break;
+      }
+      case "tab": {
+        const tab = this.make("span", { "data-word-tab": "true" });
+        parent.children.push(tab);
+        this.fieldResult(tab);
+        this.addText(tab, "\t");
+        break;
+      }
+      case "noBreakHyphen":
+        this.addText(parent, "\u2011");
+        break;
+      case "softHyphen":
+        this.addText(parent, "\u00ad");
+        break;
+      case "drawing": {
+        const image = this.image(source);
+        const offset = this.offset(parent, "\ufffc");
+        parent.children.push(image);
+        this.fieldResult(image);
+        this.record(parent, offset, "\ufffc");
+        break;
+      }
+      case "hyperlink": {
+        const link = this.make("span", { "data-word-link": "true" });
+        parent.children.push(link);
+        const id = attr(source, "id", R);
+        const bookmark = attr(source, "anchor");
+        let target: string | undefined;
+        if (id) {
+          const relation = this.opc.relationships(this.currentPart).get(id);
+          if (
+            !relation ||
+            !relation.type.endsWith("/hyperlink") ||
+            !relation.external
+          )
+            fail(source, "A hyperlink relationship is invalid.");
+          target = relation.target;
+        }
+        this.word.hyperlinks.push({
+          nodeId: this.id(link),
+          ...(target ? { target } : {}),
+          ...(bookmark ? { bookmark } : {}),
+        });
+        for (const item of this.compat(source))
+          this.inline(item, link, paragraphStyle);
+        break;
+      }
+      case "bookmarkStart": {
+        const id = attr(source, "id");
+        const name = attr(source, "name");
+        if (id === undefined || !name || this.bookmarkStarts.has(id))
+          fail(source, "A bookmark start is invalid.");
+        const marker = this.make("span", { "data-word-bookmark": "start" });
+        parent.children.push(marker);
+        this.bookmarkStarts.set(id, { name, nodeId: this.id(marker) });
+        break;
+      }
+      case "bookmarkEnd": {
+        const id = attr(source, "id");
+        const start =
+          id !== undefined ? this.bookmarkStarts.get(id) : undefined;
+        if (!start) fail(source, "A bookmark end has no start.");
+        const marker = this.make("span", { "data-word-bookmark": "end" });
+        parent.children.push(marker);
+        this.bookmarkStarts.delete(id!);
+        this.word.bookmarks.push({
+          bookmarkId: this.currentStory + "-" + id,
+          name: start.name,
+          startNodeId: start.nodeId,
+          endNodeId: this.id(marker),
+        });
+        break;
+      }
+      case "fldSimple": {
+        if (this.fieldStack.length >= this.opc.limits.maxDepth)
+          throw new DocumentError(
+            "ResourceLimitExceeded",
+            "Field nesting exceeds the configured depth.",
+          );
+        const field = this.make("span", { "data-word-field": "simple" });
+        parent.children.push(field);
+        this.fieldResult(field);
+        const definition: WordMetadata["fields"][number] = {
+          nodeId: this.id(field),
+          instruction: attr(source, "instr") ?? "",
+          resultState: "cached",
+          ...this.fieldFlags(source),
+          resultNodeIds: [],
+        };
+        const active = this.fieldStack[this.fieldStack.length - 1];
+        if (active && !active.result)
+          (active.definition.instructionFields ??= []).push({
+            offset: active.definition.instruction.length,
+            fieldNodeId: definition.nodeId,
+          });
+        this.word.fields.push(definition);
+        const state = { definition, result: true };
+        this.fieldStack.push(state);
+        for (const item of this.compat(source))
+          this.inline(item, field, paragraphStyle);
+        if (this.fieldStack.pop() !== state)
+          fail(source, "A simple field has unbalanced nested controls.");
+        break;
+      }
+      case "fldChar": {
+        check(source, []);
+        const type = attr(source, "fldCharType");
+        if (type === "begin") {
+          if (this.fieldStack.length >= this.opc.limits.maxDepth)
+            throw new DocumentError(
+              "ResourceLimitExceeded",
+              "Field nesting exceeds the configured depth.",
+            );
+          const marker = this.make("span", { "data-word-field": "begin" });
+          parent.children.push(marker);
+          const definition: WordMetadata["fields"][number] = {
+            nodeId: this.id(marker),
+            instruction: "",
+            resultState: "cached",
+            ...this.fieldFlags(source),
+            resultNodeIds: [],
+          };
+          const active = this.fieldStack[this.fieldStack.length - 1];
+          if (active && !active.result)
+            (active.definition.instructionFields ??= []).push({
+              offset: active.definition.instruction.length,
+              fieldNodeId: definition.nodeId,
+            });
+          this.word.fields.push(definition);
+          this.fieldStack.push({ definition, result: false });
+        } else {
+          const active = this.fieldStack[this.fieldStack.length - 1];
+          if (!active) fail(source, "A field control has no matching begin.");
+          if (type === "separate") {
+            if (active.result) fail(source, "A field has repeated separators.");
+            active.result = true;
+          } else if (type === "end") {
+            const marker = this.make("span", {
+              "data-word-field-end": active.definition.nodeId,
+            });
+            parent.children.push(marker);
+            active.definition.endNodeId = this.id(marker);
+            this.fieldStack.pop();
+          } else fail(source, "A field control type is invalid.");
+        }
+        break;
+      }
+      case "instrText": {
+        const active = this.fieldStack[this.fieldStack.length - 1];
+        if (!active || active.result)
+          fail(
+            source,
+            "Field instructions occur outside a field instruction range.",
+          );
+        active.definition.instruction += text(source);
+        break;
+      }
+      case "commentRangeStart": {
+        const id = attr(source, "id");
+        if (
+          id === undefined ||
+          !this.comments.has(id) ||
+          this.activeComments.has(id)
+        )
+          fail(source, "A comment range start is invalid.");
+        this.activeComments.add(id);
+        break;
+      }
+      case "commentRangeEnd": {
+        const id = attr(source, "id");
+        if (id === undefined || !this.activeComments.delete(id))
+          fail(source, "A comment range end is invalid.");
+        break;
+      }
+      case "commentReference": {
+        const id = attr(source, "id");
+        const state = id !== undefined ? this.comments.get(id) : undefined;
+        if (!state) fail(source, "A comment reference is invalid.");
+        const marker = this.make("span");
+        parent.children.push(marker);
+        state.point = this.id(marker);
+        break;
+      }
+      case "ins":
+      case "del": {
+        const sourceId = attr(source, "id");
+        if (sourceId === undefined) fail(source, "A revision has no identity.");
+        const revision = this.make(source.name);
+        parent.children.push(revision);
+        const author = attr(source, "author");
+        const date = attr(source, "date");
+        this.word.revisions.push({
+          nodeId: this.id(revision),
+          sourceId,
+          kind: source.name === "ins" ? "insert" : "delete",
+          ...(author !== undefined ? { author } : {}),
+          ...(date !== undefined ? { date } : {}),
+        });
+        for (const item of this.compat(source))
+          this.inline(item, revision, paragraphStyle);
+        break;
+      }
+      case "annotationRef":
+        parent.children.push(
+          this.make("span", { "data-word-comment-mark": "true" }),
+        );
+        break;
+      case "proofErr":
+      case "lastRenderedPageBreak":
+        break; // Proofing and stale renderer positions carry no source content.
+      default:
+        unsupported(source);
+    }
+  }
+  private section(source: XmlNode | undefined, root: Html): DocumentSection {
+    check(source, [
+      "headerReference",
+      "footerReference",
+      "footnotePr",
+      "endnotePr",
+      "type",
+      "pgSz",
+      "pgMar",
+      "paperSrc",
+      "pgBorders",
+      "lnNumType",
+      "pgNumType",
+      "cols",
+      "formProt",
+      "vAlign",
+      "noEndnote",
+      "titlePg",
+      "textDirection",
+      "bidi",
+      "rtlGutter",
+      "docGrid",
+      "printerSettings",
+    ]);
+    for (const feature of [
+      "footnotePr",
+      "endnotePr",
+      "pgBorders",
+      "lnNumType",
+    ]) {
+      if (child(source, feature)) unsupported(child(source, feature)!);
+    }
+    if (
+      (child(source, "textDirection") &&
+        attr(child(source, "textDirection"), "val") !== "lrTb") ||
+      (child(source, "vAlign") &&
+        attr(child(source, "vAlign"), "val") !== "top") ||
+      on(child(source, "bidi")) ||
+      on(child(source, "rtlGutter")) ||
+      on(child(source, "formProt"))
+    )
+      unsupported(
+        source!,
+        "The section writing direction or protection is not supported.",
+      );
+    const grid = child(source, "docGrid");
+    if (grid && attr(grid, "type") && attr(grid, "type") !== "default")
+      unsupported(grid, "Document line and character grids are not supported.");
+    const columns = child(source, "cols");
+    if (
+      columns &&
+      (number(attr(columns, "num"), columns, 1) !== 1 ||
+        elements(columns, "col").length > 1)
+    )
+      unsupported(columns, "Multiple text columns are not supported.");
+    const size = child(source, "pgSz");
+    const margins = child(source, "pgMar");
+    const previous = this.sections[this.sections.length - 1];
+    const fallback = previous?.pageSetup ?? {
+      unit: "pt" as const,
+      width: 612,
+      height: 792,
+      margins: { top: 72, right: 72, bottom: 72, left: 72 },
+    };
+    const setup: PageSetup = {
+      unit: "pt",
+      width: size ? number(attr(size, "w"), size) / 20 : fallback.width,
+      height: size ? number(attr(size, "h"), size) / 20 : fallback.height,
+      margins: { ...fallback.margins },
+    };
+    if (margins) {
+      for (const side of ["top", "right", "bottom", "left"] as const) {
+        const value = attr(margins, side);
+        if (value !== undefined)
+          setup.margins[side] = number(value, margins) / 20;
+      }
+      if (number(attr(margins, "gutter"), margins, 0) !== 0)
+        unsupported(margins, "Page gutters are not supported.");
+    }
+    const headers = { ...previous?.headers };
+    const footers = { ...previous?.footers };
+    for (const [name, kind, refs] of [
+      ["headerReference", "header", headers],
+      ["footerReference", "footer", footers],
+    ] as const) {
+      for (const ref of elements(source, name)) {
+        const type = attr(ref, "type") ?? "default";
+        if (!["default", "first", "even"].includes(type))
+          fail(ref, "A header or footer reference has an invalid type.");
+        const relation = this.opc
+          .relationships(this.main)
+          .get(attr(ref, "id", R) ?? "");
+        if (
+          !relation ||
+          relation.external ||
+          !relation.type.endsWith("/" + kind)
+        )
+          fail(ref, "A header or footer relationship is invalid.");
+        refs[type as "default" | "first" | "even"] = this.readStory(
+          relation.target,
+          kind,
+        );
+      }
+    }
+    const breakType = attr(child(source, "type"), "val") ?? "nextPage";
+    if (!["continuous", "nextPage", "evenPage", "oddPage"].includes(breakType))
+      unsupported(source!, "A section break type is not supported.");
+    const pageNumber = child(source, "pgNumType");
+    const pageNumberStart = attr(pageNumber, "start");
+    const pageNumberFormat = attr(pageNumber, "fmt");
+    if (
+      pageNumberFormat &&
+      ![
+        "decimal",
+        "upperRoman",
+        "lowerRoman",
+        "upperLetter",
+        "lowerLetter",
+      ].includes(pageNumberFormat)
+    )
+      unsupported(pageNumber!, "The page numbering format is not supported.");
+    return {
+      ...(pageNumberStart !== undefined
+        ? { pageNumberStart: number(pageNumberStart, pageNumber!) }
+        : {}),
+      ...(pageNumberFormat
+        ? {
+            pageNumberFormat: pageNumberFormat as
+              | "decimal"
+              | "upperRoman"
+              | "lowerRoman"
+              | "upperLetter"
+              | "lowerLetter",
+          }
+        : {}),
+      sectionId: "section-" + (this.sections.length + 1),
+      rootNodeId: this.id(root),
+      pageSetup: setup,
+      breakType: breakType as DocumentSection["breakType"] & string,
+      differentFirstPage: on(child(source, "titlePg")),
+      headerDistance: margins
+        ? number(attr(margins, "header"), margins, 720) / 20
+        : 36,
+      footerDistance: margins
+        ? number(attr(margins, "footer"), margins, 720) / 20
+        : 36,
+      headers,
+      footers,
+    };
+  }
+  private readStory(part: string, kind: "header" | "footer"): string {
+    const cached = this.loadedStories.get(part);
+    if (cached) return cached;
+    const source = this.opc.read(part);
+    if (source.uri !== W || source.name !== (kind === "header" ? "hdr" : "ftr"))
+      fail(source, "An auxiliary story has the wrong root.");
+    const storyId = kind + "-" + this.loadedStories.size;
+    this.loadedStories.set(part, storyId);
+    const root = this.story(kind, storyId);
+    root.attrs.class = "word-main";
+    root.children.push(...this.readStoryContent(part, storyId, source));
+    this.auxiliary.push(root);
+    return storyId;
+  }
+  private readStoryContent(part: string, storyId: string, source: XmlNode): Html[] {
+    const { currentPart, currentStory, fieldStack, activeComments, bookmarkStarts,
+      currentRun, paragraphRunClasses } = this;
+    this.currentPart = part;
+    this.currentStory = storyId;
+    this.fieldStack = [];
+    this.activeComments = new Set();
+    this.bookmarkStarts = new Map();
+    this.currentRun = undefined;
+    this.paragraphRunClasses = ["word-default-run"];
+    try {
+      const content = this.blocks(this.compat(source));
+      if (this.fieldStack.length || this.activeComments.size || this.bookmarkStarts.size)
+        fail(source, "An auxiliary story has an unclosed content range.");
+      return content;
+    } finally {
+      this.currentPart = currentPart;
+      this.currentStory = currentStory;
+      this.fieldStack = fieldStack;
+      this.activeComments = activeComments;
+      this.bookmarkStarts = bookmarkStarts;
+      this.currentRun = currentRun;
+      this.paragraphRunClasses = paragraphRunClasses;
+    }
+  }
+  private readComments(): void {
+    const part = this.opc.related(this.main, "comments");
+    if (!part) return;
+    const root = this.opc.read(part);
+    if (root.uri !== W || root.name !== "comments")
+      fail(root, "The comments part has an invalid root.");
+    check(root, ["comment"]);
+    for (const source of elements(root, "comment")) {
+      const id = attr(source, "id");
+      if (id === undefined || this.comments.has(id))
+        fail(source, "A comment identity is invalid.");
+      const story = this.story("comment", "comment-" + id);
+      story.attrs.class = "word-main";
+      story.children.push(...this.readStoryContent(part, "comment-" + id, source));
+      this.auxiliary.push(story);
+      this.comments.set(id, { source, bodyNodeId: this.id(story), ranges: [] });
+    }
+  }
+  private image(source: XmlNode): Html {
+    const inline = child(source, "inline", WP);
+    if (!inline || elements(source, "anchor", WP).length)
+      unsupported(source, "Floating drawings are not supported.");
+    for (const item of this.compat(source))
+      if (item.uri !== WP || item.name !== "inline")
+        unsupported(item, "Only inline pictures are supported.");
+    const effects = child(inline, "effectExtent", WP);
+    if (
+      effects &&
+      ["l", "r", "t", "b"].some(
+        (side) => number(attr(effects, side, ""), effects, 0) !== 0,
+      )
+    )
+      unsupported(effects, "Picture effect extents are not supported.");
+    const graphic = child(inline, "graphic", A);
+    const data = child(graphic, "graphicData", A);
+    const picture = child(data, "pic", PIC);
+    if (!picture || elements(data, undefined, A).length)
+      unsupported(source, "Only native inline pictures are supported.");
+    const fill = child(picture, "blipFill", PIC);
+    const blip = child(fill, "blip", A);
+    if (!blip || attr(blip, "link", R))
+      unsupported(source, "An external picture is not supported.");
+    const relation = this.opc
+      .relationships(this.currentPart)
+      .get(attr(blip, "embed", R) ?? "");
+    if (!relation || relation.external || !relation.type.endsWith("/image"))
+      fail(source, "An image relationship is invalid.");
+    for (const effect of elements(blip, undefined, A)) {
+      if (effect.name !== "extLst")
+        unsupported(
+          effect,
+          "Picture color and transparency effects are not supported.",
+        );
+      for (const extension of elements(effect, "ext", A))
+        for (const item of extension.content)
+          if (typeof item !== "string" && item.name !== "useLocalDpi")
+            unsupported(
+              item,
+              "An embedded picture extension is not supported.",
+            );
+    }
+    if (child(fill, "tile", A))
+      unsupported(fill!, "Tiled picture fills are not supported.");
+    const shape = child(picture, "spPr", PIC);
+    if (shape) {
+      if (attr(shape, "bwMode", "") && attr(shape, "bwMode", "") !== "auto")
+        unsupported(
+          shape,
+          "Picture black-and-white rendering is not supported.",
+        );
+      for (const appearance of this.compat(shape)) {
+        if (
+          appearance.uri !== A ||
+          !["xfrm", "prstGeom", "noFill", "ln", "effectLst"].includes(appearance.name)
+        )
+          unsupported(appearance, "The picture appearance is not supported.");
+        if (
+          appearance.name === "ln" &&
+          (!child(appearance, "noFill", A) ||
+            this.compat(appearance).some(
+              (item) => item.uri !== A || item.name !== "noFill",
+            ))
+        )
+          unsupported(appearance, "Picture outlines are not supported.");
+        if (appearance.name === "noFill" && this.compat(appearance).length)
+          unsupported(appearance, "The picture fill is not supported.");
+      }
+    }
+    const geometry = child(shape, "prstGeom", A);
+    if (
+      child(shape, "custGeom", A) ||
+      (geometry && attr(geometry, "prst", "") !== "rect")
+    )
+      unsupported(shape!, "Nonrectangular picture geometry is not supported.");
+    const effectList = child(shape, "effectLst", A);
+    if (effectList && this.compat(effectList).length)
+      unsupported(effectList, "Picture effects are not supported.");
+    const crop = child(fill, "srcRect", A);
+    if (
+      crop &&
+      ["l", "r", "t", "b"].some(
+        (side) => number(attr(crop, side, ""), crop, 0) !== 0,
+      )
+    )
+      unsupported(crop, "Cropped images are not yet supported.");
+    const transform = child(child(picture, "spPr", PIC), "xfrm", A);
+    if (
+      transform &&
+      (number(attr(transform, "rot", ""), transform, 0) !== 0 ||
+        ["flipH", "flipV"].some((key) =>
+          ["1", "true"].includes(attr(transform, key, "") ?? ""),
+        ))
+    )
+      unsupported(transform, "Rotated or flipped images are not supported.");
+    let path = this.assetSources.get(relation.target);
+    if (!path) {
+      const mime = this.opc.contentType(relation.target);
+      const extensions: Record<string, string> = {
+        "image/png": "png",
+        "image/jpeg": "jpg",
+        "image/webp": "webp",
+      };
+      if (!mime || !extensions[mime])
+        unsupported(source, "The picture format is not supported.");
+      path =
+        "assets/image-" + (this.assets.length + 1) + "." + extensions[mime];
+      const bytes = this.opc.files.get(relation.target)!;
+      this.files.set(path, new Uint8Array(bytes));
+      this.assets.push(createAssetDescriptor(path, mime, bytes));
+      this.assetSources.set(relation.target, path);
+    }
+    const extent = child(inline, "extent", WP);
+    if (!extent) fail(source, "An inline image has no dimensions.");
+    const width = number(attr(extent, "cx", ""), extent) / 12700,
+      height = number(attr(extent, "cy", ""), extent) / 12700;
+    if (width <= 0 || height <= 0)
+      fail(extent, "An image dimension must be positive.");
+    const description = child(inline, "docPr", WP);
+    return this.make("img", {
+      src: path,
+      alt:
+        attr(description, "descr", "") ?? attr(description, "name", "") ?? "",
+      style: "width:" + pt(width) + ";height:" + pt(height),
+    });
+  }
+  private validateMergeContinuation(cell: XmlNode): void {
+    // Only empty paragraphs/runs may disappear into the spanning cell. Text
+    // extraction alone misses breaks, drawings, range markers and revisions.
+    for (const paragraph of this.compat(cell)) {
+      if (paragraph.uri === W && paragraph.name === "tcPr") continue;
+      if (paragraph.uri !== W || paragraph.name !== "p")
+        unsupported(
+          paragraph,
+          "A vertical merge continuation has independent content.",
+        );
+      const properties = child(paragraph, "pPr");
+      this.styles.paragraph(properties);
+      this.styles.run(child(properties, "rPr"));
+      this.styles.get(
+        attr(child(properties, "pStyle"), "val") ?? this.styles.defaultParagraph,
+      );
+      mergeTabs(undefined, child(properties, "tabs"));
+      if (child(properties, "sectPr"))
+        unsupported(
+          properties!,
+          "A merged cell cannot contain section properties.",
+        );
+      for (const run of this.compat(paragraph)) {
+        if (run.uri === W && run.name === "pPr") continue;
+        if (run.uri !== W || run.name !== "r")
+          unsupported(
+            run,
+            "A vertical merge continuation has independent content.",
+          );
+        this.styles.run(child(run, "rPr"));
+        for (const content of this.compat(run)) {
+          if (content.uri === W && content.name === "rPr") continue;
+          if (
+            content.uri !== W ||
+            content.name !== "t" ||
+            content.content.some((item) => typeof item !== "string") ||
+            text(content) !== ""
+          )
+            unsupported(
+              content,
+              "A vertical merge continuation has independent content.",
+            );
+        }
+      }
+    }
+  }
+  private table(source: XmlNode): Html {
+    check(source, ["tblPr", "tblGrid", "tr"]);
+    const properties = child(source, "tblPr");
+    const styleId =
+      attr(child(properties, "tblStyle"), "val") ?? this.styles.defaultTable;
+    const style = this.styles.get(styleId);
+    const tableCss: Css = {
+      "margin-left": "-5.4pt",
+      ...style.table,
+      ...this.styles.tableRegion(styleId, []).table,
+      ...this.styles.table(properties),
+    };
+    const table = this.make("table", {
+      style: declarations(tableCss),
+      ...(styleId
+        ? { "data-word-style": styleId, class: this.styles.styleClass(styleId) }
+        : {}),
+    });
+    const grid = elements(child(source, "tblGrid"), "gridCol").map(
+      (item) => number(attr(item, "w"), item) / 20,
+    );
+    if (!grid.length || grid.some((value) => value <= 0))
+      fail(source, "A table requires a valid column grid.");
+    this.word.tables.push({ nodeId: this.id(table), grid });
+    let previous = new Map<number, { cell: Html; span: number }>();
+    const rows = elements(source, "tr");
+    let rowIndex = 0;
+    const look = child(properties, "tblLook");
+    const rawLook = attr(look, "val");
+    if (rawLook && !/^[0-9a-f]{1,4}$/i.test(rawLook))
+      fail(look!, "A table look mask is invalid.");
+    const mask =
+      tableLookMask(look) ??
+      this.styles.tableSetting(styleId, "tableLookMask") ??
+      0;
+    const tableInfo = this.word.tables[this.word.tables.length - 1]!;
+    const ownMask = tableLookMask(look);
+    if (ownMask !== undefined) tableInfo.lookMask = ownMask;
+    for (const [name, key] of [
+      ["tblStyleRowBandSize", "rowBandSize"],
+      ["tblStyleColBandSize", "columnBandSize"],
+    ] as const) {
+      const item = child(properties, name);
+      if (item) tableInfo[key] = number(attr(item, "val"), item);
+    }
+    const rowBand =
+      tableInfo.rowBandSize ??
+      this.styles.tableSetting(styleId, "rowBandSize") ??
+      1;
+    const columnBand =
+      tableInfo.columnBandSize ??
+      this.styles.tableSetting(styleId, "columnBandSize") ??
+      1;
+    const enabled = (name: string, bit: number): boolean => {
+      const flag = attr(look, name);
+      if (
+        flag !== undefined &&
+        !["0", "1", "false", "true", "on", "off"].includes(flag)
+      )
+        fail(look!, "A table look flag is invalid.");
+      return flag !== undefined
+        ? ["1", "true", "on"].includes(flag)
+        : (mask & bit) !== 0;
+    };
+
+    for (const row of rows) {
+      check(row, ["tblPrEx", "trPr", "tc"]);
+      const exceptions = child(row, "tblPrEx");
+      if (exceptions && elements(exceptions).length)
+        unsupported(
+          exceptions,
+          "Row-level table property exceptions are not yet supported.",
+        );
+      const rowProperties = child(row, "trPr");
+      this.styles.cellSpacing(rowProperties);
+      check(rowProperties, [
+        "cnfStyle",
+        "divId",
+        "gridBefore",
+        "gridAfter",
+        "wBefore",
+        "wAfter",
+        "cantSplit",
+        "trHeight",
+        "tblHeader",
+        "tblCellSpacing",
+        "jc",
+        "hidden",
+      ]);
+      if (
+        child(rowProperties, "gridBefore") ||
+        child(rowProperties, "gridAfter") ||
+        on(child(rowProperties, "hidden"))
+      )
+        unsupported(rowProperties!);
+      const rowCss: Css = {};
+      if (on(child(rowProperties, "cantSplit")))
+        rowCss["break-inside"] = "avoid";
+      const height = child(rowProperties, "trHeight");
+      if (height) rowCss.height = pt(number(attr(height, "val"), height) / 20);
+      const htmlRow = this.make("tr", {
+        style: declarations(rowCss),
+        ...(on(child(rowProperties, "tblHeader"))
+          ? { "data-word-repeat-header": "true" }
+          : {}),
+      });
+      table.children.push(htmlRow);
+      let column = 0;
+      const next = new Map<number, { cell: Html; span: number }>();
+      for (const cell of elements(row, "tc")) {
+        const props = child(cell, "tcPr");
+        const cellCss = this.styles.cell(props);
+        const span = number(attr(child(props, "gridSpan"), "val"), cell, 1);
+        if (span < 1 || column + span > grid.length)
+          fail(cell, "A table cell exceeds its grid.");
+        const merge = child(props, "vMerge");
+        const value = attr(merge, "val") ?? "continue";
+        const continuation = merge && value === "continue";
+        if (merge && !["continue", "restart"].includes(value))
+          fail(merge, "A vertical merge type is invalid.");
+        if (continuation) {
+          const above = previous.get(column);
+          if (!above || above.span !== span)
+            fail(cell, "A vertical merge has no matching cell above.");
+          this.validateMergeContinuation(cell);
+          above.cell.attrs.rowspan = String(
+            Number(above.cell.attrs.rowspan ?? 1) + 1,
+          );
+          next.set(column, above);
+        } else {
+          const regions: string[] = [];
+          if (!enabled("noVBand", 1024))
+            regions.push(
+              Math.floor(column / columnBand) % 2 === 0
+                ? "band1Vert"
+                : "band2Vert",
+            );
+          if (!enabled("noHBand", 512))
+            regions.push(
+              Math.floor(
+                (rowIndex - (enabled("firstRow", 32) ? 1 : 0)) / rowBand,
+              ) %
+                2 ===
+                0
+                ? "band1Horz"
+                : "band2Horz",
+            );
+          if (column === 0 && enabled("firstColumn", 128))
+            regions.push("firstCol");
+          if (column + span === grid.length && enabled("lastColumn", 256))
+            regions.push("lastCol");
+          if (rowIndex === 0 && enabled("firstRow", 32))
+            regions.push("firstRow");
+          if (rowIndex === rows.length - 1 && enabled("lastRow", 64))
+            regions.push("lastRow");
+          if (regions.includes("firstRow") && regions.includes("firstCol"))
+            regions.push("nwCell");
+          if (regions.includes("firstRow") && regions.includes("lastCol"))
+            regions.push("neCell");
+          if (regions.includes("lastRow") && regions.includes("firstCol"))
+            regions.push("swCell");
+          if (regions.includes("lastRow") && regions.includes("lastCol"))
+            regions.push("seCell");
+          const precedence = [
+            "band1Horz",
+            "band2Horz",
+            "band1Vert",
+            "band2Vert",
+            "firstCol",
+            "lastCol",
+            "firstRow",
+            "lastRow",
+            "nwCell",
+            "neCell",
+            "swCell",
+            "seCell",
+          ];
+          regions.sort(
+            (left, right) =>
+              precedence.indexOf(left) - precedence.indexOf(right),
+          );
+          const conditional = this.styles.tableRegion(styleId, regions);
+          const inner: Css = {};
+          if (tableCss["--word-border-inside-h"] && table.children.length > 1)
+            inner["border-top"] = "var(--word-border-inside-h)";
+          if (tableCss["--word-border-inside-v"] && column > 0)
+            inner["border-left"] = "var(--word-border-inside-v)";
+          const css: Css = {
+            "padding-left": "5.4pt",
+            "padding-right": "5.4pt",
+            ...style.cell,
+            ...inheritedRun(conditional.r),
+            ...conditional.cell,
+            ...inner,
+            ...this.styles.margins(child(properties, "tblCellMar")),
+            ...cellCss,
+          };
+          const htmlCell = this.make(
+            on(child(rowProperties, "tblHeader")) ? "th" : "td",
+            {
+              style: declarations(css),
+              ...(span > 1 ? { colspan: String(span) } : {}),
+            },
+          );
+          htmlCell.children.push(
+            ...this.blocks(
+              this.compat(cell).filter(
+                (item) => !(item.uri === W && item.name === "tcPr"),
+              ),
+              {
+                p: { ...style.p, ...conditional.p },
+                r: { ...style.r, ...conditional.r },
+                runClasses: this.styles.runClass(styleId),
+              },
+            ),
+          );
+          htmlRow.children.push(htmlCell);
+          if (merge) next.set(column, { cell: htmlCell, span });
+        }
+        column += span;
+      }
+      if (column !== grid.length)
+        fail(row, "A table row does not cover its grid.");
+      previous = next;
+      rowIndex++;
+    }
+    return table;
+  }
+}
+
+/** Import authorized DOCX bytes to the one persistent HTML document source. */
+export function importDocx(
+  bytes: Uint8Array,
+  options: DocxImportOptions,
+): DocumentPackage {
+  if (!options || typeof options.documentId !== "string" || !options.documentId)
+    throw new DocumentError(
+      "InvalidDocument",
+      "DOCX import requires a document identity supplied by its host.",
+    );
+  const opc = openOpc(bytes, options);
+  const main = opc.related("", "officeDocument");
+  if (
+    !main ||
+    opc.contentType(main) !==
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
+  )
+    throw new DocumentError(
+      "UnsupportedFormat",
+      "The input is not a supported DOCX document.",
+    );
+  try {
+    return new Importer(opc, main, options.documentId).import();
+  } catch (error) {
+    if (error instanceof DocumentError) throw error;
+    throw new DocumentError(
+      "InvalidDocument",
+      "The DOCX document could not be mapped to the supported document model.",
+    );
+  }
+}

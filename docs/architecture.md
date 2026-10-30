@@ -2,7 +2,7 @@
 
 dagent-office 是可嵌入不同产品的通用文档协作 SDK 与工作台。它将 Office 文件转换为带语义的 HTML 文档包，在浏览器中完成编辑、批注和修改提案预览，再从当前文档源生成 Office 文件。
 
-本文描述目标架构。工程骨架、R1-03 [结构契约](contracts.md)、R1-04 [只读文档模型](document-model.md)及 R1-05 [资源与 ZIP](resources-and-zip.md)已实现，会话执行、编辑和 OOXML 转换仍待实现；运行命令见[本地开发](development.md)。交付顺序见[整体实施计划](implementation-plan.md)，首轮支持范围见[第一轮实施细则](iteration-1.md)。
+本文描述目标架构。工程骨架、R1-03 [结构契约](contracts.md)、R1-04 [只读文档模型](document-model.md)及 R1-05 [资源与 ZIP](resources-and-zip.md)已实现，DOCX 导入和只读预览见[读取说明](docx-import.md)；[核心事务与历史](document-session.md)已实现；精确锚点映射、请求/提案执行、富文本、自动分页和 Office 导出仍待实现；运行命令见[本地开发](development.md)。交付顺序见[整体实施计划](implementation-plan.md)，首轮支持范围见[第一轮实施细则](iteration-1.md)。
 
 整体按五轮交付。第一轮将 HTML 协作基础与 Word 完整闭环合并：先完成独立 Playground 的 DOCX 导入、人工输入、分页、批注、提案和 DOCX/PDF 导出重开，再接入达智现有智能体验证；后续依次覆盖 PPT、Excel、正式宿主存储和发布准备。
 
@@ -26,6 +26,8 @@ dagent-office 是可嵌入不同产品的通用文档协作 SDK 与工作台。�
 
 达智是首个真实智能体宿主；独立 Playground 验证同一组件与 API 能脱离达智运行。其他产品无需引入达智的后端类型、路由或业务模型。
 
+[三格式模型设计](data-model.md)、DOCX 读取、样式映射和声明范围的独立只读验收已先行完成，R1-06 事务与历史也已完成，下一步进入 R1-07 精确锚点与批注映射。只读预览接受 `DocumentModel`，工作台后续接受 `DocumentSession`，复用同一渲染实现。
+
 ## 模块关系
 
 ```mermaid
@@ -42,7 +44,7 @@ flowchart TB
 
 上图箭头表示代码依赖，不表示业务数据流。文档上下文、批注请求及提案都由 `core` 定义；宿主通过接口交换它们，不形成核心对宿主的反向代码依赖。
 
-工程按以下目录组织。当前实现工程入口、核心结构契约、Schema 和只读文档模型，表中其余职责由后续任务逐步实现。
+工程按以下目录组织。当前还实现 DOCX 导入及只读预览，三格式数据模型已完成设计；表中其余职责由后续任务逐步实现。
 
 ```text
 packages/
@@ -61,7 +63,7 @@ apps/
 | `office` | 文档包 ZIP、OOXML 公共基础和各格式导入导出 | 浏览器、Node | `core` |
 | `node` | 文件系统、CLI、受管理的转换进程、Chromium 渲染及 PDF | Node | `core`、`office` |
 
-`core` 不依赖 React、DOM、文件系统、模型厂商或宿主业务代码。`editor` 接收打开的文档会话，不依赖具体 Office 库。`office` 通过文档源和明确的渲染接口转换，不依赖编辑器。`node` 复用相同的核心和格式适配器。
+`core` 不依赖 React、DOM、文件系统、模型厂商或宿主业务代码。`editor` 的只读预览接收文档模型，后续工作台接收文档会话，不依赖具体 Office 库。`office` 通过文档源和明确的渲染接口转换，不依赖编辑器。`node` 复用相同的核心和格式适配器。
 
 包之间及宿主均通过公开入口消费能力，禁止跨包访问内部实现。首轮使用直接函数、接口和事件组织能力，不引入通用插件总线、依赖注入容器或第二套命令框架。Enterprise 接入代码留在 Enterprise 仓库。
 

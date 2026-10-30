@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DocumentKindSchema, FORMAT_VERSION, IdentifierSchema, PackagePathSchema, RevisionSchema } from "./primitives.js";
+import { WordMetadataSchema } from "./word.js";
 
 export const AssetDescriptorSchema = z.strictObject({
   path: PackagePathSchema,
@@ -38,15 +39,23 @@ export type PageSetup = z.infer<typeof PageSetupSchema>;
 export const DocumentSectionSchema = z.strictObject({
   sectionId: IdentifierSchema,
   rootNodeId: IdentifierSchema,
+  pageSetup: PageSetupSchema.optional(),
+  breakType: z.enum(["continuous", "nextPage", "evenPage", "oddPage"]).optional(),
+  differentFirstPage: z.boolean().optional(),
+  pageNumberStart: z.number().int().min(0).optional(),
+  pageNumberFormat: z.enum(["decimal", "upperRoman", "lowerRoman", "upperLetter", "lowerLetter"]).optional(),
+  headerDistance: z.number().min(0).optional(),
+  footerDistance: z.number().min(0).optional(),
+  headers: z.strictObject({ default: IdentifierSchema.optional(), first: IdentifierSchema.optional(), even: IdentifierSchema.optional() }).optional(),
+  footers: z.strictObject({ default: IdentifierSchema.optional(), first: IdentifierSchema.optional(), even: IdentifierSchema.optional() }).optional(),
 });
 export type DocumentSection = z.infer<typeof DocumentSectionSchema>;
 
-// Word metadata currently defined by the document specification.
-// Numbering and header/footer mappings will be added explicitly during DOCX work.
 export const DocumentMetadataSchema = z.strictObject({
   title: z.string().optional(),
   locale: IdentifierSchema.optional(),
   pageSetup: PageSetupSchema,
   sections: z.array(DocumentSectionSchema).min(1),
+  word: WordMetadataSchema.optional(),
 });
 export type DocumentMetadata = z.infer<typeof DocumentMetadataSchema>;
