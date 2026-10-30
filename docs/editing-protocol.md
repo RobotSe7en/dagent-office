@@ -2,7 +2,7 @@
 
 人工操作和宿主智能体返回的修改共用文档操作协议。核心管理事务、修订、批注和撤销；编辑器提供选区、批注和差异界面；宿主负责智能体执行、身份授权和文件保存。
 
-结构契约、推导类型和 JSON Schema 已在 R1-03 实现，公开入口见[结构契约与 JSON Schema](contracts.md)。R1-10 已实现 DOCX 读取及只读预览；R1-06 已实现[会话准备、提交及历史](document-session.md)，工厂返回 `DocumentEditingSession`；完整 `DocumentSession` 的上下文生成、`prepareProposal` 和协作 UI 尚未实现。`protocolVersion: 1` 仍为未发布的开发设计值，首次发布前完成冻结；达智边界使用同一契约生成或校验 Pydantic 模型。
+结构契约、推导类型和 JSON Schema 已在 R1-03 实现，公开入口见[结构契约与 JSON Schema](contracts.md)。R1-10 已实现 DOCX 读取及只读预览；R1-06 已实现[会话准备、提交及历史](document-session.md)，工厂现返回完整 `DocumentSession`；R1-09 已实现上下文生成、`prepareProposal` 和[工作台协作 UI](workbench.md)。`protocolVersion: 1` 仍为未发布的开发设计值，首次发布前完成冻结；达智边界使用同一契约生成或校验 Pydantic 模型。
 
 所有协议对象严格拒绝未知字段，包括元数据和嵌套操作。不静默删字段、填默认值或强制转换类型；新增字段通过显式契约演进。结构校验通过不等于 HTML 安全、节点引用、授权或事务语义已经通过。
 
@@ -18,7 +18,7 @@
 
 SDK 不设置独立模型调用入口或文档内 AI 对话弹窗。统一提交只把数据交给宿主；文档组件不通过模型供应商 SDK 执行请求。
 
-下列签名表达完整协作接口职责。当前工厂只返回已实现的事务接口，后续请求与提案方法不作为占位方法暴露：
+下列签名表达完整协作接口职责。当前工厂返回完整事务及请求／提案接口：
 
 ```ts
 interface DocumentSession {
@@ -162,7 +162,7 @@ Agent Run 的提案文件遵循宿主既有产物保存规则；它与文档会�
 
 边界错误包含稳定 `code`、可读消息和有界详情。首轮至少区分 `UnsupportedFormat`、`UnsupportedVersion`、`UnsupportedFeature`、`InvalidDocument`、`InvalidOperation`、`InvalidProposal`、`AnchorNotFound`、`RevisionConflict`、`AssetUnavailable` 和 `ResourceLimitExceeded`。宿主提交、导出和存储分别使用 `HostSubmissionFailed`、`ExportFailed` 和 `HostCommitFailed`。
 
-核心事件包含 `annotationChanged`、`documentChanged` 和 `error`，结构携带 `protocolVersion/documentId/revision`；编辑器后续补充 `selectionChanged`、`annotationsSubmitted` 和 `proposalReady`。导出与宿主保存分别反馈结果及未保存状态，智能体运行状态不由核心推断或持久化。R1-03 只实现核心事件的数据契约，不表示事件生产和订阅已实现。
+核心事件包含 `annotationChanged`、`documentChanged` 和 `error`，结构携带 `protocolVersion/documentId/revision`；编辑器通过工作台 `onEvent` 提供 `selectionChanged`、`annotationsSubmitted` 和 `proposalReady`。导出与宿主保存分别反馈结果及未保存状态，智能体运行状态不由核心推断或持久化。核心会话生产并订阅核心事件，工作台事件不持久化进文档包。
 
 每个会话隔离文档、请求及候选引用。组件创建的会话随卸载释放，外部传入会话由创建者管理。外部智能体任务的取消和晚到结果归宿主处理，回传时仍检查会话、请求和修订。
 

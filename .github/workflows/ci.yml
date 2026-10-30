@@ -39,7 +39,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: node scripts/playwright.mjs install --with-deps chromium --only-shell
       - run: pnpm build
-      - run: node scripts/playwright.mjs test interaction.spec.ts
+      - run: node scripts/playwright.mjs test interaction.spec.ts workbench.spec.ts
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

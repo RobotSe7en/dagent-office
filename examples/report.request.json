@@ -10,11 +10,11 @@
       "baseRevision": 0,
       "status": "open",
       "anchor": {
-        "kind": "text",
         "nodeId": "n-summary",
         "from": 0,
         "to": 12,
-        "quote": "项目计划于第三季度完成。"
+        "quote": "项目计划于第三季度完成。",
+        "kind": "text"
       },
       "instruction": "改为第四季度完成，交付内容说明包含系统上线和用户培训。"
     },
@@ -35,14 +35,18 @@
     "kind": "document",
     "blocks": [
       {
-        "nodeId": "root",
-        "html": "<article data-node-id=\"root\" data-office-kind=\"document\">\n      <h1 data-node-id=\"n-title\">项目实施报告</h1>\n      <p data-node-id=\"n-summary\">项目计划于第三季度完成。</p>\n      <table data-node-id=\"n-deliverables\">\n        <thead>\n          <tr data-node-id=\"n-header-row\">\n            <th data-node-id=\"n-header-item\">交付项</th>\n            <th data-node-id=\"n-header-status\">状态</th>\n          </tr>\n        </thead>\n        <tbody>\n          <tr data-node-id=\"n-body-row\">\n            <td data-node-id=\"n-item\">业务系统</td>\n            <td data-node-id=\"n-status\">实施中</td>\n          </tr>\n        </tbody>\n      </table>\n    </article>"
+        "nodeId": "n-title",
+        "html": "<h1 data-node-id=\"n-title\">项目实施报告</h1>"
+      },
+      {
+        "nodeId": "n-summary",
+        "html": "<p data-node-id=\"n-summary\">项目计划于第三季度完成。</p>"
       }
     ],
     "styles": [
       {
         "path": "styles.css",
-        "css": ":root {\n  --body-color: #20252b;\n  --border-color: #c5ccd4;\n}\n\nbody {\n  margin: 0;\n  color: var(--body-color);\n  font-family: \"Noto Sans CJK SC\", \"Microsoft YaHei\", sans-serif;\n  font-size: 11pt;\n  line-height: 1.6;\n}\n\nh1 {\n  margin: 0 0 12pt;\n  font-size: 20pt;\n  font-weight: 700;\n}\n\np {\n  margin: 0 0 10pt;\n}\n\ntable {\n  width: 100%;\n  border-collapse: collapse;\n}\n\nth,\ntd {\n  padding: 6pt;\n  border: 0.5pt solid var(--border-color);\n  text-align: left;\n}\n"
+        "css": ":root{--body-color:#20252b;--border-color:#c5ccd4}body{margin:0;color:var(--body-color);font-family:\"Noto Sans CJK SC\",\"Microsoft YaHei\",sans-serif;font-size:11pt;line-height:1.6}h1{margin:0 0 12pt;font-size:20pt;font-weight:700}p{margin:0 0 10pt}table{width:100%;border-collapse:collapse}th,td{padding:6pt;border:0.5pt solid var(--border-color);text-align:left}"
       }
     ],
     "metadata": {
@@ -73,6 +77,7 @@
     "replaceFragment",
     "insertFragment",
     "removeNode",
-    "setStyle"
+    "setStyle",
+    "replaceAsset"
   ]
 }
