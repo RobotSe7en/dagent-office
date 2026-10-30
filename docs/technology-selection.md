@@ -121,3 +121,7 @@ ibisOffice 采用 AGPL-3.0-only 和商业双授权。本项目当前不依赖、
 ## R1-12 分页与转换依赖
 
 分页、字段显示、共享字体和打印投影为自研 `render` 包，运行时只依赖 `core`。没有使用第三方富文本编辑器、分页库或 Office 转换器。`node` 使用 `playwright-core 1.64.1`（Apache-2.0）管理宿主安装的 Chromium；浏览器和字体不随 SDK 打包，也不由运行时下载。IIFE 使用既有 Vite 工程依赖构建。许可证取自已安装包 manifest，版本锁定于根锁文件。浏览器及字体基线、已验证范围与限制见[分页与渲染](pagination-rendering.md)。
+
+## R1-13 原生导出依赖
+
+`office` 的 HTML/CSS 解析复用 `parse5 8.0.1`（MIT）与 `css-tree 3.2.1`（MIT），版本与 `core` 一致；开发类型包 `@types/css-tree 3.2.0` 使用 MIT。OOXML 属性、故事、关系、字段、批注和资源映射由本项目实现，ZIP/XML 继续使用已有的 fflate 与 saxes。没有新增 Office 转换或富文本编辑器依赖。LibreOffice、Poppler 与 Fontconfig 只用于开发和 CI 的实际重开验收，运行时不调用它们。

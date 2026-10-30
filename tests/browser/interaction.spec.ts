@@ -312,6 +312,7 @@ test("native rich comments retain their body and auxiliary stories cannot enter 
 });
 
 test("region coordinates exclude zoom and scrolling and preserve empty regions", async ({ page }) => {
+  const errors: string[] = []; page.on("pageerror", (error) => errors.push(error.message));
   await mount(page);
   await page.getByRole("button", { name: "矩形框选", exact: true }).click();
   let key: string | undefined;
@@ -335,6 +336,12 @@ test("region coordinates exclude zoom and scrolling and preserve empty regions",
   await page.getByLabel("预览缩放").selectOption("1");
   await page.evaluate(() => window.interactionHost.settle());
   expect(await page.evaluate(() => window.interactionHost.session!.getAnnotations()[0]!.status)).toBe("open");
+  await page.evaluate(async () => {
+    window.interactionHost.view!.setZoom(2);
+    window.interactionHost.view!.dispose();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  });
+  expect(errors).toEqual([]);
 });
 
 test("regions hit multiple nodes and layout changes require explicit reanchoring", async ({ page }) => {

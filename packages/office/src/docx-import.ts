@@ -62,6 +62,7 @@ interface CommentState {
   bodyNodeId: string;
   ranges: TextRange[];
   point?: string;
+  resolved?: boolean;
 }
 /** Serialized HTML size without allocating an escaped string or UTF-8 buffer. */
 function htmlBytes(value: string): number {
@@ -410,7 +411,6 @@ class Importer {
     const mainStory = this.story("main", "main");
     this.currentStory = "main";
     for (const type of [
-      "commentsExtended",
       "commentsExtensible",
       "commentsIds",
       "people",
@@ -467,7 +467,7 @@ class Importer {
         annotationId: "comment-" + id,
         documentId: this.documentId,
         baseRevision: 0,
-        status: "open",
+        status: comment.resolved ? "resolved" : "open",
         bodyNodeId: comment.bodyNodeId,
         sourceId: id,
         ...(author !== undefined
@@ -747,7 +747,8 @@ class Importer {
           ]) {
             if (
               standalone[name] !== undefined &&
-              inherited[name] !== standalone[name]
+              inherited[name] !== standalone[name] &&
+              css[name] === undefined
             )
               css[name] = inherited[name]!;
           }
@@ -1232,7 +1233,10 @@ class Importer {
   }
   private readComments(): void {
     const part = this.opc.related(this.main, "comments");
-    if (!part) return;
+    if (!part) {
+      if (this.opc.related(this.main, "commentsExtended")) fail(this.opc.read(this.main), "Comment status requires a classic comments part.");
+      return;
+    }
     const root = this.opc.read(part);
     if (root.uri !== W || root.name !== "comments")
       fail(root, "The comments part has an invalid root.");
@@ -1246,6 +1250,35 @@ class Importer {
       story.children.push(...this.readStoryContent(part, "comment-" + id, source));
       this.auxiliary.push(story);
       this.comments.set(id, { source, bodyNodeId: this.id(story), ranges: [] });
+    }
+    const extended = this.opc.related(this.main, "commentsExtended");
+    if (extended) {
+      const ns = "http://schemas.microsoft.com/office/word/2012/wordml";
+      const w14 = "http://schemas.microsoft.com/office/word/2010/wordml";
+      const extension = this.opc.read(extended);
+      if (extension.uri !== ns || extension.name !== "commentsEx") fail(extension, "The comment status extension has an invalid root.");
+      check(extension, ["commentEx"], ns);
+      const byParagraph = new Map<string, CommentState>();
+      const paragraphs = (source: XmlNode): XmlNode[] => source.content.flatMap((item) => typeof item === "string" ? [] : [...(item.uri === W && item.name === "p" ? [item] : []), ...paragraphs(item)]);
+      for (const comment of this.comments.values()) {
+        const id = attr(paragraphs(comment.source).at(-1), "paraId", w14)?.toUpperCase();
+        if (!id) continue;
+        if (!/^[0-9A-F]{8}$/.test(id) || byParagraph.has(id)) fail(comment.source, "A comment paragraph identity is invalid or repeated.");
+        byParagraph.set(id, comment);
+      }
+      const seen = new Set<string>();
+      for (const status of elements(extension, "commentEx", ns)) {
+        check(status, [], ns);
+        if (attr(status, "paraIdParent", ns) !== undefined) unsupported(status, "Comment replies are not supported.");
+        for (const key of status.attrs.keys()) if (![ns + " paraId", ns + " done"].includes(key)) unsupported(status, "An unknown comment status extension attribute is not supported.");
+        const id = attr(status, "paraId", ns)?.toUpperCase();
+        const comment = id ? byParagraph.get(id) : undefined;
+        if (!id || !comment || seen.has(id)) fail(status, "A comment status refers to an unknown or repeated comment paragraph.");
+        seen.add(id);
+        const done = attr(status, "done", ns) ?? "0";
+        if (!["0", "1", "true", "false", "on", "off"].includes(done)) fail(status, "A comment resolved state is invalid.");
+        comment.resolved = ["1", "true", "on"].includes(done);
+      }
     }
   }
   private image(source: XmlNode): Html {

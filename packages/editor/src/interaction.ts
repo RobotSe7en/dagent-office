@@ -428,11 +428,21 @@ export function mountDocumentInteraction(
     view.addEventListener("scroll", highlight, { signal });
     view.addEventListener("resize", layout, { signal });
     frame.fonts.addEventListener("loadingdone", layout, { signal });
-    const observer = new ResizeObserver(() => { resizePlane(); layout(); });
+    let resizeQueued: number | undefined;
+    const observer = new ResizeObserver(() => {
+      if (resizeQueued !== undefined || signal.aborted) return;
+      resizeQueued = document.defaultView!.requestAnimationFrame(() => {
+        resizeQueued = undefined;
+        if (!signal.aborted) { resizePlane(); layout(); }
+      });
+    });
     observer.observe(source.root);
     observer.observe(preview!.element);
     observer.observe(stage);
-    frameCleanup = () => { listeners.abort(); observer.disconnect(); };
+    frameCleanup = () => {
+      listeners.abort(); observer.disconnect();
+      if (resizeQueued !== undefined) document.defaultView!.cancelAnimationFrame(resizeQueued);
+    };
     setZoom(zoom);
     attempt(invalidateRegions);
   }

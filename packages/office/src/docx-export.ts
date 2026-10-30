@@ -1,0 +1,469 @@
+import { DEFAULT_DOCUMENT_READ_LIMITS, DocumentError, openDocument } from "@dagent-office/core";
+import type { DeepReadonly, DocumentModel, DocumentPackage, DocumentReadLimits, DocumentSection, DocumentSnapshot, PageSetup, WordMetadata } from "@dagent-office/core";
+import type { DocumentZipOptions } from "./document-zip.js";
+import { writeOpcZip } from "./document-zip.js";
+import { xml } from "./ooxml/xml.js";
+import { ExportAnnotations } from "./export/annotations.js";
+import type { UnexportedAnnotation } from "./export/annotations.js";
+import { ExportCss } from "./export/css.js";
+import type { Css } from "./export/css.js";
+import { contentType, OutputOpc } from "./export/opc.js";
+import { cellProperties, difference, paragraphKeys, paragraphProperties, pick, points, runKeys, runProperties, tableProperties, unsupported } from "./export/properties.js";
+import { children, contains, element, parseSource } from "./export/source.js";
+import type { SourceElement, SourceNode, SourceTree } from "./export/source.js";
+import type { HtmlNumbering } from "./export/styles.js";
+import { ExportStyles } from "./export/styles.js";
+import { color, fontName, nativeInteger } from "./export/values.js";
+import { attributes, declaration, empty, escapeXml, namespaces, orderedProperties, value, XmlParts } from "./export/xml.js";
+
+export interface DocxExportOptions extends DocumentZipOptions {}
+export interface DocxExportReport {
+  readonly documentId: string;
+  readonly revision: number;
+  readonly exportedAnnotationIds: readonly string[];
+  readonly unexportedAnnotations: readonly UnexportedAnnotation[];
+}
+export interface DocxExportResult { readonly bytes: Uint8Array; readonly report: DocxExportReport }
+interface Buffer { add(value: string): void; finish(): void }
+type Field = DeepReadonly<WordMetadata["fields"][number]>;
+interface FieldState { definition: Field; offset: number; result: boolean }
+const paragraphTags = new Set(["p", "h1", "h2", "h3", "h4", "h5", "h6"]);
+const blockTags = new Set([...paragraphTags, "table", "div", "section", "article", "ul", "ol", "li"]);
+const tableRows = (table: SourceElement): SourceElement[] => children(table).flatMap((node) => node.tag === "tr" ? [node] : ["thead", "tbody", "tfoot"].includes(node.tag) ? children(node, "tr") : []);
+const borderKeys = (css: Css): string[] => Object.keys(css).filter((key) => key.startsWith("border-"));
+const date = (raw: string | undefined): string | undefined => {
+  if (raw !== undefined && (!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)$/.test(raw) || !Number.isFinite(Date.parse(raw)))) unsupported("A comment or revision date cannot be represented as an XML dateTime.");
+  return raw;
+};
+class Exporter {
+  private readonly files: DocumentPackage;
+  private readonly snapshot: DocumentSnapshot;
+  private readonly tree: SourceTree;
+  private readonly css: ExportCss;
+  private readonly styles: ExportStyles;
+  private readonly annotations: ExportAnnotations;
+  private readonly opc: OutputOpc;
+  private readonly fields: ReadonlyMap<string, Field>;
+  private readonly fieldEnds: ReadonlyMap<string, Field>;
+  private readonly links: ReadonlyMap<string, DeepReadonly<WordMetadata["hyperlinks"][number]>>;
+  private readonly revisions: ReadonlyMap<string, DeepReadonly<WordMetadata["revisions"][number]>>;
+  private readonly bookmarkStarts: ReadonlyMap<string, { id: number; name: string }>;
+  private readonly bookmarkEnds: ReadonlyMap<string, number>;
+  private readonly auxiliary = new Map<string, { path: string; kind: "header" | "footer"; relation: string }>();
+  private readonly media = new Map<string, string>();
+  private readonly mainStories: SourceElement[];
+  private part = "word/document.xml";
+  private output: Buffer;
+  private fieldStack: FieldState[] = [];
+  private deleted = false;
+  private width = 468;
+  private drawingId = 0;
+  private mappedCells = 0;
+  private tableWork = 0;
+  private readonly flowStyles = new WeakMap<SourceElement, Css>();
+  private readonly visibility = new WeakMap<SourceNode, boolean>();
+  private readonly emittedText = new WeakSet<SourceNode>();
+  constructor(document: DocumentModel, private readonly limits: DocumentReadLimits) {
+    this.files = document.serialize(); this.snapshot = document.snapshot(); this.tree = parseSource(this.snapshot.html, limits);
+    const word = this.snapshot.metadata.word;
+    this.css = new ExportCss(this.snapshot.styles.map((style) => style.css), limits, new Set(word?.revisions.map((item) => item.nodeId)));
+    for (const node of this.tree.elements) if (contains(this.tree.root, node)) this.assertFormatting(node, this.css.get(node));
+    const main = word?.stories.filter((story) => story.kind === "main").map((story) => this.tree.byId.get(story.rootNodeId)!) ?? [this.tree.root];
+    this.styles = new ExportStyles(this.css, word, this.snapshot.metadata.locale, limits, this.css.get(main[0]!));
+    this.mainStories = main;
+    const stories = word?.stories.filter((story) => story.kind !== "comment").map((story) => this.tree.byId.get(story.rootNodeId)!) ?? main;
+    this.opc = new OutputOpc(new XmlParts(limits));
+    this.output = this.opc.part(this.part, "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml");
+    this.fields = new Map(word?.fields.map((field) => [field.nodeId, field]) ?? []);
+    this.fieldEnds = new Map(word?.fields.filter((field) => field.endNodeId).map((field) => [field.endNodeId!, field]) ?? []);
+    this.links = new Map(word?.hyperlinks.map((link) => [link.nodeId, link]) ?? []);
+    this.revisions = new Map(word?.revisions.map((revision) => [revision.nodeId, revision]) ?? []);
+    this.bookmarkStarts = new Map(word?.bookmarks.map((bookmark, index) => [bookmark.startNodeId, { id: index, name: bookmark.name }]) ?? []);
+    this.bookmarkEnds = new Map(word?.bookmarks.map((bookmark, index) => [bookmark.endNodeId, index]) ?? []);
+    for (const story of word?.stories ?? []) if (story.kind === "header" || story.kind === "footer") {
+      const path = "word/" + story.kind + (this.auxiliary.size + 1) + ".xml";
+      this.auxiliary.set(story.storyId, { path, kind: story.kind, relation: this.opc.relate(this.part, story.kind, path.slice(5)) });
+    }
+    const mark = (node: SourceNode): void => { if (!element(node)) this.emittedText.add(node); else node.children.forEach(mark); };
+    for (const parent of this.tree.elements) if (paragraphTags.has(parent.tag) || ["article", "section", "div", "li", "td", "th"].includes(parent.tag)) {
+      for (const node of this.flow(parent.children, parent)) if (!element(node) || this.flowStyles.has(node) || !blockTags.has(node.tag)) mark(node);
+    }
+    this.annotations = new ExportAnnotations(this.tree, this.snapshot.annotations, stories, limits.maxNodes * 128, (node) => this.emittedText.has(node));
+  }
+  private add(value: string): void { this.output.add(value); }
+  private assertFormatting(node: SourceElement, css: Css): void {
+    if (css["word-spacing"] && !["normal", "0", "0pt", "0px"].includes(css["word-spacing"])) unsupported("Native DOCX cannot preserve independent word spacing in this profile.");
+    if (css["font-weight"] && !["normal", "bold", "400", "700"].includes(css["font-weight"])) unsupported("Native DOCX supports regular and bold font weights in this profile.");
+    if (["pre", "pre-line", "break-spaces"].includes(css["white-space"] ?? "")) unsupported("This whitespace layout has no supported native DOCX representation.");
+    if (css["list-style-position"] === "inside") unsupported("Inside HTML list markers have no supported native DOCX representation.");
+    if (css["white-space"] === "nowrap") {
+      let cell: SourceElement | undefined = node;
+      while (cell && !["td", "th"].includes(cell.tag)) cell = cell.parent;
+      if (!cell || this.css.get(cell)["white-space"] !== "nowrap") unsupported("Nonwrapping text outside a nonwrapping table cell has no supported native DOCX representation.");
+    }
+    if (["td", "th"].includes(node.tag) && css.height && !["auto", "initial"].includes(css.height)) unsupported("Cell height must be applied to its row for native DOCX export.");
+    if (!paragraphTags.has(node.tag) && !["table", "td", "th"].includes(node.tag)) for (const side of ["top", "right", "bottom", "left"]) {
+      const style = css["border-" + side + "-style"], width = css["border-" + side + "-width"];
+      if (style && !["none", "hidden"].includes(style) && width !== "0" && width !== "0pt" && width !== "0px") unsupported("Borders on this HTML element have no supported native DOCX representation.");
+    }
+    if (css["text-decoration-line"]?.includes("line-through") && !["solid", "double"].includes(css["text-decoration-style"] ?? "solid")) unsupported("This strike decoration has no supported native DOCX representation.");
+    for (const key of ["min-width", "max-width", "min-height", "max-height"]) if (css[key] && !["none", "auto", "0", "0px", "0pt", "initial"].includes(css[key])) unsupported("CSS minimum and maximum dimensions have no supported native DOCX representation.");
+    if (!["table", "td", "th", "tr", "img"].includes(node.tag)) {
+      for (const key of ["width", "height"]) if (css[key] && !["auto", "initial"].includes(css[key])) unsupported("Fixed dimensions on this HTML element have no supported native DOCX representation.");
+      for (const side of ["top", "right", "bottom", "left"]) if (css["padding-" + side] && points(css["padding-" + side]!, css, this.width) !== 0) unsupported("Padding on this HTML element has no supported native DOCX representation.");
+    }
+    if (node.tag === "table" && (css["border-collapse"] !== "collapse" || css["border-spacing"] && !/^(?:0(?:px|pt)?)(?:\s+0(?:px|pt)?)?$/.test(css["border-spacing"]))) unsupported("Native DOCX export requires collapsed tables without cell spacing.");
+    if (node.tag === "tr" && css["background-color"] !== "transparent") unsupported("Row background color must be applied to cells for native DOCX export.");
+    if (css["white-space"] === "normal" && (paragraphTags.has(node.tag) || ["td", "th", "li"].includes(node.tag) && !children(node).some((child) => paragraphTags.has(child.tag) || ["table", "ul", "ol", "div"].includes(child.tag)))) {
+      const lines: string[][] = [[]]; let normal = true;
+      const visit = (child: SourceNode): void => {
+        if (!element(child)) { if (this.css.get(child.parent)["white-space"] !== "normal") normal = false; lines.at(-1)!.push(child.text); }
+        else if (child.tag === "br") lines.push([]);
+        else if (child.tag === "img") lines.at(-1)!.push("\ufffc");
+        else child.children.forEach(visit);
+      };
+      node.children.forEach(visit);
+      if (normal && lines.some((parts) => { const line = parts.join(""); return line !== line.replace(/[\t\n\r\f ]+/g, " ").replace(/^ | $/g, ""); })) unsupported("Normalize collapsible HTML whitespace or use pre-wrap before native DOCX export.");
+    }
+  }
+  private setup(section: DeepReadonly<DocumentSection>): DeepReadonly<PageSetup> { return section.pageSetup ?? this.snapshot.metadata.pageSetup; }
+  private sectionProperties(section: DeepReadonly<DocumentSection>): string {
+    const setup = this.setup(section); let out = "<w:sectPr>";
+    for (const [key, kind] of [["headers", "header"], ["footers", "footer"]] as const) for (const [type, id] of Object.entries(section[key] ?? {})) {
+      const story = id ? this.auxiliary.get(id) : undefined; if (!story || story.kind !== kind) unsupported("A section auxiliary story cannot be exported.");
+      out += empty("w:" + kind + "Reference", { "w:type": type, "r:id": story!.relation });
+    }
+    out += value("type", section.breakType ?? "nextPage");
+    out += empty("w:pgSz", { "w:w": nativeInteger(setup.width, 20, 1), "w:h": nativeInteger(setup.height, 20, 1), ...(setup.width > setup.height ? { "w:orient": "landscape" } : {}) });
+    out += empty("w:pgMar", { "w:top": nativeInteger(setup.margins.top, 20, 0), "w:right": nativeInteger(setup.margins.right, 20, 0), "w:bottom": nativeInteger(setup.margins.bottom, 20, 0), "w:left": nativeInteger(setup.margins.left, 20, 0), "w:header": nativeInteger(section.headerDistance ?? 36, 20, 0), "w:footer": nativeInteger(section.footerDistance ?? 36, 20, 0), "w:gutter": 0 });
+    if (section.pageNumberStart !== undefined || section.pageNumberFormat) out += empty("w:pgNumType", { "w:start": section.pageNumberStart, "w:fmt": section.pageNumberFormat });
+    out += value("titlePg", section.differentFirstPage ? "1" : "0") + "</w:sectPr>"; return out;
+  }
+  private runDifference(css: Css, expected: Css): Record<string, string> {
+    const properties = { ...difference(css, expected, runKeys) };
+    for (const key of ["font-family", "--word-font-ascii", "--word-font-hAnsi", "--word-font-eastAsia", "--word-font-cs"]) if (properties[key] && expected[key] && fontName(properties[key]) === fontName(expected[key])) delete properties[key];
+    if (properties.color && expected.color && color(properties.color) === color(expected.color)) delete properties.color;
+    const weight = (raw: string | undefined): number => raw === "bold" ? 700 : raw === "normal" ? 400 : Number(raw);
+    if (properties["font-weight"] && weight(properties["font-weight"]) === weight(expected["font-weight"])) delete properties["font-weight"];
+    if (properties["text-decoration-color"] && expected["text-decoration-color"]?.toLowerCase() === "currentcolor" && color(properties["text-decoration-color"], css.color) === color(css.color!)) delete properties["text-decoration-color"];
+    return properties;
+  }
+  private nativeRun(css: Css, expected: Css, character?: string, role?: string, language?: string): string {
+    const properties = this.runDifference(css, expected);
+    // A script span selects its source role. Preserve the other three source
+    // families even when a host changes just one script's font-family.
+    if (role) {
+      if (fontName(css["font-family"]!) !== fontName(expected["--word-font-" + role] ?? expected["font-family"]!)) properties["font-family"] = css["font-family"]!;
+      else delete properties["font-family"];
+    }
+    const r = (character ? value("rStyle", this.styles.ids.get(character) ?? character) : "") + runProperties(properties, expected, false, role) + (language ? empty("w:lang", { "w:val": language }) : "");
+    return r ? "<w:rPr>" + r + "</w:rPr>" : "";
+  }
+  private emitText(node: SourceNode, text: string, css: Css, expected: Css, character?: string, role?: string, language?: string): void {
+    const boundaries = [...new Set([0, text.length, ...this.annotations.offsets(node)])].sort((a, b) => a - b);
+    for (let index = 0; index < boundaries.length; index++) {
+      const start = boundaries[index]!; this.add(this.annotations.at(node, start));
+      const end = boundaries[index + 1]; if (end === undefined || end <= start) continue;
+      const textName = this.deleted ? "delText" : "t", raw = text.slice(start, end);
+      const pieces = raw.split(/([\t\n])/);
+      this.add("<w:r>" + this.nativeRun(css, expected, character, role ?? (/^[\u0000-\u007f]*$/.test(raw) ? "ascii" : undefined), language));
+      for (const piece of pieces) if (piece) this.add(piece === "\t" ? "<w:tab/>" : piece === "\n" ? "<w:br/>" : "<w:" + textName + ' xml:space="preserve">' + escapeXml(piece) + "</w:" + textName + ">");
+      this.add("</w:r>");
+    }
+  }
+  private fieldControl(type: "begin" | "separate" | "end", field?: Field): void {
+    this.add("<w:r>" + empty("w:fldChar", { "w:fldCharType": type, ...(field ? { "w:fldLock": field.locked === undefined ? undefined : field.locked ? 1 : 0, "w:dirty": field.dirty === undefined ? undefined : field.dirty ? 1 : 0 } : {}) }) + "</w:r>");
+  }
+  private instruction(state: FieldState, until: number): void {
+    if (until < state.offset || until > state.definition.instruction.length) unsupported("A nested field instruction offset cannot be exported.");
+    if (until > state.offset) this.add('<w:r><w:instrText xml:space="preserve">' + escapeXml(state.definition.instruction.slice(state.offset, until)) + "</w:instrText></w:r>");
+    state.offset = until;
+  }
+  private inline(node: SourceNode, paragraphStyle: string | undefined, character?: string, role?: string, language?: string): void {
+    if (!element(node)) {
+      const css = this.css.get(node.parent);
+      const textCss = ["td", "th"].includes(node.parent.tag) ? { ...css, "vertical-align": "baseline", "background-color": "transparent" } : css;
+      this.emitText(node, node.text, textCss, this.styles.runContext(paragraphStyle, character), character, role, language); return;
+    }
+    const id = node.attrs["data-node-id"] ?? "", css = this.css.get(node);
+    const requestedStyle = node.attrs["data-word-style"] ?? node.attrs["data-word-ignored-character-style"];
+    if (requestedStyle) character = requestedStyle;
+    role = node.attrs["data-word-script"] === "eastAsia" ? "eastAsia" : node.attrs["data-word-script"] === "cs" ? "cs" : node.attrs["data-word-script"] === "hAnsi" ? "hAnsi" : node.attrs["data-word-script"] === "ascii" ? "ascii" : role;
+    language = node.attrs.lang ?? language;
+    if (node.attrs["data-word-paragraph-mark"]) return;
+    const field = this.fields.get(id), end = this.fieldEnds.get(id), parent = this.fieldStack.at(-1);
+    if (parent && !parent.result) {
+      const nested = field && parent.definition.instructionFields?.find((item) => item.fieldNodeId === field.nodeId);
+      if (nested) this.instruction(parent, nested.offset);
+      else if (parent.definition.resultNodeIds?.includes(id) || node.attrs["data-word-field-result"] === parent.definition.nodeId) { this.instruction(parent, parent.definition.instruction.length); this.fieldControl("separate"); parent.result = true; }
+    }
+    this.add(this.annotations.at(node, 0));
+    const bookmark = this.bookmarkStarts.get(id); if (bookmark) this.add(empty("w:bookmarkStart", { "w:id": bookmark.id, "w:name": bookmark.name }));
+    const bookmarkEnd = this.bookmarkEnds.get(id); if (bookmarkEnd !== undefined) this.add(empty("w:bookmarkEnd", { "w:id": bookmarkEnd }));
+    if (end) {
+      const current = this.fieldStack.pop(); if (current?.definition !== end) unsupported("Unbalanced complex field controls cannot be exported.");
+      if (!current.result) { this.instruction(current, end.instruction.length); this.fieldControl("separate"); }
+      this.fieldControl("end"); return;
+    }
+    if (field) {
+      if (!field.endNodeId) {
+        this.add("<w:fldSimple" + attributes({ "w:instr": field.instruction, "w:fldLock": field.locked === undefined ? undefined : field.locked ? 1 : 0, "w:dirty": field.dirty === undefined ? undefined : field.dirty ? 1 : 0 }) + ">");
+        for (const child of node.children) this.inline(child, paragraphStyle, character, role, language);
+        this.add("</w:fldSimple>"); return;
+      }
+      this.fieldControl("begin", field); const state = { definition: field, offset: 0, result: false }; this.fieldStack.push(state);
+      this.instruction(state, field.instructionFields?.[0]?.offset ?? field.instruction.length); return;
+    }
+    const link = this.links.get(id), revision = this.revisions.get(id);
+    if (link) this.add("<w:hyperlink" + attributes({ "w:anchor": link.bookmark, "r:id": link.target ? this.opc.relate(this.part, "hyperlink", link.target, true) : undefined }) + ">");
+    const previousDeleted = this.deleted;
+    if (revision) { this.add("<w:" + (revision.kind === "insert" ? "ins" : "del") + attributes({ "w:id": this.snapshot.metadata.word!.revisions.indexOf(revision), "w:author": revision.author ?? "", "w:date": date(revision.date) }) + ">"); this.deleted = revision.kind === "delete"; }
+    if (node.tag === "br") {
+      this.add("<w:r>" + this.nativeRun(css, this.styles.runContext(paragraphStyle, character), character, role, language) + empty("w:br", node.attrs["data-word-break"] === "page" ? { "w:type": "page" } : {}) + "</w:r>");
+      this.add(this.annotations.at(node, 1));
+    } else if (node.tag === "img") { this.image(node, css, paragraphStyle, character, role, language); this.add(this.annotations.at(node, 1)); }
+    else if (node.attrs["data-word-tab"]) this.emitText(node, "\t", css, this.styles.runContext(paragraphStyle, character), character, role, language);
+    else for (const child of node.children) this.inline(child, paragraphStyle, character, role, language);
+    if (revision) { this.add("</w:" + (revision.kind === "insert" ? "ins" : "del") + ">"); this.deleted = previousDeleted; }
+    if (link) this.add("</w:hyperlink>");
+  }
+  private image(node: SourceElement, css: Css, paragraphStyle?: string, character?: string, role?: string, language?: string): void {
+    const parts = this.snapshot.manifest.entrypoint.split("/").slice(0, -1);
+    // Source was validated against this entrypoint by core; decode exactly one
+    // URL layer, then look up only the already supplied resource bytes.
+    for (const token of node.attrs.src!.split("/")) { const segment = decodeURIComponent(token); if (segment === "..") parts.pop(); else if (segment !== ".") parts.push(segment); }
+    const src = parts.join("/"), descriptor = this.snapshot.manifest.assets.find((asset) => asset.path === src);
+    if (!descriptor) throw new DocumentError("AssetUnavailable", "An exported image resource is missing.");
+    let path = this.media.get(src);
+    if (!path) {
+      const ext: Record<string, string> = { "image/png": "png", "image/jpeg": "jpeg", "image/webp": "webp" };
+      if (!ext[descriptor.mimeType]) unsupported("An image container is outside the native DOCX export profile.");
+      path = "word/media/image" + (this.media.size + 1) + "." + ext[descriptor.mimeType]; this.media.set(src, path); this.opc.binary(path, descriptor.mimeType, this.files.get(src)!);
+    }
+    const width = css.width ? points(css.width, css, this.width) : Number(node.attrs.width) * .75, height = css.height ? points(css.height, css, this.width) : Number(node.attrs.height) * .75;
+    if (!(width > 0) || !(height > 0)) unsupported("An inline image requires finite native dimensions.");
+    const cx = nativeInteger(width, 12700, 1), cy = nativeInteger(height, 12700, 1), id = ++this.drawingId;
+    const rel = this.opc.relate(this.part, "image", path.slice(5));
+    this.add("<w:r>" + this.nativeRun(css, this.styles.runContext(paragraphStyle, character), character, role, language) + '<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">' + empty("wp:extent", { cx, cy }) + empty("wp:docPr", { id, name: "Image " + id, descr: node.attrs.alt ?? "" }) + '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic>' + '<pic:nvPicPr>' + empty("pic:cNvPr", { id: 0, name: "Image " + id, descr: node.attrs.alt ?? "" }) + '<pic:cNvPicPr/></pic:nvPicPr><pic:blipFill>' + empty("a:blip", { "r:embed": rel }) + '<a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/>' + empty("a:ext", { cx, cy }) + '</a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>');
+  }
+  private paragraph(node: SourceElement, section?: string, paragraphId?: string, list?: { id: string; level: number }): void {
+    const css = this.flowStyles.get(node) ?? this.css.get(node), id = node.attrs["data-node-id"] ?? "", style = node.attrs["data-word-style"];
+    this.add("<w:p" + attributes({ "w14:paraId": paragraphId }) + ">");
+    let props = (style ? value("pStyle", this.styles.ids.get(style) ?? style) : "");
+    const numId = node.attrs["data-word-numbering"] ? this.styles.numberingIds.get(node.attrs["data-word-numbering"]) : list?.id;
+    if (numId) props += '<w:numPr>' + value("ilvl", node.attrs["data-word-level"] ?? list?.level ?? 0) + value("numId", numId) + "</w:numPr>";
+    const expectedParagraph = this.styles.paragraphContext(style), paragraphCss = { ...css };
+    for (const side of ["top", "right", "bottom", "left"]) if (!paragraphCss["border-" + side + "-style"] && expectedParagraph["border-" + side + "-style"] && expectedParagraph["border-" + side + "-style"] !== "none") { paragraphCss["border-" + side + "-style"] = "none"; paragraphCss["border-" + side + "-width"] = "0pt"; }
+    props += paragraphProperties({ ...difference(paragraphCss, expectedParagraph, [...paragraphKeys, ...borderKeys(paragraphCss)]), "font-size": css["font-size"]! }, this.width);
+    const tabs = this.snapshot.metadata.word?.tabs.find((tab) => tab.paragraphNodeId === id);
+    if (tabs) props += '<w:tabs>' + tabs.stops.map((tab) => empty("w:tab", { "w:val": tab.alignment, "w:leader": tab.leader, "w:pos": nativeInteger(tab.position) })).join("") + "</w:tabs>";
+    if (/^h[1-6]$/.test(node.tag)) props += value("outlineLvl", Number(node.tag[1]) - 1);
+    const mark = children(node).find((child) => child.attrs["data-word-paragraph-mark"]);
+    const markProperties = mark ? this.runDifference(this.css.get(mark), this.styles.runContext(style)) : pick(this.runDifference(css, this.styles.runContext(style)), runKeys.filter((key) => key !== "background-color" && !key.startsWith("text-decoration") && !["vertical-align", "letter-spacing", "--word-run-shading", "--word-kerning-threshold"].includes(key)));
+    if (Object.keys(markProperties).length) props += "<w:rPr>" + runProperties(markProperties, this.styles.runContext(style)) + "</w:rPr>";
+    props += section ?? ""; this.add("<w:pPr>" + orderedProperties("pPr", props) + "</w:pPr>");
+    this.add(this.annotations.at(node, 0));
+    for (const child of node.children) this.inline(child, style);
+    this.add("</w:p>");
+  }
+  /** Group anonymous inline flow before writing paragraphs. Whitespace-only
+   * nodes between blocks are formatting only under normal white-space; spaces
+   * within an inline run and all pre-wrap characters retain their source leaf. */
+  private flow(nodes: readonly SourceNode[], container = nodes[0]?.parent): SourceNode[] {
+    const result: SourceNode[] = []; let pending: SourceNode[] = [];
+    const flush = (): void => {
+      if (!pending.length) return;
+      const visible = pending.some((node) => this.visible(node));
+      if (!visible) {
+        for (const node of pending) if (element(node) && (this.bookmarkStarts.has(node.attrs["data-node-id"] ?? "") || this.bookmarkEnds.has(node.attrs["data-node-id"] ?? ""))) result.push(node);
+      } else {
+        const parent = container ?? pending[0]!.parent!;
+        const paragraph: SourceElement = { tag: "p", attrs: {}, parent, children: pending, from: pending[0]!.from, to: pending.at(-1)!.to };
+        const css = this.css.get(parent);
+        this.flowStyles.set(paragraph, ["td", "th"].includes(parent.tag) ? { ...this.css.emptyStyle(), ...pick(css, [...runKeys, "text-align", "text-indent", "line-height", "widows", "orphans", ...Object.keys(css).filter((key) => key.startsWith("--"))]), "background-color": "transparent", "vertical-align": "baseline" } : css); result.push(paragraph);
+      }
+      pending = [];
+    };
+    for (const node of nodes) {
+      if (element(node) && blockTags.has(node.tag)) { flush(); result.push(node); }
+      else pending.push(node);
+    }
+    flush(); return result;
+  }
+  private visible(node: SourceNode): boolean {
+    const known = this.visibility.get(node); if (known !== undefined) return known;
+    const result = element(node) ? ["img", "br"].includes(node.tag) || node.children.some((child) => this.visible(child)) : /[^\t\n\r\f ]/.test(node.text) || node.text.length > 0 && this.css.get(node.parent)["white-space"] !== "normal";
+    this.visibility.set(node, result); return result;
+  }
+  private blocks(nodes: readonly SourceNode[], finalSection?: string, paragraphId?: string): void {
+    const significant = this.flow(nodes);
+    if (!significant.length) { this.add("<w:p" + attributes({ "w14:paraId": paragraphId }) + "><w:pPr>" + (finalSection ?? "") + "</w:pPr></w:p>"); return; }
+    for (let index = 0; index < significant.length; index++) {
+      const node = significant[index]!, last = index === significant.length - 1;
+      if (element(node) && node.from === node.to && (this.bookmarkStarts.has(node.attrs["data-node-id"] ?? "") || this.bookmarkEnds.has(node.attrs["data-node-id"] ?? ""))) {
+        this.inline(node, undefined);
+        if (last && (finalSection || paragraphId)) this.add("<w:p" + attributes({ "w14:paraId": paragraphId }) + "><w:pPr>" + (finalSection ?? "") + "</w:pPr></w:p>");
+      }
+      else if (element(node) && paragraphTags.has(node.tag)) this.paragraph(node, last ? finalSection : undefined, last ? paragraphId : undefined);
+      else if (element(node) && node.tag === "table") {
+        this.table(node);
+        if (last) this.add("<w:p" + attributes({ "w14:paraId": paragraphId }) + "><w:pPr>" + (finalSection ?? "") + "</w:pPr></w:p>");
+      } else if (element(node) && ["div", "section", "article", "li", "ul", "ol"].includes(node.tag)) {
+        if (node.tag === "ul" || node.tag === "ol") this.list(node, last ? finalSection : undefined, last ? paragraphId : undefined);
+        else {
+          const toc = node.attrs["data-word-content-control"] === "toc";
+          if (toc) this.add("<w:sdt><w:sdtPr>" + ["id", "alias", "tag"].map((key) => value(key, node.attrs["data-word-control-" + key])).join("") + '<w:docPartObj>' + value("docPartGallery", "Table of Contents") + "<w:docPartUnique/></w:docPartObj></w:sdtPr><w:sdtContent>");
+          this.blocks(node.children, last ? finalSection : undefined, last ? paragraphId : undefined);
+          if (toc) this.add("</w:sdtContent></w:sdt>");
+        }
+      } else {
+        this.add("<w:p" + attributes({ "w14:paraId": last ? paragraphId : undefined }) + "><w:pPr>" + (last ? finalSection ?? "" : "") + "</w:pPr>"); this.inline(node, undefined); this.add("</w:p>");
+      }
+    }
+  }
+  private table(node: SourceElement): void {
+    const css = this.css.get(node), info = this.snapshot.metadata.word?.tables.find((table) => table.nodeId === node.attrs["data-node-id"]), rows = tableRows(node);
+    const style = node.attrs["data-word-style"];
+    interface Cell { node: SourceElement; column: number; span: number; rows: number; continuation: boolean }
+    const matrix: Cell[][] = []; let active = new Map<number, Cell>(), columns = 0;
+    for (const row of rows) {
+      const rowCells: Cell[] = []; let column = 0, current = 0, remaining = active.size;
+      const cells = children(row).filter((cell) => ["td", "th"].includes(cell.tag)), next = new Map<number, Cell>();
+      while (current < cells.length || remaining > 0) {
+        // The expansion is bounded before constructing a continuation object.
+        if (++this.mappedCells > this.limits.maxNodes) throw new DocumentError("ResourceLimitExceeded", "DOCX table expansion exceeds its cell budget.");
+        const above = active.get(column); let cell: Cell;
+        if (above) { remaining--; cell = { ...above, rows: above.rows - 1, continuation: true }; }
+        else { const source = cells[current++]; if (!source) unsupported("A table row leaves an unsupported hole in its native grid."); cell = { node: source!, column, span: Number(source!.attrs.colspan ?? 1), rows: Number(source!.attrs.rowspan ?? 1), continuation: false }; }
+        if (cell.span < 1 || !Number.isSafeInteger(cell.span) || !Number.isSafeInteger(cell.rows) || cell.rows < 1 || column + cell.span > this.limits.maxNodes) unsupported("A table span exceeds the native grid profile.");
+        this.tableWork += cell.span;
+        if (this.tableWork > this.limits.maxNodes * 128) throw new DocumentError("ResourceLimitExceeded", "DOCX table mapping exceeds its work budget.");
+        for (let offset = 1; offset < cell.span; offset++) if (active.has(column + offset)) unsupported("A table cell overlaps a vertical merge.");
+        rowCells.push(cell); if (cell.rows > 1) next.set(column, cell); column += cell.span;
+      }
+      active = next; columns = Math.max(columns, column); matrix.push(rowCells);
+    }
+    if (active.size || !columns || matrix.some((row) => row.reduce((total, cell) => total + cell.span, 0) !== columns)) unsupported("A table has an incomplete or nonrectangular grid.");
+    const tableWidth = css.width && css.width !== "auto" ? points(css.width, css, this.width) : this.width;
+    const grid = info?.grid ?? Array.from({ length: columns }, () => tableWidth / columns);
+    if (grid.length !== columns) unsupported("The current table structure no longer matches its native column grid.");
+    this.add("<w:tbl><w:tblPr>" + (style ? value("tblStyle", this.styles.ids.get(style) ?? style) : "") + (info?.rowBandSize ? value("tblStyleRowBandSize", info.rowBandSize) : "") + (info?.columnBandSize ? value("tblStyleColBandSize", info.columnBandSize) : "") + tableProperties(css) + (info?.lookMask !== undefined ? empty("w:tblLook", { "w:val": info.lookMask.toString(16).padStart(4, "0") }) : "") + "</w:tblPr><w:tblGrid>");
+    for (const width of grid) this.add(empty("w:gridCol", { "w:w": nativeInteger(width, 20, 1) })); this.add("</w:tblGrid>");
+    matrix.forEach((cells, index) => {
+      const row = rows[index]!, rowCss = this.css.get(row);
+      this.add("<w:tr><w:trPr>" + (rowCss["break-inside"] === "avoid" ? value("cantSplit", 1) : "") + (rowCss.height && rowCss.height !== "auto" ? empty("w:trHeight", { "w:val": nativeInteger(points(rowCss.height, rowCss), 20, 0), "w:hRule": "atLeast" }) : "") + (row.attrs["data-word-repeat-header"] === "true" || row.parent?.tag === "thead" ? value("tblHeader", 1) : "") + "</w:trPr>");
+      for (const cell of cells) {
+        const cellCss = this.css.get(cell.node);
+        this.add("<w:tc><w:tcPr>" + orderedProperties("tcPr", (cell.span > 1 ? value("gridSpan", cell.span) : "") + (cell.continuation || cell.rows > 1 ? value("vMerge", cell.continuation ? "continue" : "restart") : "") + cellProperties(cellCss)) + "</w:tcPr>");
+        if (cell.continuation) this.add("<w:p/>"); else {
+          const width = this.width; this.width = grid.slice(cell.column, cell.column + cell.span).reduce((total, value) => total + value, 0); this.blocks(cell.node.children); this.width = width;
+        }
+        this.add("</w:tc>");
+      }
+      this.add("</w:tr>");
+    }); this.add("</w:tbl>");
+  }
+  private list(node: SourceElement, section?: string, paragraphId?: string, depth = 0): void {
+    if (depth > 8) unsupported("Native DOCX supports up to nine numbering levels.");
+    const items = children(node, "li"), ordered = node.tag === "ol";
+    if (node.attrs.reversed !== undefined) unsupported("Reversed HTML numbering is outside the native DOCX profile.");
+    const formatMap: Record<string, string> = { decimal: "decimal", "lower-alpha": "lowerLetter", "upper-alpha": "upperLetter", "lower-roman": "lowerRoman", "upper-roman": "upperRoman", disc: "bullet", circle: "bullet", square: "bullet", none: "none" };
+    const raw = this.css.get(node)["list-style-type"] ?? (ordered ? "decimal" : "disc"), format = formatMap[raw] ?? unsupported("This list marker has no supported native DOCX representation.");
+    const create = (start: number): string => {
+      if (!Number.isSafeInteger(start) || start < 0 || start > 2147483647) unsupported("A list counter is outside the native numbering profile.");
+      const id = String(this.styles.numberingIds.size + this.htmlLists.length + 1);
+      this.htmlLists.push({ id, start, level: depth, format, text: format === "bullet" ? raw === "square" ? "▪" : raw === "circle" ? "○" : "•" : format === "none" ? "" : "%" + (depth + 1) + "." }); return id;
+    };
+    let id = create(Number(node.attrs.start ?? 1));
+    items.forEach((item, index) => {
+      if (item.attrs.value !== undefined) id = create(Number(item.attrs.value));
+      let first = true; const content = this.flow(item.children, item);
+      let pending: SourceNode[] = [];
+      const emit = (nodes: SourceNode[], last: boolean): void => {
+        if (!nodes.length) return;
+        const paragraph = nodes.length === 1 && element(nodes[0]!) && paragraphTags.has(nodes[0]!.tag) ? nodes[0] as SourceElement : { ...item, tag: "p", children: nodes };
+        if (!this.flowStyles.has(paragraph) && paragraph.tag === "p" && paragraph !== nodes[0]) this.flowStyles.set(paragraph, this.css.get(item));
+        this.paragraph(paragraph, last && index === items.length - 1 ? section : undefined, last && index === items.length - 1 ? paragraphId : undefined, first ? { id, level: depth } : undefined); first = false;
+      };
+      content.forEach((child, position) => {
+        const block = element(child) && (paragraphTags.has(child.tag) || ["ol", "ul", "table"].includes(child.tag));
+        if (block) {
+          emit(pending, false); pending = [];
+          if (element(child) && ["ol", "ul"].includes(child.tag)) this.list(child, position === content.length - 1 && index === items.length - 1 ? section : undefined, position === content.length - 1 && index === items.length - 1 ? paragraphId : undefined, depth + 1);
+          else if (element(child) && child.tag === "table") this.table(child);
+          else emit([child], position === content.length - 1);
+        } else pending.push(child);
+      });
+      emit(pending, true);
+      if (first && !content.length) this.paragraph({ ...item, tag: "p" }, index === items.length - 1 ? section : undefined, index === items.length - 1 ? paragraphId : undefined, { id, level: depth });
+    });
+  }
+  private readonly htmlLists: HtmlNumbering[] = [];
+  private withStory(part: string, body: () => void): void {
+    const previous = { part: this.part, output: this.output, fields: this.fieldStack, deleted: this.deleted, width: this.width };
+    this.part = part; this.fieldStack = []; this.deleted = false;
+    try { body(); if (this.fieldStack.length) unsupported("A story has an unclosed field."); }
+    finally { this.part = previous.part; this.output = previous.output; this.fieldStack = previous.fields; this.deleted = previous.deleted; this.width = previous.width; }
+  }
+  write(): { files: ReadonlyMap<string, Uint8Array>; report: DocxExportReport } {
+    const sections = this.snapshot.metadata.sections.map((section) => ({ section, root: this.tree.byId.get(section.rootNodeId)!, nodes: [] as SourceNode[] })).sort((left, right) => left.root.from - right.root.from || this.tree.elements.indexOf(left.root) - this.tree.elements.indexOf(right.root));
+    if (sections.some((left) => sections.some((right) => left !== right && contains(left.root, right.root)))) unsupported("Nested native section roots cannot be exported.");
+    let current = sections[0]!;
+    const collect = (node: SourceNode): void => {
+      if (!element(node)) { current.nodes.push(node); return; }
+      if (node.attrs["data-office-story"] && node.attrs["data-office-story"] !== "main") return;
+      const section = sections.find((section) => section.root === node);
+      if (section) { current = section; current.nodes.push(node); return; }
+      if (!["article", "section", "div"].includes(node.tag) || !sections.some((item) => contains(node, item.root))) { current.nodes.push(node); return; }
+      for (const child of node.children) collect(child);
+    };
+    this.mainStories.forEach(collect);
+    this.add(declaration + '<w:document' + namespaces + ' xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="w14"><w:body>');
+    sections.forEach(({ section, nodes }, index) => { const setup = this.setup(section); this.width = setup.width - setup.margins.left - setup.margins.right; this.blocks(nodes, index === sections.length - 1 ? undefined : this.sectionProperties(section)); });
+    this.add(this.sectionProperties(sections.at(-1)!.section) + "</w:body></w:document>"); this.output.finish();
+    if (this.fieldStack.length) unsupported("The main story has an unclosed field.");
+    for (const story of this.snapshot.metadata.word?.stories ?? []) {
+      const info = this.auxiliary.get(story.storyId); if (!info) continue;
+      this.withStory(info.path, () => { this.output = this.opc.part(info.path, contentType(info.kind)); const tag = info.kind === "header" ? "hdr" : "ftr"; this.add(declaration + "<w:" + tag + namespaces + ">"); this.blocks(this.tree.byId.get(story.rootNodeId)!.children); this.add("</w:" + tag + ">"); this.output.finish(); });
+    }
+    this.writeComments(); this.styles.write(this.opc); this.styles.writeNumbering(this.opc, this.htmlLists); this.writeSettings();
+    const core = this.opc.part("docProps/core.xml", "application/vnd.openxmlformats-package.core-properties+xml");
+    core.add(declaration + '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>' + escapeXml(this.snapshot.metadata.title ?? "") + "</dc:title></cp:coreProperties>"); core.finish();
+    this.opc.relate("", "officeDocument", "word/document.xml"); this.opc.relate("", "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties", "docProps/core.xml"); this.opc.finish();
+    const budget = { nodes: 0 }; for (const [path, bytes] of this.opc.parts.files) if (path.endsWith(".xml") || path.endsWith(".rels")) xml(bytes, path, this.limits, budget);
+    return { files: this.opc.parts.files, report: Object.freeze({ documentId: this.snapshot.manifest.documentId, revision: this.snapshot.manifest.revision, exportedAnnotationIds: Object.freeze(this.annotations.comments.map((comment) => comment.annotation.annotationId)), unexportedAnnotations: Object.freeze(this.annotations.omitted.map((item) => Object.freeze({ ...item }))) }) };
+  }
+  private writeComments(): void {
+    if (!this.annotations.comments.length) return;
+    const path = "word/comments.xml";
+    this.withStory(path, () => {
+      this.output = this.opc.part(path, contentType("comments")); this.add(declaration + "<w:comments" + namespaces + ' xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="w14">');
+      for (const comment of this.annotations.comments) {
+        const annotation = comment.annotation;
+        this.add("<w:comment" + attributes({ "w:id": comment.id, "w:author": annotation.author?.name ?? "", "w:initials": annotation.author?.initials, "w:date": date(annotation.date) }) + ">");
+        if (annotation.bodyNodeId) this.blocks(this.tree.byId.get(annotation.bodyNodeId)!.children, undefined, comment.paragraphId);
+        else this.add('<w:p w14:paraId="' + comment.paragraphId + '"><w:r><w:t xml:space="preserve">' + escapeXml(annotation.instruction!) + "</w:t></w:r></w:p>");
+        this.add("</w:comment>");
+      }
+      this.add("</w:comments>"); this.output.finish();
+    });
+    this.opc.relate("word/document.xml", "comments", "comments.xml");
+    const extended = this.opc.part("word/commentsExtended.xml", "application/vnd.ms-word.commentsExtended+xml");
+    extended.add(declaration + '<w15:commentsEx xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml">');
+    for (const comment of this.annotations.comments) extended.add(empty("w15:commentEx", { "w15:paraId": comment.paragraphId, "w15:done": comment.annotation.status === "resolved" ? 1 : 0 }));
+    extended.add("</w15:commentsEx>"); extended.finish(); this.opc.relate("word/document.xml", "http://schemas.microsoft.com/office/2011/relationships/commentsExtended", "commentsExtended.xml");
+  }
+  private writeSettings(): void {
+    const out = this.opc.part("word/settings.xml", contentType("settings")), tabs = this.snapshot.metadata.word?.tabs ?? [], intervals = new Set(tabs.map((tab) => tab.defaultInterval));
+    if (intervals.size > 1) unsupported("DOCX has one document-wide default tab interval.");
+    out.add(declaration + "<w:settings" + namespaces + ">" + value("evenAndOddHeaders", this.snapshot.metadata.word?.evenAndOddHeaders ? 1 : 0) + value("defaultTabStop", nativeInteger(tabs[0]?.defaultInterval ?? 36, 20, 1)) + value("autoHyphenation", this.snapshot.metadata.word?.automaticHyphenation ? 1 : 0) + value("updateFields", 0) + "</w:settings>"); out.finish(); this.opc.relate("word/document.xml", "settings", "settings.xml");
+  }
+}
+/** Generate a native, editable DOCX exclusively from the current validated HTML
+ * package. No original Office bytes, DOM, filesystem or network is consulted. */
+export function exportDocx(document: DocumentModel, options: DocxExportOptions = {}): DocxExportResult {
+  const model = openDocument(document.serialize(), options), limits = { ...DEFAULT_DOCUMENT_READ_LIMITS, ...options.limits };
+  if (model.snapshot().manifest.kind !== "document") throw new DocumentError("UnsupportedFormat", "DOCX export requires a Word document package.");
+  const output = new Exporter(model, limits).write();
+  return Object.freeze({ bytes: writeOpcZip(output.files, options), report: output.report });
+}
