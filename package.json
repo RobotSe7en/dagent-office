@@ -23,7 +23,8 @@
     "check": "pnpm check:boundaries && pnpm typecheck && pnpm test && pnpm build",
     "fixtures:docx": "python3 scripts/generate-docx-fixtures.py",
     "check:docx-reference": "python3 scripts/docx-reference.py",
-    "record:docx-reference": "python3 scripts/docx-reference.py --record"
+    "record:docx-reference": "python3 scripts/docx-reference.py --record",
+    "check:docx-export": "pnpm build:packages && node scripts/docx-export-acceptance.mjs"
   },
   "devDependencies": {
     "@dagent-office/core": "workspace:*",

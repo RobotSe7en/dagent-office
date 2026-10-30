@@ -1,0 +1,221 @@
+{
+  "environment": {
+    "libreOffice": "LibreOffice 25.8.1.1 580(Build:1)",
+    "poppler": "pdftotext version 25.03.0",
+    "fonts": [
+      {
+        "family": "Noto Sans CJK SC",
+        "sha256": "b76b0433203017ca80401b2ee0dd69350349871c4b19d504c34dbdd80541690a"
+      },
+      {
+        "family": "Noto Serif CJK SC",
+        "sha256": "5d9c31a059600193c9d7968a998bde886ccdc77e934006ad243b41794c496a7d"
+      },
+      {
+        "family": "Liberation Serif",
+        "sha256": "705903ae1382f0150f115d6f10a30f5b2f3d6ade649c474afe6366c39174fb65"
+      }
+    ],
+    "word": "not-verified",
+    "wps": "not-verified"
+  },
+  "cases": [
+    {
+      "file": "01-text-numbering.docx",
+      "inputSha256": "4bdf9e199cef667fef056fd147ce099394aab21a51bf06f0bad397d509824ad5",
+      "exportSha256": "72816f171e908b13a600a99015faf372466ebef830580c4f783e7607ba3379ff",
+      "reopenedSha256": "0c433c5776220cdd384cc6898adf714784821a7cb6065821479644ed197f7b07",
+      "pages": 1,
+      "images": 0,
+      "comments": 0,
+      "resolvedComments": 0
+    },
+    {
+      "file": "02-table-merges.docx",
+      "inputSha256": "c8adc76b8ebce0242d1d96237cb27d6fcdc072878ab4bddb747144fe18610bb3",
+      "exportSha256": "d2067b9e6f7ebc830a3ed2bfecda2aafe2f0a73526cfcb8ad82f68e87303bad4",
+      "reopenedSha256": "09e2b058870a7f4683156e825ce9dd3aa635e5b977344bacf868e7b7dff14365",
+      "pages": 1,
+      "images": 0,
+      "comments": 0,
+      "resolvedComments": 0
+    },
+    {
+      "file": "03-images.docx",
+      "inputSha256": "3ade9c8626c1ae42f564acb052c546e133f7c8975b05d89d850a039f5bc1e967",
+      "exportSha256": "7d87a00e9ca314a077844b97fcee96b5c4e5593904aaebb60f39c4a58bcaa25b",
+      "reopenedSha256": "d75e04e81c3e031b0c39c4c7e204e5ac5925ed93a0dcdc92bec1186b83bacfbb",
+      "pages": 1,
+      "images": 3,
+      "comments": 0,
+      "resolvedComments": 0
+    },
+    {
+      "file": "04-styles-sections.docx",
+      "inputSha256": "e6f475ea6f5ec0cd98009d842becdc5dc0d1a1b8a1c54219b002d3c5de5323b2",
+      "exportSha256": "c3f93a8087e1e3a1e770a40f0bf447f828ccbeb00eca2eec33bc18cb4654fc8c",
+      "reopenedSha256": "d79ceca5272c7be716de524743ccecde2d84ae6f34f9967d385a01487ee49250",
+      "pages": 2,
+      "images": 0,
+      "comments": 0,
+      "resolvedComments": 0
+    },
+    {
+      "file": "05-long-page-break.docx",
+      "inputSha256": "81efff91918b2a0f40e91fdd4e0686520894ef3a8ec9884b9143f40ceb623bde",
+      "exportSha256": "591056cf36b231593bec07047336892ea62884e8f809ace089db70106dc618fb",
+      "reopenedSha256": "f81ea997b63e71e79515b7a835308f7ad8a97f6594f0630b2cda3b7b48a04c9b",
+      "pages": 3,
+      "images": 0,
+      "comments": 0,
+      "resolvedComments": 0
+    },
+    {
+      "file": "06-links-tabs.docx",
+      "inputSha256": "cc8935aabda0aed3c1e8fdd3c3e8467b739aca05a4cc598d269468798603e492",
+      "exportSha256": "c4ba4f6b88211bf7e39da7a9175a1400c753d47cc0d7d15c52b3d05ff53f2c7f",
+      "reopenedSha256": "790403284a699e8e77ab174c0f3f559c7b76ceb5315627b1a8d0871c2174e95c",
+      "pages": 1,
+      "images": 0,
+      "comments": 0,
+      "resolvedComments": 0
+    },
+    {
+      "file": "07-fields.docx",
+      "inputSha256": "ce60be884ca12a382dc287bff86c9a3eeb47c7207b47d639cbed8d7edb261c2a",
+      "exportSha256": "b75d8ae2b4b105f5b46ecc272a6765d822a98a277b3104740f7b482c15a35e63",
+      "reopenedSha256": "3624bedc3f25dd017e3b1c422aed94d618ec6369e1dad02a9d248847411c1ce4",
+      "pages": 1,
+      "images": 0,
+      "comments": 0,
+      "resolvedComments": 0
+    },
+    {
+      "file": "08-comments-revisions.docx",
+      "inputSha256": "c29141440a66d6b60cbf16c91b2a5c060df20a7ef5b6ecd38644fcf87f94affc",
+      "exportSha256": "49302a092388838851fd0dbb6663c60093eaea6f5498acb92f5b6644a6460b80",
+      "reopenedSha256": "a96f35a33a2d91e6d4cfd14086a6a8f7598aa02295e86c79244748ef9f85dd9f",
+      "pages": 1,
+      "images": 0,
+      "comments": 1,
+      "resolvedComments": 0
+    },
+    {
+      "file": "09-chinese-fonts.docx",
+      "inputSha256": "5c3590db9627e39fdd54678d9fbda6214865ea295dc030bfb9570c8b76c7d7d9",
+      "exportSha256": "6e2c5499a9349fe805db3717ad67cf747fd223bcb0b250b70a06778b923c350f",
+      "reopenedSha256": "44f4ab19922ebc9886a471ffce691bb132a2871af31e9c82a682c45bdac2e89b",
+      "pages": 1,
+      "images": 0,
+      "comments": 0,
+      "resolvedComments": 0
+    },
+    {
+      "file": "producer-01-text-numbering.docx",
+      "inputSha256": "d7afa4ef03627dfa93ab22535869cb6e4b8ac7128b6fe658cc3bbb151f676a27",
+      "exportSha256": "b275510774c3c625a5adc9181096bc40e8bea0a7aacaf4750b3029dc3200e83c",
+      "reopenedSha256": "921c475f77522ef99810d40745a69f247ebf0a2ce76487eb0913ec4efa39d9fe",
+      "pages": 1,
+      "images": 0,
+      "comments": 0,
+      "resolvedComments": 0
+    },
+    {
+      "file": "producer-02-table-merges.docx",
+      "inputSha256": "c1e2fc84f4d455e714ef7aed96bff43f16e760ad18cfd573481a7d9e282da785",
+      "exportSha256": "b62cc3e9d64648f089d87a2c444bd70aca28dfbbd07d6653d23225478ff0430f",
+      "reopenedSha256": "6c8ff067de7180fa035a47d46c13163f438d1f6c1a013bcf6f6b92554fdca148",
+      "pages": 1,
+      "images": 0,
+      "comments": 0,
+      "resolvedComments": 0
+    },
+    {
+      "file": "producer-03-images.docx",
+      "inputSha256": "a1156854e46747379f36ce3cd28e9cc35775330706541fef9ae806ff89d2a848",
+      "exportSha256": "2027f133e1e56a694d73357cf3836eb327d29469420394ff671dbbcb80a9e706",
+      "reopenedSha256": "d8efb1fece2c568db8e2cdd27e6996827fd1f63bba625c82e4c66277016c17db",
+      "pages": 1,
+      "images": 3,
+      "comments": 0,
+      "resolvedComments": 0
+    },
+    {
+      "file": "producer-04-styles-sections.docx",
+      "inputSha256": "a4193916648bf641763d741b386258fe2cdba8f3eea213b905d932df3ba59a1e",
+      "exportSha256": "828957da3ec5c4e2813a3dfec51386cbbc7ef2036565e3588a76f2f7803369e2",
+      "reopenedSha256": "0bc59cdf3c8433c4bde533d207d2a92c1b93f08431b4b7a801d874246ef5eed9",
+      "pages": 2,
+      "images": 0,
+      "comments": 0,
+      "resolvedComments": 0
+    },
+    {
+      "file": "producer-05-long-page-break.docx",
+      "inputSha256": "7e46f30fca4c096b944d3b2f2e63c25dddc1186984a98bec7c8c7ff88967b5d7",
+      "exportSha256": "3b1386b6d3717f33fd6d56b397a03ffeaca233ff38a45f0755f7c86619ca729b",
+      "reopenedSha256": "271174d6ebc2df37e46e8b3064f1e8d99076502fc85b4a3318cccada8e7c9ba6",
+      "pages": 3,
+      "images": 0,
+      "comments": 0,
+      "resolvedComments": 0
+    },
+    {
+      "file": "producer-06-links-tabs.docx",
+      "inputSha256": "8202c50b2601866e502ee867e8d1c34b25397c9e475d53c80b5a5610129cde6a",
+      "exportSha256": "95011d5c79580715bb7d9aba0105beeb9dc77d9100e4ed80edfd2513e258bfab",
+      "reopenedSha256": "2c844b8b61e45ee5e5f0f20f6f7fa8d0decab83ec9b991dc27e5af99fe2a937a",
+      "pages": 1,
+      "images": 0,
+      "comments": 0,
+      "resolvedComments": 0
+    },
+    {
+      "file": "producer-07-fields.docx",
+      "inputSha256": "685e21331919643f7dba085ece61684bd6dcaf0af6fb13098cc298800b9994cb",
+      "exportSha256": "9d37e8da8c64f59b6739c82f0d4098258d088fcfd4e47ee4dbc6763a4ca65411",
+      "reopenedSha256": "79ba8ca8ebadfe00e450198755012ffed69c9354a4ff90cab9fe9fdbc73713aa",
+      "pages": 1,
+      "images": 0,
+      "comments": 0,
+      "resolvedComments": 0
+    },
+    {
+      "file": "producer-08-comments-revisions.docx",
+      "inputSha256": "28bcd2a90a4062e34b3d8f131de1c55292d62d1c0f25b230a9f9a76c17fad5e3",
+      "exportSha256": "2189b703572dc01659ce9e2b8546dcff8b4e36b16c7d1e9e6268da2ddd1e6ce5",
+      "reopenedSha256": "5c531fcb994497c4a6c23959e0b87a364cc529a3bcea18047e63120f7cbe614d",
+      "pages": 1,
+      "images": 0,
+      "comments": 1,
+      "resolvedComments": 0
+    },
+    {
+      "file": "producer-09-chinese-fonts.docx",
+      "inputSha256": "0c40cb8c62c1e93d65fbc4596765a4c84b34f9620a2a912040255347a5f4b3b7",
+      "exportSha256": "ca407436332fed23694c48eab48b8f986a36a43b5f9e491e940cf71f65147462",
+      "reopenedSha256": "38587aa07fe6513ea43af72bd511cd1cce93c47df6f9e2297370844d08c4ef6e",
+      "pages": 1,
+      "images": 0,
+      "comments": 0,
+      "resolvedComments": 0
+    },
+    {
+      "file": "edited-resolved.docx",
+      "inputSha256": null,
+      "exportSha256": "a1e905036a9d859292367f2f922d66cfe3db54356bf07b9e37b2b45d45c000ce",
+      "reopenedSha256": "77504b6b8b1b097b649a2dd0dcb59ca7716f28aa47c82eaf2c47252237373788",
+      "pages": 1,
+      "images": 0,
+      "comments": 1,
+      "resolvedComments": 1
+    }
+  ],
+  "scope": "R1-13 native editable DOCX export; independently authored and LibreOffice-produced inputs plus edited/resolved comments.",
+  "limitations": [
+    "Word and WPS have not been verified on a real installation.",
+    "LibreOffice normalizes nested IF instructions and TOC switches even for the original producer; exact native controls are checked before Office and application behavior is compared with an independent producer reopen.",
+    "Native OOXML size quantization, font availability, paragraph layout and border resolution do not guarantee pixel-identical rendering across applications.",
+    "The authoritative HTML source has normalized inline-image spacing; original producer implicit image gaps are not reconstructed."
+  ]
+}

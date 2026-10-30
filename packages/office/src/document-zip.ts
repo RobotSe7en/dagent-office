@@ -69,6 +69,13 @@ export function readDocumentZip(input: Uint8Array, options: DocumentZipOptions =
 
 /** Write a complete validated document package, retaining source files and resource bytes. */
 export function writeDocumentZip(input: DocumentPackage, options: DocumentZipOptions = {}): Uint8Array {
+  return writeZip(input, options, true);
+}
+/** Internal OPC output primitive; shares all raw ZIP/path and byte limits. */
+export function writeOpcZip(input: DocumentPackage, options: DocumentZipOptions = {}): Uint8Array {
+  return writeZip(input, options, false);
+}
+function writeZip(input: DocumentPackage, options: DocumentZipOptions, document: boolean): Uint8Array {
   const { limits, maxZipBytes } = zipOptions(options);
   const files = new Map<string, Uint8Array>();
   let inputSize = 0;
@@ -82,7 +89,7 @@ export function writeDocumentZip(input: DocumentPackage, options: DocumentZipOpt
   }
   // Validate stable copied bytes, including every declared resource. Normalization
   // remains an explicit document-model serialization step rather than an archive side effect.
-  openDocument(files, { limits });
+  if (document) openDocument(files, { limits });
   const chunks: Uint8Array[] = [];
   let length = 0;
   try {

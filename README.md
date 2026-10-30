@@ -2,7 +2,7 @@
 
 面向人和宿主智能体协作的通用办公文档 SDK 与可嵌入工作台。采用 TypeScript 和带语义的 HTML 文档格式，提供 Office 导入、保留样式的网页编辑、框选批注、结构化修改提案和可编辑 Office 导出。达智平台是首个宿主，SDK 同时面向其他应用独立发布。
 
-**当前状态：R1-12 自研分页与 PDF/PNG 渲染已实现。** 三格式模型设计已明确，`core` 提供严格契约、13 份 JSON Schema、Word 语义及文档包；`office` 提供有界 ZIP 和 DOCX 导入。`editor` 提供无脚本预览、文字／对象／矩形选择、批注面板与重定位，见[预览与交互](docs/preview-interaction.md)。Playground 可打开 DOCX、添加或管理批注、缩放、撤销重做、下载文档包并重开，包含中文字体替代和缺字诊断。读取验收使用实际 DOCX、LibreOffice 重存文件与固定字体参考图，范围和限制见 [DOCX 读取](docs/docx-import.md)。隔离候选、七类内容操作、批注事务、单调修订和精确锚点映射见[核心事务与历史](docs/document-session.md)。工作台支持多批注请求、固定提案导入、候选差异和整批应用，见[工作台与协议](docs/workbench.md)。连续正文与表格支持富文本及中文输入，见[正文输入](docs/rich-text.md)。`render` 提供独立只读预览和共享页面画布，`node` 提供受管理的 Chromium、PDF/PNG 与字节协议，见[分页与渲染](docs/pagination-rendering.md)。预览直接显示 HTML，分页覆盖旧 Chromium、Firefox 和 WebKit。下一步为 R1-13 原生 DOCX 导出；尚未发布 npm 包。
+**当前状态：R1-13 原生 DOCX 导出已实现。** 三格式模型设计已明确，`core` 提供严格契约、13 份 JSON Schema、Word 语义及文档包；`office` 提供有界 ZIP 和原生 DOCX 导入／导出。`editor` 提供无脚本预览、文字／对象／矩形选择、批注面板与重定位，见[预览与交互](docs/preview-interaction.md)。Playground 可打开 DOCX、添加或管理批注、缩放、撤销重做、下载文档包并重开，包含中文字体替代和缺字诊断。读取验收使用实际 DOCX、LibreOffice 重存文件与固定字体参考图，范围和限制见 [DOCX 读取](docs/docx-import.md)。隔离候选、七类内容操作、批注事务、单调修订和精确锚点映射见[核心事务与历史](docs/document-session.md)。工作台支持多批注请求、固定提案导入、候选差异和整批应用，见[工作台与协议](docs/workbench.md)。连续正文与表格支持富文本及中文输入，见[正文输入](docs/rich-text.md)。`render` 提供独立只读预览和共享页面画布，`node` 提供受管理的 Chromium、PDF/PNG 与字节协议，见[分页与渲染](docs/pagination-rendering.md)。预览直接显示 HTML，分页覆盖旧 Chromium、Firefox 和 WebKit。原生可编辑导出和批注报告见 [DOCX 导出](docs/docx-export.md)。下一步为 R1-14 独立 Word 闭环；尚未发布 npm 包。
 
 ## 本地开发
 
@@ -44,6 +44,7 @@ pnpm dev
 | [预览与交互](docs/preview-interaction.md) | 普通 JS 挂载、文字与对象选择、矩形坐标、批注面板、布局失效与生命周期 |
 | [分页与渲染](docs/pagination-rendering.md) | 纯预览、页面画布、字段、Node PDF/PNG、CLI、浏览器与预算边界 |
 | [中文字体](docs/fonts.md) | 常用宋体、仿宋、楷体名称保留、开源字体环境与预览替代 |
+| [DOCX 原生导出](docs/docx-export.md) | 当前文档源、样式、字段、批注状态、导出报告及实际重开 |
 | [DOCX 读取与只读预览](docs/docx-import.md) | 导入 API、范围、中文字体、样例、参考渲染和限制 |
 | [资源与 ZIP](docs/resources-and-zip.md) | 资源摘要、图片容器识别、宿主资源收集、ZIP 预算及保真样例 |
 | [整体实施计划](docs/implementation-plan.md) | 五轮交付顺序、具体产物、能力范围和验收门槛 |

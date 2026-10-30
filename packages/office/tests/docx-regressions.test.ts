@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { openDocument } from "@dagent-office/core";
 import type { DocumentModel, DocumentNode } from "@dagent-office/core";
-import { importDocx, readDocumentZip, writeDocumentZip } from "@dagent-office/office";
+import { exportDocx, importDocx, readDocumentZip, writeDocumentZip } from "@dagent-office/office";
 import {
   body, complexField, crossSectionRangesFixture, mutateDocx, nestedFieldFixture, styleInheritanceFixture, styles, wordNamespace,
 } from "./regression-fixtures.js";
@@ -9,6 +9,12 @@ import {
 function reopen(bytes: Uint8Array): DocumentModel {
   const model = openDocument(importDocx(bytes, { documentId: "regression" }));
   expect(openDocument(readDocumentZip(writeDocumentZip(model.serialize()))).snapshot()).toEqual(model.snapshot());
+  const native = exportDocx(model);
+  const reopened = openDocument(importDocx(native.bytes, { documentId: "native-regression" }));
+  const main = (document: DocumentModel): string => document.getNode(document.snapshot().metadata.word!.stories.find((story) => story.kind === "main")!.rootNodeId)!.text;
+  expect(main(reopened)).toBe(main(model));
+  expect(reopened.snapshot().annotations).toHaveLength(model.snapshot().annotations.length);
+  expect(native.report.unexportedAnnotations).toEqual([]);
   return model;
 }
 function descendants(model: DocumentModel, nodeId: string): DocumentNode[] {
