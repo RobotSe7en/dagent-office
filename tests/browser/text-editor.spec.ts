@@ -261,12 +261,48 @@ test("native copy, paste and cut transfer source formatting rather than browser 
   expect(html).toContain("UnavailableSourceFace"); expect(html).not.toMatch(/Noto|data-node-id|webkit/);
   await selection(page, "b", 3); await page.keyboard.press("Control+v");
   await expect.poll(() => page.evaluate(() => window.textEditorHost.session!.getNode("root")!.text)).toBe("甲乙丙另一段甲乙");
+  expect(await page.evaluate(() => window.textEditorHost.session!.getNode("b")!.text)).toBe("另一段甲乙");
+  expect(await page.evaluate(() => window.textEditorHost.session!.getNode("root")!.childNodeIds)).toHaveLength(2);
   expect(await page.evaluate(() => window.textEditorHost.errors)).toEqual([]);
   await selection(page, "s", 0, "s", 1); await page.keyboard.press("Control+x");
   expect(await page.evaluate(() => window.textEditorHost.session!.getNode("a")!.text)).toBe("乙丙");
   await page.keyboard.press("Control+z");
   expect(await page.evaluate(() => window.textEditorHost.session!.getNode("a")!.text)).toBe("甲乙丙");
 });
+
+for (const name of ["01-text-numbering.docx", "02-table-merges.docx"]) {
+  test("copy and paste omit derived numbering and table grid children: " + name, async ({ page }) => {
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await mount(page, importDocx(readFileSync(new URL("../../examples/docx/" + name, import.meta.url)), { documentId: "copy-derived" }));
+    const target = await page.evaluate(() => {
+      const s = window.textEditorHost.session!, root = s.snapshot().metadata.word!.stories.find((story) => story.kind === "main")!.rootNodeId;
+      s.commit(s.prepare({ protocolVersion: 1, documentId: s.snapshot().manifest.documentId, baseRevision: 0,
+        operations: [{ op: "insertFragment", nodeId: root, position: "end", html: "<p>粘贴到此</p>" }] }));
+      return s.getNode(root)!.childNodeIds.at(-1)!;
+    });
+    const canvas = page.frameLocator('iframe[title="正文编辑"]');
+    const selector = name.startsWith("01") ? "[data-word-numbering]" : "table";
+    const copied = await canvas.locator(selector).first().evaluate((node) => {
+      const range = document.createRange(); range.selectNode(node);
+      const selected = document.getSelection()!; selected.removeAllRanges(); selected.addRange(range);
+      return node.getAttribute("data-node-id")!;
+    });
+    const expected = await page.evaluate((id) => window.textEditorHost.session!.getNode(id)!.text, copied);
+    await page.keyboard.press("Control+c");
+    const clipboard = await page.evaluate(async () => {
+      const items = await navigator.clipboard.read(); return {
+        html: await (await items[0]!.getType("text/html")).text(), text: await navigator.clipboard.readText(),
+      };
+    });
+    expect(clipboard.html).not.toMatch(/sdk-number-marker|colgroup|contenteditable|data-node-id/);
+    expect(clipboard.text).toBe(expected);
+    await selection(page, target, 4); await page.keyboard.press("Control+v");
+    expect(await page.evaluate(() => window.textEditorHost.errors)).toEqual([]);
+    const text = await page.evaluate(() => window.textEditorHost.session!.snapshot().html);
+    expect(text).not.toMatch(/sdk-number-marker|colgroup|contenteditable/);
+    expect(await canvas.locator(selector).count()).toBeGreaterThan(1);
+  });
+}
 
 test("table Tab navigation and paragraph/character formats use the same session", async ({ page }) => {
   await mount(page, fixture('<table data-node-id="t"><tr data-node-id="r"><td data-node-id="c">第一格</td><td data-node-id="d">第二格</td></tr></table>'));

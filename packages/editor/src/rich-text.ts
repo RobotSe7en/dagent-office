@@ -258,17 +258,18 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
     let fragment: Node = range.cloneContents(), ancestor = range.commonAncestorContainer;
     if (ancestor.nodeType !== 1) ancestor = ancestor.parentNode!;
     while (ancestor !== root && root.contains(ancestor)) {
-      if ((ancestor as Element).matches("td,th")) break;
+      // A selection within a paragraph is inline. Only explicitly selected
+      // blocks or table structure carry block wrappers to the clipboard.
+      if ((ancestor as Element).matches(blockSelector + ",section,article,div,ul,ol")) break;
       const wrapper = ancestor.cloneNode(false); wrapper.appendChild(fragment); fragment = wrapper;
-      if ((ancestor as Element).matches(blockSelector)) {
-        if ((ancestor as Element).matches("li") && ancestor.parentElement?.matches("ul,ol")) {
-          const list = ancestor.parentElement.cloneNode(false); list.appendChild(fragment); fragment = list;
-        }
-        break;
-      }
+      if ((ancestor as Element).matches("table")) break;
       ancestor = ancestor.parentNode!;
     }
     holder.append(fragment);
+    // cloneContents creates new objects, so the projection WeakSet cannot identify
+    // their derived origin. Authored source elements already have core identities.
+    for (const node of holder.querySelectorAll(".sdk-number-marker,colgroup,.sdk-story-label"))
+      if (!node.hasAttribute("data-node-id")) node.remove();
     const source = projection.serialize(holder);
     for (const node of source.querySelectorAll("[data-node-id],[id]")) { node.removeAttribute("data-node-id"); node.removeAttribute("id"); }
     event.clipboardData.setData("text/html", source.innerHTML);
