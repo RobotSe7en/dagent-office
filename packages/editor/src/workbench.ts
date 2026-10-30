@@ -100,13 +100,15 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
   }
   function updateButtons(): void {
     const hasSelection = [...selected.values()].some(Boolean);
-    generate.disabled = !hasSelection || pending; submit.disabled = !hasSelection || pending || !options.onSubmitAnnotations;
+    generate.disabled = !hasSelection || pending || Boolean(candidate); submit.disabled = !hasSelection || pending || Boolean(candidate) || !options.onSubmitAnnotations;
     download.disabled = !activeRequest;
+    input.disabled = !activeRequest || Boolean(candidate);
     apply.disabled = !candidate || candidate.baseRevision !== session.snapshot().manifest.revision;
     reject.disabled = !candidate;
   }
   function buildRequest(annotationIds?: readonly string[]): DocumentInteractionRequest {
     ensureActive();
+    if (candidate) throw new DocumentError("InvalidOperation", "请先应用或拒绝当前提案，再生成新的请求。");
     const request = session.buildInteractionRequest({ annotationIds: annotationIds ?? [...selected].filter(([, value]) => value).map(([id]) => id),
       ...(options.supportedOperations ? { supportedOperations: options.supportedOperations } : {}),
       ...(options.contextLimits ? { limits: options.contextLimits } : {}) });
@@ -121,8 +123,9 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
     pending = true; updateButtons();
     try {
       await options.onSubmitAnnotations(request);
-      if (!disposed && current === generation && activeRequest === request) {
-        status.textContent = request.baseRevision === session.snapshot().manifest.revision ? "请求已交给宿主，等待提案。" : "请求已交给宿主；文档已变化，返回提案将按旧修订拒绝。";
+      if (!disposed && current === generation && activeRequest?.requestId === request.requestId
+        && activeRequest.documentId === request.documentId && activeRequest.baseRevision === request.baseRevision) {
+        if (!candidate) status.textContent = request.baseRevision === session.snapshot().manifest.revision ? "请求已交给宿主，等待提案。" : "请求已交给宿主；文档已变化，返回提案将按旧修订拒绝。";
         notify({ type: "annotationsSubmitted", request });
       }
     } catch {
@@ -144,10 +147,10 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
   }
   function loadProposal(request: DocumentInteractionRequest, proposal: EditProposal): CandidateChange {
     ensureActive();
+    if (candidate) throw new DocumentError("InvalidOperation", "请先应用或拒绝当前提案，再载入下一份提案。");
     const next = session.prepareProposal(request, proposal);
     let model: DocumentModel;
     try { model = previewModel(next); } catch (reason) { session.discard(next); throw reason; }
-    if (candidate) session.discard(candidate);
     candidatePreview?.dispose(); candidatePreview = undefined;
     candidate = next; activeRequest = immutable(parseContract("interaction-request", request)); diff.replaceChildren(); diff.hidden = false;
     const title = document.createElement("h2"); title.textContent = "提案差异";

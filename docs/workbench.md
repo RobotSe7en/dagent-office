@@ -44,6 +44,8 @@ view.dispose();
 
 公开视图保留 `selection/fonts/setMode/setZoom/focusAnnotation/ready/dispose`，并提供 `request/buildRequest/submitAnnotations/loadProposal/applyProposal/rejectProposal`。`ready` 等待当前正文及候选预览。卸载释放监听、候选、预览及资源 URL，不销毁外部会话；晚到提交和文件读取结果不重新挂载界面。
 
+工作台一次审阅一个候选；应用或拒绝当前提案后再生成新请求或载入下一份提案。界面在审阅期间禁用对应入口，公开 API 也返回明确的 `InvalidOperation`，保留当前候选。该流程只需一个候选的数量及字节预算，不会叠加未提交候选。
+
 `onEvent` 提供 `selectionChanged`、`annotationsSubmitted` 和 `proposalReady`。提交事件表示宿主成功接受交接，不表示模型执行完成或文件已保存。宿主提交失败返回 `HostSubmissionFailed`，文档与批注不变；未配置提交回调时仍可下载请求。
 
 ## React 与 Playground

@@ -97,10 +97,46 @@ test("an external edit disables stale application while retaining proposal diffe
   await expect(page.getByRole("button", { name: "整批应用提案" })).toBeDisabled();
   await expect(page.getByLabel("提案差异", { exact: true })).toBeVisible();
   await expect(page.getByLabel("协作状态")).toContainText("请求已过期");
+  await page.getByRole("button", { name: "拒绝提案", exact: true }).click();
   await importProposal(page, proposal(request));
   await expect(page.getByRole("alert")).toContainText("different document revision");
   expect(await page.evaluate(() => window.workbenchHost.session!.snapshot().manifest.revision)).toBe(1);
 });
+
+test("one-candidate budgets support sequential reviews without hidden replacement capacity", async ({ page }) => {
+  await mount(page);
+  await page.evaluate((files) => window.workbenchHost.mount(files, 1), report);
+  const request = await generated(page), value = proposal(request);
+  await importProposal(page, value);
+  await expect(page.getByRole("button", { name: "整批应用提案" })).toBeEnabled();
+  await expect(page.getByLabel("导入提案 JSON", { exact: true })).toBeDisabled();
+  const code = await page.evaluate((value) => {
+    try { window.workbenchHost.view!.loadProposal(window.workbenchHost.view!.request()!, value); return "success"; }
+    catch (error) { return (error as { code: string }).code; }
+  }, value);
+  expect(code).toBe("InvalidOperation");
+  await expect(page.getByRole("button", { name: "整批应用提案" })).toBeEnabled();
+  await page.getByRole("button", { name: "拒绝提案", exact: true }).click();
+  await importProposal(page, { ...value, proposalId: "second" });
+  await expect(page.getByRole("button", { name: "整批应用提案" })).toBeEnabled();
+  expect(await page.evaluate(() => window.workbenchHost.session!.history().undoSteps)).toBe(0);
+});
+
+for (const deferred of [false, true]) {
+  test("host callback can return a proposal before submission completes: deferred=" + deferred, async ({ page }) => {
+    await mount(page);
+    await page.evaluate(({ value, deferred }) => {
+      window.workbenchHost.submissionProposal = value; window.workbenchHost.deferSubmission = deferred;
+    }, { value: exampleProposal, deferred });
+    await page.getByRole("button", { name: "统一提交批注" }).click();
+    await expect(page.getByRole("button", { name: "整批应用提案" })).toBeEnabled();
+    if (deferred) await page.evaluate(() => window.workbenchHost.release!());
+    await expect.poll(() => page.evaluate(() => window.workbenchHost.events.filter((type) => type === "annotationsSubmitted").length)).toBe(1);
+    await expect(page.getByLabel("协作状态")).toContainText("提案已准备");
+    expect(await page.evaluate(() => window.workbenchHost.events.filter((type) => type === "proposalReady").length)).toBe(1);
+    expect(await page.evaluate(() => window.workbenchHost.session!.snapshot().manifest.revision)).toBe(0);
+  });
+}
 
 test("malicious, mismatched and out-of-scope proposal files leave state intact", async ({ page }) => {
   await mount(page); const request = await generated(page);
