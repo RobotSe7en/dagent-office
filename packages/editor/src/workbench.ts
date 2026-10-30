@@ -7,6 +7,8 @@ import { mountDocumentInteraction } from "./interaction.js";
 import type { DocumentInteractionOptions, DocumentInteractionView } from "./interaction.js";
 import { mountDocumentPreview } from "./preview.js";
 import type { DocumentPreview } from "./preview.js";
+import { mountDocumentTextEditor } from "./rich-text.js";
+import type { DocumentTextEditor } from "./rich-text.js";
 
 function immutable<Value>(value: Value): Value {
   if (value && typeof value === "object") {
@@ -21,6 +23,7 @@ export type DocumentWorkbenchEvent =
   | { readonly type: "annotationsSubmitted"; readonly request: DocumentInteractionRequest }
   | { readonly type: "proposalReady"; readonly proposal: EditProposal; readonly candidate: CandidateChange };
 export interface DocumentWorkbenchOptions extends DocumentInteractionOptions {
+  readonly editable?: boolean;
   readonly onSubmitAnnotations?: AnnotationSubmissionHandler;
   readonly supportedOperations?: InteractionRequestInput["supportedOperations"];
   readonly contextLimits?: InteractionRequestInput["limits"];
@@ -49,11 +52,13 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
   const error = document.createElement("p"); error.className = "error"; error.setAttribute("role", "alert"); error.hidden = true;
   const diff = document.createElement("section"); diff.setAttribute("aria-label", "提案差异"); diff.hidden = true;
   collaboration.append(heading, choices, actions, status, error, diff);
-  shadow.append(style, interactionHost, collaboration); container.append(element);
+  const editingControls = document.createElement("div"), editingHost = document.createElement("div"); editingHost.hidden = true;
+  shadow.append(style, editingControls, editingHost, interactionHost, collaboration); container.append(element);
   const controller = new AbortController();
   let choiceController = new AbortController(), disposed = false, pending = false, generation = 0, importSequence = 0;
   let activeRequest: DocumentInteractionRequest | undefined, deliveredRequest: DocumentInteractionRequest | undefined, candidate: CandidateChange | undefined;
   let candidatePreview: DocumentPreview | undefined, candidateReady: Promise<void> = Promise.resolve();
+  let textEditor: DocumentTextEditor | undefined;
   const selected = new Map<string, boolean>();
 
   function ensureActive(): void { if (disposed) throw new DocumentError("InvalidOperation", "The workbench has been disposed."); }
@@ -81,6 +86,17 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
     onSelectionChange: (selection) => { options.onSelectionChange?.(selection); notify({ type: "selectionChanged", selection }); },
     onError: report,
   });
+  if (options.editable !== false) {
+    const edit = button("编辑正文", () => {
+      if (textEditor) {
+        textEditor.dispose(); textEditor = undefined; editingHost.hidden = true; interactionHost.hidden = false; edit.textContent = "编辑正文";
+      } else {
+        textEditor = mountDocumentTextEditor(editingHost, session, { onError: report });
+        editingHost.hidden = false; interactionHost.hidden = true; edit.textContent = "返回预览与批注";
+        void textEditor.ready.catch(report);
+      }
+    }, editingControls);
+  }
   function update(): void {
     if (disposed) return;
     choiceController.abort(); choiceController = new AbortController(); choices.replaceChildren();
@@ -215,7 +231,7 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
   const unsubscribe = session.subscribe((event) => { if (event.type !== "error") update(); });
   update();
   return {
-    element, get ready() { return Promise.all([interaction.ready, candidateReady]).then(() => {}); },
+    element, get ready() { return Promise.all([interaction.ready, candidateReady, textEditor?.ready]).then(() => {}); },
     selection: interaction.selection, fonts: interaction.fonts, setMode: interaction.setMode, setZoom: interaction.setZoom, focusAnnotation: interaction.focusAnnotation,
     request: () => activeRequest, buildRequest, submitAnnotations, loadProposal, applyProposal, rejectProposal,
     dispose: () => {
@@ -223,7 +239,7 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
       disposed = true; generation++; unsubscribe(); controller.abort(); choiceController.abort();
       if (candidate) { try { session.discard(candidate); } catch { /* The host may have already disposed the session. */ } }
       candidate = undefined; activeRequest = undefined; deliveredRequest = undefined;
-      selected.clear(); candidatePreview?.dispose(); interaction.dispose(); element.remove();
+      selected.clear(); textEditor?.dispose(); textEditor = undefined; candidatePreview?.dispose(); interaction.dispose(); element.remove();
     },
   };
 }

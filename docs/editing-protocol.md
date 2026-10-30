@@ -68,6 +68,7 @@ interface DocumentSession {
 | --- | --- | --- |
 | `replaceText` | 替换节点内文字范围 | 节点、范围、`expectedText` 匹配 |
 | `replaceFragment` | 替换指定节点的子内容 | 目标结构、HTML 和引用合法 |
+| `reconcileFragment` | 在目标子树保留已有身份并协调内容 | 身份来自基准子树；UTF-16 映射证据与最终文字一致，见[正文输入](rich-text.md) |
 | `insertFragment` | 在指定位置插入 HTML 区块 | 位置合法，新节点 ID 由核心分配 |
 | `removeNode` | 删除内容或对象节点 | 目标存在且允许删除，不能删除文档根 |
 | `setStyle` | 设置目标节点样式 | 属性和值在支持范围内 |
@@ -80,7 +81,7 @@ interface DocumentSession {
 
 `setStyle` 在首轮写回目标节点的行内 CSS 声明，已有样式表继续参与级联。不在元数据中保存另一份颜色、字号等值。
 
-当前结构契约提供六种内容操作和三种批注操作，表中的几何与单元格操作属于后续计划。`insertFragment` 使用 `nodeId/position/html`，位置为同级的 `before/after` 或子内容的 `start/end`。`replaceAsset` 通过 `assetPath` 引用资源，未携带资源字节或新的访问权限。字段约束见[契约 API](contracts.md)。
+当前结构契约提供七种内容操作和三种批注操作，表中的几何与单元格操作属于后续计划。`insertFragment` 使用 `nodeId/position/html`，位置为同级的 `before/after` 或子内容的 `start/end`。`replaceAsset` 通过 `assetPath` 引用资源，未携带资源字节或新的访问权限。字段约束见[契约 API](contracts.md)。
 
 内容操作目标的节点 ID 必须来自事务基准快照。新插入或复制的节点由核心分配 ID，提案不能猜测并在同一批内引用这些新 ID。首轮不额外引入临时节点引用协议。
 

@@ -111,3 +111,9 @@ Office 转换路线已确定为自研 OOXML，不采用 docx、PptxGenJS、Excel
 核心库在隔离工作区使用 Rust 1.99.0 的五项冒烟验证通过，覆盖中文 Word 编辑与撤销、Excel 公式重开、PPT 文本框、批量失败回滚和简单 HTML 转换。该结果验证基础接口链路，不构成完整浏览器视觉兼容性或所有 Office 特性的结论。公开仓库的部分测试引用未包含的 `test/editing` 夹具，完整测试需要补齐上游数据。
 
 ibisOffice 采用 AGPL-3.0-only 和商业双授权。本项目当前不依赖、复制或翻译其源码；根据本项目文档格式、公开标准和独立测试实现所需能力。[上游许可](https://github.com/ibisjp/ibis-office/blob/50287728b005ceb0ed8a4a8f7d825ac4824224ef/COMMERCIAL-LICENSE.md)
+
+## R1-11 富文本输入依赖
+
+`@tiptap/core` 与 `@tiptap/pm` 锁定 3.32.1（MIT），只用于浏览器输入适配器。自定义节点保留文档属性，实际输入转换为核心身份协调事务；没有注册独立的历史插件。公开接口不泄露 Tiptap 或 ProseMirror 对象。[节点 API](https://tiptap.dev/docs/editor/extensions/custom-extensions/create-new/node)、[编辑器 API](https://tiptap.dev/docs/editor/api/editor)
+
+间接依赖的实际版本为：prosemirror-model 1.25.12、state 1.4.4、view 1.42.8、transform 1.12.4、commands 1.7.2、keymap 1.2.3、tables 1.8.5、changeset 2.4.5、dropcursor 1.8.4、gapcursor 1.4.1、history/inputrules/schema-list 1.5.1、orderedmap 2.1.1、rope-sequence 1.3.4、w3c-keyname 2.2.8，均为 MIT。版本和许可从安装包 manifest 核对，并由锁文件固定；包含 history 依赖不表示启用其持久化历史。

@@ -61,7 +61,11 @@ function textLeaves(root: Node): TextLeaf[] {
 }
 
 /** Match import's source font roles, keeping marks and variation selectors with their base. */
-function scriptParts(value: string): { script: "ascii" | "eastAsia" | "hAnsi"; text: string }[] {
+type FontScript = "ascii" | "eastAsia" | "hAnsi" | "cs";
+function fontScript(value: string): FontScript | undefined {
+  return ["ascii", "eastAsia", "hAnsi", "cs"].includes(value) ? value as FontScript : undefined;
+}
+function scriptParts(value: string, initialScript?: FontScript): { script: FontScript; text: string }[] {
   const parts: ReturnType<typeof scriptParts> = [];
   for (const character of value) {
     const code = character.codePointAt(0)!;
@@ -69,7 +73,7 @@ function scriptParts(value: string): { script: "ascii" | "eastAsia" | "hAnsi"; t
     const eastAsian = code >= 0x2e80 && code <= 0xa4cf || code >= 0xac00 && code <= 0xd7af
       || code >= 0xf900 && code <= 0xfaff || code >= 0xfe10 && code <= 0xfe6f
       || code >= 0xff00 && code <= 0xffef || code >= 0x20000 && code <= 0x323af;
-    const script = /\p{Mark}/u.test(character) && previous ? previous.script
+    const script = /\p{Mark}/u.test(character) && (previous || initialScript) ? previous?.script ?? initialScript!
       : eastAsian ? "eastAsia" : code <= 0x7f ? "ascii" : "hAnsi";
     if (previous?.script === script) previous.text += character;
     else parts.push({ script, text: character });
@@ -120,7 +124,7 @@ export class DocumentEdit {
       if (index) result.push(this.make("br"));
       if (!line) continue;
       if (!word) result.push(this.text(line));
-      else for (const part of scriptParts(line)) {
+      else for (const part of scriptParts(line, fontScript(inheritedScript))) {
         if (part.script === inheritedScript) {
           result.push(this.text(part.text));
           continue;
@@ -224,6 +228,97 @@ export class DocumentEdit {
     }
   }
 
+  /** Reconcile a validated editor view while retaining only identities inside this source subtree. */
+  private reconcile(target: Element, operation: Extract<DocumentContentOperation, { op: "reconcileFragment" }>): void {
+    const before = parseHtml(this.html(), this.state.snapshot.manifest, this.state.files, this.limits, { nodes: 0 });
+    const allowed = new Map<string, Element>();
+    visit(target, (node) => { if (isElement(node)) { const id = attr(node, "data-node-id"); if (id) allowed.set(id, node); } });
+    const fragment = parseHtmlFragment(operation.html, target, this.limits, bodyTags), seen = new Set<string>();
+    const cssBudget = { nodes: 0 };
+    visit(fragment, (node) => {
+      if (!isElement(node)) return;
+      const id = attr(node, "data-node-id");
+      if (id !== undefined) {
+        if (!this.baseIds.has(id) || !allowed.has(id) || node === target || id === operation.nodeId || seen.has(id))
+          fail("Reconciled identities must be unique descendants of the base target subtree.");
+        seen.add(id);
+      } else setAttribute(node, "data-node-id", this.allocate());
+      const style = attr(node, "style");
+      if (style !== undefined) setAttribute(node, "style", normalizeCss(style, "declarationList", this.limits, cssBudget));
+    });
+    const proofs = new Map<string, { value: string; edits: typeof operation.textEdits; inserted: { from: number; to: number }[] }>();
+    for (const edit of operation.textEdits) {
+      if (!allowed.has(edit.nodeId) || !this.baseIds.has(edit.nodeId)) fail("Text mapping proof targets must belong to the base target subtree.");
+      const proof = proofs.get(edit.nodeId) ?? { value: before.getNode(edit.nodeId)!.text, edits: [], inserted: [] };
+      if (edit.from > edit.to || edit.to > proof.value.length || proof.value.slice(edit.from, edit.to) !== edit.expectedText
+        || !isTextBoundary(proof.value, edit.from) || !isTextBoundary(proof.value, edit.to)
+        || /[\u0000\r]/u.test(edit.text)
+        || [...edit.text].some((character) => character.length === 1 && character.charCodeAt(0) >= 0xd800 && character.charCodeAt(0) <= 0xdfff))
+        fail("Reconciled text mapping proof does not match the source text or Unicode boundaries.");
+      proof.value = proof.value.slice(0, edit.from) + edit.text + proof.value.slice(edit.to);
+      if (edit.expectedText !== edit.text) {
+        proof.edits.push(edit);
+        const delta = edit.text.length - edit.to + edit.from, inserted: typeof proof.inserted = [];
+        for (const range of proof.inserted) {
+          if (range.to <= edit.from) inserted.push(range);
+          else if (range.from >= edit.to) inserted.push({ from: range.from + delta, to: range.to + delta });
+          else {
+            if (range.from < edit.from) inserted.push({ from: range.from, to: edit.from });
+            if (range.to > edit.to) inserted.push({ from: edit.from + edit.text.length, to: range.to + delta });
+          }
+        }
+        if (edit.text.length) inserted.push({ from: edit.from, to: edit.from + edit.text.length });
+        const merged: typeof inserted = [];
+        for (const range of inserted.sort((left, right) => left.from - right.from)) {
+          const last = merged.at(-1);
+          if (last && range.from <= last.to) last.to = Math.max(last.to, range.to);
+          else merged.push({ ...range });
+        }
+        proof.inserted = merged;
+      }
+      proofs.set(edit.nodeId, proof);
+    }
+    for (const child of [...target.childNodes]) adapter.detachNode(child);
+    for (const child of [...fragment.childNodes]) { adapter.detachNode(child); adapter.appendChild(target, child); }
+    const textNodes: Tree.TextNode[] = [];
+    visit(target, (node) => { if (node.nodeName === "#text" && "value" in node) textNodes.push(node); });
+    const positions = textPositions(this.tree);
+    for (const node of textNodes) {
+      const inherited = ancestors(node), word = inherited.some((item) => attr(item, "data-word-run") !== undefined || attr(item, "data-word-script") !== undefined);
+      if (!word || !node.parentNode || !isElement(node.parentNode)) continue;
+      const existing = inherited.find((item) => { const id = attr(item, "data-node-id"); return id !== undefined && proofs.has(id); });
+      if (!existing) continue;
+      const proof = proofs.get(attr(existing, "data-node-id")!)!, offset = positions.get(node)!.from - positions.get(existing)!.from;
+      const ranges = proof.inserted.map((range) => ({ from: Math.max(0, range.from - offset), to: Math.min(node.value.length, range.to - offset) }))
+        .filter((range) => range.from < range.to);
+      if (!ranges.length) continue;
+      const script = inherited.map((item) => attr(item, "data-word-script")).find((value) => value !== undefined) ?? "ascii";
+      if (ranges.every((range) => scriptParts(node.value.slice(range.from, range.to), fontScript(script)).every((part) => part.script === script))) continue;
+      let cursor = 0;
+      for (const range of ranges) {
+        if (range.from > cursor) adapter.insertBefore(node.parentNode, this.text(node.value.slice(cursor, range.from)), node);
+        for (const part of this.insertedText(node.value.slice(range.from, range.to), true, script)) adapter.insertBefore(node.parentNode, part, node);
+        cursor = range.to;
+      }
+      if (cursor < node.value.length) adapter.insertBefore(node.parentNode, this.text(node.value.slice(cursor)), node);
+      adapter.detachNode(node);
+    }
+    const after = parseHtml(this.html(), this.state.snapshot.manifest, this.state.files, this.limits, { nodes: 0 });
+    for (const [id] of allowed) {
+      if (!after.hasNode(id)) continue;
+      const previous = before.getNode(id)!.text, next = after.getNode(id)!.text, proof = proofs.get(id);
+      if (proof && proof.value !== next) fail("Reconciled text mapping proof differs from the final source text.");
+      if (proof) {
+        for (const edit of proof.edits) this.textEdits.push({ nodeId: id, from: edit.from, to: edit.to, insertedLength: edit.text.length });
+        if (proof.edits.length) this.structuralTextNodes.add(id);
+      } else if (previous !== next) this.replacedTextNodes.add(id);
+    }
+    for (const parent of ancestors(target).slice(1)) {
+      const id = attr(parent, "data-node-id");
+      if (id && before.getNode(id)?.text !== after.getNode(id)?.text) this.replacedTextNodes.add(id);
+    }
+  }
+
   apply(operation: DocumentContentOperation): void {
     this.createdNodes = 0;
     if (!this.baseIds.has(operation.nodeId)) fail("Operation targets must belong to the transaction's base snapshot.");
@@ -231,6 +326,7 @@ export class DocumentEdit {
     if (!target) fail("An earlier operation removed the target node.");
     switch (operation.op) {
       case "replaceText": this.replaceText(target, operation); break;
+      case "reconcileFragment": this.reconcile(target, operation); break;
       case "setStyle": {
         const style = setInlineStyle(attr(target, "style") ?? "", operation.property, operation.value, this.limits);
         setAttribute(target, "style", style);

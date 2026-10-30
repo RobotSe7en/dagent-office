@@ -1,6 +1,6 @@
 # 本地开发与工程检查
 
-当前完成 R1-02 至 R1-09、R1-05A 模型设计与 R1-10 声明范围的 DOCX 读取验收。`core` 提供严格契约、Word 语义和文档包，`office` 提供 ZIP 与 DOCX 导入，`editor` 提供[预览、选择与批注交互](preview-interaction.md)；`node` 仍为工程入口。`core` 还提供[编辑会话、事务及历史](document-session.md)、精确文字及结构锚点映射和区域批注重定位；[工作台与协议闭环](workbench.md)支持多批注请求、提案差异和整批应用；下一步是 R1-11 富文本输入，输入、自动分页及 DOCX/PDF 导出尚未实现。API 见[DOCX 读取](docx-import.md)，顺序见[第一轮细则](iteration-1.md)。
+当前完成 R1-02 至 R1-09、R1-05A 模型设计与 R1-10 声明范围的 DOCX 读取验收。`core` 提供严格契约、Word 语义和文档包，`office` 提供 ZIP 与 DOCX 导入，`editor` 提供[预览、选择与批注交互](preview-interaction.md)；`node` 仍为工程入口。`core` 还提供[编辑会话、事务及历史](document-session.md)、精确文字及结构锚点映射和区域批注重定位；[工作台与协议闭环](workbench.md)支持多批注请求、提案差异和整批应用；[R1-11 正文输入](rich-text.md)也已实现；下一步是 R1-12 分页与渲染，自动分页及 DOCX/PDF 导出尚未实现。API 见[DOCX 读取](docx-import.md)，顺序见[第一轮细则](iteration-1.md)。
 
 ## 环境和安装
 
@@ -46,7 +46,7 @@ pnpm test:watch
 
 打包用例在 workspace 外、包含空格的临时路径中安装四个 tarball，优先复用工作区 pnpm 依赖缓存；冷缓存时允许获取第三方依赖及其注册表元数据。内部包通过显式 tarball 覆盖固定来源，不从注册表下载内部包。验证真实校验 API、公开 JSON、ES2022 类型、私有路径拒绝，以及不安装 React 的普通 JS 浏览器宿主构建。临时消费工程在测试结束后删除。
 
-测试还覆盖只读文档解析、资源摘要、宿主资源收集、ZIP 原始路径及大小校验、保真样例保存重开；DOCX 用例覆盖实际格式输入、独立生产者版本、样式、字段、批注、修订及保存重开；事务用例另覆盖隔离候选、操作、原子性、历史、冲突和预算，精确 UTF-16/结构映射、跨节点与区域批注，以及 DOCX 原生批注编辑后的历史和文档包重开；输入、自动分页和 Office 导出仍待实现。核心用例放入各包 `tests`，浏览器用例放入根 `tests/browser`。
+测试还覆盖只读文档解析、资源摘要、宿主资源收集、ZIP 原始路径及大小校验、保真样例保存重开；DOCX 用例覆盖实际格式输入、独立生产者版本、样式、字段、批注、修订及保存重开；事务用例另覆盖隔离候选、操作、原子性、历史、冲突和预算，精确 UTF-16/结构映射、跨节点与区域批注，以及 DOCX 原生批注编辑后的历史和文档包重开；正文输入增加身份协调、精确映射证据和中文组合输入；自动分页和 Office 导出仍待实现。核心用例放入各包 `tests`，浏览器用例放入根 `tests/browser`。
 
 ## 浏览器烟测
 
@@ -67,7 +67,7 @@ DAGENT_OFFICE_BROWSER_CHANNEL=chrome pnpm test:browser
 
 未设置渠道时使用对应 Playwright 版本的 Chromium，不进行自动渠道回退。当前截图基线使用锁定的 Chromium 与 Noto 中文字体；补充的仿宋/楷体浏览器用例还需要[固定开源字体环境](fonts.md)。环境和字体摘要见[参考记录](../examples/docx/reference.json)。使用 Chrome 渠道只能作额外验证，不能静默刷新固定基线。独立参考检查使用 `pnpm check:docx-reference`，更新方法见[DOCX 读取](docx-import.md#独立样例与验收)。
 
-仅运行 R1-08 交互验收使用 `node scripts/playwright.mjs test interaction.spec.ts workbench.spec.ts`；它包含普通 JavaScript 宿主及 React Playground。CI 分别执行 `pnpm check` 和浏览器交互／工作台检查，失败时上传 Playwright 结果。文档视觉夹具截图时展开滚动容器，继续核对原完整文档基线；交互滚动与缩放另有坐标验收。
+仅运行 R1-08 交互验收使用 `node scripts/playwright.mjs test interaction.spec.ts workbench.spec.ts text-editor.spec.ts`；它包含普通 JavaScript 宿主及 React Playground。CI 分别执行 `pnpm check` 和浏览器交互／工作台检查，失败时上传 Playwright 结果。文档视觉夹具截图时展开滚动容器，继续核对原完整文档基线；交互滚动与缩放另有坐标验收。
 
 ## 本地打包
 
@@ -81,6 +81,6 @@ pnpm pack:packages
 
 ## 依赖与状态
 
-已安装 Zod、HTML/CSS 解析器、哈希、ZIP、工具及依赖的版本、许可证见[技术选型](technology-selection.md)。XML 已通过内部 saxes 适配器接入，Tiptap 等依赖仍按后续任务引入；Office OOXML 读写和样式映射自行实现，不提前提供占位功能 API。
+已安装 Zod、HTML/CSS 解析器、哈希、ZIP、工具及依赖的版本、许可证见[技术选型](technology-selection.md)。XML 已通过内部 saxes 适配器接入，Tiptap 3.32.1 已用于 R1-11，其他格式的编辑依赖仍按后续任务引入；Office OOXML 读写和样式映射自行实现，不提前提供占位功能 API。
 
 修改后运行相应的窄范围检查与 `git diff --check`。只有验证所覆盖的能力才可在 README 标为已实现，产品范围和宿主边界以[总体架构](architecture.md)及[交互协议](editing-protocol.md)为准。

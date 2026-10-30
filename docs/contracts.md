@@ -32,7 +32,7 @@ const proposalSchema = getContractJsonSchema("edit-proposal");
 | `document-metadata` | Word 页面/节、内容域、样式图、编号、字段、链接、制表位、表格及修订语义；标题及语言可选 |
 | `anchor` | 单节点文字、跨节点文字、节点、节点集合和区域 |
 | `annotation`、`annotations` | 批注及批注列表 |
-| `content-operation` | 当前六种内容操作 |
+| `content-operation` | 当前七种内容操作，包含身份协调及精确文字映射证据 |
 | `document-operation` | 内容操作和三种批注管理操作 |
 | `document-transaction` | 协议、文档、基准修订和操作列表 |
 | `interaction-request` | 开放批注、完整区块、样式、元数据、资源和支持操作 |
@@ -96,7 +96,7 @@ import proposalSchema from "@dagent-office/core/schemas/edit-proposal.json"
 - `DocumentSnapshot` 为文档源的派生只读视图，不是新的保存格式。
 - `DocumentModel` 由 `openDocument` 创建，已实现 `snapshot/getNode/serialize`；返回值冻结或独立复制，第三方 AST 不进入公共接口。
 - `CandidateChange` 是非序列化的候选类型；当前会话使用私有运行时状态验证候选所有权、消费状态和修订，类型标记不代表授权。
-- `createDocumentSession` 返回已实现的 `DocumentEditingSession`，包含查询、候选、提交、历史、序列化和释放；`DocumentSession` 继续声明完整协作契约，请求生成和 `prepareProposal` 尚未实现。
+- `createDocumentSession` 返回 `DocumentSession`，包含查询、候选、提交、历史、序列化和释放，以及 R1-09 已实现的请求生成和 `prepareProposal`；R1-11 的输入通过相同事务边界协调身份及精确文字映射。
 - 核心事件声明 `protocolVersion/documentId/revision`，文档变化携带节点 ID，批注变化携带批注 ID，错误携带结构化错误数据。
 
 ## 校验边界与后续任务

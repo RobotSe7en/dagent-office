@@ -164,7 +164,14 @@ export function createDocumentSession(document: DocumentModel, options: Document
   }
 
   function prepareTransaction(input: DocumentTransaction, resolvedIds?: readonly string[]): CandidateChange {
-    if (input && Array.isArray(input.operations)) checkLimit(input.operations.length, budgets.maxOperations);
+    if (input && Array.isArray(input.operations)) {
+      let count = input.operations.length;
+      for (const operation of input.operations) {
+        if (operation?.op === "reconcileFragment" && Array.isArray(operation.textEdits)) count += operation.textEdits.length;
+        checkLimit(count, budgets.maxOperations);
+      }
+      checkLimit(count, budgets.maxOperations);
+    }
     checkTransactionSize(input, budgets.maxTransactionBytes, limits.maxDepth);
     const transaction = parseContract("document-transaction", input);
     const base = state();
