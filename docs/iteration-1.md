@@ -1,6 +1,6 @@
 # 第一轮实施细则：HTML 与 Word 完整协作
 
-**状态：R1-02 至 R1-09、R1-05A 模型设计及 R1-10 声明范围读取验收已完成，下一步 R1-11。** DOCX API、支持矩阵、中文字体和验收限制见[读取说明](docx-import.md)。事务 API、候选、历史及精确锚点映射规则见[核心事务与历史](document-session.md)，R1-08 的选区、框选、批注面板及生命周期见[预览与交互](preview-interaction.md)。校验 API 见[结构契约](contracts.md)，读取与保存重开见[文档模型](document-model.md)，资源校验、ZIP 和保真样例见[资源与 ZIP](resources-and-zip.md)，环境与检查见[本地开发](development.md)。本轮合并 HTML 协作基础与 Word 文件闭环，先在独立 Playground 验证，再接入达智智能体。[总体架构](architecture.md)定义模块，[整体计划](implementation-plan.md)定义五轮路线，[编辑与宿主交互协议](editing-protocol.md)是事务、请求和提案规则的来源。
+**状态：R1-02 至 R1-09、R1-05A 模型设计及 R1-10 声明范围读取验收以及 R1-11 富文本输入已完成，下一步 R1-12。** DOCX API、支持矩阵、中文字体和验收限制见[读取说明](docx-import.md)。事务 API、候选、历史及精确锚点映射规则见[核心事务与历史](document-session.md)，R1-08 的选区、框选、批注面板及生命周期见[预览与交互](preview-interaction.md)。校验 API 见[结构契约](contracts.md)，读取与保存重开见[文档模型](document-model.md)，资源校验、ZIP 和保真样例见[资源与 ZIP](resources-and-zip.md)，环境与检查见[本地开发](development.md)。本轮合并 HTML 协作基础与 Word 文件闭环，先在独立 Playground 验证，再接入达智智能体。[总体架构](architecture.md)定义模块，[整体计划](implementation-plan.md)定义五轮路线，[编辑与宿主交互协议](editing-protocol.md)是事务、请求和提案规则的来源。
 
 ## 目标与演示闭环
 
@@ -98,7 +98,7 @@ Playground 的 Vite 开发宿主通过仅限本机开发的转换中间件调用
 | R1-07 | 锚点与批注（已完成） | R1-06 | 批注事务、文字映射、节点失效及区域重定位规则 |
 | R1-08 | 预览与交互（已完成） | R1-07、R1-10 | 样式隔离、文字／对象选择、矩形坐标与命中、批注列表与重定位、统一历史及资源释放；见[交互说明](preview-interaction.md) |
 | R1-09 | 工作台与协议闭环（已完成） | R1-08 | 请求生成、统一提交、固定提案导入、候选差异、整批应用和下载 |
-| R1-11 | 富文本直接输入 | R1-08、R1-10 | Tiptap 适配、中文输入法、跨段落及表格输入、基础格式和统一历史 |
+| R1-11 | 富文本直接输入（已完成） | R1-08、R1-10 | Tiptap 适配、中文输入法、跨段落及表格输入、基础格式和统一历史 |
 | R1-12 | 分页与渲染 | R1-10、R1-11 | 派生分页、页设置、明确分页分节、页眉页脚、中文字体、页码/总页数/目录更新及 PDF |
 | R1-13 | 原生 DOCX 导出 | R1-10、R1-11、R1-12 | 从当前文档源输出全部已支持的导入语义，包括链接、制表位、字段、批注和文字修订；导出重开无需修复 |
 | R1-14 | 独立 Word 闭环 | R1-09 至 R1-13 | Playground 完成 HTML/DOCX 输入、人工编辑、固定提案、DOCX/PDF 导出与重开，并消费打包产物 |

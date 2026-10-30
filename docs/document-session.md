@@ -26,11 +26,11 @@ const reopened = openDocument(saved);
 session.dispose();
 ```
 
-工厂返回 `DocumentSession`（扩展 `DocumentEditingSession`），实现 `snapshot/getNode/getAnnotations/serialize`、`prepare/commit/discard`、`undo/redo/history/clearHistory`、`subscribe/dispose`。R1-09 已实现请求生成与 `prepareProposal`，完整规则见[工作台与协议](workbench.md)。本入口不提供富文本 UI、分页或 Office 导出。
+工厂返回 `DocumentSession`（扩展 `DocumentEditingSession`），实现 `snapshot/getNode/getAnnotations/serialize`、`prepare/commit/discard`、`undo/redo/history/clearHistory`、`subscribe/dispose`。R1-09 已实现请求生成与 `prepareProposal`，完整规则见[工作台与协议](workbench.md)。富文本 UI 通过[正文输入适配器](rich-text.md)复用本入口；分页和 Office 导出另行实现。
 
 ## 操作和候选
 
-支持六类内容操作以及三类批注操作，结构与[交互协议](editing-protocol.md#文档操作)一致。全部操作先经严格结构校验，目标 ID 必须属于基准快照；然后按顺序在隔离树执行，文字范围和 `expectedText` 对照前序操作后的状态。最终重新检查 HTML/CSS、资源、节、Word 语义和批注引用。失败不会改变文档、修订或历史。
+支持七类内容操作以及三类批注操作，结构与[交互协议](editing-protocol.md#文档操作)一致。全部操作先经严格结构校验，目标 ID 必须属于基准快照；然后按顺序在隔离树执行，文字范围和 `expectedText` 对照前序操作后的状态。最终重新检查 HTML/CSS、资源、节、Word 语义和批注引用。失败不会改变文档、修订或历史。
 
 | 操作 | 当前执行规则 |
 | --- | --- |

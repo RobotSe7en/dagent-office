@@ -30,6 +30,8 @@ export const validCases: [ContractName, unknown][] = [
   ["annotation", annotations[0]],
   ["annotations", annotations],
   ["content-operation", proposal.operations[0]],
+  ["content-operation", { op: "reconcileFragment", nodeId: "root", html: '<p data-node-id="n">新</p>',
+    textEdits: [{ nodeId: "n", from: 0, to: 1, expectedText: "旧", text: "新" }] }],
   ["document-operation", { op: "addAnnotation", annotation: annotations[0] }],
   ["document-transaction", {
     protocolVersion: 1, documentId: manifest.documentId, baseRevision: 0, operations: proposal.operations,
@@ -92,6 +94,7 @@ export const invalidCases: [ContractName, unknown][] = [
   ["asset-descriptor", { path: "image.png", mimeType: "image/png", sha256: "a".repeat(64) + "\n" }],
   ["content-operation", { op: "replaceText", nodeId: "n", from: 0, to: 1, text: "new" }],
   ["content-operation", { op: "setGeometry", nodeId: "n", x: 1 }],
+  ["content-operation", { op: "reconcileFragment", nodeId: "n", html: "", textEdits: [{ nodeId: "n", from: 0, to: 0, expectedText: "", text: "x", unsafe: true }] }],
   ["content-operation", { op: "addAnnotation", annotation: annotations[0] }],
   ["content-operation", { op: "insertFragment", nodeId: "root", position: "somewhere", html: "<p>x</p>" }],
   ["document-operation", { op: "updateAnnotation", annotationId: "a", changes: { unknown: true } }],

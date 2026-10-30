@@ -25,13 +25,17 @@
     "dev": "tsc --watch --project tsconfig.json --preserveWatchOutput"
   },
   "dependencies": {
-    "@dagent-office/core": "workspace:*"
+    "@dagent-office/core": "workspace:*",
+    "@tiptap/core": "3.32.1",
+    "@tiptap/pm": "3.32.1"
   },
   "peerDependencies": {
     "react": ">=18.2.0 <20"
   },
   "peerDependenciesMeta": {
-    "react": { "optional": true }
+    "react": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/react": "19.3.0"

@@ -7,6 +7,15 @@ import {
 } from "../../packages/office/tests/regression-fixtures.js";
 
 const samples = fileURLToPath(new URL("../../examples/docx/", import.meta.url));
+test("fixed-font continuous rich-text input fixture", async ({ page }) => {
+  await page.goto("/"); await page.getByRole("button", { name: "打开报告协作样例" }).click();
+  await page.getByRole("button", { name: "编辑正文", exact: true }).click();
+  const paragraph = page.frameLocator('iframe[title="正文编辑"]').locator('[data-node-id="n-summary"]');
+  await paragraph.click(); await page.keyboard.press("End"); await page.keyboard.insertText(" 中文输入 ABC");
+  await paragraph.evaluate(async () => document.fonts.ready);
+  await expect(paragraph).toContainText("中文输入 ABC");
+  await expect(paragraph).toHaveScreenshot("continuous-rich-text.png", { animations: "disabled", caret: "hide", maxDiffPixelRatio: 0.005, threshold: 0.2 });
+});
 async function expandDocumentScreenshot(page: Page): Promise<void> {
   // Measure the complete source rendering, independent of the interaction scroll viewport.
   await page.locator("iframe").evaluate((frame) => {

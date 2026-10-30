@@ -18,6 +18,7 @@ export function DocumentWorkbench(props: DocumentWorkbenchProps): ReactElement {
   useEffect(() => {
     if (!container.current) return;
     const view = mountDocumentWorkbench(container.current, props.session, {
+      ...(props.editable !== undefined ? { editable: props.editable } : {}),
       ...(props.title ? { title: props.title } : {}),
       ...(props.supportedOperations ? { supportedOperations: props.supportedOperations } : {}),
       ...(props.contextLimits ? { contextLimits: props.contextLimits } : {}),
@@ -30,6 +31,6 @@ export function DocumentWorkbench(props: DocumentWorkbenchProps): ReactElement {
     let active = true;
     void view.ready.catch((error: unknown) => { if (active) latest.current.onError?.(error instanceof Error ? error : new Error("Preview failed.")); });
     return () => { active = false; view.dispose(); latest.current.onViewChange?.(undefined); };
-  }, [props.session, props.title, props.supportedOperations, props.contextLimits, hasSubmission]);
+  }, [props.session, props.title, props.supportedOperations, props.contextLimits, props.editable, hasSubmission]);
   return createElement("div", { ref: container, className: props.className });
 }

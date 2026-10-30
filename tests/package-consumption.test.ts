@@ -159,13 +159,14 @@ test("packed declarations resolve without borrowing workspace source or ambient 
       'const digest: string = createAssetDescriptor("assets/a.bin", "application/octet-stream", archive).sha256;',
       'void collected; void unpacked; void digest;',
       ...(name === "browser" ? [
-        'import { mountDocumentInteraction, mountDocumentWorkbench } from "@dagent-office/editor";',
+        'import { mountDocumentInteraction, mountDocumentWorkbench, mountDocumentTextEditor } from "@dagent-office/editor";',
         'import type { DocumentInteractionView } from "@dagent-office/editor";',
         'declare const container: HTMLElement;',
         'const view: DocumentInteractionView = mountDocumentInteraction(container, session, {onSelectionChange(selection) { void selection?.baseRevision; }});',
         'view.setMode("region"); view.setZoom(1.25); view.selection(); view.fonts(); void view.ready; view.dispose();',
         'const workbench = mountDocumentWorkbench(container, session, {onSubmitAnnotations(request) { void request.requestId; }});',
         'workbench.buildRequest(["a"]); workbench.request(); workbench.rejectProposal(); workbench.dispose();',
+        'const textEditor = mountDocumentTextEditor(container, session); void textEditor.ready; textEditor.focus(); textEditor.dispose();',
       ] : []),
     ].join("\n"));
     writeFileSync(join(consumer, "tsconfig." + name + ".json"), JSON.stringify({

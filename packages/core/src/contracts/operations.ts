@@ -2,6 +2,12 @@ import { z } from "zod";
 import { AnchorSchema, AnnotationSchema, AnnotationStatusSchema } from "./annotations.js";
 import { IdentifierSchema, PackagePathSchema, PROTOCOL_VERSION, RevisionSchema } from "./primitives.js";
 
+export const ReconciledTextEditSchema = z.strictObject({
+  nodeId: IdentifierSchema, from: RevisionSchema, to: RevisionSchema,
+  expectedText: z.string(), text: z.string(),
+});
+export type ReconciledTextEdit = z.infer<typeof ReconciledTextEditSchema>;
+
 export const DocumentContentOperationSchema = z.discriminatedUnion("op", [
   z.strictObject({
     op: z.literal("replaceText"),
@@ -15,6 +21,12 @@ export const DocumentContentOperationSchema = z.discriminatedUnion("op", [
     op: z.literal("replaceFragment"),
     nodeId: IdentifierSchema,
     html: z.string(),
+  }),
+  z.strictObject({
+    op: z.literal("reconcileFragment"),
+    nodeId: IdentifierSchema,
+    html: z.string(),
+    textEdits: z.array(ReconciledTextEditSchema),
   }),
   z.strictObject({
     op: z.literal("insertFragment"),
