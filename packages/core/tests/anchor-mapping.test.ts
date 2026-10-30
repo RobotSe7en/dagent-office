@@ -273,6 +273,33 @@ describe("region validity and explicit relocation", () => {
     expect(openDocument(s.serialize()).snapshot()).toEqual(s.snapshot());
   });
 
+  test.each(["open", "resolved"] as const)("recovering a region to %s requires an explicit measured anchor", (status) => {
+    const s = session('<p data-node-id="p">甲</p>', [region()]);
+    s.commit(prepare(s, [replace("p", 0, "", "前")]));
+    const original = s.snapshot();
+    const history = s.history();
+    expect(() => prepare(s, [{ op: "updateAnnotation", annotationId: "a0", changes: { status } }])).toThrow(DocumentError);
+    expect(s.snapshot()).toEqual(original);
+    expect(s.history()).toEqual(history);
+    const anchor = { ...region(["p"]), layoutKey: "flow-2" };
+    s.commit(prepare(s, [{ op: "updateAnnotation", annotationId: "a0", changes: { anchor } },
+      { op: "updateAnnotation", annotationId: "a0", changes: { status } }]));
+    expect(s.getAnnotations()[0]).toMatchObject({ status, baseRevision: 2, anchor });
+    s.undo();
+    expect(s.getAnnotations()[0]).toEqual(original.annotations[0]);
+    s.redo();
+    expect(s.getAnnotations()[0]).toMatchObject({ status, baseRevision: 4, anchor });
+  });
+
+  test("matching text does not allow status-only recovery after a structural replacement", () => {
+    const s = session('<p data-node-id="p">甲乙</p>', [range("p", 0, "甲乙")]);
+    s.commit(prepare(s, [{ op: "replaceFragment", nodeId: "p", html: "<strong>甲乙</strong>" }]));
+    const original = s.snapshot();
+    expect(() => prepare(s, [{ op: "updateAnnotation", annotationId: "a0", changes: { status: "open" } },
+      { op: "setStyle", nodeId: "p", property: "color", value: "red" }])).toThrow(DocumentError);
+    expect(s.snapshot()).toEqual(original);
+  });
+
   test("renderer environment changes can invalidate a region explicitly without changing document HTML", () => {
     const s = session('<p data-node-id="p">甲</p>', [region()]);
     const html = s.snapshot().html;
@@ -298,6 +325,43 @@ describe("anchor source validation", () => {
     expect(() => openDocument(files(content, [anchor]))).toThrow(expect.objectContaining({ code: "InvalidDocument" }));
     const recovery = openDocument(files(content, [anchor], "needs_reanchor"));
     expect(openDocument(recovery.serialize()).snapshot().annotations[0]!.anchor).toEqual(anchor);
+  });
+
+  test("accepts ordered empty-paragraph ranges sharing a normalized offset, and rejects reversed or duplicate points", () => {
+    const content = '<p data-node-id="p"></p><p data-node-id="q"></p><p data-node-id="r">乙</p>';
+    const ranges = [part("p", 0, ""), part("q", 0, ""), part("r", 0, "乙")];
+    const document = openDocument(files(content, [{ kind: "text-set", ranges }]));
+    expect(openDocument(document.serialize()).snapshot()).toEqual(document.snapshot());
+    for (const invalid of [[...ranges].reverse(), [ranges[0]!, ranges[0]!]]) {
+      expect(() => openDocument(files(content, [{ kind: "text-set", ranges: invalid }]))).toThrow(DocumentError);
+    }
+    const s = createDocumentSession(document);
+    s.commit(prepare(s, [replace("r", 0, "", "前")]));
+    expect(s.getAnnotations()[0]).toMatchObject({ status: "open", anchor: { kind: "text-set", ranges: [ranges[0], ranges[1], part("r", 1, "乙")] } });
+  });
+
+  test("ancestor-node text anchors use the content domains actually covered by their ranges", () => {
+    const content = '<div data-node-id="main" data-office-story="main"><p data-node-id="p">甲乙</p></div>'
+      + '<div data-node-id="comment" data-office-story="comment"><p data-node-id="q">丙丁</p></div>';
+    for (const anchor of [range("root", 1, "乙丙"), { kind: "text-set", ranges: [part("root", 0, "甲"), part("root", 2, "丙")] } as Anchor]) {
+      expect(() => openDocument(files(content, [anchor]))).toThrow(DocumentError);
+    }
+    const document = openDocument(files(content, [range("root", 0, "甲乙"), range("root", 2, "丙丁")]));
+    expect(document.snapshot().annotations.every((a) => a.status === "open")).toBe(true);
+    expect(openDocument(document.serialize()).snapshot()).toEqual(document.snapshot());
+  });
+
+  test("ancestor point anchors follow actual source stories, including the anchored node's end", () => {
+    const content = '<div data-node-id="main" data-office-story="main"><p data-node-id="p">甲乙丙</p></div>'
+      + '<div data-node-id="comment" data-office-story="comment"><p data-node-id="q">丁</p></div>';
+    const anchors: Anchor[] = [
+      { kind: "text-set", ranges: [part("root", 1, ""), part("root", 2, "丙")] },
+      { kind: "text-set", ranges: [part("p", 0, "甲"), part("p", 3, "")] },
+      { kind: "text-set", ranges: [part("q", 0, "丁"), part("root", 4, "")] },
+    ];
+    const document = openDocument(files(content, anchors));
+    expect(openDocument(document.serialize()).snapshot()).toEqual(document.snapshot());
+    expect(() => openDocument(files(content, [{ kind: "text-set", ranges: [part("p", 2, "丙"), part("root", 3, "")] }]))).toThrow(DocumentError);
   });
 
   test("rejects cross-story text sets", () => {

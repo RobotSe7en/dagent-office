@@ -63,6 +63,7 @@ export interface ParsedHtml {
   getNode(nodeId: string): DocumentNode | undefined;
   hasNode(nodeId: string): boolean;
   textOffset(nodeId: string): number | undefined;
+  textScope(nodeId: string, from: number, to: number): string | undefined;
   isContainer(nodeId: string): boolean;
   signature(nodeId: string): string | undefined;
 }
@@ -172,6 +173,30 @@ export function parseHtml(source: string, manifest: DeepReadonly<DocumentManifes
       invalid("HTML stylesheet links must match the manifest order exactly.");
     }
     let positions: ReturnType<typeof textPositions> | undefined;
+    let scopes: { from: number; to: number; scope: string }[] | undefined;
+    const inheritedScope = (element: Element): string => {
+      for (let node: Node | null = element; node; node = "parentNode" in node ? node.parentNode : null) {
+        if (isElement(node) && attribute(node, "data-office-story") !== undefined) {
+          const id = attribute(node, "data-node-id");
+          if (id !== undefined) return id;
+        }
+      }
+      return attribute(root, "data-node-id")!;
+    };
+    const readScopes = () => {
+      if (scopes) return scopes;
+      positions ??= textPositions(tree);
+      scopes = [];
+      const visit = (node: Node, scope: string): void => {
+        if (isElement(node) && attribute(node, "data-office-story") !== undefined) scope = attribute(node, "data-node-id") ?? scope;
+        if (node.nodeName === "#text" || isElement(node) && ["br", "img"].includes(node.tagName)) {
+          const range = positions!.get(node)!;
+          if (range.from < range.to) scopes!.push({ ...range, scope });
+        } else if ("childNodes" in node) for (const child of node.childNodes) visit(child, scope);
+      };
+      visit(root, inheritedScope(root));
+      return scopes;
+    };
     return {
       html: serialize(tree),
       nodeIds: () => [...index.keys()],
@@ -197,6 +222,28 @@ export function parseHtml(source: string, manifest: DeepReadonly<DocumentManifes
         positions ??= textPositions(tree);
         const element = index.get(nodeId)?.element;
         return element ? positions.get(element)?.from : undefined;
+      },
+      textScope: (nodeId, from, to) => {
+        const element = index.get(nodeId)?.element;
+        if (!element) return undefined;
+        const runs = readScopes();
+        const bounds = positions!.get(element)!;
+        const offset = bounds.from;
+        if (bounds.from === bounds.to) return inheritedScope(element);
+        let low = 0;
+        let high = runs.length;
+        while (low < high) {
+          const middle = Math.floor((low + high) / 2);
+          if (runs[middle]!.to <= offset + from) low = middle + 1;
+          else high = middle;
+        }
+        // Points follow the next source leaf, or the preceding leaf at this node's end.
+        if (from === to) return runs[low - (offset + from === bounds.to ? 1 : 0)]?.scope;
+        const scope = runs[low]?.scope;
+        for (let index = low; index < runs.length && runs[index]!.from < offset + to; index++) {
+          if (runs[index]!.scope !== scope) return undefined;
+        }
+        return scope;
       },
       hasNode: (nodeId) => index.has(nodeId),
       isContainer: (nodeId) => {

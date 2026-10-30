@@ -180,11 +180,15 @@ export function createDocumentSession(document: DocumentModel, options: Document
       const annotations = parseContract("annotations", base.snapshot.annotations);
       const metadata = parseContract("document-metadata", base.snapshot.metadata);
       const explicit = new Set<string>();
+      const unresolved = new Set(base.snapshot.annotations.filter((item) => item.status === "needs_reanchor").map((item) => item.annotationId));
       for (const operation of transaction.operations) {
         if ("nodeId" in operation) edit.apply(operation);
         else applyAnnotation(operation, annotations, explicit);
       }
       for (const annotation of annotations) {
+        if (annotation.status !== "needs_reanchor" && unresolved.has(annotation.annotationId) && !explicit.has(annotation.annotationId)) {
+          invalid("Reactivating an unresolved annotation requires an explicit anchor.");
+        }
         if (explicit.has(annotation.annotationId) && annotation.status !== "needs_reanchor"
           && annotationNodes(annotation).some((id) => !base.html.hasNode(id))) invalid("Annotation targets must belong to the base snapshot.");
       }

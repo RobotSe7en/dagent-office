@@ -6,18 +6,27 @@ import { invalid } from "./validation.js";
 
 /** A text-set denotes one ordered selection, including ranges on nested source nodes. */
 export function validTextRanges(ranges: readonly TextRange[], html: ParsedHtml): boolean {
-  const storyOf = (id: string): string => {
-    const node = html.peekNode(id)!;
-    return node.attributes["data-office-story"] !== undefined || node.parentNodeId === null ? id : storyOf(node.parentNodeId);
+  let order: Map<string, number> | undefined;
+  const ancestorOf = (ancestor: string, id: string): boolean => {
+    for (let current: string | null = id; current !== null; current = html.peekNode(current)!.parentNodeId) {
+      if (current === ancestor) return true;
+    }
+    return false;
   };
-  let previous: { from: number; to: number; story: string } | undefined;
+  let previous: { nodeId: string; from: number; to: number; story: string } | undefined;
   for (const range of ranges) {
     const text = html.getNode(range.nodeId)?.text;
     if (text === undefined || range.from > range.to || range.to > text.length || text.slice(range.from, range.to) !== range.quote
       || !isTextBoundary(text, range.from) || !isTextBoundary(text, range.to)) return false;
     const offset = html.textOffset(range.nodeId)!;
-    const current = { from: offset + range.from, to: offset + range.to, story: storyOf(range.nodeId) };
-    if (previous && (current.story !== previous.story || current.from < previous.to || current.from === previous.from)) return false;
+    const story = html.textScope(range.nodeId, range.from, range.to);
+    if (story === undefined) return false;
+    const current = { nodeId: range.nodeId, from: offset + range.from, to: offset + range.to, story };
+    if (previous && (current.story !== previous.story || current.from < previous.to)) return false;
+    if (previous && current.from === previous.from) {
+      order ??= new Map(html.nodeIds().map((id, index) => [id, index]));
+      if (order.get(current.nodeId)! <= order.get(previous.nodeId)! || ancestorOf(previous.nodeId, current.nodeId)) return false;
+    }
     previous = current;
   }
   return true;
