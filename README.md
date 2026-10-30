@@ -39,7 +39,7 @@ pnpm dev
 | [结构契约与 JSON Schema](docs/contracts.md) | 已实现的校验 API、严格字段、类型、静态 Schema 与语义校验边界 |
 | [文档包读取与模型](docs/document-model.md) | 只读打开、节点查询、HTML/CSS 支持范围、引用、预算和保存重开 |
 | [核心事务与历史](docs/document-session.md) | 编辑会话、操作、候选、修订、历史、事件及预算 |
-| [正文富文本输入](docs/rich-text.md) | Tiptap、中文输入法、身份保留、跨段落与表格输入及统一历史 |
+| [正文富文本输入](docs/rich-text.md) | 自研输入适配、中文输入法、身份保留、跨段落与表格输入及统一历史 |
 | [工作台与协议](docs/workbench.md) | 多批注请求、宿主提交、提案校验、差异应用及 React 包装 |
 | [预览与交互](docs/preview-interaction.md) | 普通 JS 挂载、文字与对象选择、矩形坐标、批注面板、布局失效与生命周期 |
 | [中文字体](docs/fonts.md) | 常用宋体、仿宋、楷体名称保留、开源字体环境与预览替代 |

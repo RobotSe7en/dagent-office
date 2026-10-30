@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { build } from "vite";
 import { importDocx } from "@dagent-office/office";
+import { createAssetDescriptor } from "@dagent-office/core";
 import type { DocumentPackage } from "@dagent-office/core";
 import type { TextEditorHost } from "./fixtures/text-editor-host.js";
 declare global { interface Window { textEditorHost: TextEditorHost } }
@@ -16,10 +17,12 @@ function fixture(html = '<p data-node-id="a">甲甲甲</p><p data-node-id="b">�
   files.set("content.html", new TextEncoder().encode(new TextDecoder().decode(files.get("content.html")).replace(/<article[\s\S]*<\/article>/,
     '<article data-node-id="root" data-office-kind="document">' + html + "</article>"))); return files;
 }
-async function mount(page: Page, files = fixture()): Promise<void> {
+async function mount(page: Page, files = fixture(), beforeReadyText?: string): Promise<void> {
   await page.goto("/"); await page.addScriptTag({ type: "module", content: code });
   await page.waitForFunction(() => !!window.textEditorHost);
-  await page.evaluate((entries) => window.textEditorHost.mount(entries), [...files].map(([path, value]) => [path, [...value]] as [string, number[]]));
+  await page.evaluate(({ entries, text }) => window.textEditorHost.mount(entries, text), {
+    entries: [...files].map(([path, value]) => [path, [...value]] as [string, number[]]), text: beforeReadyText,
+  });
 }
 async function selection(page: Page, fromId: string, from: number, toId = fromId, to = from): Promise<void> {
   await page.frameLocator('iframe[title="正文编辑"]').locator("body").evaluate((_, value) => {
@@ -62,6 +65,35 @@ test("an empty document offers a derived paragraph and commits it only after inp
   expect(await page.evaluate(() => window.textEditorHost.session!.history().undoSteps)).toBe(1);
 });
 
+test("a host commit before ready is visible and accepts input at the current revision", async ({ page }) => {
+  await mount(page, fixture(), "宿主先更新");
+  await expect(page.frameLocator('iframe[title="正文编辑"]').locator('[data-node-id="a"]')).toHaveText("宿主先更新甲甲甲");
+  await selection(page, "a", 0); await page.keyboard.insertText("人工后输入");
+  expect(await page.evaluate(() => window.textEditorHost.session!.getNode("a")!.text)).toBe("人工后输入宿主先更新甲甲甲");
+  expect(await page.evaluate(() => window.textEditorHost.errors)).toEqual([]);
+});
+
+test("an authorized image replacement creates a current blob URL without changing package paths", async ({ page }) => {
+  const files = new Map(fixture('<p data-node-id="a"><img data-node-id="image" src="assets/a.png" width="10" height="20"></p>'));
+  const bytes = new Uint8Array(readFileSync(new URL("../../examples/fidelity/assets/sample.png", import.meta.url)));
+  const manifest = JSON.parse(new TextDecoder().decode(files.get("manifest.json")!));
+  manifest.assets = ["assets/a.png", "assets/b.png"].map((path) => createAssetDescriptor(path, "image/png", bytes));
+  files.set("manifest.json", new TextEncoder().encode(JSON.stringify(manifest))); files.set("assets/a.png", bytes); files.set("assets/b.png", bytes);
+  await mount(page, files);
+  const image = page.frameLocator('iframe[title="正文编辑"]').locator('[data-node-id="image"]');
+  const previous = await image.getAttribute("src");
+  await page.evaluate(() => {
+    const s = window.textEditorHost.session!;
+    s.commit(s.prepare({ protocolVersion: 1, documentId: s.snapshot().manifest.documentId, baseRevision: 0,
+      operations: [{ op: "replaceAsset", nodeId: "image", assetPath: "assets/b.png" }] }));
+  });
+  await expect(image).toHaveAttribute("src", /^blob:/);
+  expect(await image.getAttribute("src")).not.toBe(previous);
+  await expect.poll(() => image.evaluate((node) => (node as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.textEditorHost.session!.getNode("image")!.attributes.src)).toBe("assets/b.png");
+  expect(await page.evaluate(() => window.textEditorHost.errors)).toEqual([]);
+});
+
 test("repeated text anchors follow the actual insertion point rather than a guessed string diff", async ({ page }) => {
   const files = new Map(fixture()); files.set("annotations.json", new TextEncoder().encode(JSON.stringify([{
     annotationId: "note", documentId: "report-demo", baseRevision: 0, status: "open", instruction: "middle",
@@ -69,6 +101,59 @@ test("repeated text anchors follow the actual insertion point rather than a gues
   }])));
   await mount(page, files); await selection(page, "a", 1); await page.keyboard.insertText("甲");
   await expect.poll(() => page.evaluate(() => window.textEditorHost.session!.getAnnotations()[0]!.anchor)).toEqual({ kind: "text", nodeId: "a", from: 2, to: 3, quote: "甲" });
+});
+
+test("a known paragraph split retains annotations on the untouched prefix", async ({ page }) => {
+  const files = new Map(fixture('<p data-node-id="a">甲乙丙</p>'));
+  files.set("annotations.json", new TextEncoder().encode(JSON.stringify([{
+    annotationId: "note", documentId: "report-demo", baseRevision: 0, status: "open", instruction: "prefix",
+    anchor: { kind: "text", nodeId: "a", from: 0, to: 1, quote: "甲" },
+  }])));
+  await mount(page, files); await selection(page, "a", 2); await page.keyboard.press("Enter");
+  expect(await page.evaluate(() => window.textEditorHost.session!.getAnnotations()[0]!.status)).toBe("open");
+  expect(await page.evaluate(() => window.textEditorHost.session!.getAnnotations()[0]!.anchor)).toEqual({ kind: "text", nodeId: "a", from: 0, to: 1, quote: "甲" });
+});
+
+test("native deletion uses its target range and joins paragraphs through core history", async ({ page }) => {
+  await mount(page); await selection(page, "a", 2); await page.keyboard.press("Backspace");
+  expect(await page.evaluate(() => window.textEditorHost.session!.getNode("a")!.text)).toBe("甲甲");
+  await page.keyboard.press("Delete");
+  expect(await page.evaluate(() => window.textEditorHost.session!.getNode("a")!.text)).toBe("甲");
+  await selection(page, "b", 0); await page.keyboard.press("Backspace");
+  expect(await page.evaluate(() => window.textEditorHost.session!.getNode("a")!.text)).toBe("甲第二段");
+  await page.keyboard.press("Control+z");
+  expect(await page.evaluate(() => window.textEditorHost.session!.getNode("b")!.text)).toBe("第二段");
+  expect(await page.evaluate(() => window.textEditorHost.errors)).toEqual([]);
+});
+
+test("splitting a font-substituted run preserves authored fonts rather than measured presentation", async ({ page }) => {
+  await mount(page, fixture('<p data-node-id="a"><span data-node-id="s" style="font-family:UnavailableSourceFace;color:#123456">甲乙丙</span></p>'));
+  await selection(page, "s", 1); await page.keyboard.press("Enter"); await page.keyboard.insertText("新");
+  const html = await page.evaluate(() => window.textEditorHost.session!.snapshot().html);
+  expect(html.match(/font-family:UnavailableSourceFace/g)).toHaveLength(2);
+  expect(html).not.toMatch(/Noto|sdk-number-marker|contenteditable|data-office-editor|role="textbox"/);
+  expect(await page.evaluate(() => window.textEditorHost.errors)).toEqual([]);
+});
+
+test("editing preserves imported numbering, tabs, grid and untouched source attributes", async ({ page }) => {
+  for (const name of ["01-text-numbering.docx", "02-table-merges.docx", "06-links-tabs.docx"]) {
+    const path = new URL("../../examples/docx/" + name, import.meta.url);
+    const files = importDocx(readFileSync(path), { documentId: "projection" });
+    await mount(page, files);
+    const before = await page.evaluate(() => {
+      const s = window.textEditorHost.session!, source = new DOMParser().parseFromString(s.snapshot().html, "text/html");
+      const paragraph = [...source.querySelectorAll("p")].find((node) => node.textContent?.trim())!;
+      return { id: paragraph.getAttribute("data-node-id")!, nodes: [...source.querySelectorAll("[data-node-id]")].map((node) => ({ id: node.getAttribute("data-node-id")!, html: node.outerHTML })) };
+    });
+    await selection(page, before.id, 0); await page.keyboard.insertText("新增");
+    const after = await page.evaluate(() => window.textEditorHost.session!.snapshot().html);
+    expect(after).toContain("新增"); expect(after).not.toMatch(/sdk-number-marker|contenteditable|data-office-editor|blob:/);
+    const untouched = before.nodes.filter((node) => !node.html.includes('data-node-id="' + before.id + '"') && node.id !== before.id && !before.nodes.find((item) => item.id === before.id)!.html.includes('data-node-id="' + node.id + '"'));
+    // Core may assign an identity to a previously implicit table wrapper.
+    const structural = (html: string): string => html.replace(/<(tbody|thead|tfoot) data-node-id="edit-[^"]+"/g, "<$1");
+    for (const node of untouched) expect(structural((await page.evaluate((id) => window.textEditorHost.session!.getNode(id)?.html, node.id))!)).toBe(node.html);
+    expect(await page.evaluate(() => window.textEditorHost.errors)).toEqual([]);
+  }
 });
 
 test("Enter splits paragraphs, cross-paragraph replacement and table input remain serializable", async ({ page }) => {
@@ -116,6 +201,21 @@ test("real Chromium composition commits one Chinese input batch", async ({ page 
   expect(await page.evaluate(() => window.textEditorHost.errors)).toEqual([]);
 });
 
+test("a collapsed character format applies to IME text in its first and only undo step", async ({ page }) => {
+  await mount(page); await selection(page, "a", 1);
+  await page.getByRole("button", { name: "加粗", exact: true }).click();
+  expect(await page.evaluate(() => window.textEditorHost.session!.snapshot().manifest.revision)).toBe(0);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Input.imeSetComposition", { text: "中文", selectionStart: 2, selectionEnd: 2 });
+  await cdp.send("Input.insertText", { text: "中文" });
+  expect(await page.evaluate(() => window.textEditorHost.session!.getNode("a")!.text)).toBe("甲中文甲甲");
+  expect(await page.evaluate(() => window.textEditorHost.session!.getNode("a")!.html)).toMatch(/font-weight:700[^>]*>中文/);
+  expect(await page.evaluate(() => window.textEditorHost.session!.history().undoSteps)).toBe(1);
+  await page.keyboard.press("Control+z");
+  expect(await page.evaluate(() => window.textEditorHost.session!.getNode("a")!.text)).toBe("甲甲甲");
+  expect(await page.evaluate(() => window.textEditorHost.errors)).toEqual([]);
+});
+
 test("external changes during composition reject the pending input and restore the authoritative source", async ({ page }) => {
   await mount(page); await selection(page, "a", 1);
   const cdp = await page.context().newCDPSession(page);
@@ -149,6 +249,23 @@ test("supported HTML paste is validated atomically and executable or external co
     expect(await page.evaluate(() => window.textEditorHost.session!.snapshot())).toEqual(before);
   }
   expect(external).toEqual([]);
+});
+
+test("native copy, paste and cut transfer source formatting rather than browser computed styles", async ({ page }) => {
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await mount(page, fixture('<p data-node-id="a"><span data-node-id="s" style="font-family:UnavailableSourceFace;color:#123456">甲乙丙</span></p><p data-node-id="b">另一段</p>'));
+  await selection(page, "s", 0, "s", 2); await page.keyboard.press("Control+c");
+  const html = await page.evaluate(async () => {
+    const items = await navigator.clipboard.read(); return (await items[0]!.getType("text/html")).text();
+  });
+  expect(html).toContain("UnavailableSourceFace"); expect(html).not.toMatch(/Noto|data-node-id|webkit/);
+  await selection(page, "b", 3); await page.keyboard.press("Control+v");
+  await expect.poll(() => page.evaluate(() => window.textEditorHost.session!.getNode("root")!.text)).toBe("甲乙丙另一段甲乙");
+  expect(await page.evaluate(() => window.textEditorHost.errors)).toEqual([]);
+  await selection(page, "s", 0, "s", 1); await page.keyboard.press("Control+x");
+  expect(await page.evaluate(() => window.textEditorHost.session!.getNode("a")!.text)).toBe("乙丙");
+  await page.keyboard.press("Control+z");
+  expect(await page.evaluate(() => window.textEditorHost.session!.getNode("a")!.text)).toBe("甲乙丙");
 });
 
 test("table Tab navigation and paragraph/character formats use the same session", async ({ page }) => {

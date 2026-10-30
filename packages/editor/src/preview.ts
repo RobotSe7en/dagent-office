@@ -1,7 +1,7 @@
 import { DocumentError, openDocument } from "@dagent-office/core";
 import { resolvePreviewFonts } from "./fonts.js";
 import type { FontResolution } from "./fonts.js";
-import type { DocumentModel, WordMetadata } from "@dagent-office/core";
+import type { DeepReadonly, DocumentModel, WordMetadata } from "@dagent-office/core";
 import { PreviewSource } from "./source-index.js";
 
 export interface DocumentPreview {
@@ -14,7 +14,7 @@ export interface DocumentPreviewOptions {
   readonly title?: string;
 }
 
-function packagePath(reference: string, entrypoint: string): string {
+export function packagePath(reference: string, entrypoint: string): string {
   const parts = entrypoint.split("/").slice(0, -1);
   for (const token of reference.split("/")) {
     const value = decodeURIComponent(token);
@@ -63,17 +63,22 @@ function numeral(value: number, format: string): string {
   }
   return String(value);
 }
-function decorate(
+export function decorate(
   document: Document,
-  word: Readonly<WordMetadata> | undefined,
+  word: DeepReadonly<WordMetadata> | undefined,
+  scope: ParentNode = document,
 ): void {
   if (!word) return;
   const byId = new Map(
-    [...document.querySelectorAll<HTMLElement>("[data-node-id]")].map(
+    [...scope.querySelectorAll<HTMLElement>("[data-node-id]")].map(
       (node) => [node.dataset.nodeId!, node],
     ),
   );
-  for (const run of document.querySelectorAll<HTMLElement>("[data-word-run]")) {
+  if ((scope as Node).nodeType === 1) {
+    const root = scope as HTMLElement;
+    if (root.dataset.nodeId) byId.set(root.dataset.nodeId, root);
+  }
+  for (const run of scope.querySelectorAll<HTMLElement>("[data-word-run]")) {
     const computed = document.defaultView!.getComputedStyle(run);
     const threshold = parseFloat(
       computed.getPropertyValue("--word-kerning-threshold"),
@@ -84,7 +89,7 @@ function decorate(
           ? "normal"
           : "none";
   }
-  for (const paragraph of document.querySelectorAll<HTMLElement>(
+  for (const paragraph of scope.querySelectorAll<HTMLElement>(
     "p,h1,h2,h3,h4,h5,h6",
   )) {
     const computed = document.defaultView!.getComputedStyle(paragraph);
@@ -95,7 +100,7 @@ function decorate(
           ? "auto"
           : "manual";
   }
-  for (const paragraph of document.querySelectorAll<HTMLElement>(
+  for (const paragraph of scope.querySelectorAll<HTMLElement>(
     '[data-word-line-rule="auto"]',
   )) {
     const typed = paragraph as HTMLElement & {
@@ -136,7 +141,7 @@ function decorate(
     }
     element.prepend(columns);
   }
-  for (const section of document.querySelectorAll<HTMLElement>(
+  for (const section of scope.querySelectorAll<HTMLElement>(
     '[data-office-story="main"] > section',
   ))
     section.classList.add("sdk-section");
@@ -306,6 +311,7 @@ export function mountPreview(
     "default-src 'none'; img-src blob:; style-src 'unsafe-inline'; font-src 'none'; base-uri 'none'; form-action 'none'";
   parsed.head.prepend(policy);
   const style = parsed.createElement("style");
+  style.setAttribute("data-sdk-source-styles", "");
   // outerHTML leaves raw style text intact. Escape the slash in HTML end tags
   // using CSS syntax, preserving the string's value and existing escapes.
   style.textContent = snapshot.styles.map((item) => item.css).join("\n")
