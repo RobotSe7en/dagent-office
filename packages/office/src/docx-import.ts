@@ -63,6 +63,17 @@ interface CommentState {
   ranges: TextRange[];
   point?: string;
 }
+/** Serialized HTML size without allocating an escaped string or UTF-8 buffer. */
+function htmlBytes(value: string): number {
+  let bytes = 0;
+  for (const character of value) {
+    const code = character.codePointAt(0)!;
+    bytes += character === "&" ? 5 : character === '"' ? 6
+      : character === "<" || character === ">" ? 4
+        : code <= 0x7f ? 1 : code <= 0x7ff ? 2 : code <= 0xffff ? 3 : 4;
+  }
+  return bytes;
+}
 const serialize = (node: Html): string => {
   const attributes = Object.entries(node.attrs)
     .map(([name, value]) => " " + name + '="' + escapeHtml(value) + '"')
@@ -98,6 +109,8 @@ const emptyWord = (): WordMetadata => ({
 
 class Importer {
   private serial = 0;
+  private generatedNodes = 0;
+  private generatedBytes = 0;
   private readonly textLengths = new WeakMap<Html, number>();
   private currentRun: Html | undefined;
   private paragraphRunClasses: string[] = ["word-default-run"];
@@ -110,13 +123,13 @@ class Importer {
   private readonly root: Html;
   private readonly auxiliary: Html[] = [];
   private readonly comments = new Map<string, CommentState>();
-  private readonly activeComments = new Set<string>();
+  private activeComments = new Set<string>();
   private commentRangeCount = 0;
   private commentRangeBytes = 0;
   private fieldResultCount = 0;
   private fieldResultBytes = 0;
-  private readonly fieldStack: FieldState[] = [];
-  private readonly bookmarkStarts = new Map<
+  private fieldStack: FieldState[] = [];
+  private bookmarkStarts = new Map<
     string,
     { name: string; nodeId: string }
   >();
@@ -176,13 +189,32 @@ class Importer {
   private make(
     tag: string,
     attrs: Record<string, string> = {},
-    children: (Html | string)[] = [],
   ): Html {
+    const id = "n" + (this.serial + 1);
+    let bytes = (["img", "br"].includes(tag) ? tag.length + 2 : tag.length * 2 + 5)
+      + ' data-node-id=""'.length + id.length;
+    for (const [name, value] of Object.entries(attrs))
+      bytes += name.length + 4 + htmlBytes(value);
+    this.reserveHtml(1, bytes);
+    this.serial++;
     return {
       tag,
-      attrs: { "data-node-id": "n" + ++this.serial, ...attrs },
-      children,
+      attrs: { "data-node-id": id, ...attrs },
+      children: [],
     };
+  }
+  private reserveHtml(nodes: number, bytes: number): void {
+    if (
+      this.generatedNodes + nodes > this.opc.limits.maxNodes ||
+      this.generatedBytes + bytes >
+        Math.min(this.opc.limits.maxFileBytes, this.opc.limits.maxPackageBytes)
+    )
+      throw new DocumentError(
+        "ResourceLimitExceeded",
+        "Generated HTML exceeds the configured node or byte budget.",
+      );
+    this.generatedNodes += nodes;
+    this.generatedBytes += bytes;
   }
   private id(node: Html): string {
     return node.attrs["data-node-id"]!;
@@ -210,10 +242,26 @@ class Importer {
       this.fieldResult(content);
     }
     if (node.tag === "span" && !node.attrs["data-word-tab"]) {
-      const parts: { script: "ascii" | "hAnsi" | "eastAsia"; text: string }[] = [];
+      // Flush one script part at a time; reserve text and wrapper budgets before
+      // creating substrings or HTML nodes. Never build an unbounded parts array.
+      let script: "ascii" | "hAnsi" | "eastAsia" | undefined;
+      let start = 0, end = 0, bytes = 0;
+      const append = (): void => {
+        if (!script) return;
+        this.reserveHtml(1, bytes);
+        let target = content;
+        if (script !== "ascii") {
+          target = this.make("span", {
+            style: "font-family:var(--word-font-" + script +
+              ",var(--word-font-ascii,var(--word-font-hAnsi,inherit)))",
+            "data-word-script": script,
+          });
+          content.children.push(target);
+        }
+        target.children.push(value.slice(start, end));
+      };
       for (const character of value) {
         const code = character.codePointAt(0)!;
-        const previous = parts[parts.length - 1];
         const eastAsian =
           (code >= 0x2e80 && code <= 0xa4cf) ||
           (code >= 0xac00 && code <= 0xd7af) ||
@@ -221,35 +269,28 @@ class Importer {
           (code >= 0xfe10 && code <= 0xfe6f) ||
           (code >= 0xff00 && code <= 0xffef) ||
           (code >= 0x20000 && code <= 0x323af);
-        const script =
-          /\p{Mark}/u.test(character) && previous
-            ? previous.script
+        const nextScript =
+          /\p{Mark}/u.test(character) && script
+            ? script
             : eastAsian
               ? "eastAsia"
               : code <= 0x7f
                 ? "ascii"
                 : "hAnsi";
-        if (previous?.script === script) previous.text += character;
-        else parts.push({ script, text: character });
+        if (script !== nextScript) {
+          append();
+          start = end;
+          bytes = 0;
+          script = nextScript;
+        }
+        end += character.length;
+        bytes += htmlBytes(character);
       }
-      for (const part of parts) {
-        if (part.script !== "ascii")
-          content.children.push(
-            this.make(
-              "span",
-              {
-                style:
-                  "font-family:var(--word-font-" +
-                  part.script +
-                  ",var(--word-font-ascii,var(--word-font-hAnsi,inherit)))",
-                "data-word-script": part.script,
-              },
-              [part.text],
-            ),
-          );
-        else content.children.push(part.text);
-      }
-    } else content.children.push(value);
+      append();
+    } else {
+      this.reserveHtml(1, htmlBytes(value));
+      content.children.push(value);
+    }
     this.record(node, from, value);
   }
   private fieldResult(node: Html): void {
@@ -1160,19 +1201,34 @@ class Importer {
     this.loadedStories.set(part, storyId);
     const root = this.story(kind, storyId);
     root.attrs.class = "word-main";
-    const previousPart = this.currentPart,
-      previousStory = this.currentStory;
-    if (this.fieldStack.length || this.activeComments.size)
-      fail(source, "A content range crosses a story boundary.");
-    this.currentPart = part;
-    this.currentStory = storyId;
-    root.children.push(...this.blocks(this.compat(source)));
-    if (this.fieldStack.length || this.activeComments.size)
-      fail(source, "An auxiliary story has an unclosed content range.");
-    this.currentPart = previousPart;
-    this.currentStory = previousStory;
+    root.children.push(...this.readStoryContent(part, storyId, source));
     this.auxiliary.push(root);
     return storyId;
+  }
+  private readStoryContent(part: string, storyId: string, source: XmlNode): Html[] {
+    const { currentPart, currentStory, fieldStack, activeComments, bookmarkStarts,
+      currentRun, paragraphRunClasses } = this;
+    this.currentPart = part;
+    this.currentStory = storyId;
+    this.fieldStack = [];
+    this.activeComments = new Set();
+    this.bookmarkStarts = new Map();
+    this.currentRun = undefined;
+    this.paragraphRunClasses = ["word-default-run"];
+    try {
+      const content = this.blocks(this.compat(source));
+      if (this.fieldStack.length || this.activeComments.size || this.bookmarkStarts.size)
+        fail(source, "An auxiliary story has an unclosed content range.");
+      return content;
+    } finally {
+      this.currentPart = currentPart;
+      this.currentStory = currentStory;
+      this.fieldStack = fieldStack;
+      this.activeComments = activeComments;
+      this.bookmarkStarts = bookmarkStarts;
+      this.currentRun = currentRun;
+      this.paragraphRunClasses = paragraphRunClasses;
+    }
   }
   private readComments(): void {
     const part = this.opc.related(this.main, "comments");
@@ -1181,21 +1237,16 @@ class Importer {
     if (root.uri !== W || root.name !== "comments")
       fail(root, "The comments part has an invalid root.");
     check(root, ["comment"]);
-    const previous = this.currentPart;
-    this.currentPart = part;
     for (const source of elements(root, "comment")) {
       const id = attr(source, "id");
       if (id === undefined || this.comments.has(id))
         fail(source, "A comment identity is invalid.");
       const story = this.story("comment", "comment-" + id);
       story.attrs.class = "word-main";
-      this.currentStory = "comment-" + id;
-      story.children.push(...this.blocks(this.compat(source)));
+      story.children.push(...this.readStoryContent(part, "comment-" + id, source));
       this.auxiliary.push(story);
       this.comments.set(id, { source, bodyNodeId: this.id(story), ranges: [] });
     }
-    this.currentPart = previous;
-    this.currentStory = "main";
   }
   private image(source: XmlNode): Html {
     const inline = child(source, "inline", WP);

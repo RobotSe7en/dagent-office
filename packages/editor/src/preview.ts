@@ -219,13 +219,17 @@ function decorate(
   for (const definition of word.tabs) {
     const paragraph = byId.get(definition.paragraphNodeId);
     if (!paragraph) continue;
+    // Word tab stops are relative to the text margin, before paragraph indent.
+    const indent = parseFloat(
+      document.defaultView!.getComputedStyle(paragraph).marginLeft,
+    ) || 0;
     for (const tab of paragraph.querySelectorAll<HTMLElement>(
       "[data-word-tab]",
     )) {
       if (tab.closest("[hidden]")) continue;
       const start = paragraph.getBoundingClientRect();
       const box = tab.getBoundingClientRect();
-      const cursor = ((box.left - start.left) * 72) / 96;
+      const cursor = ((box.left - start.left + indent) * 72) / 96;
       const stop = [...definition.stops]
         .filter((item) => item.alignment !== "clear" && item.position > cursor)
         .sort((a, b) => a.position - b.position)[0];
@@ -292,7 +296,10 @@ export function mountDocumentPreview(
     "default-src 'none'; img-src blob:; style-src 'unsafe-inline'; font-src 'none'; base-uri 'none'; form-action 'none'";
   parsed.head.prepend(policy);
   const style = parsed.createElement("style");
-  style.textContent = snapshot.styles.map((item) => item.css).join("\n");
+  // outerHTML leaves raw style text intact. Escape the slash in HTML end tags
+  // using CSS syntax, preserving the string's value and existing escapes.
+  style.textContent = snapshot.styles.map((item) => item.css).join("\n")
+    .replace(/<\/style/gi, (terminator) => "<\\" + terminator.slice(1));
   parsed.head.append(style);
   const frameStyle = parsed.createElement("style");
   const setup = snapshot.metadata.pageSetup;

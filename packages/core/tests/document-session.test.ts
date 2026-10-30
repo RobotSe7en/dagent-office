@@ -152,6 +152,32 @@ describe("isolated document transactions and history", () => {
     failure(() => prepare(table, [text("t", "甲乙", "新文")]));
   });
 
+  test.each([
+    ['a<br>', 2, "a\nX"],
+    ['<span data-node-id="run">a<br></span>', 2, "a\nX"],
+    ['<br>', 1, "\nX"],
+    ['a<br><br>', 3, "a\n\nX"],
+    ['a<br>', 1, "aX\n"],
+  ] as const)("inserts at the normalized break boundary: %s at %s", (content, offset, expected) => {
+    const s = session('<p data-node-id="p">' + content + '</p>');
+    const before = s.snapshot();
+    const candidate = prepare(s, [text("p", "", "X", offset)]);
+    expect(s.snapshot()).toEqual(before);
+    expect(candidate.mapping.textEdits.filter((item) => item.nodeId === "p")).toEqual([
+      { nodeId: "p", from: offset, to: offset, insertedLength: 1 },
+    ]);
+    const stale = prepare(s, [text("p", "", "Y", offset)]);
+    s.commit(candidate);
+    expect(s.getNode("p")!.text).toBe(expected);
+    expect(openDocument(s.serialize()).getNode("p")!.text).toBe(expected);
+    failure(() => s.commit(stale), "RevisionConflict");
+    s.undo();
+    expect(s.snapshot().html).toBe(before.html);
+    s.redo();
+    expect(s.getNode("p")!.text).toBe(expected);
+    s.dispose();
+  });
+
   test("inserts contextual fragments, assigns identities, replaces children and removes nodes atomically", () => {
     const s = session('<p data-node-id="p">甲</p><table data-node-id="t"><tbody><tr data-node-id="r"><td data-node-id="c">单元格</td></tr></tbody></table>');
     const candidate = prepare(s, [

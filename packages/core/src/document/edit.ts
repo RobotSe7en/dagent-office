@@ -207,7 +207,7 @@ export class DocumentEdit {
       return;
     }
     const reference = start.node;
-    if (isElement(reference) && reference.tagName === "img" && from === to) {
+    if (isElement(reference) && ["img", "br"].includes(reference.tagName) && from === to) {
       const next = from >= start.end ? parent.childNodes[parent.childNodes.indexOf(reference) + 1] : reference;
       for (const node of inserted) {
         if (next) adapter.insertBefore(parent, node, next);

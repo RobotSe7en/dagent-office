@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
-  editedChineseFontFixture, mutateDocx, nestedFieldFixture, sectionPackageFixture, styleInheritanceFixture,
+  editedChineseFontFixture, indentedTabsFixture, mutateDocx, nestedFieldFixture, sectionPackageFixture, styleInheritanceFixture, stylesheetPackageFixture,
 } from "../../packages/office/tests/regression-fixtures.js";
 
 const samples = fileURLToPath(new URL("../../examples/docx/", import.meta.url));
@@ -12,6 +12,57 @@ const cases = JSON.parse(
     "utf8",
   ),
 ) as { file: string; requiredText: string[] }[];
+
+for (const [terminator, escapedLessThan] of [
+  ["</style>", false], ["</StYlE>", false], ["</STYLE >", false], ["</style>", true],
+] as const) {
+  test("keeps stylesheet raw-text terminators inside CSS: " + terminator + " escaped=" + escapedLessThan, async ({ page }) => {
+    const payload = terminator + '<input id=escaped><a href=https://example.com/injected>link</a><style>';
+    await page.goto("/");
+    await page.getByLabel("打开文件").setInputFiles({
+      name: "stylesheet.zip", mimeType: "application/zip",
+      buffer: Buffer.from(stylesheetPackageFixture('p{--payload:"' + (escapedLessThan ? '\\' : '') + payload + '";color:#123456}')),
+    });
+    await expect(page.getByRole("status")).toContainText("已打开");
+    const frame = page.frameLocator("iframe");
+    await expect(frame.locator("input,a[href]")).toHaveCount(0);
+    await expect(frame.locator("style")).toHaveCount(2);
+    const paragraph = frame.locator("p").first();
+    await expect(paragraph).toHaveCSS("color", "rgb(18, 52, 86)");
+    const literal = await paragraph.evaluate((node) => {
+      const probe = document.createElement("span");
+      probe.style.fontFamily = "var(--payload)";
+      node.append(probe);
+      const result = getComputedStyle(probe).fontFamily;
+      probe.remove();
+      return JSON.parse(result) as string;
+    });
+    expect(literal).toBe(payload);
+  });
+}
+
+test("positions custom and default tabs from the unindented text origin", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("打开文件").setInputFiles({
+    name: "indented-tabs.docx",
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    buffer: Buffer.from(indentedTabsFixture()),
+  });
+  await expect(page.getByRole("status")).toContainText("已打开");
+  const frame = page.frameLocator("iframe");
+  await expect(frame.locator("[data-word-tab]").last()).toHaveCSS("display", "inline-block");
+  const positions = await frame.locator("[data-word-tab]").evaluateAll((tabs) => tabs.map((tab) => {
+    const section = tab.closest("section")!;
+    const origin = section.getBoundingClientRect().left + parseFloat(getComputedStyle(section).paddingLeft);
+    return (tab.getBoundingClientRect().right - origin) * 72 / 96;
+  }));
+  for (const [index, expected] of [72, 72, 144, 72, 72, 72].entries())
+    expect(positions[index]).toBeCloseTo(expected, 1);
+  await expect(frame.locator("[data-word-run]").first()).toHaveCSS("font-family", /Liberation Serif/);
+  await expect(frame.locator("article")).toHaveScreenshot("indented-tabs.png", {
+    animations: "disabled", maxDiffPixelRatio: 0.005, threshold: 0.2,
+  });
+});
 
 test("opens a DOCX sample through the public APIs and releases its preview on replacement", async ({
   page,

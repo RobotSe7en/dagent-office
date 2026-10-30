@@ -3,7 +3,7 @@ import { openDocument } from "@dagent-office/core";
 import type { DocumentModel, DocumentNode } from "@dagent-office/core";
 import { importDocx, readDocumentZip, writeDocumentZip } from "@dagent-office/office";
 import {
-  body, complexField, mutateDocx, nestedFieldFixture, styleInheritanceFixture, styles, wordNamespace,
+  body, complexField, crossSectionRangesFixture, mutateDocx, nestedFieldFixture, styleInheritanceFixture, styles, wordNamespace,
 } from "./regression-fixtures.js";
 
 function reopen(bytes: Uint8Array): DocumentModel {
@@ -27,6 +27,73 @@ function overlappingComments(count: number, runs: number, chunks = 1, quote = "x
       "</w:p>"),
   });
 }
+test.each([
+  { value: "A中".repeat(100_000), chunks: 1, limits: { maxNodes: 1000 } },
+  { value: "Aé".repeat(100_000), chunks: 1, limits: { maxNodes: 1000 } },
+  { value: "中é".repeat(100_000), chunks: 1, limits: { maxNodes: 1000 } },
+  { value: "A中".repeat(100), chunks: 4, limits: { maxNodes: 1000 } },
+  { value: "A中".repeat(2000), chunks: 1, limits: { maxFileBytes: 32_768 } },
+  { value: "A中".repeat(2000), chunks: 1, limits: { maxPackageBytes: 65_536 } },
+  { value: '"'.repeat(7000), chunks: 1, limits: { maxFileBytes: 32_768 } },
+])("bounds generated script nodes and escaped bytes before allocation (case %#)", ({ value, chunks, limits }) => {
+  const bytes = mutateDocx("06-links-tabs.docx", {
+    "word/document.xml": (source) => body(source,
+      '<w:p><w:r>' + ('<w:t>' + value + '</w:t>').repeat(chunks) + '</w:r></w:p>'),
+  });
+  expect(() => importDocx(bytes, { documentId: "budget", limits })).toThrowError(expect.objectContaining({
+    code: "ResourceLimitExceeded",
+    message: expect.stringContaining("Generated HTML"),
+  }));
+});
+test("preserves bounded script segments, UTF-16 variation sequences and escaped text", () => {
+  const value = 'A中\u0301𠀀\u{e0100}é&amp;&lt;&gt;"';
+  const model = reopen(mutateDocx("06-links-tabs.docx", {
+    "word/document.xml": (source) => body(source, '<w:p><w:r><w:t>' + value + '</w:t></w:r></w:p>'),
+  }));
+  const main = model.snapshot().metadata.word!.stories.find((story) => story.kind === "main")!;
+  expect(model.getNode(main.rootNodeId)!.text).toBe('A中\u0301𠀀\u{e0100}é&<>"');
+  const segments = descendants(model, main.rootNodeId).filter((node) => node.attributes["data-word-script"]);
+  expect(segments.map((node) => [node.attributes["data-word-script"], node.text])).toEqual([
+    ["eastAsia", "中\u0301𠀀\u{e0100}"], ["hAnsi", "é"],
+  ]);
+});
+
+test.each([false, true])("isolates auxiliary fields, comments and bookmarks across sections (instruction open=%s)", (instructionOpen) => {
+  const model = reopen(crossSectionRangesFixture(instructionOpen));
+  const snapshot = model.snapshot();
+  const expected = [instructionOpen ? "main after" : "main beforemain after", "header cache", "footer cache"];
+  expect(snapshot.metadata.sections).toHaveLength(2);
+  expect(snapshot.metadata.sections[1]!.headers).toEqual(snapshot.metadata.sections[0]!.headers);
+  expect(snapshot.metadata.word!.fields).toHaveLength(3);
+  for (const [index, field] of snapshot.metadata.word!.fields.entries()) {
+    expect(field.endNodeId).toBeDefined();
+    expect(field.instructionFields).toBeUndefined();
+    expect(field.resultNodeIds!.map((id) => model.getNode(id)!.text).join("")).toBe(expected[index]);
+  }
+  expect(snapshot.annotations.map(({ anchor }) => anchor.kind === "text" ? anchor.quote
+    : anchor.kind === "text-set" ? anchor.ranges.map((range) => range.quote).join("") : undefined)).toEqual(expected);
+  expect(snapshot.metadata.word!.bookmarks.map((bookmark) => bookmark.bookmarkId).sort()).toEqual([
+    "footer-1-0", "header-0-0", "main-0",
+  ]);
+});
+
+test.each([
+  ['<w:r><w:fldChar w:fldCharType="begin"/></w:r>', '<w:r><w:fldChar w:fldCharType="end"/></w:r>', "A field control has no matching begin."],
+  ['<w:commentRangeStart w:id="0"/>', '<w:commentRangeEnd w:id="0"/>', "A comment range end is invalid."],
+  ['<w:bookmarkStart w:id="0" w:name="crossing"/>', '<w:bookmarkEnd w:id="0"/>', "A bookmark end has no start."],
+])("rejects an auxiliary endpoint that only matches a main-story start: %s", (start, end, message) => {
+  const bytes = mutateDocx("08-comments-revisions.docx", {
+    "word/document.xml": (source) => body(source,
+      '<w:p><w:pPr><w:sectPr><w:headerReference w:type="default" r:id="header1"/></w:sectPr></w:pPr>' +
+      start + '</w:p><w:p>' + end + '</w:p>'),
+    "word/header1.xml": () => '<w:hdr xmlns:w="' + wordNamespace + '"><w:p>' + end + '</w:p></w:hdr>',
+    "word/_rels/document.xml.rels": (source) => source.replace('</Relationships>',
+      '<Relationship Id="header1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/></Relationships>'),
+    "[Content_Types].xml": (source) => source.replace('</Types>',
+      '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/></Types>'),
+  });
+  expect(() => importDocx(bytes, { documentId: "crossing" })).toThrowError(expect.objectContaining({ code: "InvalidDocument", message }));
+});
 test("bounds the 8,000 by 8,000 comment expansion before allocating its ranges", () => {
   expect(() => importDocx(overlappingComments(8000, 8000), { documentId: "budget" }))
     .toThrowError(expect.objectContaining({
