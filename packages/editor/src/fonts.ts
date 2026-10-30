@@ -70,9 +70,13 @@ export function resolvePreviewFonts(
     const first = requested[0]!;
     let rendered = requested.find(available);
     if (!rendered) {
-      const candidates = /宋|明|仿|楷|SimSun|Ming|Mincho|Serif/i.test(first)
-        ? ["Noto Serif CJK SC", "Noto Sans CJK SC", "serif"]
-        : ["Noto Sans CJK SC", "Noto Serif CJK SC", "sans-serif"];
+      const candidates = /仿宋|FangSong/i.test(first)
+        ? ["FandolFang", "Noto Serif CJK SC", "serif"]
+        : /楷|KaiTi|SimKai/i.test(first)
+          ? ["FandolKai", "LXGW WenKai", "Noto Serif CJK SC", "serif"]
+          : /宋|明|SimSun|NSimSun|Ming|Mincho|Serif/i.test(first)
+            ? ["Noto Serif CJK SC", "FandolSong", "Noto Sans CJK SC", "serif"]
+            : ["Noto Sans CJK SC", "Noto Serif CJK SC", "sans-serif"];
       rendered = candidates.find(available)!;
     }
     if (rendered !== first) node.style.fontFamily = JSON.stringify(rendered);

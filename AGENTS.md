@@ -2,7 +2,7 @@
 
 ## Scope
 
-`dagent-office` is an independent TypeScript SDK for HTML-based Office editing and human/AI collaboration. Read [README.md](README.md) and the task-relevant design documents before implementation. The core implements structural contracts, JSON Schemas, Word semantics, a read-only HTML/CSS document package model and resource validation/collection; office implements bounded package ZIP adapters and DOCX import. Editor provides a scriptless read-only preview. Three-format model design and declared DOCX import acceptance are complete; R1-06 is next. Session execution, rich-text editing, automatic pagination and Office/PDF export are not implemented yet.
+`dagent-office` is an independent TypeScript SDK for HTML-based Office editing and human/AI collaboration. Read [README.md](README.md) and the task-relevant design documents before implementation. The core implements structural contracts, JSON Schemas, Word semantics, a read-only HTML/CSS document package model and resource validation/collection; office implements bounded package ZIP adapters and DOCX import. Editor provides a scriptless read-only preview. Three-format model design, declared DOCX import acceptance and R1-06 core transactions/history are complete; R1-07 precise anchor and annotation mapping is next. Editing sessions support isolated candidates, content/annotation operations and bounded snapshot history. Request/proposal execution, rich-text editing, automatic pagination and Office/PDF export are not implemented yet.
 
 ## Working with the user
 
@@ -41,7 +41,7 @@
 - Keep import, editing, export and model orchestration separate. Use adapters for format libraries; never invent a second agent runtime.
 - Preserve supported package readers once published; reject unknown versions without modifying their bytes. Do not rewrite immutable revisions in place.
 
-- Chinese typography must preserve Latin/east-Asian font roles, source font names, UTF-16 text and variation sequences. Report preview substitutions and missing glyphs; pin and record fonts for visual fixtures. Do not silently download fonts.
+- Chinese typography must preserve Latin/east-Asian font roles, source font names, UTF-16 text and variation sequences. Report preview substitutions and missing glyphs; pin and record fonts for visual fixtures. Do not silently download fonts. Host-authorized local font installation is separate from SDK runtime behavior; record source, version, license and hashes.
 
 ## Verification
 

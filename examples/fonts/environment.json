@@ -1,0 +1,80 @@
+{
+  "purpose": "Supplemental Chinese preview font environment; does not replace the DOCX reference baseline.",
+  "directory": "/usr/local/share/fonts/dagent-office",
+  "licensesDirectory": "/usr/local/share/doc/dagent-office-fonts",
+  "fontconfig": "fontconfig version 2.15.0",
+  "fonts": [
+    {
+      "file": "FandolFang-Regular.otf",
+      "family": "FandolFang",
+      "version": "0.3",
+      "sha256": "d838ad32ce2244d8144f408c37fe71065aba6fbbc80759a4d2aa2033948d5bc9",
+      "license": "GPL v3 + font exception (distribution README/COPYING)",
+      "source": "https://mirrors.ctan.org/fonts/fandol/FandolFang-Regular.otf"
+    },
+    {
+      "file": "FandolHei-Bold.otf",
+      "family": "FandolHei",
+      "version": "0.3",
+      "sha256": "42ca2de27b45e16a284768673b6205a5add9e17871ee0e7db9c0d03f061d96fd",
+      "license": "GPL v3 + font exception (distribution README/COPYING)",
+      "source": "https://mirrors.ctan.org/fonts/fandol/FandolHei-Bold.otf"
+    },
+    {
+      "file": "FandolHei-Regular.otf",
+      "family": "FandolHei",
+      "version": "0.3",
+      "sha256": "4afa97aa8751e0118617df88272b58d43691b5cffb7ea024c4580496e9f34d28",
+      "license": "GPL v3 + font exception (distribution README/COPYING)",
+      "source": "https://mirrors.ctan.org/fonts/fandol/FandolHei-Regular.otf"
+    },
+    {
+      "file": "FandolKai-Regular.otf",
+      "family": "FandolKai",
+      "version": "0.3",
+      "sha256": "ea7e7fb4f9b3ac694a68d43946e04d21deed6e8c29a7c2d3081e1a4138f2f827",
+      "license": "GPL v3 + font exception (distribution README/COPYING)",
+      "source": "https://mirrors.ctan.org/fonts/fandol/FandolKai-Regular.otf"
+    },
+    {
+      "file": "FandolSong-Bold.otf",
+      "family": "FandolSong",
+      "version": "0.3",
+      "sha256": "ffa76a70e128947a4dd22151d5ee829b23e24ce3cb6fe8ad49891cd1c2d9e9b9",
+      "license": "GPL v3 + font exception (distribution README/COPYING)",
+      "source": "https://mirrors.ctan.org/fonts/fandol/FandolSong-Bold.otf"
+    },
+    {
+      "file": "FandolSong-Regular.otf",
+      "family": "FandolSong",
+      "version": "0.3",
+      "sha256": "a3820003227d4abe31fe28b493200d94a849ccfd078b50a019264f70353020b0",
+      "license": "GPL v3 + font exception (distribution README/COPYING)",
+      "source": "https://mirrors.ctan.org/fonts/fandol/FandolSong-Regular.otf"
+    },
+    {
+      "file": "LXGWWenKai-Light.ttf",
+      "family": "LXGW WenKai",
+      "version": "1.530",
+      "sha256": "9a50e3f0f51fad60d68152d5191bce1a495bfc4b9ceb1cee24833835511d1dca",
+      "license": "SIL-OFL-1.1",
+      "source": "https://github.com/lxgw/LxgwWenKai/releases/download/v1.530/LXGWWenKai-Light.ttf"
+    },
+    {
+      "file": "LXGWWenKai-Medium.ttf",
+      "family": "LXGW WenKai",
+      "version": "1.530",
+      "sha256": "f4b8a34d1f838fe411540cb7c97b1c384ac9738a876c4104500bc42508b2312a",
+      "license": "SIL-OFL-1.1",
+      "source": "https://github.com/lxgw/LxgwWenKai/releases/download/v1.530/LXGWWenKai-Medium.ttf"
+    },
+    {
+      "file": "LXGWWenKai-Regular.ttf",
+      "family": "LXGW WenKai",
+      "version": "1.530",
+      "sha256": "2d73eea94ad808999d90c0000c239a84a33b09d4bc6ab6c5b8bbf1eda8a7fc8b",
+      "license": "SIL-OFL-1.1",
+      "source": "https://github.com/lxgw/LxgwWenKai/releases/download/v1.530/LXGWWenKai-Regular.ttf"
+    }
+  ]
+}

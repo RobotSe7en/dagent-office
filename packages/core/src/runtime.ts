@@ -72,7 +72,7 @@ export interface InteractionRequestInput {
   };
 }
 
-// Type-only opacity; the future session must also bind candidates to private runtime state.
+// Type-only opacity is supplemented by private candidate identity inside the session.
 declare const candidateBrand: unique symbol;
 export interface CandidateChange {
   readonly [candidateBrand]: true;
@@ -80,6 +80,33 @@ export interface CandidateChange {
   readonly baseRevision: number;
   readonly preview: DocumentSnapshot;
   readonly affectedNodeIds: readonly string[];
+  readonly changes: readonly DocumentNodeChange[];
+  readonly changedAnnotationIds: readonly string[];
+  readonly mapping: ChangeMapping;
+}
+
+export interface DocumentNodeChange {
+  readonly nodeId: string;
+  readonly kind: "added" | "removed" | "modified";
+}
+
+export interface DocumentSessionLimits {
+  readonly maxOperations: number;
+  readonly maxTransactionBytes: number;
+  readonly maxCandidates: number;
+  readonly maxCandidateBytes: number;
+  readonly maxHistorySteps: number;
+  readonly maxHistoryBytes: number;
+}
+
+export interface DocumentSessionOptions extends OpenDocumentOptions {
+  readonly sessionLimits?: Partial<DocumentSessionLimits>;
+}
+
+export interface DocumentHistoryState {
+  readonly undoSteps: number;
+  readonly redoSteps: number;
+  readonly retainedBytes: number;
 }
 
 export interface TextOffsetMapping {
@@ -105,17 +132,22 @@ export interface TransactionReceipt {
 export type DocumentEventListener = (event: DeepReadonly<DocumentEvent>) => void;
 export type AnnotationSubmissionHandler = (request: DeepReadonly<DocumentInteractionRequest>) => void | Promise<void>;
 
-/** Contract only. No session factory, editing, or I/O implementation is supplied in R1-03. */
-export interface DocumentSession {
-  snapshot(): DocumentSnapshot;
+/** The implemented transaction boundary; interaction requests arrive in R1-09. */
+export interface DocumentEditingSession extends DocumentModel {
   getAnnotations(): readonly DeepReadonly<Annotation>[];
-  buildInteractionRequest(input: InteractionRequestInput): DocumentInteractionRequest;
   prepare(transaction: DocumentTransaction): CandidateChange;
-  prepareProposal(request: DocumentInteractionRequest, proposal: EditProposal): CandidateChange;
   commit(candidate: CandidateChange): TransactionReceipt;
+  discard(candidate: CandidateChange): void;
   undo(): TransactionReceipt;
   redo(): TransactionReceipt;
-  serialize(): DocumentPackage;
+  history(): DocumentHistoryState;
+  clearHistory(): void;
   subscribe(listener: DocumentEventListener): () => void;
   dispose(): void;
+}
+
+/** Full collaboration contract; request/proposal execution is still planned. */
+export interface DocumentSession extends DocumentEditingSession {
+  buildInteractionRequest(input: InteractionRequestInput): DocumentInteractionRequest;
+  prepareProposal(request: DocumentInteractionRequest, proposal: EditProposal): CandidateChange;
 }

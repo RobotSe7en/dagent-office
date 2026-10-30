@@ -2,7 +2,7 @@
 
 面向人和宿主智能体协作的通用办公文档 SDK 与可嵌入工作台。采用 TypeScript 和带语义的 HTML 文档格式，提供 Office 导入、保留样式的网页编辑、框选批注、结构化修改提案和可编辑 Office 导出。达智平台是首个宿主，SDK 同时面向其他应用独立发布。
 
-**当前状态：R1-05A 模型设计与 R1-10 DOCX 读取已实现。** 三格式模型设计已明确，`core` 提供严格契约、13 份 JSON Schema、Word 语义及只读文档包；`office` 提供有界 ZIP 和 DOCX 导入，`editor` 提供无脚本只读预览。Playground 可打开 DOCX、下载文档包并重开，包含中文字体替代和缺字诊断。读取验收使用实际 DOCX、LibreOffice 重存文件与固定字体参考图，范围和限制见 [DOCX 读取](docs/docx-import.md)。下一步是 R1-06；事务、富文本编辑、自动分页和 DOCX/PDF 导出尚未实现，未发布 npm 包。
+**当前状态：R1-06 核心操作与历史已实现。** 三格式模型设计已明确，`core` 提供严格契约、13 份 JSON Schema、Word 语义及只读文档包；`office` 提供有界 ZIP 和 DOCX 导入，`editor` 提供无脚本只读预览。Playground 可打开 DOCX、下载文档包并重开，包含中文字体替代和缺字诊断。读取验收使用实际 DOCX、LibreOffice 重存文件与固定字体参考图，范围和限制见 [DOCX 读取](docs/docx-import.md)。`core` 已提供隔离候选、六类内容操作、批注事务、单调修订和撤销重做，见[核心事务与历史](docs/document-session.md)。下一步是 R1-07 精确锚点与批注映射；富文本编辑、自动分页和 DOCX/PDF 导出尚未实现，未发布 npm 包。
 
 ## 本地开发
 
@@ -38,6 +38,8 @@ pnpm dev
 | [编辑与宿主交互协议](docs/editing-protocol.md) | 事务、锚点、批注请求、修改提案、事件及冲突 |
 | [结构契约与 JSON Schema](docs/contracts.md) | 已实现的校验 API、严格字段、类型、静态 Schema 与语义校验边界 |
 | [文档包读取与模型](docs/document-model.md) | 只读打开、节点查询、HTML/CSS 支持范围、引用、预算和保存重开 |
+| [核心事务与历史](docs/document-session.md) | 编辑会话、操作、候选、修订、历史、事件及预算 |
+| [中文字体](docs/fonts.md) | 常用宋体、仿宋、楷体名称保留、开源字体环境与预览替代 |
 | [DOCX 读取与只读预览](docs/docx-import.md) | 导入 API、范围、中文字体、样例、参考渲染和限制 |
 | [资源与 ZIP](docs/resources-and-zip.md) | 资源摘要、图片容器识别、宿主资源收集、ZIP 预算及保真样例 |
 | [整体实施计划](docs/implementation-plan.md) | 五轮交付顺序、具体产物、能力范围和验收门槛 |
@@ -50,7 +52,7 @@ pnpm dev
 
 ## 最小示例
 
-[examples/report](examples/report/) 是一份 `document` 类型的文档包目录，包含中文报告、表格和两条批注。[report.request.json](examples/report.request.json) 表示统一交给宿主的请求，[report.proposal.json](examples/report.proposal.json) 表示宿主智能体针对该请求返回的修改提案。三者共享文档身份和基准修订。报告包已能通过 `openDocument` 读取、查询和保存重开，请求与提案执行尚未实现。
+[examples/report](examples/report/) 是一份 `document` 类型的文档包目录，包含中文报告、表格和两条批注。[report.request.json](examples/report.request.json) 表示统一交给宿主的请求，[report.proposal.json](examples/report.proposal.json) 表示宿主智能体针对该请求返回的修改提案。三者共享文档身份和基准修订。报告包已能通过 `openDocument` 读取、查询和保存重开，示例提案中的内容操作已能通过 `prepare/commit` 执行；请求生成和关联提案的 `prepareProposal` 尚未实现。
 
 ```text
 Office 文件

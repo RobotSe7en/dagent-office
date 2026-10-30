@@ -8,7 +8,7 @@ type ParentNode = DefaultTreeAdapterTypes.ParentNode;
 type ChildNode = DefaultTreeAdapterTypes.ChildNode;
 
 /** Keep parser-specific token and construction checks behind the HTML adapter. */
-export function parseHtmlTree(source: string, limits: DocumentReadLimits, supportedTags: ReadonlySet<string>): DefaultTreeAdapterTypes.Document {
+function boundedParser(limits: DocumentReadLimits, supportedTags: ReadonlySet<string>) {
   const depths = new WeakMap<Node, number>();
   const sourceElements = new Set<number>();
   let count = 0;
@@ -80,9 +80,22 @@ export function parseHtmlTree(source: string, limits: DocumentReadLimits, suppor
     }
   }
 
-  return DocumentParser.parse(source, {
+  const options = {
     treeAdapter,
     sourceCodeLocationInfo: true,
     onParseError: () => invalid("The HTML source is malformed."),
-  });
+  };
+  return { DocumentParser, options };
+}
+
+export function parseHtmlTree(source: string, limits: DocumentReadLimits, supportedTags: ReadonlySet<string>): DefaultTreeAdapterTypes.Document {
+  const { DocumentParser, options } = boundedParser(limits, supportedTags);
+  return DocumentParser.parse(source, options);
+}
+
+export function parseHtmlFragment(source: string, context: DefaultTreeAdapterTypes.Element, limits: DocumentReadLimits, supportedTags: ReadonlySet<string>): DefaultTreeAdapterTypes.DocumentFragment {
+  const { DocumentParser, options } = boundedParser(limits, supportedTags);
+  const parser = DocumentParser.getFragmentParser(context, options);
+  parser.tokenizer.write(source, true);
+  return parser.getFragment();
 }

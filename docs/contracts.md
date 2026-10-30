@@ -2,7 +2,7 @@
 
 三格式模型及来源规则见[数据模型](data-model.md)。DOCX 读取及只读验收已前移至 R1-06 前，当前状态与细则见[第一轮计划](iteration-1.md)。
 
-R1-03 提供 `core` 的数据结构校验、推导类型、JSON Schema、稳定校验错误，以及会话等运行时接口的类型声明。R1-04 的文档包打开、HTML/CSS 解析、节点与元数据引用检查见[文档模型](document-model.md)；DOCX 语义扩展及只读预览已在 R1-10 实现，见[读取说明](docx-import.md)；事务执行和编辑协作界面尚未实现。
+R1-03 提供 `core` 的数据结构校验、推导类型、JSON Schema、稳定校验错误，以及会话等运行时接口的类型声明。R1-04 的文档包打开、HTML/CSS 解析、节点与元数据引用检查见[文档模型](document-model.md)；DOCX 语义扩展及只读预览已在 R1-10 实现，见[读取说明](docx-import.md)；R1-06 已实现[事务执行与历史](document-session.md)，精确锚点映射、请求/提案执行和编辑协作界面仍待实现。
 
 ## 公开入口
 
@@ -95,8 +95,8 @@ import proposalSchema from "@dagent-office/core/schemas/edit-proposal.json"
 - `DocumentPackage` 为只读路径到字节的 Map，`manifest.json` 在其中，避免另一份可独立修改的 manifest。
 - `DocumentSnapshot` 为文档源的派生只读视图，不是新的保存格式。
 - `DocumentModel` 由 `openDocument` 创建，已实现 `snapshot/getNode/serialize`；返回值冻结或独立复制，第三方 AST 不进入公共接口。
-- `CandidateChange` 是非序列化的候选类型；实际会话仍需私有状态验证候选所有权和修订，类型标记不代表授权。
-- `DocumentSession` 声明查询、准备、提交、撤销、序列化和释放，当前没有工厂或执行实现。
+- `CandidateChange` 是非序列化的候选类型；当前会话使用私有运行时状态验证候选所有权、消费状态和修订，类型标记不代表授权。
+- `createDocumentSession` 返回已实现的 `DocumentEditingSession`，包含查询、候选、提交、历史、序列化和释放；`DocumentSession` 继续声明完整协作契约，请求生成和 `prepareProposal` 尚未实现。
 - 核心事件声明 `protocolVersion/documentId/revision`，文档变化携带节点 ID，批注变化携带批注 ID，错误携带结构化错误数据。
 
 ## 校验边界与后续任务

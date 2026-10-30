@@ -42,7 +42,7 @@
 
 `saxes 6.0.0` 的上游声明在当前严格 TypeScript 配置下存在泛型约束及 `exactOptionalPropertyTypes` 问题。通过仓库 `patches` 和 pnpm `patchedDependencies` 只修正声明，不改运行时代码；继续保持 `skipLibCheck: false`，公开接口不泄露解析器类型。许可证来自已安装包。
 
-固定视觉环境使用 Noto Sans CJK SC、Noto Serif CJK SC 和 Liberation Serif，其字体许可均为 SIL OFL 1.1；依据本机字体包的版权文件核对。字体二进制不随 SDK 分发，具体文件和 SHA-256 见[参考记录](../examples/docx/reference.json)。参考渲染工具 LibreOffice/Poppler 只用于开发验收，不成为 SDK 依赖。
+固定视觉环境使用 Noto Sans CJK SC、Noto Serif CJK SC 和 Liberation Serif，其字体许可均为 SIL OFL 1.1；依据本机字体包的版权文件核对。字体二进制不随 SDK 分发，具体文件和 SHA-256 见[参考记录](../examples/docx/reference.json)。参考渲染工具 LibreOffice/Poppler 只用于开发验收，不成为 SDK 依赖。补充中文预览环境使用 Fandol 0.3（GPL v3 加字体例外）和 LXGW WenKai 1.530（SIL OFL 1.1），字体不随 SDK 分发；下载、许可与哈希见[中文字体](fonts.md)。
 
 ## 已锁定的工程依赖
 

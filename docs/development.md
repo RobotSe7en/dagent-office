@@ -1,6 +1,6 @@
 # 本地开发与工程检查
 
-当前完成 R1-02 至 R1-05、R1-05A 模型设计与 R1-10 声明范围的 DOCX 读取验收。`core` 提供严格契约、Word 语义和只读文档包，`office` 提供 ZIP 与 DOCX 导入，`editor` 提供只读预览；`node` 仍为工程入口。下一步是 R1-06，事务、输入、自动分页及 DOCX/PDF 导出尚未实现。API 见[DOCX 读取](docx-import.md)，顺序见[第一轮细则](iteration-1.md)。
+当前完成 R1-02 至 R1-06、R1-05A 模型设计与 R1-10 声明范围的 DOCX 读取验收。`core` 提供严格契约、Word 语义和只读文档包，`office` 提供 ZIP 与 DOCX 导入，`editor` 提供只读预览；`node` 仍为工程入口。`core` 还提供[编辑会话、事务及历史](document-session.md)；下一步是 R1-07 精确锚点映射，输入、自动分页及 DOCX/PDF 导出尚未实现。API 见[DOCX 读取](docx-import.md)，顺序见[第一轮细则](iteration-1.md)。
 
 ## 环境和安装
 
@@ -46,7 +46,7 @@ pnpm test:watch
 
 打包用例在 workspace 外、包含空格的临时路径中安装四个 tarball，显式复用工作区 pnpm 依赖缓存并覆盖内部包来源，不从注册表下载内部包。验证真实校验 API、公开 JSON、ES2022 类型、私有路径拒绝，以及不安装 React 的普通 JS 浏览器宿主构建。临时消费工程在测试结束后删除。
 
-测试还覆盖只读文档解析、资源摘要、宿主资源收集、ZIP 原始路径及大小校验、保真样例保存重开；DOCX 用例覆盖实际格式输入、独立生产者版本、样式、字段、批注、修订及保存重开；不代表事务、输入、自动分页或 Office 导出已实现。核心用例放入各包 `tests`，浏览器用例放入根 `tests/browser`。
+测试还覆盖只读文档解析、资源摘要、宿主资源收集、ZIP 原始路径及大小校验、保真样例保存重开；DOCX 用例覆盖实际格式输入、独立生产者版本、样式、字段、批注、修订及保存重开；事务用例另覆盖隔离候选、操作、原子性、历史、冲突和预算，以及 DOCX 编辑后文档包重开；输入、自动分页和 Office 导出仍待实现。核心用例放入各包 `tests`，浏览器用例放入根 `tests/browser`。
 
 ## 浏览器烟测
 
@@ -65,7 +65,7 @@ pnpm test:browser
 DAGENT_OFFICE_BROWSER_CHANNEL=chrome pnpm test:browser
 ```
 
-未设置渠道时使用对应 Playwright 版本的 Chromium，不进行自动渠道回退。当前截图基线使用锁定的 Chromium 与 Noto 中文字体；环境和字体摘要见[参考记录](../examples/docx/reference.json)。使用 Chrome 渠道只能作额外验证，不能静默刷新固定基线。独立参考检查使用 `pnpm check:docx-reference`，更新方法见[DOCX 读取](docx-import.md#独立样例与验收)。
+未设置渠道时使用对应 Playwright 版本的 Chromium，不进行自动渠道回退。当前截图基线使用锁定的 Chromium 与 Noto 中文字体；补充的仿宋/楷体浏览器用例还需要[固定开源字体环境](fonts.md)。环境和字体摘要见[参考记录](../examples/docx/reference.json)。使用 Chrome 渠道只能作额外验证，不能静默刷新固定基线。独立参考检查使用 `pnpm check:docx-reference`，更新方法见[DOCX 读取](docx-import.md#独立样例与验收)。
 
 ## 本地打包
 

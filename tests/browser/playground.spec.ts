@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
-  mutateDocx, nestedFieldFixture, sectionPackageFixture, styleInheritanceFixture,
+  editedChineseFontFixture, mutateDocx, nestedFieldFixture, sectionPackageFixture, styleInheritanceFixture,
 } from "../../packages/office/tests/regression-fixtures.js";
 
 const samples = fileURLToPath(new URL("../../examples/docx/", import.meta.url));
@@ -126,6 +126,41 @@ test("keeps distinct Latin and Chinese faces and reports missing Chinese fonts",
     .locator("article")
     .evaluate((node) => node.outerHTML);
   expect(sourceNames).toContain("--word-font-eastAsia");
+});
+
+for (const [family, selected] of [
+  ["FandolSong", "FandolSong"], ["FandolFang", "FandolFang"], ["FandolKai", "FandolKai"], ["LXGW WenKai", "LXGW WenKai"],
+  ["仿宋_GB2312", "FandolFang"], ["STFangsong", "FandolFang"], ["楷体_GB2312", "FandolKai"], ["STKaiti", "FandolKai"],
+] as const) {
+  test("uses installed Chinese font or reports its explicit substitution: " + family, async ({ page }) => {
+    const bytes = mutateDocx("09-chinese-fonts.docx", {
+      "word/styles.xml": (source) => source.replace(/w:eastAsia="[^"]*"/g, 'w:eastAsia="' + family + '"'),
+      "word/document.xml": (source) => source.replace(/w:eastAsia="[^"]*"/g, 'w:eastAsia="' + family + '"'),
+    });
+    await page.goto("/");
+    await page.getByLabel("打开文件").setInputFiles({ name: "chinese-font.docx", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", buffer: Buffer.from(bytes) });
+    await expect(page.getByRole("status")).toContainText("已打开");
+    const frame = page.frameLocator("iframe");
+    const eastAsian = frame.locator('[data-word-script="eastAsia"]').first();
+    await expect(eastAsian).toBeVisible();
+    expect(await eastAsian.evaluate((node) => getComputedStyle(node).fontFamily)).toContain(selected);
+    if (family !== selected) await expect(frame.getByRole("note")).toContainText(family);
+    const latin = frame.locator('[data-word-run="true"]').filter({ hasText: "ABC" }).first();
+    await expect(latin).toBeVisible();
+    expect(await latin.evaluate((node) => getComputedStyle(node).fontFamily)).toContain("Liberation Serif");
+  });
+}
+
+test("previews a committed/reopened Chinese font edit with independent Latin and east-Asian roles", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("打开文件").setInputFiles({ name: "edited-fonts.zip", mimeType: "application/zip", buffer: Buffer.from(editedChineseFontFixture()) });
+  await expect(page.getByRole("status")).toContainText("已打开");
+  const frame = page.frameLocator("iframe");
+  const inserted = frame.locator('[data-word-script="eastAsia"]').filter({ hasText: "新增仿宋" }).first();
+  expect(await inserted.evaluate((node) => getComputedStyle(node).fontFamily)).toContain("FandolFang");
+  const run = frame.locator('[data-word-run="true"]').filter({ hasText: "新增仿宋" }).first();
+  await expect(run).toContainText("新增仿宋ABC𠀀\u{e0100}");
+  expect(await run.evaluate((node) => getComputedStyle(node).fontFamily)).toContain("Liberation Serif");
 });
 
 test("releases image URLs when switching documents", async ({ page }) => {

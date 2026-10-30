@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
+import { createDocumentSession, openDocument } from "@dagent-office/core";
 import type { DocumentMetadata } from "@dagent-office/core";
 import { importDocx, writeDocumentZip } from "@dagent-office/office";
 
@@ -13,6 +14,20 @@ export function mutateDocx(
   for (const [part, change] of Object.entries(changes))
     files[part] = strToU8(change(strFromU8(files[part]!)));
   return zipSync(files);
+}
+
+export function editedChineseFontFixture(): Uint8Array {
+  const model = openDocument(importDocx(mutateDocx("09-chinese-fonts.docx", {}), { documentId: "edited-fonts" }));
+  const ids = [...model.snapshot().html.matchAll(/data-node-id="([^"]+)"/g)].map((match) => match[1]!);
+  const target = ids.map((id) => model.getNode(id)!).find((node) => node.attributes["data-word-run"] === "true" && node.text.includes("ABC"))!;
+  const session = createDocumentSession(model);
+  session.commit(session.prepare({ protocolVersion: 1, documentId: "edited-fonts", baseRevision: 0, operations: [
+    { op: "replaceText", nodeId: target.nodeId, from: 0, to: 0, expectedText: "", text: "新增仿宋ABC𠀀\u{e0100}" },
+    { op: "setStyle", nodeId: target.nodeId, property: "--word-font-eastAsia", value: '"FandolFang"' },
+  ] }));
+  const result = writeDocumentZip(session.serialize());
+  session.dispose();
+  return result;
 }
 
 export const wordNamespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
