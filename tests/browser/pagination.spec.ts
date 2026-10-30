@@ -251,3 +251,23 @@ test("unitless inherited Word line spacing works without Typed OM and preserves 
   expect(measured.line).toBeCloseTo(measured.normal * 1.5, 1);
   await expect(page.frameLocator("iframe").locator('[data-node-id="absolute"]')).toHaveCSS("line-height", "30px");
 });
+for (const layout of ["pages", "continuous"] as const) test("editing preserves source content before, between and after sections: " + layout, async ({ page }) => {
+  const files = pagedFiles('<p data-node-id="lead">L</p><section data-node-id="first"><p data-node-id="a">A</p></section><p data-node-id="middle">M</p><section data-node-id="second"><p data-node-id="b">B</p></section><p data-node-id="tail">T</p>');
+  const metadata = JSON.parse(new TextDecoder().decode(files.get("metadata.json"))); metadata.sections = [{ sectionId: "first", rootNodeId: "first" }, { sectionId: "second", rootNodeId: "second", breakType: "nextPage" }];
+  files.set("metadata.json", new TextEncoder().encode(JSON.stringify(metadata))); await mount(page, files, "edit", { layout });
+  await atStart(page, "a"); await page.keyboard.insertText("X");
+  const state = await page.evaluate(() => ({ text: window.paginationHost.session!.getNode("root")!.text, html: window.paginationHost.session!.snapshot().html, errors: window.paginationHost.errors }));
+  expect(state.text).toBe("LXAMBT"); expect(state.errors).toEqual([]);
+  expect(state.html).not.toMatch(/sdk-page|edit-\d|<div/);
+  const structure = await page.evaluate(() => window.paginationHost.session!.getNode("root")!.childNodeIds);
+  expect(structure).toEqual(["lead", "first", "middle", "second", "tail"]);
+  await page.keyboard.press("Control+z"); expect(await page.evaluate(() => window.paginationHost.session!.getNode("root")!.text)).toBe("LAMBT");
+});
+test("formatted table whitespace does not become extra plain-text rows or cells", async ({ page }) => {
+  await mount(page, pagedFiles('<table data-node-id="table">\n <tbody>\n <tr data-node-id="row">\n  <td data-node-id="c">C</td>\n  <td data-node-id="d">D</td>\n </tr>\n </tbody>\n</table>'));
+  const copied = await page.frameLocator("iframe").locator('[data-node-id="table"]').evaluate((node) => {
+    const range = document.createRange(); range.selectNode(node); document.getSelection()!.removeAllRanges(); document.getSelection()!.addRange(range);
+    const values: Record<string, string> = {}, event = new Event("copy", { bubbles: true, cancelable: true }); Object.defineProperty(event, "clipboardData", { value: { setData: (type: string, value: string) => { values[type] = value; } } }); node.dispatchEvent(event); return values;
+  });
+  expect(copied["text/plain"]).toBe("C\tD");
+});

@@ -363,10 +363,9 @@ function prepareDocument(input: DocumentModel): { model: DocumentModel; document
     article.style.padding = "0";
     const auxiliary = parsed.createElement("div");
     auxiliary.style.padding = `0 ${setup.margins.right}pt ${setup.margins.bottom}pt ${setup.margins.left}pt`;
+    const auxiliaryRoots = new Set(snapshot.metadata.word?.stories.filter((story) => story.kind !== "main").map((story) => story.rootNodeId) ?? []);
     for (const node of [...article.children])
-      if (
-        !sectionNodes.some((section) => node === section || node.contains(section))
-      )
+      if (auxiliaryRoots.has(node.getAttribute("data-node-id") ?? ""))
         auxiliary.append(node);
     if (auxiliary.children.length) article.append(auxiliary);
   }

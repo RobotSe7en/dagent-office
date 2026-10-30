@@ -7,7 +7,9 @@ export function sourceSelectionText(root: Node): string {
     if (element?.localName === "br") return { text: "\n", boundary: false };
     if (element?.hasAttribute("data-word-tab")) return { text: "\t", boundary: false };
     if (element?.localName === "img") return { text: "\ufffc", boundary: false };
-    const parts = [...node.childNodes].map(visit);
+    const children = element?.localName === "tr" ? [...element.children].filter((child) => child.matches("td,th"))
+      : element?.matches("table,thead,tbody,tfoot") ? [...element.children].filter((child) => child.matches("thead,tbody,tfoot,tr")) : [...node.childNodes];
+    const parts = children.map(visit);
     if (element?.localName === "tr") return { text: parts.map((part) => part.boundary ? part.text.slice(0, -1) : part.text).join("\t") + "\n", boundary: true };
     let text = parts.map((part) => part.text).join(""), boundary = parts.at(-1)?.boundary ?? false;
     if (element?.matches("p,h1,h2,h3,h4,h5,h6")) { text += "\n"; boundary = true; }

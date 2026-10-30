@@ -21,6 +21,7 @@ async function command(method, path, data) {
   if (!response.ok || result.value?.error) throw new Error(JSON.stringify(result)); return result.value;
 }
 const execute = (script, args = []) => command("POST", `/session/${session}/execute/sync`, { script, args });
+const iframeExpression = "((view)=>view.element.localName==='iframe'?view.element:view.element.shadowRoot.querySelector('iframe'))(window.paginationHost.view)";
 function files(body) {
   const entries = new Map(["manifest.json", "content.html", "styles.css", "metadata.json", "annotations.json"].map((path) => [path, readFileSync(root + "examples/report/" + path)]));
   entries.set("content.html", Buffer.from(entries.get("content.html").toString().replace(/<article[\s\S]*<\/article>/, '<article data-node-id="root" data-office-kind="document">' + body + "</article>")));
@@ -46,7 +47,7 @@ try {
   assert.equal(await execute("return !!window.paginationHost.session"), false);
   await mount('<p data-node-id="a">START</p>', "edit");
   const elementKey = "element-6066-11e4-a52e-4f735466cecf";
-  const iframe = await execute("return document.querySelector('iframe')");
+  const iframe = await execute("return " + iframeExpression);
   await command("POST", `/session/${session}/frame`, { id: iframe });
   await execute("const root=document.querySelector('[data-office-editor]'),p=document.querySelector('[data-node-id=a]');root.focus();const r=document.createRange();r.setStart(p.firstChild,0);r.collapse(true);const s=document.getSelection();s.removeAllRanges();s.addRange(r);");
   const editable = await command("POST", `/session/${session}/element`, { using: "css selector", value: "[data-office-editor]" });
@@ -56,7 +57,7 @@ try {
   await execute("window.paginationHost.session.undo()");
   assert.equal(await execute("return window.paginationHost.session.getNode('a').text"), "START");
   await mount('<p data-node-id="long">' + Array.from({ length: 40 }, (_, index) => "TEXT-" + index).join("<br>") + "</p>", "interaction");
-  await execute("const d=document.querySelector('iframe').contentDocument,r=d.createRange();r.selectNodeContents(d.querySelector('[data-node-id=long]'));d.getSelection().removeAllRanges();d.getSelection().addRange(r);d.dispatchEvent(new Event('selectionchange'));");
+  await execute("const d=" + iframeExpression + ".contentDocument,r=d.createRange();r.selectNodeContents(d.querySelector('[data-node-id=long]'));d.getSelection().removeAllRanges();d.getSelection().addRange(r);d.dispatchEvent(new Event('selectionchange'));");
   for (let pass = 0; pass < 50 && !await execute("return !!window.paginationHost.interaction.selection()"); pass++) await pause();
   const selected = await execute("return window.paginationHost.interaction.selection()?.anchor"); assert.equal(selected?.kind, "text"); assert.equal(selected?.nodeId, "long");
   assert.ok(await execute("return window.paginationHost.layout().pages.length>1"));

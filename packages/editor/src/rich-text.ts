@@ -34,6 +34,7 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
   let projection = new SourceProjection(), proofs: ReconciledTextEdit[] = [], pending: InputStep | undefined;
   let savedSelection: SelectionBookmark | undefined;
   let compositionInsertion: { from: number; to: number } | undefined;
+  let wholeStoryReplacement = false;
   const typingStyles = new Map<string, string>();
   const report = (reason: unknown): void => {
     if (disposed) return;
@@ -63,23 +64,28 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
     viewControls.abort(); viewControls = new AbortController();
     try {
       preview.update(session); root = rootElement(frame); projection = new SourceProjection();
-      activate(source); revision = session.snapshot().manifest.revision; proofs = []; pending = undefined; typingStyles.clear(); compositionInsertion = undefined;
+      activate(source); revision = session.snapshot().manifest.revision; proofs = []; pending = undefined; typingStyles.clear(); compositionInsertion = undefined; wholeStoryReplacement = false;
     } catch (reason) { root.contentEditable = "false"; report(reason); return; }
     root.focus(); restoreBookmark(root, selection, projection.ignored); savedSelection = bookmark(root, projection.ignored);
   }
   function normalizedRoot(): HTMLElement {
     const value = projection.serialize(root!), source = sourceDocument(), original = rootElement(source);
     const sections = session.snapshot().metadata.sections.map((section) => source.querySelector<HTMLElement>('[data-node-id="' + CSS.escape(section.rootNodeId) + '"]'))
-      .filter((section): section is HTMLElement => Boolean(section && section !== original && original.contains(section)));
+      .filter((section): section is HTMLElement => Boolean(section && section !== original && original.contains(section)))
+      .sort((a, b) => a.compareDocumentPosition(b) & 4 ? -1 : 1);
+    const survivingSections = sections.some((section) => value.querySelector('[data-node-id="' + CSS.escape(section.dataset.nodeId!) + '"]'));
+    const survivingOutside = [...original.querySelectorAll<HTMLElement>("[data-node-id]")].some((node) => !sections.some((section) => section === node || section.contains(node))
+      && value.querySelector('[data-node-id="' + CSS.escape(node.dataset.nodeId!) + '"]'));
     for (const [index, section] of sections.entries()) {
       if (value.querySelector('[data-node-id="' + CSS.escape(section.dataset.nodeId!) + '"]')) continue;
       let reference: Element | null = null;
-      for (const following of sections.slice(index + 1)) { reference = value.querySelector('[data-node-id="' + CSS.escape(following.dataset.nodeId!) + '"]'); if (reference) break; }
+      const following = section.parentElement === original ? [...original.children].slice([...original.children].indexOf(section) + 1) : sections.slice(index + 1);
+      for (const node of following) { const id = node.getAttribute("data-node-id"); if (id) reference = value.querySelector('[data-node-id="' + CSS.escape(id) + '"]'); if (reference) break; }
       while (reference?.parentElement && reference.parentElement !== value) reference = reference.parentElement;
       value.insertBefore(section.cloneNode(false), reference);
     }
     let target: Element = value;
-    if (sections.length) {
+    if (wholeStoryReplacement && sections.length && !survivingSections && !survivingOutside) {
       target = value.querySelector('[data-node-id="' + CSS.escape(sections[0]!.dataset.nodeId!) + '"]')!;
       for (const child of [...value.childNodes]) {
         if (child === target || child.nodeType === 1 && sections.some((section) => (child as Element).querySelector('[data-node-id="' + CSS.escape(section.dataset.nodeId!) + '"]') || (child as Element).getAttribute("data-node-id") === section.dataset.nodeId)) continue;
@@ -127,6 +133,7 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
   function mutate(range: Range, action: () => void, split = false): void {
     if (!root || composing || disposed) return;
     const step = inputStep(root, range, projection.ignored);
+    wholeStoryReplacement = step.from === 0 && step.to > 0 && step.to === sourceText(root, projection.ignored).length;
     const parent = range.startContainer.nodeType === 1 ? range.startContainer as Element : range.startContainer.parentElement;
     const block = parent?.closest(blockSelector);
     const moved = split && block && !block.matches("td,th,li")
@@ -319,7 +326,11 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
     const target = event.getTargetRanges?.()[0];
     if (target) { range = frame!.createRange(); range.setStart(target.startContainer, target.startOffset); range.setEnd(target.endContainer, target.endOffset); }
     if (!range || !root.contains(range.commonAncestorContainer)) { event.preventDefault(); return; }
-    if (composing || event.isComposing || event.inputType === "insertCompositionText") { pending = inputStep(root, range, projection.ignored); return; }
+    if (composing || event.isComposing || event.inputType === "insertCompositionText") {
+      pending = inputStep(root, range, projection.ignored);
+      wholeStoryReplacement ||= pending.from === 0 && pending.to > 0 && pending.to === sourceText(root, projection.ignored).length;
+      return;
+    }
     event.preventDefault();
     if (event.inputType === "historyUndo" || event.inputType === "historyRedo") {
       try { if (event.inputType === "historyUndo") session.undo(); else session.redo(); } catch (reason) { report(reason); } return;
