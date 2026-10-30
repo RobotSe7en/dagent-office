@@ -29,7 +29,9 @@ for (const producer of ["", "producer/"]) for (const name of readdirSync(join(ro
 }
 const edited = createDocumentSession(cases.find((item) => item.filename === "08-comments-revisions.docx").source);
 const paragraph = [...edited.snapshot().html.matchAll(/data-node-id="([^"]+)"/g)].map((match) => edited.getNode(match[1])).find((node) => node.tagName === "p" && node.text);
-const operations = [{ op: "replaceText", nodeId: paragraph.nodeId, from: 0, to: 0, expectedText: "", text: "DOCX重新编辑确认 " }, ...edited.getAnnotations().map((annotation) => ({ op: "updateAnnotation", annotationId: annotation.annotationId, changes: { status: "resolved" } }))];
+const operations = [{ op: "replaceText", nodeId: paragraph.nodeId, from: 0, to: 0, expectedText: "", text: "DOCX重新编辑确认 " },
+  { op: "insertFragment", nodeId: paragraph.nodeId, position: "after", html: '<div>INLINE <strong>A</strong> <em>B</em></div><table style="width:200pt;border-collapse:collapse"><tr><td>CELL <strong>A</strong> B</td></tr></table>' },
+  ...edited.getAnnotations().map((annotation) => ({ op: "updateAnnotation", annotationId: annotation.annotationId, changes: { status: "resolved" } }))];
 edited.commit(edited.prepare({ protocolVersion: 1, documentId: "acceptance", baseRevision: 0, operations }));
 const native = exportDocx(edited); writeFileSync(join(cache, "native/edited-resolved.docx"), native.bytes);
 cases.push({ filename: "edited-resolved.docx", source: openDocument(edited.serialize()), inputSha256: null, exportSha256: digest(native.bytes), edited: true }); edited.dispose();
@@ -56,7 +58,13 @@ try {
     const pdf = join(cache, "pdf", item.filename.replace(/\.docx$/, ".pdf")), info = run("pdfinfo", [pdf]), pages = Number(/Pages:\s+(\d+)/.exec(info)?.[1]);
     assert.ok(pages > 0, item.filename + " PDF pages");
     const text = run("pdftotext", [pdf, "-"]); assert.ok(text.trim(), item.filename + " searchable text");
-    if (item.edited) { assert.ok(text.replace(/\s/g, "").includes("DOCX重新编辑确认")); assert.ok(after.annotations.every((annotation) => annotation.status === "resolved")); }
+    if (item.edited) {
+      assert.ok(text.replace(/\s/g, "").includes("DOCX重新编辑确认")); assert.ok(after.annotations.every((annotation) => annotation.status === "resolved"));
+      const ids = [...after.html.matchAll(/data-node-id="([^"]+)"/g)].map((match) => reopened.getNode(match[1]));
+      const cell = ids.find((node) => node.tagName === "td" && node.text === "CELL A B"); assert.ok(cell, "edited inline cell text");
+      assert.equal(cell.childNodeIds.map((id) => reopened.getNode(id)).filter((node) => node.tagName === "p").length, 1, "edited inline cell remains one paragraph after Office");
+      assert.ok(ids.some((node) => node.tagName === "p" && node.text === "INLINE A B"), "edited inline container remains one paragraph after Office");
+    }
     if (!item.edited) {
       const reference = JSON.parse(readFileSync(join(root, "examples/docx/reference.json"), "utf8"));
       const entries = reference.fixtures ?? reference.records ?? reference.documents;

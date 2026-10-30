@@ -13,7 +13,7 @@ import { children, contains, element, parseSource } from "./export/source.js";
 import type { SourceElement, SourceNode, SourceTree } from "./export/source.js";
 import type { HtmlNumbering } from "./export/styles.js";
 import { ExportStyles } from "./export/styles.js";
-import { nativeInteger } from "./export/values.js";
+import { color, nativeInteger } from "./export/values.js";
 import { attributes, declaration, empty, escapeXml, namespaces, orderedProperties, value, XmlParts } from "./export/xml.js";
 
 export interface DocxExportOptions extends DocumentZipOptions {}
@@ -28,6 +28,7 @@ interface Buffer { add(value: string): void; finish(): void }
 type Field = DeepReadonly<WordMetadata["fields"][number]>;
 interface FieldState { definition: Field; offset: number; result: boolean }
 const paragraphTags = new Set(["p", "h1", "h2", "h3", "h4", "h5", "h6"]);
+const blockTags = new Set([...paragraphTags, "table", "div", "section", "article", "ul", "ol", "li"]);
 const tableRows = (table: SourceElement): SourceElement[] => children(table).flatMap((node) => node.tag === "tr" ? [node] : ["thead", "tbody", "tfoot"].includes(node.tag) ? children(node, "tr") : []);
 const borderKeys = (css: Css): string[] => Object.keys(css).filter((key) => key.startsWith("border-"));
 const date = (raw: string | undefined): string | undefined => {
@@ -57,16 +58,20 @@ class Exporter {
   private deleted = false;
   private width = 468;
   private drawingId = 0;
+  private mappedCells = 0;
+  private tableWork = 0;
+  private readonly flowStyles = new WeakMap<SourceElement, Css>();
+  private readonly visibility = new WeakMap<SourceNode, boolean>();
+  private readonly emittedText = new WeakSet<SourceNode>();
   constructor(document: DocumentModel, private readonly limits: DocumentReadLimits) {
     this.files = document.serialize(); this.snapshot = document.snapshot(); this.tree = parseSource(this.snapshot.html, limits);
     const word = this.snapshot.metadata.word;
     this.css = new ExportCss(this.snapshot.styles.map((style) => style.css), limits, new Set(word?.revisions.map((item) => item.nodeId)));
     for (const node of this.tree.elements) if (contains(this.tree.root, node)) this.assertFormatting(node, this.css.get(node));
-    this.styles = new ExportStyles(this.css, word, this.snapshot.metadata.locale);
     const main = word?.stories.filter((story) => story.kind === "main").map((story) => this.tree.byId.get(story.rootNodeId)!) ?? [this.tree.root];
+    this.styles = new ExportStyles(this.css, word, this.snapshot.metadata.locale, limits.maxDepth, this.css.get(main[0]!));
     this.mainStories = main;
     const stories = word?.stories.filter((story) => story.kind !== "comment").map((story) => this.tree.byId.get(story.rootNodeId)!) ?? main;
-    this.annotations = new ExportAnnotations(this.tree, this.snapshot.annotations, stories, limits.maxNodes * 128);
     this.opc = new OutputOpc(new XmlParts(limits));
     this.output = this.opc.part(this.part, "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml");
     this.fields = new Map(word?.fields.map((field) => [field.nodeId, field]) ?? []);
@@ -79,6 +84,11 @@ class Exporter {
       const path = "word/" + story.kind + (this.auxiliary.size + 1) + ".xml";
       this.auxiliary.set(story.storyId, { path, kind: story.kind, relation: this.opc.relate(this.part, story.kind, path.slice(5)) });
     }
+    const mark = (node: SourceNode): void => { if (!element(node)) this.emittedText.add(node); else node.children.forEach(mark); };
+    for (const parent of this.tree.elements) if (paragraphTags.has(parent.tag) || ["article", "section", "div", "li", "td", "th"].includes(parent.tag)) {
+      for (const node of this.flow(parent.children, parent)) if (!element(node) || this.flowStyles.has(node) || !blockTags.has(node.tag)) mark(node);
+    }
+    this.annotations = new ExportAnnotations(this.tree, this.snapshot.annotations, stories, limits.maxNodes * 128, (node) => this.emittedText.has(node));
   }
   private add(value: string): void { this.output.add(value); }
   private assertFormatting(node: SourceElement, css: Css): void {
@@ -86,6 +96,16 @@ class Exporter {
     if (css["font-weight"] && !["normal", "bold", "400", "700"].includes(css["font-weight"])) unsupported("Native DOCX supports regular and bold font weights in this profile.");
     if (["pre", "pre-line", "break-spaces"].includes(css["white-space"] ?? "")) unsupported("This whitespace layout has no supported native DOCX representation.");
     if (css["list-style-position"] === "inside") unsupported("Inside HTML list markers have no supported native DOCX representation.");
+    if (css["white-space"] === "nowrap") {
+      let cell: SourceElement | undefined = node;
+      while (cell && !["td", "th"].includes(cell.tag)) cell = cell.parent;
+      if (!cell || this.css.get(cell)["white-space"] !== "nowrap") unsupported("Nonwrapping text outside a nonwrapping table cell has no supported native DOCX representation.");
+    }
+    if (["td", "th"].includes(node.tag) && css.height && !["auto", "initial"].includes(css.height)) unsupported("Cell height must be applied to its row for native DOCX export.");
+    if (!paragraphTags.has(node.tag) && !["table", "td", "th"].includes(node.tag)) for (const side of ["top", "right", "bottom", "left"]) {
+      const style = css["border-" + side + "-style"], width = css["border-" + side + "-width"];
+      if (style && !["none", "hidden"].includes(style) && width !== "0" && width !== "0pt" && width !== "0px") unsupported("Borders on this HTML element have no supported native DOCX representation.");
+    }
     if (css["text-decoration-line"]?.includes("line-through") && !["solid", "double"].includes(css["text-decoration-style"] ?? "solid")) unsupported("This strike decoration has no supported native DOCX representation.");
     for (const key of ["min-width", "max-width", "min-height", "max-height"]) if (css[key] && !["none", "auto", "0", "0px", "0pt", "initial"].includes(css[key])) unsupported("CSS minimum and maximum dimensions have no supported native DOCX representation.");
     if (!["table", "td", "th", "tr", "img"].includes(node.tag)) {
@@ -121,6 +141,7 @@ class Exporter {
   }
   private nativeRun(css: Css, expected: Css, character?: string, role?: string, language?: string): string {
     const properties = { ...difference(css, expected, runKeys) };
+    if (properties["text-decoration-color"] && expected["text-decoration-color"]?.toLowerCase() === "currentcolor" && color(properties["text-decoration-color"], css.color) === color(css.color!)) delete properties["text-decoration-color"];
     // A script span selects its source role. Preserve the other three source
     // families even when a host changes just one script's font-family.
     if (role && css["font-family"] !== expected["--word-font-" + role]) properties["font-family"] = css["font-family"]!;
@@ -156,7 +177,7 @@ class Exporter {
     const id = node.attrs["data-node-id"] ?? "", css = this.css.get(node);
     const requestedStyle = node.attrs["data-word-style"] ?? node.attrs["data-word-ignored-character-style"];
     if (requestedStyle) character = requestedStyle;
-    role = node.attrs["data-word-script"] === "eastAsia" ? "eastAsia" : node.attrs["data-word-script"] === "hAnsi" ? "hAnsi" : node.attrs["data-word-script"] === "ascii" ? "ascii" : role;
+    role = node.attrs["data-word-script"] === "eastAsia" ? "eastAsia" : node.attrs["data-word-script"] === "cs" ? "cs" : node.attrs["data-word-script"] === "hAnsi" ? "hAnsi" : node.attrs["data-word-script"] === "ascii" ? "ascii" : role;
     language = node.attrs.lang ?? language;
     if (node.attrs["data-word-paragraph-mark"]) return;
     const field = this.fields.get(id), end = this.fieldEnds.get(id), parent = this.fieldStack.at(-1);
@@ -215,7 +236,7 @@ class Exporter {
     this.add("<w:r>" + this.nativeRun(css, this.styles.runContext(paragraphStyle, character), character, role, language) + '<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">' + empty("wp:extent", { cx, cy }) + empty("wp:docPr", { id, name: "Image " + id, descr: node.attrs.alt ?? "" }) + '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic>' + '<pic:nvPicPr>' + empty("pic:cNvPr", { id: 0, name: "Image " + id, descr: node.attrs.alt ?? "" }) + '<pic:cNvPicPr/></pic:nvPicPr><pic:blipFill>' + empty("a:blip", { "r:embed": rel }) + '<a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/>' + empty("a:ext", { cx, cy }) + '</a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>');
   }
   private paragraph(node: SourceElement, section?: string, paragraphId?: string, list?: { id: string; level: number }): void {
-    const css = this.css.get(node), id = node.attrs["data-node-id"] ?? "", style = node.attrs["data-word-style"];
+    const css = this.flowStyles.get(node) ?? this.css.get(node), id = node.attrs["data-node-id"] ?? "", style = node.attrs["data-word-style"];
     this.add("<w:p" + attributes({ "w14:paraId": paragraphId }) + ">");
     let props = (style ? value("pStyle", this.styles.ids.get(style) ?? style) : "");
     const numId = node.attrs["data-word-numbering"] ? this.styles.numberingIds.get(node.attrs["data-word-numbering"]) : list?.id;
@@ -231,8 +252,36 @@ class Exporter {
     for (const child of node.children) this.inline(child, style);
     this.add("</w:p>");
   }
+  /** Group anonymous inline flow before writing paragraphs. Whitespace-only
+   * nodes between blocks are formatting only under normal white-space; spaces
+   * within an inline run and all pre-wrap characters retain their source leaf. */
+  private flow(nodes: readonly SourceNode[], container = nodes[0]?.parent): SourceNode[] {
+    const result: SourceNode[] = []; let pending: SourceNode[] = [];
+    const flush = (): void => {
+      if (!pending.length) return;
+      const visible = pending.some((node) => this.visible(node));
+      if (!visible) {
+        for (const node of pending) if (element(node) && (this.bookmarkStarts.has(node.attrs["data-node-id"] ?? "") || this.bookmarkEnds.has(node.attrs["data-node-id"] ?? ""))) result.push(node);
+      } else {
+        const parent = container ?? pending[0]!.parent!;
+        const paragraph: SourceElement = { tag: "p", attrs: {}, parent, children: pending, from: pending[0]!.from, to: pending.at(-1)!.to };
+        this.flowStyles.set(paragraph, this.css.get(parent)); result.push(paragraph);
+      }
+      pending = [];
+    };
+    for (const node of nodes) {
+      if (element(node) && blockTags.has(node.tag)) { flush(); result.push(node); }
+      else pending.push(node);
+    }
+    flush(); return result;
+  }
+  private visible(node: SourceNode): boolean {
+    const known = this.visibility.get(node); if (known !== undefined) return known;
+    const result = element(node) ? ["img", "br"].includes(node.tag) || node.children.some((child) => this.visible(child)) : /[^\t\n\r\f ]/.test(node.text) || node.text.length > 0 && this.css.get(node.parent)["white-space"] !== "normal";
+    this.visibility.set(node, result); return result;
+  }
   private blocks(nodes: readonly SourceNode[], finalSection?: string, paragraphId?: string): void {
-    const significant = nodes.filter((node) => element(node) || node.text.trim());
+    const significant = this.flow(nodes);
     if (!significant.length) { this.add("<w:p" + attributes({ "w14:paraId": paragraphId }) + "><w:pPr>" + (finalSection ?? "") + "</w:pPr></w:p>"); return; }
     for (let index = 0; index < significant.length; index++) {
       const node = significant[index]!, last = index === significant.length - 1;
@@ -261,20 +310,25 @@ class Exporter {
     const css = this.css.get(node), info = this.snapshot.metadata.word?.tables.find((table) => table.nodeId === node.attrs["data-node-id"]), rows = tableRows(node);
     const style = node.attrs["data-word-style"];
     interface Cell { node: SourceElement; column: number; span: number; rows: number; continuation: boolean }
-    const matrix: Cell[][] = []; let active: Cell[] = [], columns = 0;
+    const matrix: Cell[][] = []; let active = new Map<number, Cell>(), columns = 0;
     for (const row of rows) {
-      const rowCells: Cell[] = []; let column = 0, current = 0; const cells = children(row).filter((cell) => ["td", "th"].includes(cell.tag)); const next: Cell[] = [];
-      while (current < cells.length || active.some((cell) => cell.column >= column)) {
-        const above = active.find((cell) => cell.column === column);
-        let cell: Cell;
-        if (above) cell = { ...above, rows: above.rows - 1, continuation: true };
+      const rowCells: Cell[] = []; let column = 0, current = 0, remaining = active.size;
+      const cells = children(row).filter((cell) => ["td", "th"].includes(cell.tag)), next = new Map<number, Cell>();
+      while (current < cells.length || remaining > 0) {
+        // The expansion is bounded before constructing a continuation object.
+        if (++this.mappedCells > this.limits.maxNodes) throw new DocumentError("ResourceLimitExceeded", "DOCX table expansion exceeds its cell budget.");
+        const above = active.get(column); let cell: Cell;
+        if (above) { remaining--; cell = { ...above, rows: above.rows - 1, continuation: true }; }
         else { const source = cells[current++]; if (!source) unsupported("A table row leaves an unsupported hole in its native grid."); cell = { node: source!, column, span: Number(source!.attrs.colspan ?? 1), rows: Number(source!.attrs.rowspan ?? 1), continuation: false }; }
         if (cell.span < 1 || !Number.isSafeInteger(cell.span) || !Number.isSafeInteger(cell.rows) || cell.rows < 1 || column + cell.span > this.limits.maxNodes) unsupported("A table span exceeds the native grid profile.");
-        rowCells.push(cell); if (cell.rows > 1) next.push(cell); column += cell.span;
+        this.tableWork += cell.span;
+        if (this.tableWork > this.limits.maxNodes * 128) throw new DocumentError("ResourceLimitExceeded", "DOCX table mapping exceeds its work budget.");
+        for (let offset = 1; offset < cell.span; offset++) if (active.has(column + offset)) unsupported("A table cell overlaps a vertical merge.");
+        rowCells.push(cell); if (cell.rows > 1) next.set(column, cell); column += cell.span;
       }
       active = next; columns = Math.max(columns, column); matrix.push(rowCells);
     }
-    if (active.length || !columns || matrix.some((row) => row.reduce((total, cell) => total + cell.span, 0) !== columns)) unsupported("A table has an incomplete or nonrectangular grid.");
+    if (active.size || !columns || matrix.some((row) => row.reduce((total, cell) => total + cell.span, 0) !== columns)) unsupported("A table has an incomplete or nonrectangular grid.");
     const tableWidth = css.width && css.width !== "auto" ? points(css.width, css, this.width) : this.width;
     const grid = info?.grid ?? Array.from({ length: columns }, () => tableWidth / columns);
     if (grid.length !== columns) unsupported("The current table structure no longer matches its native column grid.");
@@ -308,11 +362,12 @@ class Exporter {
     let id = create(Number(node.attrs.start ?? 1));
     items.forEach((item, index) => {
       if (item.attrs.value !== undefined) id = create(Number(item.attrs.value));
-      let first = true; const content = item.children.filter((child) => element(child) || child.text.trim());
+      let first = true; const content = this.flow(item.children, item);
       let pending: SourceNode[] = [];
       const emit = (nodes: SourceNode[], last: boolean): void => {
         if (!nodes.length) return;
         const paragraph = nodes.length === 1 && element(nodes[0]!) && paragraphTags.has(nodes[0]!.tag) ? nodes[0] as SourceElement : { ...item, tag: "p", children: nodes };
+        if (!this.flowStyles.has(paragraph) && paragraph.tag === "p" && paragraph !== nodes[0]) this.flowStyles.set(paragraph, this.css.get(item));
         this.paragraph(paragraph, last && index === items.length - 1 ? section : undefined, last && index === items.length - 1 ? paragraphId : undefined, first ? { id, level: depth } : undefined); first = false;
       };
       content.forEach((child, position) => {
@@ -340,11 +395,11 @@ class Exporter {
     if (sections.some((left) => sections.some((right) => left !== right && contains(left.root, right.root)))) unsupported("Nested native section roots cannot be exported.");
     let current = sections[0]!;
     const collect = (node: SourceNode): void => {
-      if (!element(node)) { if (node.text.trim()) current.nodes.push(node); return; }
+      if (!element(node)) { current.nodes.push(node); return; }
       if (node.attrs["data-office-story"] && node.attrs["data-office-story"] !== "main") return;
-      const section = sections.find((section) => section.root === node); if (section) current = section;
-      if (paragraphTags.has(node.tag) || ["table", "ul", "ol"].includes(node.tag) || node.attrs["data-word-content-control"]) { current.nodes.push(node); return; }
-      if (!["article", "section", "div"].includes(node.tag)) { current.nodes.push(node); return; }
+      const section = sections.find((section) => section.root === node);
+      if (section) { current = section; current.nodes.push(node); return; }
+      if (!["article", "section", "div"].includes(node.tag) || !sections.some((item) => contains(node, item.root))) { current.nodes.push(node); return; }
       for (const child of node.children) collect(child);
     };
     this.mainStories.forEach(collect);

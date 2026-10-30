@@ -1,3 +1,4 @@
+import { DocumentError } from "@dagent-office/core";
 import type { DeepReadonly, WordMetadata } from "@dagent-office/core";
 import type { Css, ExportCss } from "./css.js";
 import { cellMargins, cellProperties, paragraphKeys, paragraphProperties, pick, runKeys, runProperties, tableProperties } from "./properties.js";
@@ -13,24 +14,24 @@ export class ExportStyles {
   readonly ids: ReadonlyMap<string, string>;
   readonly numberingIds: Map<string, string> = new Map<string, string>();
   private readonly definitions: Map<string, Style>;
-  constructor(readonly css: ExportCss, readonly word: DeepReadonly<WordMetadata> | undefined, private readonly locale: string | undefined) {
+  private readonly native = new Map<string, { p: Css; r: Css }>();
+  constructor(readonly css: ExportCss, readonly word: DeepReadonly<WordMetadata> | undefined, private readonly locale: string | undefined, private readonly maxDepth: number, main: Css) {
     this.definitions = new Map(word?.styles.map((style) => [style.styleId, style]) ?? []);
     this.ids = new Map([...this.definitions.keys()].map((id) => [id, id]));
-    const main = css.classStyle("word-main");
-    this.defaults = { ...pick(main, runKeys), ...pick(css.classStyle(word?.defaultRunCssClass ?? "word-default-run", main), runKeys.filter((key) => key === "background-color" || key.startsWith("text-decoration"))) };
+    const special = runKeys.filter((key) => key === "background-color" || key.startsWith("text-decoration"));
+    this.defaults = { ...pick(main, runKeys.filter((key) => !special.includes(key) && (word || key !== "--word-run-shading"))), ...(word?.defaultRunCssClass ? pick(css.classStyle(word.defaultRunCssClass, main), special) : pick(css.emptyStyle(), special)) };
     // Paragraph source nodes carry resolved defaults; a native default of zero
     // spacing is explicit so producers do not substitute their UI defaults.
     this.paragraphDefaults = { "margin-top": "0pt", "margin-bottom": "0pt" };
     word?.numbering.forEach((definition, index) => this.numberingIds.set(definition.numberingId, String(index + 1)));
   }
   style(id: string | undefined): Style | undefined { return id ? this.definitions.get(id) : undefined; }
-  paragraphContext(id: string | undefined): Css { const style = this.style(id); return this.css.classStyle(style?.cssClass ?? "word-native-no-style"); }
+  paragraphContext(id: string | undefined): Css { return { ...this.css.emptyStyle(), ...(id && this.style(id) ? this.nativeValues(this.style(id)!).p : {}) }; }
   runContext(paragraph: string | undefined, character?: string): Css {
     let result = this.defaults;
     for (const id of [paragraph, character]) {
       const definition = this.style(id); if (!definition) continue;
-      result = { ...result, ...pick(this.css.classStyle(definition.cssClass, result), runKeys) };
-      if (definition.runCssClass) result = { ...result, ...pick(this.css.classStyle(definition.runCssClass, result), runKeys.filter((key) => key === "background-color" || key.startsWith("text-decoration"))) };
+      result = { ...result, ...this.nativeValues(definition).r };
     }
     return result;
   }
@@ -38,16 +39,32 @@ export class ExportStyles {
     const result = this.css.classStyle(style.cssClass, this.defaults);
     return style.runCssClass ? { ...result, ...pick(this.css.classStyle(style.runCssClass, result), ["background-color", "text-decoration-line", "text-decoration-style", "text-decoration-color"]) } : result;
   }
+  private own(style: Style, kind: "p" | "r", css: Css, parent: Css): Css {
+    const original = kind === "p" ? style.paragraphProperties : style.runProperties;
+    const allowed = kind === "p" ? paragraphKeys : runKeys;
+    const declared = new Set([...this.css.classKeys(style.cssClass), ...(style.runCssClass && kind === "r" ? this.css.classKeys(style.runCssClass) : [])]);
+    const owns = (key: string): boolean => original === undefined || original.some((name) => name === key || key.startsWith(name + "-") && ["border", "margin", "padding"].some((prefix) => name.startsWith(prefix)));
+    return pick(css, allowed.filter((key) => owns(key) || declared.has(key) && css[key] !== parent[key] && !(kind === "r" && style.kind !== "character" && key === "background-color" && !style.runCssClass)));
+  }
+  private nativeValues(style: Style, depth = 0): { p: Css; r: Css } {
+    const known = this.native.get(style.styleId); if (known) return known;
+    if (depth > this.maxDepth) throw new DocumentError("ResourceLimitExceeded", "Native style inheritance exceeds its depth budget.");
+    const css = this.values(style), parentStyle = style.basedOn ? this.style(style.basedOn) : undefined;
+    const parent = parentStyle ? this.nativeValues(parentStyle, depth + 1) : { p: {}, r: this.defaults };
+    const parentCss = parentStyle ? this.values(parentStyle) : this.defaults;
+    const result = { p: { ...parent.p, ...this.own(style, "p", css, parentCss) }, r: { ...parent.r, ...this.own(style, "r", css, parentCss) } };
+    this.native.set(style.styleId, result); return result;
+  }
   write(opc: OutputOpc): void {
     const out = opc.part("word/styles.xml", contentType("styles"));
     out.add(declaration + "<w:styles" + namespaces + ">");
     out.add("<w:docDefaults><w:rPrDefault><w:rPr>" + runProperties(pick(this.defaults, runKeys.filter((key) => key !== "vertical-align" || this.defaults[key] !== "baseline"))) + (this.locale ? empty("w:lang", { "w:val": this.locale }) : "") + "</w:rPr></w:rPrDefault><w:pPrDefault><w:pPr>" + paragraphProperties(this.paragraphDefaults) + "</w:pPr></w:pPrDefault></w:docDefaults>");
     for (const style of this.definitions.values()) {
-      const css = this.values(style), parent = style.basedOn ? this.values(this.definitions.get(style.basedOn)!) : {};
+      const css = this.values(style), parent = style.basedOn ? this.values(this.definitions.get(style.basedOn)!) : this.defaults;
       out.add("<w:style" + attributes({ "w:type": style.kind, "w:styleId": this.ids.get(style.styleId)!, ...(style.kind === "paragraph" && style.styleId === "Normal" ? { "w:default": 1 } : {}) }) + ">" + value("name", style.styleId));
       for (const [key, name] of [["basedOn", "basedOn"], ["linkedStyleId", "link"], ["nextStyleId", "next"]] as const) if (style[key]) out.add(value(name, this.ids.get(style[key])));
-      out.add("<w:pPr>" + paragraphProperties(pick(css, style.paragraphProperties ?? paragraphKeys)) + "</w:pPr>");
-      out.add("<w:rPr>" + runProperties(pick(css, style.runProperties ?? runKeys), parent, true) + "</w:rPr>");
+      out.add("<w:pPr>" + paragraphProperties({ ...this.own(style, "p", css, parent), "font-size": css["font-size"]! }) + "</w:pPr>");
+      out.add("<w:rPr>" + runProperties(this.own(style, "r", css, parent), parent, true) + "</w:rPr>");
       if (style.kind === "table") {
         out.add("<w:tblPr>" + (style.rowBandSize ? value("tblStyleRowBandSize", style.rowBandSize) : "") + (style.columnBandSize ? value("tblStyleColBandSize", style.columnBandSize) : "") + tableProperties(css) + cellMargins(css, "tblCellMar") + (style.tableLookMask !== undefined ? empty("w:tblLook", { "w:val": style.tableLookMask.toString(16).padStart(4, "0") }) : "") + "</w:tblPr>");
         out.add("<w:tcPr>" + cellProperties(pick(css, Object.keys(css).filter((key) => key.startsWith("padding-")))) + "</w:tcPr>");

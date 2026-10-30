@@ -3,7 +3,7 @@ import type { CssNode, Declaration, Selector } from "css-tree";
 import { DocumentError } from "@dagent-office/core";
 import type { DocumentReadLimits } from "@dagent-office/core";
 import type { SourceElement } from "./source.js";
-import { length } from "./values.js";
+import { color, length } from "./values.js";
 
 export type Css = Readonly<Record<string, string>>;
 interface Compound { tag?: string; classes: string[]; attrs: { name: string; value?: string }[]; root: boolean }
@@ -98,6 +98,7 @@ export class ExportCss {
   private readonly indexed = new Map<string, Rule[]>();
   private readonly cache = new WeakMap<SourceElement, Css>();
   private work = 0;
+  private rootFont = 12;
   constructor(styles: readonly string[], private readonly limits: DocumentReadLimits, private readonly revisionIds: ReadonlySet<string> = new Set()) {
     let order = 0;
     for (const source of ["p,h1,h2,h3,h4,h5,h6{margin:0;font-weight:inherit;line-height:normal}td,th{padding:0;font-weight:inherit;text-align:inherit;vertical-align:top}", ...styles]) {
@@ -155,6 +156,7 @@ export class ExportCss {
       && !rule.compounds[0]!.tag && !rule.compounds[0]!.root && rule.compounds[0]!.attrs.length === 0);
     return this.compute(parent, rules);
   }
+  emptyStyle(): Css { return this.compute(initial, []); }
   classKeys(name: string): readonly string[] {
     const keys = new Set<string>();
     for (const rule of this.indexed.get("." + name) ?? []) if (rule.compounds.length === 1 && rule.compounds[0]!.classes.every((value) => value === name))
@@ -164,8 +166,10 @@ export class ExportCss {
   private compute(parent: Css, rules: readonly { declarations: Declaration[]; specificity: Specificity; order: number }[], node?: SourceElement): Css {
     const result: Record<string, string> = { ...initial }, custom = new Map<string, Entry>(), winners = new Map<string, Entry>();
     for (const [name, value] of Object.entries(parent)) if (name.startsWith("--") || inherited.has(name)) result[name] = value;
-    if (node?.parent && inline.has(node.parent.tag)) for (const name of ["background-color", "text-decoration-line", "text-decoration-style", "text-decoration-color"]) result[name] = parent[name] ?? initial[name]!;
+    if (node?.parent && inline.has(node.parent.tag)) result["background-color"] = parent["background-color"]?.toLowerCase() === "currentcolor" ? parent.color! : parent["background-color"] ?? initial["background-color"]!;
     if (node) {
+      if (node.tag === "ul") result["list-style-type"] = "disc";
+      if (node.tag === "ol") result["list-style-type"] = ({ "1": "decimal", a: "lower-alpha", A: "upper-alpha", i: "lower-roman", I: "upper-roman" } as Record<string, string>)[node.attrs.type ?? "1"] ?? "decimal";
       if (["b", "strong"].includes(node.tag)) result["font-weight"] = "bold";
       if (["em", "i"].includes(node.tag)) result["font-style"] = "italic";
       if (node.tag === "u" || node.tag === "ins" && !this.revisionIds.has(node.attrs["data-node-id"] ?? "")) result["text-decoration-line"] = "underline";
@@ -219,7 +223,38 @@ export class ExportCss {
     }
     const base = parseFloat(parent["font-size"] ?? "12pt"), size = result["font-size"] ?? "12pt";
     const sizes: Record<string, number> = { "xx-small": 7.2, "x-small": 9, small: 10, medium: 12, large: 13.5, "x-large": 18, "xx-large": 24, "xxx-large": 36, smaller: base / 1.2, larger: base * 1.2 };
-    result["font-size"] = String(sizes[size] ?? length(size, { font: base, percent: base })) + "pt";
+    result["font-size"] = String(sizes[size] ?? length(size, { font: base, rootFont: node?.tag === "html" ? 12 : this.rootFont, percent: base })) + "pt";
+    const font = parseFloat(result["font-size"]);
+    if (node?.tag === "html") this.rootFont = font;
+    // Relative lengths compute on the element that declares them, before they
+    // are inherited. Percentages stay relative to layout except for line-height.
+    for (const [name, raw] of Object.entries(result)) {
+      if (name.startsWith("--") || name === "font-family" || name === "font-size" || !/[\d.]r?em\b/i.test(raw)) continue;
+      const ast = parse(raw, { context: "value" });
+      walk(ast, (item) => {
+        if (item.type === "Dimension" && ["em", "rem"].includes(item.unit.toLowerCase())) { item.value = String(Number(item.value) * (item.unit.toLowerCase() === "em" ? font : this.rootFont)); item.unit = "pt"; }
+      });
+      result[name] = generate(ast);
+    }
+    if (result["line-height"] !== "normal" && !/^[\d.]+$/.test(result["line-height"]!)) result["line-height"] = length(result["line-height"]!, { font, rootFont: this.rootFont, percent: font }) + "pt";
+    for (const key of ["letter-spacing", "word-spacing"]) if (result[key] !== "normal") result[key] = length(result[key]!, { font, rootFont: this.rootFont, percent: font }) + "pt";
+    if (result.color?.toLowerCase() === "currentcolor") result.color = parent.color ?? initial.color!;
+    // Decorations propagate through descendant inline boxes, including from a
+    // block ancestor. `none` on a descendant does not erase an ancestor's paint.
+    const ownLines = result["text-decoration-line"]!, parentLines = node?.parent ? parent["text-decoration-line"] ?? "none" : "none";
+    const lines = [...new Set([...parentLines.split(/\s+/), ...ownLines.split(/\s+/)].filter((line) => line !== "none"))];
+    if (lines.length) {
+      if (parentLines !== "none" && ownLines !== "none") {
+        const parentColor = parent["text-decoration-color"]?.toLowerCase() === "currentcolor" ? parent.color : parent["text-decoration-color"];
+        const ownColor = result["text-decoration-color"]?.toLowerCase() === "currentcolor" ? result.color : result["text-decoration-color"];
+        if (color(parentColor ?? "#000000", parent.color) !== color(ownColor ?? "#000000", result.color) || parent["text-decoration-style"] !== result["text-decoration-style"]) throw new DocumentError("UnsupportedFeature", "Multiple decoration paints cannot share one native Word run property.");
+      }
+      if (parentLines !== "none" && ownLines === "none") {
+        result["text-decoration-style"] = parent["text-decoration-style"]!;
+        result["text-decoration-color"] = parent["text-decoration-color"]?.toLowerCase() === "currentcolor" ? parent.color! : parent["text-decoration-color"]!;
+      }
+      result["text-decoration-line"] = lines.join(" ");
+    }
     if (["bolder", "lighter"].includes(result["font-weight"] ?? "")) {
       const weight = parent["font-weight"] === "bold" ? 700 : Number(parent["font-weight"]) || 400;
       result["font-weight"] = String(result["font-weight"] === "bolder" ? weight < 350 ? 400 : weight < 550 ? 700 : 900 : weight < 550 ? 100 : weight < 750 ? 400 : 700);

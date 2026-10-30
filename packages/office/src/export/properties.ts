@@ -4,7 +4,7 @@ import { color, fontName, length, nativeInteger } from "./values.js";
 import { empty, orderedProperties, value } from "./xml.js";
 
 export const runKeys: readonly string[] = ["font-family", "font-size", "font-weight", "font-style", "font-variant", "text-transform", "color", "letter-spacing", "vertical-align", "background-color", "text-decoration-line", "text-decoration-style", "text-decoration-color", "--word-font-ascii", "--word-font-hAnsi", "--word-font-eastAsia", "--word-font-cs", "--word-font-size-cs", "--word-bold-cs", "--word-italic-cs", "--word-kerning-threshold", "--word-run-shading"];
-export const paragraphKeys: readonly string[] = ["margin-top", "margin-bottom", "margin-left", "margin-right", "text-indent", "text-align", "line-height", "break-before", "break-after", "break-inside", "widows", "orphans", "background-color", "--word-suppress-auto-hyphens", "--word-overflow-punctuation"];
+export const paragraphKeys: readonly string[] = ["margin-top", "margin-bottom", "margin-left", "margin-right", "text-indent", "text-align", "line-height", "break-before", "break-after", "break-inside", "widows", "orphans", "background-color", "--word-suppress-auto-hyphens", "--word-overflow-punctuation", ...["top", "right", "bottom", "left"].flatMap((side) => ["width", "style", "color"].map((part) => "border-" + side + "-" + part))];
 export const pick = (css: Css, keys: readonly string[]): Css => Object.fromEntries(Object.entries(css).filter(([key]) => keys.includes(key)));
 export const difference = (css: Css, expected: Css, keys: readonly string[]): Css => Object.fromEntries(Object.entries(css).filter(([key, val]) => keys.includes(key) && val !== expected[key]));
 export function unsupported(message: string): never { throw new DocumentError("UnsupportedFeature", message); }
@@ -55,7 +55,7 @@ export function runProperties(css: Css, inherited: Css = {}, style = false, role
   if (css["text-decoration-line"] !== undefined || css["text-decoration-style"] !== undefined || css["text-decoration-color"] !== undefined) {
     const lines = css["text-decoration-line"] ?? inherited["text-decoration-line"] ?? "none";
     const styles: Record<string, string> = { solid: "single", double: "double", dotted: "dotted", dashed: "dash", wavy: "wave" };
-    out += empty("w:u", { "w:val": lines.includes("underline") ? styles[css["text-decoration-style"] ?? inherited["text-decoration-style"] ?? "solid"] ?? unsupported("Unsupported native underline style.") : "none", ...(css["text-decoration-color"] ? { "w:color": color(css["text-decoration-color"], css.color ?? inherited.color) } : {}) });
+    out += empty("w:u", { "w:val": lines.includes("underline") ? styles[css["text-decoration-style"] ?? inherited["text-decoration-style"] ?? "solid"] ?? unsupported("Unsupported native underline style.") : "none", ...(css["text-decoration-color"] && css["text-decoration-color"].toLowerCase() !== "currentcolor" ? { "w:color": color(css["text-decoration-color"], css.color ?? inherited.color) } : {}) });
   }
   if (base !== undefined || background !== undefined) out += shade({ ...css, "background-color": base !== undefined && fill !== baseFill && fill && highlights[fill] ? base : background ?? base! });
   if (css["vertical-align"] !== undefined) {

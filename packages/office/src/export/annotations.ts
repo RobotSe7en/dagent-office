@@ -1,6 +1,6 @@
 import { DocumentError } from "@dagent-office/core";
 import type { Annotation, DeepReadonly } from "@dagent-office/core";
-import type { SourceElement, SourceNode, SourceTree } from "./source.js";
+import type { SourceElement, SourceNode, SourceText, SourceTree } from "./source.js";
 import { element } from "./source.js";
 import { empty } from "./xml.js";
 
@@ -14,7 +14,7 @@ export class ExportAnnotations {
   readonly comments: ExportComment[] = [];
   readonly omitted: UnexportedAnnotation[] = [];
   private readonly events = new WeakMap<SourceNode, Map<number, { starts: string[]; ends: string[] }>>();
-  constructor(tree: SourceTree, annotations: readonly DeepReadonly<Annotation>[], stories: readonly SourceElement[], maximumWork: number = 12_800_000) {
+  constructor(tree: SourceTree, annotations: readonly DeepReadonly<Annotation>[], stories: readonly SourceElement[], maximumWork: number, emitted: (node: SourceText) => boolean) {
     const leaves: SourceNode[] = [];
     let work = 0;
     const step = (): void => { if (++work > maximumWork) throw new DocumentError("ResourceLimitExceeded", "DOCX annotation mapping exceeds its work budget."); };
@@ -23,7 +23,7 @@ export class ExportAnnotations {
       return false;
     };
     const visit = (node: SourceNode): void => {
-      if (!element(node)) { if (node.text.trim() || !["article", "section", "div", "table", "thead", "tbody", "tfoot", "tr", "ul", "ol"].includes(node.parent.tag)) leaves.push(node); }
+      if (!element(node)) { if (emitted(node)) leaves.push(node); }
       else if (["img", "br"].includes(node.tag)) leaves.push(node); else node.children.forEach(visit);
     };
     stories.forEach(visit);
