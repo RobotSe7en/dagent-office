@@ -2,7 +2,7 @@ import type { Annotation } from "./contracts/annotations.js";
 import type { DocumentMetadata } from "./contracts/document.js";
 import type { DocumentEvent } from "./contracts/events.js";
 import type { DocumentOperation, DocumentTransaction } from "./contracts/operations.js";
-import type { CandidateChange, DocumentEditingSession, DocumentEventListener, DocumentModel, DocumentSessionOptions, TextOffsetMapping, TransactionReceipt } from "./runtime.js";
+import type { CandidateChange, DocumentSession, DocumentEventListener, DocumentModel, DocumentSessionOptions, TextOffsetMapping, TransactionReceipt } from "./runtime.js";
 import { DocumentError } from "./errors.js";
 import { parseContract } from "./schema-registry.js";
 import { DocumentEdit } from "./document/edit.js";
@@ -15,6 +15,10 @@ import { checkLimit, freeze, readLimits } from "./document/validation.js";
 import { compareStates, retainedBytes } from "./session/changes.js";
 import { checkTransactionSize, sessionLimits } from "./session/limits.js";
 import { annotationNodes, mapAnnotations } from "./session/anchors.js";
+import { buildInteractionRequest, validateProposal } from "./session/interaction.js";
+import type { DocumentInteractionRequest, EditProposal } from "./contracts/interaction.js";
+import type { InteractionRequestInput } from "./runtime.js";
+export { DEFAULT_INTERACTION_LIMITS } from "./session/interaction.js";
 
 export { DEFAULT_DOCUMENT_SESSION_LIMITS } from "./session/limits.js";
 
@@ -58,7 +62,7 @@ interface HistoryEntry {
 }
 
 /** Create an isolated transaction session from an authorized, validated document source. */
-export function createDocumentSession(document: DocumentModel, options: DocumentSessionOptions = {}): DocumentEditingSession {
+export function createDocumentSession(document: DocumentModel, options: DocumentSessionOptions = {}): DocumentSession {
   const limits = readLimits(options.limits);
   const budgets = sessionLimits(options.sessionLimits);
   let current: DocumentState | undefined = buildDocumentState(copyPackage(document.serialize(), limits), limits);
@@ -159,55 +163,81 @@ export function createDocumentSession(document: DocumentModel, options: Document
     }
   }
 
+  function prepareTransaction(input: DocumentTransaction, resolvedIds?: readonly string[]): CandidateChange {
+    if (input && Array.isArray(input.operations)) checkLimit(input.operations.length, budgets.maxOperations);
+    checkTransactionSize(input, budgets.maxTransactionBytes, limits.maxDepth);
+    const transaction = parseContract("document-transaction", input);
+    const base = state();
+    if (transaction.documentId !== base.snapshot.manifest.documentId) invalid("The transaction belongs to another document.");
+    if (transaction.baseRevision !== base.snapshot.manifest.revision) throw new DocumentError("RevisionConflict", "The transaction is based on a different document revision.");
+    checkLimit(activeCandidates.size + 1, budgets.maxCandidates);
+    // Validate every target against the base before applying any operation.
+    for (const operation of transaction.operations) {
+      if ("nodeId" in operation && !base.html.hasNode(operation.nodeId)) invalid("An operation targets a node outside the base snapshot.");
+    }
+    const edit = new DocumentEdit(base, limits, allocate);
+    let annotations = parseContract("annotations", base.snapshot.annotations);
+    const metadata = parseContract("document-metadata", base.snapshot.metadata);
+    const explicit = new Set<string>();
+    const unresolved = new Set(base.snapshot.annotations.filter((item) => item.status === "needs_reanchor").map((item) => item.annotationId));
+    for (const operation of transaction.operations) {
+      if ("nodeId" in operation) edit.apply(operation);
+      else applyAnnotation(operation, annotations, explicit);
+    }
+    for (const annotation of annotations) {
+      if (annotation.status !== "needs_reanchor" && unresolved.has(annotation.annotationId) && !explicit.has(annotation.annotationId)) {
+        invalid("Reactivating an unresolved annotation requires an explicit anchor.");
+      }
+      if (explicit.has(annotation.annotationId) && annotation.status !== "needs_reanchor"
+        && annotationNodes(annotation).some((id) => !base.html.hasNode(id))) invalid("Annotation targets must belong to the base snapshot.");
+    }
+    const files = new Map(base.files);
+    const source = edit.html();
+    files.set(base.snapshot.manifest.entrypoint, encode(source));
+    const parsed = parseHtml(source, parseContract("document-manifest", base.snapshot.manifest), files, limits, { nodes: 0 });
+    mapAnnotations(annotations, base.html, parsed, edit, explicit);
+    updateWordMetadata(metadata, base, parsed);
+    if (resolvedIds) {
+      const resolved = new Set(resolvedIds);
+      const contentChanged = parsed.html !== base.snapshot.html || JSON.stringify(metadata) !== JSON.stringify(base.snapshot.metadata);
+      if (!contentChanged) annotations = parseContract("annotations", base.snapshot.annotations);
+      else for (const annotation of annotations) {
+        if (resolved.has(annotation.annotationId) && annotation.status === "open") annotation.status = "resolved";
+      }
+    }
+    files.set(base.snapshot.manifest.metadata, encode(JSON.stringify(metadata)));
+    files.set(base.snapshot.manifest.annotations, encode(JSON.stringify(annotations)));
+    const next = buildDocumentState(files, limits);
+    checkLimit(retainedBytes([...activeCandidates.values(), next]), budgets.maxCandidateBytes);
+    const diff = compareStates(base, next, edit.textEdits);
+    const candidate = freeze({ documentId: transaction.documentId, baseRevision: transaction.baseRevision,
+      preview: next.snapshot, ...diff }) as unknown as CandidateChange;
+    issued.set(candidate, { baseRevision: transaction.baseRevision, consumed: false });
+    activeCandidates.set(candidate, next);
+    return candidate;
+  }
+
   return Object.freeze({
     snapshot: () => state().snapshot,
     getNode: (id: string) => state().html.getNode(id),
     getAnnotations: () => state().snapshot.annotations,
     serialize: () => new Map([...state().files].map(([path, bytes]) => [path, new Uint8Array(bytes)])),
-    prepare: (input: DocumentTransaction): CandidateChange => execute(() => {
-      if (input && Array.isArray(input.operations)) checkLimit(input.operations.length, budgets.maxOperations);
+    prepare: (input: DocumentTransaction): CandidateChange => execute(() => prepareTransaction(input)),
+    buildInteractionRequest: (input: InteractionRequestInput): DocumentInteractionRequest => execute(() => {
       checkTransactionSize(input, budgets.maxTransactionBytes, limits.maxDepth);
-      const transaction = parseContract("document-transaction", input);
-      const base = state();
-      if (transaction.documentId !== base.snapshot.manifest.documentId) invalid("The transaction belongs to another document.");
-      if (transaction.baseRevision !== base.snapshot.manifest.revision) throw new DocumentError("RevisionConflict", "The transaction is based on a different document revision.");
-      checkLimit(activeCandidates.size + 1, budgets.maxCandidates);
-      // Validate every target against the base before applying any operation.
-      for (const operation of transaction.operations) {
-        if ("nodeId" in operation && !base.html.hasNode(operation.nodeId)) invalid("An operation targets a node outside the base snapshot.");
-      }
-      const edit = new DocumentEdit(base, limits, allocate);
-      const annotations = parseContract("annotations", base.snapshot.annotations);
-      const metadata = parseContract("document-metadata", base.snapshot.metadata);
-      const explicit = new Set<string>();
-      const unresolved = new Set(base.snapshot.annotations.filter((item) => item.status === "needs_reanchor").map((item) => item.annotationId));
-      for (const operation of transaction.operations) {
-        if ("nodeId" in operation) edit.apply(operation);
-        else applyAnnotation(operation, annotations, explicit);
-      }
-      for (const annotation of annotations) {
-        if (annotation.status !== "needs_reanchor" && unresolved.has(annotation.annotationId) && !explicit.has(annotation.annotationId)) {
-          invalid("Reactivating an unresolved annotation requires an explicit anchor.");
-        }
-        if (explicit.has(annotation.annotationId) && annotation.status !== "needs_reanchor"
-          && annotationNodes(annotation).some((id) => !base.html.hasNode(id))) invalid("Annotation targets must belong to the base snapshot.");
-      }
-      const files = new Map(base.files);
-      const source = edit.html();
-      files.set(base.snapshot.manifest.entrypoint, encode(source));
-      const parsed = parseHtml(source, parseContract("document-manifest", base.snapshot.manifest), files, limits, { nodes: 0 });
-      mapAnnotations(annotations, base.html, parsed, edit, explicit);
-      updateWordMetadata(metadata, base, parsed);
-      files.set(base.snapshot.manifest.metadata, encode(JSON.stringify(metadata)));
-      files.set(base.snapshot.manifest.annotations, encode(JSON.stringify(annotations)));
-      const next = buildDocumentState(files, limits);
-      checkLimit(retainedBytes([...activeCandidates.values(), next]), budgets.maxCandidateBytes);
-      const diff = compareStates(base, next, edit.textEdits);
-      const candidate = freeze({ documentId: transaction.documentId, baseRevision: transaction.baseRevision,
-        preview: next.snapshot, ...diff }) as unknown as CandidateChange;
-      issued.set(candidate, { baseRevision: transaction.baseRevision, consumed: false });
-      activeCandidates.set(candidate, next);
-      return candidate;
+      const request = buildInteractionRequest(state(), input);
+      checkLimit(encode(JSON.stringify(request)).byteLength, limits.maxPackageBytes);
+      return request;
+    }),
+    prepareProposal: (requestInput: DocumentInteractionRequest, proposalInput: EditProposal): CandidateChange => execute(() => {
+      checkTransactionSize(requestInput, limits.maxPackageBytes * 8, limits.maxDepth + 16);
+      checkLimit(encode(JSON.stringify(requestInput)).byteLength, limits.maxPackageBytes);
+      checkTransactionSize(proposalInput, budgets.maxTransactionBytes, limits.maxDepth);
+      const request = parseContract("interaction-request", requestInput);
+      const proposal = parseContract("edit-proposal", proposalInput);
+      validateProposal(state(), request, proposal);
+      return prepareTransaction({ protocolVersion: 1, documentId: proposal.documentId,
+        baseRevision: proposal.baseRevision, operations: proposal.operations }, proposal.annotationIds);
     }),
     commit: (candidate: CandidateChange): TransactionReceipt => execute(() => {
       const record = issued.get(candidate);

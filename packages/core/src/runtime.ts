@@ -132,7 +132,7 @@ export interface TransactionReceipt {
 export type DocumentEventListener = (event: DeepReadonly<DocumentEvent>) => void;
 export type AnnotationSubmissionHandler = (request: DeepReadonly<DocumentInteractionRequest>) => void | Promise<void>;
 
-/** The implemented transaction boundary; interaction requests arrive in R1-09. */
+/** Shared transaction and history boundary for editing views. */
 export interface DocumentEditingSession extends DocumentModel {
   getAnnotations(): readonly DeepReadonly<Annotation>[];
   prepare(transaction: DocumentTransaction): CandidateChange;
@@ -146,7 +146,7 @@ export interface DocumentEditingSession extends DocumentModel {
   dispose(): void;
 }
 
-/** Full collaboration contract; request/proposal execution is still planned. */
+/** Revision-bound collaboration on the same transaction boundary. */
 export interface DocumentSession extends DocumentEditingSession {
   buildInteractionRequest(input: InteractionRequestInput): DocumentInteractionRequest;
   prepareProposal(request: DocumentInteractionRequest, proposal: EditProposal): CandidateChange;

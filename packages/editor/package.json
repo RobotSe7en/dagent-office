@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "license": "UNLICENSED",
-  "description": "Scriptless document preview, revision-bound selection and annotation interaction",
+  "description": "Document workbench with preview, annotations, request/proposal review and optional React integration",
   "files": [
     "dist"
   ],
@@ -13,6 +13,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
     }
   },
   "sideEffects": false,
@@ -22,5 +26,14 @@
   },
   "dependencies": {
     "@dagent-office/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18.2.0 <20"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true }
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0"
   }
 }

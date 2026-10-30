@@ -511,5 +511,5 @@ test("Playground downloads annotation transactions and reopens them", async ({ p
   expect(openDocument(readDocumentZip(readFileSync(path))).snapshot().annotations[0]).toMatchObject({ instruction: "保存并重开" });
   await page.getByLabel("打开文件").setInputFiles(path);
   await expect(page.getByRole("status")).toContainText("修订 1 · 批注 1");
-  await expect(page.getByText("保存并重开", { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "文档批注", exact: true }).getByText("保存并重开", { exact: true })).toBeVisible();
 });

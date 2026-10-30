@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { createDocumentSession, DocumentError, openDocument } from "@dagent-office/core";
-import type { DocumentEditingSession, DocumentModel, DocumentSnapshot } from "@dagent-office/core";
+import type { DocumentModel, DocumentSession, DocumentSnapshot } from "@dagent-office/core";
 import {
   importDocx,
   readDocumentZip,
   writeDocumentZip,
 } from "@dagent-office/office";
-import { mountDocumentInteraction } from "@dagent-office/editor";
+import type { DocumentWorkbenchView } from "@dagent-office/editor";
+import { DocumentWorkbench } from "@dagent-office/editor/react";
+import { reportFiles, sampleProposal } from "./samples.js";
 const sample = import.meta.env.BASE_URL + "01-text-numbering.docx";
 
 export function App() {
@@ -14,30 +16,23 @@ export function App() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [snapshot, setSnapshot] = useState<DocumentSnapshot>();
-  const sessionRef = useRef<DocumentEditingSession>(undefined);
-  const container = useRef<HTMLDivElement>(null);
+  const sessionRef = useRef<DocumentSession>(undefined);
+  const workbenchRef = useRef<DocumentWorkbenchView>(undefined);
+  const [session, setSession] = useState<DocumentSession>();
+  const [submitted, setSubmitted] = useState(false);
   const generation = useRef(0);
   useEffect(() => {
-    if (!model || !container.current) return;
+    setSubmitted(false);
+    if (!model) { setSession(undefined); return; }
     const session = createDocumentSession(model);
     sessionRef.current = session;
+    setSession(session);
     setSnapshot(session.snapshot());
     const unsubscribe = session.subscribe((event) => {
       if (event.type !== "error") setSnapshot(session.snapshot());
     });
-    const preview = mountDocumentInteraction(container.current, session);
-    let active = true;
-    void preview.ready.catch((reason) => {
-      if (active) {
-        setError(reason instanceof Error ? reason.message : "预览失败");
-        setModel(undefined);
-      }
-    });
     return () => {
-      active = false;
-      preview.dispose();
-      unsubscribe();
-      session.dispose();
+      unsubscribe(); session.dispose();
       if (sessionRef.current === session) sessionRef.current = undefined;
     };
   }, [model]);
@@ -94,9 +89,27 @@ export function App() {
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
+  async function openReport(): Promise<void> {
+    const current = ++generation.current;
+    setLoading(true); setError(""); setModel(undefined);
+    try { const files = await reportFiles(); if (current === generation.current) setModel(openDocument(files)); }
+    catch (reason) { if (current === generation.current) setError(reason instanceof Error ? reason.message : "报告读取失败"); }
+    finally { if (current === generation.current) setLoading(false); }
+  }
+  async function loadSampleProposal(): Promise<void> {
+    const current = generation.current, view = workbenchRef.current;
+    if (!view) return;
+    try {
+      const proposal = await sampleProposal();
+      if (current !== generation.current || workbenchRef.current !== view) return;
+      const request = view.request() ?? view.buildRequest();
+      view.loadProposal(request, { ...proposal, requestId: request.requestId, documentId: request.documentId,
+        baseRevision: request.baseRevision, annotationIds: request.annotations.map((annotation) => annotation.annotationId) });
+    } catch (reason) { if (current === generation.current) setError(reason instanceof Error ? reason.message : "固定提案导入失败"); }
+  }
   return (
     <main>
-      <p className="eyebrow">DOCX 预览 · 文字划选 · 框选批注</p>
+      <p className="eyebrow">DOCX 预览 · 批注请求 · 提案审阅</p>
       <h1>dagent-office Playground</h1>
       <div className="toolbar">
         <label>
@@ -132,6 +145,8 @@ export function App() {
         >
           打开 DOCX 样例
         </button>
+        <button disabled={loading} onClick={() => { void openReport(); }}>打开报告协作样例</button>
+        <button disabled={!session} onClick={() => { void loadSampleProposal(); }}>载入固定示例提案</button>
         <button disabled={!model} onClick={download}>
           下载文档包
         </button>
@@ -148,7 +163,12 @@ export function App() {
           {(snapshot ?? model.snapshot()).annotations.length}
         </p>
       )}
-      <div ref={container} className="preview" />
+      {submitted && <p>Playground 已接收批注请求；使用固定提案验证返回与应用。</p>}
+      {model && session && <DocumentWorkbench session={session} className="preview"
+        onViewChange={(view) => { workbenchRef.current = view; }}
+        onSubmitAnnotations={() => { setSubmitted(true); }}
+        onError={(reason) => setError(reason.message)} />}
+
     </main>
   );
 }

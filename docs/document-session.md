@@ -26,7 +26,7 @@ const reopened = openDocument(saved);
 session.dispose();
 ```
 
-工厂返回 `DocumentEditingSession`，实现 `snapshot/getNode/getAnnotations/serialize`、`prepare/commit/discard`、`undo/redo/history/clearHistory`、`subscribe/dispose`。完整协作接口 `DocumentSession` 继续作为后续契约保留；请求生成与 `prepareProposal` 在 R1-09 实现。本入口不提供富文本 UI、分页或 Office 导出。
+工厂返回 `DocumentSession`（扩展 `DocumentEditingSession`），实现 `snapshot/getNode/getAnnotations/serialize`、`prepare/commit/discard`、`undo/redo/history/clearHistory`、`subscribe/dispose`。R1-09 已实现请求生成与 `prepareProposal`，完整规则见[工作台与协议](workbench.md)。本入口不提供富文本 UI、分页或 Office 导出。
 
 ## 操作和候选
 

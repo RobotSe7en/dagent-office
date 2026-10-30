@@ -2,9 +2,9 @@ import type { Annotation, TextRange } from "../contracts/annotations.js";
 import { validTextRanges } from "../document/annotations.js";
 import type { ParsedHtml } from "../document/html.js";
 import { isTextBoundary } from "../document/text.js";
-import type { TextOffsetMapping } from "../runtime.js";
+import type { DeepReadonly, TextOffsetMapping } from "../runtime.js";
 
-export function annotationNodes(annotation: Annotation): string[] {
+export function annotationNodes(annotation: DeepReadonly<Annotation>): readonly string[] {
   const anchor = annotation.anchor;
   return anchor.kind === "text" || anchor.kind === "node" ? [anchor.nodeId]
     : anchor.kind === "text-set" ? anchor.ranges.map((range) => range.nodeId)

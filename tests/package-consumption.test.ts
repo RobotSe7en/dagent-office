@@ -89,6 +89,9 @@ test("packed packages load in Node and reject access to their internal files", (
     'assert.equal(document.getNode("n-summary").text, "项目计划于第三季度完成。");',
     "assert.deepEqual(openDocument(document.serialize()).snapshot(), document.snapshot());",
     "const session = createDocumentSession(document);",
+    'const request = session.buildInteractionRequest({annotationIds:["a-summary","a-heading"]});',
+    'const proposal = {protocolVersion:1,requestId:request.requestId,proposalId:"packed-proposal",documentId:input.documentId,baseRevision:0,annotationIds:["a-heading"],summary:"Packed proposal",operations:[{op:"setStyle",nodeId:"n-title",property:"color",value:"#123456"}]};',
+    'session.discard(session.prepareProposal(JSON.parse(JSON.stringify(request)),proposal));',
     'const candidate = session.prepare({protocolVersion:1, documentId:input.documentId, baseRevision:0, operations:[{op:"replaceText",nodeId:"n-summary",from:0,to:12,expectedText:"项目计划于第三季度完成。",text:"第四季度交付。"}]});',
     "assert.equal(session.commit(candidate).revision, 1);",
     'assert.equal(openDocument(session.serialize()).getNode("n-summary").text, "第四季度交付。");',
@@ -138,6 +141,8 @@ test("packed declarations resolve without borrowing workspace source or ambient 
       "declare const files: ReadonlyMap<string, Uint8Array>;",
       "const document = openDocument(files);",
       "const session = createDocumentSession(document);",
+      'const request = session.buildInteractionRequest({annotationIds:["a"]});',
+      'void request.context.blocks;',
       'session.prepare({protocolVersion:1, documentId:"d", baseRevision:0, operations:[]});',
       "session.history(); session.dispose();",
       'const text: string | undefined = document.getNode("n")?.text;',
@@ -154,11 +159,13 @@ test("packed declarations resolve without borrowing workspace source or ambient 
       'const digest: string = createAssetDescriptor("assets/a.bin", "application/octet-stream", archive).sha256;',
       'void collected; void unpacked; void digest;',
       ...(name === "browser" ? [
-        'import { mountDocumentInteraction } from "@dagent-office/editor";',
+        'import { mountDocumentInteraction, mountDocumentWorkbench } from "@dagent-office/editor";',
         'import type { DocumentInteractionView } from "@dagent-office/editor";',
         'declare const container: HTMLElement;',
         'const view: DocumentInteractionView = mountDocumentInteraction(container, session, {onSelectionChange(selection) { void selection?.baseRevision; }});',
         'view.setMode("region"); view.setZoom(1.25); view.selection(); view.fonts(); void view.ready; view.dispose();',
+        'const workbench = mountDocumentWorkbench(container, session, {onSubmitAnnotations(request) { void request.requestId; }});',
+        'workbench.buildRequest(["a"]); workbench.request(); workbench.rejectProposal(); workbench.dispose();',
       ] : []),
     ].join("\n"));
     writeFileSync(join(consumer, "tsconfig." + name + ".json"), JSON.stringify({
@@ -195,4 +202,29 @@ test("packed browser modules build in a plain JavaScript host without React", as
   });
   expect(existsSync(join(consumer, "browser-dist/index.html"))).toBe(true);
   expect(existsSync(join(consumer, "node_modules/react"))).toBe(false);
+});
+
+test("the optional packed React entry builds with independently installed React and declarations", async () => {
+  const directory = join(temporary, "react consumer"); mkdirSync(directory);
+  const manifest = JSON.parse(readFileSync(join(consumer, "package.json"), "utf8"));
+  manifest.dependencies.react = "19.3.1"; manifest.dependencies["@types/react"] = "19.3.0";
+  writeFileSync(join(directory, "package.json"), JSON.stringify(manifest));
+  const pnpm = process.env.npm_execpath!;
+  const store = spawnSync(process.execPath, [pnpm, "store", "path"], { cwd: repository, encoding: "utf8", timeout: 30_000 });
+  expect(store.status).toBe(0);
+  run(process.execPath, [pnpm, "install", "--prefer-offline", "--ignore-scripts", "--ignore-workspace", "--no-frozen-lockfile", "--store-dir", store.stdout.trim()], directory);
+  writeFileSync(join(directory, "entry.ts"), [
+    'import { createElement } from "react";',
+    'import { DocumentWorkbench } from "@dagent-office/editor/react";',
+    'import type { DocumentSession } from "@dagent-office/core";',
+    'declare const session: DocumentSession;',
+    'createElement(DocumentWorkbench, {session, onViewChange(view) { view?.buildRequest(); }});',
+  ].join("\n"));
+  writeFileSync(join(directory, "tsconfig.json"), JSON.stringify({ compilerOptions: {
+    target: "ES2022", module: "NodeNext", moduleResolution: "NodeNext", strict: true, noEmit: true, types: [], lib: ["ES2022", "DOM", "DOM.Iterable"],
+  }, files: ["entry.ts"] }));
+  run(process.execPath, [require.resolve("typescript/bin/tsc"), "--project", "tsconfig.json"], directory);
+  writeFileSync(join(directory, "index.html"), '<script type="module" src="/entry.ts"></script>');
+  await build({ root: directory, configFile: false, logLevel: "silent", build: { target: "es2022", outDir: "dist" } });
+  expect(existsSync(join(directory, "dist/index.html"))).toBe(true);
 });
