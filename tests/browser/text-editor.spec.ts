@@ -180,6 +180,14 @@ test("input cannot split a UTF-16 surrogate pair or detach a variation selector"
   }
 });
 
+test("an incrementally typed variation selector stays in its base character's source font scope", async ({ page }) => {
+  await mount(page, fixture('<p data-node-id="a"><span data-node-id="s" data-word-run="true" data-word-script="eastAsia" style="font-family:CJKFace;--word-font-eastAsia:CJKFace;--word-font-hAnsi:OtherFace">漢</span></p>'));
+  await selection(page, "s", 1); await page.keyboard.insertText("\u{e0100}");
+  await expect.poll(() => page.evaluate(() => window.textEditorHost.session!.getNode("s")!.text)).toBe("漢\u{e0100}");
+  expect(await page.evaluate(() => window.textEditorHost.session!.getNode("s")!.childNodeIds)).toEqual([]);
+  expect(await page.evaluate(() => window.textEditorHost.errors)).toEqual([]);
+});
+
 test("replacing the complete editable story retains document and section identities", async ({ page }) => {
   for (const files of [fixture(), importDocx(readFileSync(new URL("../../examples/docx/04-styles-sections.docx", import.meta.url)), { documentId: "whole-story" })]) {
     await mount(page, files);

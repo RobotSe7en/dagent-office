@@ -61,7 +61,11 @@ function textLeaves(root: Node): TextLeaf[] {
 }
 
 /** Match import's source font roles, keeping marks and variation selectors with their base. */
-function scriptParts(value: string): { script: "ascii" | "eastAsia" | "hAnsi"; text: string }[] {
+type FontScript = "ascii" | "eastAsia" | "hAnsi" | "cs";
+function fontScript(value: string): FontScript | undefined {
+  return ["ascii", "eastAsia", "hAnsi", "cs"].includes(value) ? value as FontScript : undefined;
+}
+function scriptParts(value: string, initialScript?: FontScript): { script: FontScript; text: string }[] {
   const parts: ReturnType<typeof scriptParts> = [];
   for (const character of value) {
     const code = character.codePointAt(0)!;
@@ -69,7 +73,7 @@ function scriptParts(value: string): { script: "ascii" | "eastAsia" | "hAnsi"; t
     const eastAsian = code >= 0x2e80 && code <= 0xa4cf || code >= 0xac00 && code <= 0xd7af
       || code >= 0xf900 && code <= 0xfaff || code >= 0xfe10 && code <= 0xfe6f
       || code >= 0xff00 && code <= 0xffef || code >= 0x20000 && code <= 0x323af;
-    const script = /\p{Mark}/u.test(character) && previous ? previous.script
+    const script = /\p{Mark}/u.test(character) && (previous || initialScript) ? previous?.script ?? initialScript!
       : eastAsian ? "eastAsia" : code <= 0x7f ? "ascii" : "hAnsi";
     if (previous?.script === script) previous.text += character;
     else parts.push({ script, text: character });
@@ -120,7 +124,7 @@ export class DocumentEdit {
       if (index) result.push(this.make("br"));
       if (!line) continue;
       if (!word) result.push(this.text(line));
-      else for (const part of scriptParts(line)) {
+      else for (const part of scriptParts(line, fontScript(inheritedScript))) {
         if (part.script === inheritedScript) {
           result.push(this.text(part.text));
           continue;
@@ -264,7 +268,13 @@ export class DocumentEdit {
           }
         }
         if (edit.text.length) inserted.push({ from: edit.from, to: edit.from + edit.text.length });
-        proof.inserted = inserted.sort((left, right) => left.from - right.from);
+        const merged: typeof inserted = [];
+        for (const range of inserted.sort((left, right) => left.from - right.from)) {
+          const last = merged.at(-1);
+          if (last && range.from <= last.to) last.to = Math.max(last.to, range.to);
+          else merged.push({ ...range });
+        }
+        proof.inserted = merged;
       }
       proofs.set(edit.nodeId, proof);
     }
@@ -283,7 +293,7 @@ export class DocumentEdit {
         .filter((range) => range.from < range.to);
       if (!ranges.length) continue;
       const script = inherited.map((item) => attr(item, "data-word-script")).find((value) => value !== undefined) ?? "ascii";
-      if (ranges.every((range) => scriptParts(node.value.slice(range.from, range.to)).every((part) => part.script === script))) continue;
+      if (ranges.every((range) => scriptParts(node.value.slice(range.from, range.to), fontScript(script)).every((part) => part.script === script))) continue;
       let cursor = 0;
       for (const range of ranges) {
         if (range.from > cursor) adapter.insertBefore(node.parentNode, this.text(node.value.slice(cursor, range.from)), node);

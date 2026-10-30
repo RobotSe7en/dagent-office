@@ -125,3 +125,27 @@ test("editing an existing font scope classifies inserted text while preserving o
   expect(s.getNode("s")!.html).not.toContain('data-word-script="hAnsi"');
   expect(s.getNode("s")!.html).toContain('data-word-script="eastAsia"');
 });
+
+test.each([["漢", "eastAsia", "\u{e0100}"], ["e", "ascii", "\u0301"]])("incremental marks inherit the base font scope: %s", (base, script, mark) => {
+  const s = session(base);
+  s.commit(prepare(s, reconcile('<span data-node-id="s" data-word-run="true" data-word-script="' + script + '" style="font-family:BaseFace;--word-font-hAnsi:OtherFace">' + base + '</span>', [], "p")));
+  s.commit(prepare(s, reconcile(s.getNode("s")!.html.replace('>' + base + '<', '>' + base + mark + '<'),
+    ["p", "s"].map((nodeId) => ({ nodeId, from: base.length, to: base.length, expectedText: "", text: mark })), "p")));
+  expect(s.getNode("s")!.childNodeIds).toEqual([]);
+  expect(s.getNode("s")!.text).toBe(base + mark);
+  expect(s.getNode("s")!.attributes.style).toContain("font-family:BaseFace");
+});
+
+test("one composition's adjacent inserted base and selector keep a shared new font scope", () => {
+  const s = session("");
+  s.commit(prepare(s, reconcile('<span data-node-id="s" data-word-run="true" data-word-script="ascii"></span>', [], "p")));
+  s.commit(prepare(s, reconcile('<span data-node-id="s" data-word-run="true" data-word-script="ascii">漢\u{e0100}</span>',
+    ["p", "s"].flatMap((nodeId) => [
+      { nodeId, from: 0, to: 0, expectedText: "", text: "漢" },
+      { nodeId, from: 1, to: 1, expectedText: "", text: "\u{e0100}" },
+    ]), "p")));
+  const children = s.getNode("s")!.childNodeIds;
+  expect(children).toHaveLength(1);
+  expect(s.getNode(children[0]!)!.attributes["data-word-script"]).toBe("eastAsia");
+  expect(s.getNode(children[0]!)!.text).toBe("漢\u{e0100}");
+});
