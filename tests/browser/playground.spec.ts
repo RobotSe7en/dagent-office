@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
@@ -6,6 +7,13 @@ import {
 } from "../../packages/office/tests/regression-fixtures.js";
 
 const samples = fileURLToPath(new URL("../../examples/docx/", import.meta.url));
+async function expandDocumentScreenshot(page: Page): Promise<void> {
+  // Measure the complete source rendering, independent of the interaction scroll viewport.
+  await page.locator("iframe").evaluate((frame) => {
+    const stage = (frame.getRootNode() as ShadowRoot).querySelector<HTMLElement>(".stage");
+    if (stage) stage.style.maxHeight = "none";
+  });
+}
 const cases = JSON.parse(
   readFileSync(
     new URL("../../examples/docx/expected.json", import.meta.url),
@@ -59,6 +67,7 @@ test("positions custom and default tabs from the unindented text origin", async 
   for (const [index, expected] of [72, 72, 144, 72, 72, 72].entries())
     expect(positions[index]).toBeCloseTo(expected, 1);
   await expect(frame.locator("[data-word-run]").first()).toHaveCSS("font-family", /Liberation Serif/);
+  await expandDocumentScreenshot(page);
   await expect(frame.locator("article")).toHaveScreenshot("indented-tabs.png", {
     animations: "disabled", maxDiffPixelRatio: 0.005, threshold: 0.2,
   });
@@ -131,6 +140,7 @@ for (const item of cases) {
       expect(positions.right).toBeGreaterThan(positions.left);
       await expect(frame.locator("a[href]")).toHaveCount(0);
     }
+    await expandDocumentScreenshot(page);
     await expect(frame.locator("article")).toHaveScreenshot(
       item.file.replace(".docx", ".png"),
       { animations: "disabled", maxDiffPixelRatio: 0.005, threshold: 0.2 },
@@ -284,6 +294,7 @@ test("previews partial font overrides, cleared highlighting, inherited tabs and 
   await expect(cell).toHaveCSS("padding-top", /2\.66/);
   await expect(cell).toHaveCSS("padding-bottom", "4px");
   await expect(frame.locator("table")).toHaveCSS("margin-left", "40px");
+  await expandDocumentScreenshot(page);
   await expect(frame.locator("article")).toHaveScreenshot("style-inheritance.png", {
     animations: "disabled", maxDiffPixelRatio: 0.005, threshold: 0.2,
   });
@@ -346,6 +357,7 @@ test("uses each section's width and margins in continuous view", async ({ page }
   expect(geometry[1]!.width).toBeCloseTo(841.9, 1);
   expect(geometry[1]!.padding).toEqual([36, 48, 54, 48]);
   expect(geometry[1]!.contentWidth).toBeCloseTo(745.9, 1);
+  await expandDocumentScreenshot(page);
   await expect(frame.locator("article")).toHaveScreenshot("section-geometry.png", {
     animations: "disabled", maxDiffPixelRatio: 0.005, threshold: 0.2,
   });

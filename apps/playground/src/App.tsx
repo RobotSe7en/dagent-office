@@ -1,23 +1,31 @@
 import { useEffect, useRef, useState } from "react";
-import { DocumentError, openDocument } from "@dagent-office/core";
-import type { DocumentModel } from "@dagent-office/core";
+import { createDocumentSession, DocumentError, openDocument } from "@dagent-office/core";
+import type { DocumentEditingSession, DocumentModel, DocumentSnapshot } from "@dagent-office/core";
 import {
   importDocx,
   readDocumentZip,
   writeDocumentZip,
 } from "@dagent-office/office";
-import { mountDocumentPreview } from "@dagent-office/editor";
+import { mountDocumentInteraction } from "@dagent-office/editor";
 const sample = import.meta.env.BASE_URL + "01-text-numbering.docx";
 
 export function App() {
   const [model, setModel] = useState<DocumentModel>();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [snapshot, setSnapshot] = useState<DocumentSnapshot>();
+  const sessionRef = useRef<DocumentEditingSession>(undefined);
   const container = useRef<HTMLDivElement>(null);
   const generation = useRef(0);
   useEffect(() => {
     if (!model || !container.current) return;
-    const preview = mountDocumentPreview(container.current, model);
+    const session = createDocumentSession(model);
+    sessionRef.current = session;
+    setSnapshot(session.snapshot());
+    const unsubscribe = session.subscribe((event) => {
+      if (event.type !== "error") setSnapshot(session.snapshot());
+    });
+    const preview = mountDocumentInteraction(container.current, session);
     let active = true;
     void preview.ready.catch((reason) => {
       if (active) {
@@ -28,6 +36,9 @@ export function App() {
     return () => {
       active = false;
       preview.dispose();
+      unsubscribe();
+      session.dispose();
+      if (sessionRef.current === session) sessionRef.current = undefined;
     };
   }, [model]);
   useEffect(
@@ -44,6 +55,7 @@ export function App() {
     setLoading(true);
     setError("");
     setModel(undefined);
+    setSnapshot(undefined);
     try {
       const value = new Uint8Array(await bytes);
       const files =
@@ -68,8 +80,9 @@ export function App() {
     }
   }
   function download(): void {
-    if (!model) return;
-    const bytes = writeDocumentZip(model.serialize());
+    const session = sessionRef.current;
+    if (!session) return;
+    const bytes = writeDocumentZip(session.serialize());
     const buffer = new ArrayBuffer(bytes.length);
     new Uint8Array(buffer).set(bytes);
     const url = URL.createObjectURL(
@@ -83,7 +96,7 @@ export function App() {
   }
   return (
     <main>
-      <p className="eyebrow">DOCX 读取与映射 · 只读预览</p>
+      <p className="eyebrow">DOCX 预览 · 文字划选 · 框选批注</p>
       <h1>dagent-office Playground</h1>
       <div className="toolbar">
         <label>
@@ -131,8 +144,8 @@ export function App() {
       )}
       {model && (
         <p role="status">
-          已打开 · 修订 {model.snapshot().manifest.revision} · 批注{" "}
-          {model.snapshot().annotations.length}
+          已打开 · 修订 {(snapshot ?? model.snapshot()).manifest.revision} · 批注{" "}
+          {(snapshot ?? model.snapshot()).annotations.length}
         </p>
       )}
       <div ref={container} className="preview" />

@@ -2,6 +2,7 @@ import { DocumentError, openDocument } from "@dagent-office/core";
 import { resolvePreviewFonts } from "./fonts.js";
 import type { FontResolution } from "./fonts.js";
 import type { DocumentModel, WordMetadata } from "@dagent-office/core";
+import { PreviewSource } from "./source-index.js";
 
 export interface DocumentPreview {
   readonly element: HTMLIFrameElement;
@@ -285,6 +286,15 @@ export function mountDocumentPreview(
   input: DocumentModel,
   options: DocumentPreviewOptions = {},
 ): DocumentPreview {
+  return mountPreview(container, input, options);
+}
+
+/** Internal renderer connection; source positions never become a public document model. */
+export function mountPreview(
+  container: HTMLElement,
+  input: DocumentModel,
+  options: DocumentPreviewOptions = {},
+): DocumentPreview & { source(): PreviewSource | undefined } {
   const model = openDocument(input.serialize());
   const snapshot = model.snapshot();
   const files = model.serialize();
@@ -359,6 +369,7 @@ export function mountDocumentPreview(
   iframe.setAttribute("sandbox", "allow-same-origin");
   iframe.style.cssText = "width:100%;height:480px;border:0;display:block";
   let fontReport: readonly FontResolution[] = [];
+  let source: PreviewSource | undefined;
   let disposed = false;
   let observer: ResizeObserver | undefined;
   let settle: () => void = () => {};
@@ -374,6 +385,7 @@ export function mountDocumentPreview(
       .then(() => {
         if (disposed) return;
         const sourceFonts = resolvePreviewFonts(frameDocument);
+        source = new PreviewSource(frameDocument, model);
         decorate(
           frameDocument,
           snapshot.metadata.word as WordMetadata | undefined,
@@ -446,9 +458,11 @@ export function mountDocumentPreview(
     element: iframe,
     ready,
     fonts: () => fontReport,
+    source: () => source,
     dispose: () => {
       if (disposed) return;
       disposed = true;
+      source = undefined;
       observer?.disconnect();
       iframe.removeEventListener("load", load);
       iframe.remove();

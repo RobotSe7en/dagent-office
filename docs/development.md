@@ -1,6 +1,6 @@
 # 本地开发与工程检查
 
-当前完成 R1-02 至 R1-07、R1-05A 模型设计与 R1-10 声明范围的 DOCX 读取验收。`core` 提供严格契约、Word 语义和只读文档包，`office` 提供 ZIP 与 DOCX 导入，`editor` 提供只读预览；`node` 仍为工程入口。`core` 还提供[编辑会话、事务及历史](document-session.md)、精确文字及结构锚点映射和区域批注重定位；下一步是 R1-08 预览与交互，输入、自动分页及 DOCX/PDF 导出尚未实现。API 见[DOCX 读取](docx-import.md)，顺序见[第一轮细则](iteration-1.md)。
+当前完成 R1-02 至 R1-08、R1-05A 模型设计与 R1-10 声明范围的 DOCX 读取验收。`core` 提供严格契约、Word 语义和文档包，`office` 提供 ZIP 与 DOCX 导入，`editor` 提供[预览、选择与批注交互](preview-interaction.md)；`node` 仍为工程入口。`core` 还提供[编辑会话、事务及历史](document-session.md)、精确文字及结构锚点映射和区域批注重定位；下一步是 R1-09 工作台与协议闭环，输入、自动分页及 DOCX/PDF 导出尚未实现。API 见[DOCX 读取](docx-import.md)，顺序见[第一轮细则](iteration-1.md)。
 
 ## 环境和安装
 
@@ -13,7 +13,7 @@ pnpm dev
 
 `pnpm dev` 先构建库，再同时运行库编译监听与 Vite。开发服务器绑定本机，访问终端显示的地址；停止命令时一并结束监听进程。
 
-Playground 通过公开入口打开 DOCX/文档包、只读预览、下载文档包及重开。开发宿主将公开合成样例作为静态资源提供；SDK 不自行访问样例目录。它使用 React，SDK 的 `core`、`office` 和 `node` 不依赖 React；编辑器 React 包装将在对应任务实现。
+Playground 通过公开入口打开 DOCX/文档包、选择文字／对象／区域、管理批注、缩放、撤销重做、下载当前会话的文档包及重开。开发宿主将公开合成样例作为静态资源提供；SDK 不自行访问样例目录。它使用 React 生命周期挂载同一 DOM 组件，SDK 的 `core`、`office` 和 `node` 不依赖 React；编辑器专用 React 包装将在工作台任务实现。
 
 内部 workspace 暂用 `@dagent-office/core`、`@dagent-office/editor`、`@dagent-office/office` 和 `@dagent-office/node`。版本均为 `0.0.0`，包均设为 `private`，许可证字段为 `UNLICENSED`；正式名称和第一方许可证仍按发布计划确定。
 
@@ -66,6 +66,8 @@ DAGENT_OFFICE_BROWSER_CHANNEL=chrome pnpm test:browser
 ```
 
 未设置渠道时使用对应 Playwright 版本的 Chromium，不进行自动渠道回退。当前截图基线使用锁定的 Chromium 与 Noto 中文字体；补充的仿宋/楷体浏览器用例还需要[固定开源字体环境](fonts.md)。环境和字体摘要见[参考记录](../examples/docx/reference.json)。使用 Chrome 渠道只能作额外验证，不能静默刷新固定基线。独立参考检查使用 `pnpm check:docx-reference`，更新方法见[DOCX 读取](docx-import.md#独立样例与验收)。
+
+仅运行 R1-08 交互验收使用 `node scripts/playwright.mjs test interaction.spec.ts`；它包含普通 JavaScript 宿主及 React Playground。CI 分别执行 `pnpm check` 和浏览器交互检查，失败时上传 Playwright 结果。文档视觉夹具截图时展开滚动容器，继续核对原完整文档基线；交互滚动与缩放另有坐标验收。
 
 ## 本地打包
 
