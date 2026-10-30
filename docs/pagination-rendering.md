@@ -80,7 +80,7 @@ PDF 将测量画布按真实纸张裁切，保留可搜索文字；PNG 使用同
 
 示意的 `bytesBase64` 需替换为真实规范 Base64。DOCX 必须由宿主提供文档 ID；包中已有身份可额外断言匹配。协议严格拒绝未知字段、版本、格式、超限帧和非规范 Base64，错误仍关联 `taskId`；结果字节位于 `output.bytesBase64`。宿主可调用 `executeConversionRequest` 或自行管理 CLI 进程。
 
-`@dagent-office/node/dev` 的 `runConversionProcess` 提供有界单请求子进程，`createDevelopmentConversionMiddleware` 仅用于本机开发：检查实际 loopback socket、Host、Origin、自定义请求头及上传期限，不开启端口。Playground 的 PDF 按钮使用它；切换文档、修订变化、取消或卸载会丢弃迟到结果。远程 HTTP 的预览／编辑独立可用；本机转换入口仍要求本机访问或端口转发。正式远程转换服务的认证和部署由宿主提供。
+`@dagent-office/node/dev` 的 `runConversionProcess` 提供有界单请求子进程，`createDevelopmentConversionMiddleware` 用于开发：默认检查实际 loopback socket，也允许宿主显式配置确切的 `allowedOrigins`；两种方式均检查 Host、实际监听端口、Origin、自定义请求头及上传期限，中间件不打开端口。Playground 的 PDF 按钮使用它；切换文档、修订变化、取消或卸载会丢弃迟到结果。远程 HTTP 的预览／编辑独立可用；远程开发转换的明确同源配置见 [Word 闭环](word-closure.md#远程开发访问)。正式远程转换服务的认证和部署由宿主提供。
 
 ## 验证环境
 

@@ -24,7 +24,8 @@
     "fixtures:docx": "python3 scripts/generate-docx-fixtures.py",
     "check:docx-reference": "python3 scripts/docx-reference.py",
     "record:docx-reference": "python3 scripts/docx-reference.py --record",
-    "check:docx-export": "pnpm build:packages && node scripts/docx-export-acceptance.mjs"
+    "check:docx-export": "pnpm build:packages && node scripts/docx-export-acceptance.mjs",
+    "check:word-closure": "pnpm build:packages && node scripts/word-closure-acceptance.mjs"
   },
   "devDependencies": {
     "@dagent-office/core": "workspace:*",

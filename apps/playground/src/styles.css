@@ -40,3 +40,5 @@ button { padding: .5rem .8rem; cursor: pointer; }
 label { display: flex; gap: .5rem; align-items: center; }
 [role="alert"] { color: #a00000; overflow-wrap: anywhere; }
 .preview { overflow: auto; }
+.export-report { margin: 1rem 0; padding: .75rem 1rem; border: 1px solid #c5ccd4; border-radius: .4rem; background: #f4f8ff; overflow-wrap: anywhere; }
+.export-report p { margin: .3rem 0; }

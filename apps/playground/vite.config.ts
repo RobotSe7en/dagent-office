@@ -10,6 +10,7 @@ function localConversion(): Plugin {
     browserCacheDirectory: fileURLToPath(new URL("../../.playwright/", import.meta.url)),
     ...(process.env.DAGENT_OFFICE_CHROMIUM_EXECUTABLE ? { browserExecutable: process.env.DAGENT_OFFICE_CHROMIUM_EXECUTABLE } : {}),
     maxMessageBytes: 16 * 1024 * 1024,
+    allowedOrigins: (process.env.DAGENT_OFFICE_DEV_ALLOWED_ORIGINS ?? "").split(",").map((origin) => origin.trim()).filter(Boolean),
   });
   return { name: "local-office-conversion", configureServer(server) { server.middlewares.use(middleware); }, configurePreviewServer(server) { server.middlewares.use(middleware); } };
 }

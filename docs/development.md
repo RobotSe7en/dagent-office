@@ -1,6 +1,6 @@
 # 本地开发与工程检查
 
-当前完成 R1-02 至 R1-09、R1-05A 模型设计与 R1-10 声明范围的 DOCX 读取验收。`core` 提供严格契约、Word 语义和文档包，`office` 提供 ZIP 与 DOCX 导入，`editor` 提供[预览、选择与批注交互](preview-interaction.md)；`render` 提供共享画布，`node` 提供 PDF/PNG 和字节转换入口。`core` 还提供[编辑会话、事务及历史](document-session.md)、精确文字及结构锚点映射和区域批注重定位；[工作台与协议闭环](workbench.md)支持多批注请求、提案差异和整批应用；[R1-11 正文输入](rich-text.md)也已实现；R1-12 [分页与渲染](pagination-rendering.md)已实现，下一步为原生 DOCX 导出。API 见[DOCX 读取](docx-import.md)，顺序见[第一轮细则](iteration-1.md)。
+当前完成 R1-02 至 R1-09、R1-05A 模型设计与 R1-10 声明范围的 DOCX 读取验收。`core` 提供严格契约、Word 语义和文档包，`office` 提供 ZIP 与 DOCX 导入，`editor` 提供[预览、选择与批注交互](preview-interaction.md)；`render` 提供共享画布，`node` 提供 PDF/PNG 和字节转换入口。`core` 还提供[编辑会话、事务及历史](document-session.md)、精确文字及结构锚点映射和区域批注重定位；[工作台与协议闭环](workbench.md)支持多批注请求、提案差异和整批应用；[R1-11 正文输入](rich-text.md)也已实现；R1-12 [分页与渲染](pagination-rendering.md)已实现，R1-13 [原生 DOCX 导出](docx-export.md)与 R1-14 [独立 Word 闭环](word-closure.md)也已实现。API 见[DOCX 读取](docx-import.md)，顺序见[第一轮细则](iteration-1.md)。
 
 ## 环境和安装
 
@@ -67,7 +67,7 @@ DAGENT_OFFICE_BROWSER_CHANNEL=chrome pnpm test:browser
 
 未设置渠道时使用对应 Playwright 版本的 Chromium，不进行自动渠道回退。当前截图基线使用锁定的 Chromium 与 Noto 中文字体；补充的仿宋/楷体浏览器用例还需要[固定开源字体环境](fonts.md)。环境和字体摘要见[参考记录](../examples/docx/reference.json)。使用 Chrome 渠道只能作额外验证，不能静默刷新固定基线。独立参考检查使用 `pnpm check:docx-reference`，更新方法见[DOCX 读取](docx-import.md#独立样例与验收)。
 
-仅运行 R1-08 交互验收使用 `node scripts/playwright.mjs test interaction.spec.ts workbench.spec.ts text-editor.spec.ts pagination.spec.ts rendering.spec.ts remote-access.spec.ts`；它包含普通 JavaScript 宿主及 React Playground。CI 分别执行 `pnpm check` 和浏览器交互／工作台检查，失败时上传 Playwright 结果。文档视觉夹具截图时展开滚动容器，继续核对原完整文档基线；交互滚动与缩放另有坐标验收。
+仅运行 R1-08 交互验收使用 `node scripts/playwright.mjs test interaction.spec.ts workbench.spec.ts text-editor.spec.ts pagination.spec.ts rendering.spec.ts remote-access.spec.ts word-closure.spec.ts`；它包含普通 JavaScript 宿主及 React Playground。CI 分别执行 `pnpm check` 和浏览器交互／工作台检查，失败时上传 Playwright 结果。文档视觉夹具截图时展开滚动容器，继续核对原完整文档基线；交互滚动与缩放另有坐标验收。
 
 ## 本地打包
 
@@ -85,4 +85,4 @@ pnpm pack:packages
 
 修改后运行相应的窄范围检查与 `git diff --check`。只有验证所覆盖的能力才可在 README 标为已实现，产品范围和宿主边界以[总体架构](architecture.md)及[交互协议](editing-protocol.md)为准。
 
-R1-12 的浏览器 CI 使用 Ubuntu 24.04、固定 Playwright 引擎、Poppler 和宿主 Noto 字体；另校验官方归档后安装 Chromium 109，并在 macOS 15 使用真实 SafariDriver。Safari 输出实际版本及验收结果，不能用 Linux WebKit 结果冒充 Safari。PDF 开发中间件只接受本机连接；远程预览可将 Vite 绑定 `0.0.0.0`，正式转换认证由宿主管理。
+R1-12 的浏览器 CI 使用 Ubuntu 24.04、固定 Playwright 引擎、Poppler 和宿主 Noto 字体；另校验官方归档后安装 Chromium 109，并在 macOS 15 使用真实 SafariDriver。Safari 输出实际版本及验收结果，不能用 Linux WebKit 结果冒充 Safari。PDF 开发中间件默认只接受本机连接；远程访问可将 Vite 绑定 `0.0.0.0` 并显式配置确切同源开发地址，见 [Word 闭环](word-closure.md#远程开发访问)。正式转换认证由宿主管理。

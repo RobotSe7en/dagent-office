@@ -6,13 +6,14 @@ import { writeDocumentZip } from "@dagent-office/office";
 import { createDevelopmentConversionMiddleware, runConversionProcess } from "@dagent-office/node/dev";
 
 const servers: Server[] = [];
-async function server(timeoutMs = 200): Promise<{ port: number; started: Promise<void> }> {
+async function server(timeoutMs = 200, allowedHost?: string, allowedPort?: number): Promise<{ port: number; started: Promise<void> }> {
   let started: () => void = () => {};
   const seen = new Promise<void>((resolve) => { started = resolve; });
-  const middleware = createDevelopmentConversionMiddleware({ timeoutMs, maxConcurrency: 1 });
+  let middleware: ReturnType<typeof createDevelopmentConversionMiddleware>;
   const instance = createServer((req, res) => { started(); middleware(req, res, () => { res.statusCode = 404; res.end(); }); }); servers.push(instance);
   await new Promise<void>((resolve) => instance.listen(0, "127.0.0.1", resolve));
   const address = instance.address(); if (!address || typeof address === "string") throw new Error("Missing test address.");
+  middleware = createDevelopmentConversionMiddleware({ timeoutMs, maxConcurrency: 1, ...(allowedHost ? { allowedOrigins: ["http://" + allowedHost + ":" + (allowedPort ?? address.port)] } : {}) });
   return { port: address.port, started: seen };
 }
 function send(port: number, headers: Record<string,string> = {}, body = "{bad}", end = true): { client: ClientRequest; response: Promise<number> } {
@@ -49,4 +50,16 @@ test("worker processes receive the host byte quota and exit without launching a 
   ]));
   const result = await runConversionProcess({ protocolVersion: 1, taskId: "quota", format: "pdf", input: { format: "document-package-zip", bytesBase64: Buffer.from(writeDocumentZip(files)).toString("base64") } }, { maxInputBytes: 1 });
   expect(result).toMatchObject({ taskId: "quota", ok: false, error: { code: "ResourceLimitExceeded" } });
+});
+test("remote development hosts require an exact configured origin and the actual listening port", async () => {
+  const { port } = await server(200, "office.test");
+  expect(await send(port, { Host: "office.test:" + port, Origin: "http://office.test:" + port }).response).toBe(400);
+  expect(await send(port, { Host: "office.test:" + port, Origin: "" }).response).toBe(403);
+  expect(await send(port, { Host: "office.test:" + port, Origin: "http://attacker.test:" + port }).response).toBe(403);
+  expect(await send(port, { Host: "attacker.test:" + port, Origin: "http://attacker.test:" + port }).response).toBe(403);
+  const wrong = await server(200, "office.test", 1);
+  expect(await send(wrong.port, { Host: "office.test:1", Origin: "http://office.test:1" }).response).toBe(403);
+});
+test.each(["*", "http://*.office.test", "file:///tmp/doc", "https://user:password@office.test", "http://office.test/private", "http://office.test?next=evil"])("development origins reject ambiguous authority: %s", (origin) => {
+  expect(() => createDevelopmentConversionMiddleware({ allowedOrigins: [origin] })).toThrowError(expect.objectContaining({ code: "InvalidRequest" }));
 });
