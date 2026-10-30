@@ -1,6 +1,6 @@
 # 第一轮实施细则：HTML 与 Word 完整协作
 
-**状态：R1-02 至 R1-09、R1-05A 模型设计及 R1-10 声明范围读取验收以及 R1-11 富文本输入已完成，下一步 R1-12。** DOCX API、支持矩阵、中文字体和验收限制见[读取说明](docx-import.md)。事务 API、候选、历史及精确锚点映射规则见[核心事务与历史](document-session.md)，R1-08 的选区、框选、批注面板及生命周期见[预览与交互](preview-interaction.md)。校验 API 见[结构契约](contracts.md)，读取与保存重开见[文档模型](document-model.md)，资源校验、ZIP 和保真样例见[资源与 ZIP](resources-and-zip.md)，环境与检查见[本地开发](development.md)。本轮合并 HTML 协作基础与 Word 文件闭环，先在独立 Playground 验证，再接入达智智能体。[总体架构](architecture.md)定义模块，[整体计划](implementation-plan.md)定义五轮路线，[编辑与宿主交互协议](editing-protocol.md)是事务、请求和提案规则的来源。
+**状态：R1-02 至 R1-09、R1-05A 模型设计及 R1-10 声明范围读取验收以及 R1-11 富文本输入和 R1-12 分页／PDF 渲染已完成，下一步 R1-13。** DOCX API、支持矩阵、中文字体和验收限制见[读取说明](docx-import.md)。事务 API、候选、历史及精确锚点映射规则见[核心事务与历史](document-session.md)，R1-08 的选区、框选、批注面板及生命周期见[预览与交互](preview-interaction.md)。校验 API 见[结构契约](contracts.md)，读取与保存重开见[文档模型](document-model.md)，资源校验、ZIP 和保真样例见[资源与 ZIP](resources-and-zip.md)，环境与检查见[本地开发](development.md)。本轮合并 HTML 协作基础与 Word 文件闭环，先在独立 Playground 验证，再接入达智智能体。[总体架构](architecture.md)定义模块，[整体计划](implementation-plan.md)定义五轮路线，[编辑与宿主交互协议](editing-protocol.md)是事务、请求和提案规则的来源。
 
 ## 目标与演示闭环
 

@@ -25,7 +25,8 @@
     "dev": "tsc --watch --project tsconfig.json --preserveWatchOutput"
   },
   "dependencies": {
-    "@dagent-office/core": "workspace:*"
+    "@dagent-office/core": "workspace:*",
+    "@dagent-office/render": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=18.2.0 <20"

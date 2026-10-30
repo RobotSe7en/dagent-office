@@ -4,6 +4,7 @@ import type { DocumentState } from "../document/state.js";
 import { encode } from "../document/package.js";
 import { checkLimit, freeze } from "../document/validation.js";
 import { DocumentError } from "../errors.js";
+import { createOpaqueId } from "../identifiers.js";
 import { parseContract } from "../schema-registry.js";
 import type { InteractionRequestInput } from "../runtime.js";
 import { annotationNodes } from "./anchors.js";
@@ -63,10 +64,8 @@ export function buildInteractionRequest(state: DocumentState, input: Interaction
   if (!Array.isArray(supportedOperations) || !unique(supportedOperations)
     || supportedOperations.some((name) => !ContentOperationNameSchema.safeParse(name).success))
     throw new DocumentError("InvalidOperation", "Supported operations must be a unique list of implemented content operations.");
-  const crypto = (globalThis as unknown as { crypto?: { randomUUID(): string } }).crypto;
-  if (!crypto) throw new DocumentError("UnsupportedFeature", "Request generation requires the host runtime's Web Crypto implementation.");
   const request = parseContract("interaction-request", {
-    protocolVersion: 1, requestId: crypto.randomUUID(), documentId: state.snapshot.manifest.documentId,
+    protocolVersion: 1, requestId: createOpaqueId(), documentId: state.snapshot.manifest.documentId,
     baseRevision: state.snapshot.manifest.revision, annotations,
     context: { formatVersion: 1, kind: "document", blocks: selected.map((nodeId) => ({ nodeId, html: state.html.getNode(nodeId)!.html })),
       styles: state.snapshot.styles, metadata: state.snapshot.metadata, assets: state.snapshot.manifest.assets },

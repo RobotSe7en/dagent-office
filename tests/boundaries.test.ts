@@ -5,7 +5,7 @@ import { afterEach, expect, test } from "vitest";
 import { checkBoundaries } from "../scripts/check-boundaries.mjs";
 
 const temporary: string[] = [];
-const layout = ["packages/core", "packages/editor", "packages/office", "packages/node", "apps/playground"];
+const layout = ["packages/core", "packages/render", "packages/editor", "packages/office", "packages/node", "apps/playground"];
 
 function fixture(project: string, source: string, dependencies: Record<string, string> = {}) {
   const root = mkdtempSync(join(tmpdir(), "dagent-office-boundaries-"));

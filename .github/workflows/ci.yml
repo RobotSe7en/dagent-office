@@ -27,7 +27,32 @@ jobs:
       - run: pnpm check
 
   browser-interaction:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node scripts/playwright.mjs install --with-deps chromium firefox webkit --only-shell
+      - run: sudo apt-get install -y poppler-utils fonts-noto-cjk
+      - run: pnpm build
+      - run: node scripts/playwright.mjs test interaction.spec.ts workbench.spec.ts text-editor.spec.ts pagination.spec.ts rendering.spec.ts remote-access.spec.ts
+      - run: node scripts/install-legacy-chromium.mjs
+      - run: node scripts/playwright.mjs test pagination.spec.ts --project=chromium
+        env:
+          DAGENT_OFFICE_BROWSER_EXECUTABLE: ${{ github.workspace }}/.cache/legacy-browser/chromium-1041/chrome-linux/chrome
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-interaction-results
+          path: test-results/
+
+  safari:
+    runs-on: macos-15
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -37,11 +62,13 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: node scripts/playwright.mjs install --with-deps chromium --only-shell
       - run: pnpm build
-      - run: node scripts/playwright.mjs test interaction.spec.ts workbench.spec.ts text-editor.spec.ts
+      - run: sudo safaridriver --enable
+      - run: node scripts/safari-smoke.mjs
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
-          name: browser-interaction-results
-          path: test-results/
+          name: safari-acceptance
+          path: |
+            .cache/safari-result.json
+            .cache/safari-failure.png

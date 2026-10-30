@@ -15,5 +15,8 @@
     "@dagent-office/office": "workspace:*",
     "react": "19.3.1",
     "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@dagent-office/node": "workspace:*"
   }
 }

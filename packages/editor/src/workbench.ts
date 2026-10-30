@@ -9,6 +9,7 @@ import { mountDocumentPreview } from "./preview.js";
 import type { DocumentPreview } from "./preview.js";
 import { mountDocumentTextEditor } from "./rich-text.js";
 import type { DocumentTextEditor } from "./rich-text.js";
+import { createLayoutFieldTransaction } from "@dagent-office/render";
 
 function immutable<Value>(value: Value): Value {
   if (value && typeof value === "object") {
@@ -82,6 +83,7 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
     control.addEventListener("click", () => attempt(action), { signal: controller.signal }); parent.append(control); return control;
   }
   const interaction = mountDocumentInteraction(interactionHost, session, {
+    ...(options.layout ? { layout: options.layout } : {}), ...(options.limits ? { limits: options.limits } : {}),
     ...(options.title ? { title: options.title } : {}),
     onSelectionChange: (selection) => { options.onSelectionChange?.(selection); notify({ type: "selectionChanged", selection }); },
     onError: report,
@@ -91,10 +93,16 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
       if (textEditor) {
         textEditor.dispose(); textEditor = undefined; editingHost.hidden = true; interactionHost.hidden = false; edit.textContent = "编辑正文";
       } else {
-        textEditor = mountDocumentTextEditor(editingHost, session, { onError: report });
+        textEditor = mountDocumentTextEditor(editingHost, session, { ...(options.layout ? { layout: options.layout } : {}), ...(options.limits ? { limits: options.limits } : {}), onError: report });
         editingHost.hidden = false; interactionHost.hidden = true; edit.textContent = "返回预览与批注";
         void textEditor.ready.catch(report);
       }
+    }, editingControls);
+    button("更新页码与目录", () => {
+      const layout = textEditor?.layout() ?? interaction.layout();
+      if (!layout?.pages.length) throw new DocumentError("InvalidOperation", "请等待页面布局完成。");
+      const prepared = session.prepare(createLayoutFieldTransaction(session, layout));
+      try { session.commit(prepared); } catch (reason) { session.discard(prepared); throw reason; }
     }, editingControls);
   }
   function update(): void {
@@ -232,7 +240,7 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
   update();
   return {
     element, get ready() { return Promise.all([interaction.ready, candidateReady, textEditor?.ready]).then(() => {}); },
-    selection: interaction.selection, fonts: interaction.fonts, setMode: interaction.setMode, setZoom: interaction.setZoom, focusAnnotation: interaction.focusAnnotation,
+    selection: interaction.selection, fonts: interaction.fonts, layout: () => textEditor?.layout() ?? interaction.layout(), setMode: interaction.setMode, setZoom: interaction.setZoom, focusAnnotation: interaction.focusAnnotation,
     request: () => activeRequest, buildRequest, submitAnnotations, loadProposal, applyProposal, rejectProposal,
     dispose: () => {
       if (disposed) return;

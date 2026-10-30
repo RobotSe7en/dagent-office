@@ -1,6 +1,8 @@
 export { mountDocumentPreview } from "./preview.js";
 export type { DocumentPreview, DocumentPreviewOptions } from "./preview.js";
 export type { FontResolution } from "./fonts.js";
+export { createLayoutFieldTransaction } from "@dagent-office/render";
+export type { DocumentRenderReport, LayoutDiagnostic, LayoutFieldResult, RenderedPage, RenderLimits } from "@dagent-office/render";
 export { mountDocumentInteraction } from "./interaction.js";
 export type { DocumentInteractionMode, DocumentInteractionOptions, DocumentInteractionView } from "./interaction.js";
 export { mountDocumentWorkbench } from "./workbench.js";

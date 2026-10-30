@@ -1,14 +1,15 @@
-import { DocumentError } from "@dagent-office/core";
+import { createOpaqueId, DocumentError } from "@dagent-office/core";
 import type {
   Anchor, DeepReadonly, DocumentEditingSession, DocumentModel, DocumentOperation, DocumentSelection, Rectangle,
 } from "@dagent-office/core";
 import { mountPreview } from "./preview.js";
+import type { DocumentPreviewOptions } from "./preview.js";
+import type { DocumentRenderReport } from "@dagent-office/render";
 import type { FontResolution } from "./fonts.js";
 import type { PreviewSource } from "./source-index.js";
 
 export type DocumentInteractionMode = "text" | "node" | "region";
-export interface DocumentInteractionOptions {
-  readonly title?: string;
+export interface DocumentInteractionOptions extends DocumentPreviewOptions {
   readonly onSelectionChange?: (selection: DocumentSelection | undefined) => void;
   readonly onError?: (error: Error) => void;
 }
@@ -18,6 +19,7 @@ export interface DocumentInteractionView {
   readonly ready: Promise<void>;
   selection(): DocumentSelection | undefined;
   fonts(): readonly FontResolution[];
+  layout(): DocumentRenderReport | undefined;
   setMode(mode: DocumentInteractionMode): void;
   setZoom(zoom: number): void;
   focusAnnotation(annotationId: string): void;
@@ -189,7 +191,7 @@ export function mountDocumentInteraction(
     const chosen = requireSelection();
     if (!draft.value.trim()) throw new DocumentError("InvalidOperation", "请填写批注内容。");
     commit([{ op: "addAnnotation", annotation: {
-      annotationId: "annotation-" + crypto.randomUUID(), documentId: chosen.documentId, baseRevision: chosen.baseRevision,
+      annotationId: "annotation-" + createOpaqueId(), documentId: chosen.documentId, baseRevision: chosen.baseRevision,
       anchor: structuredClone(chosen.anchor) as Anchor, instruction: draft.value, status: "open",
     } }], chosen.baseRevision);
     draft.value = "";
@@ -462,7 +464,7 @@ export function mountDocumentInteraction(
     plane.style.height = "auto";
     renderedRevision = session.snapshot().manifest.revision;
     renderedContent = contentKey();
-    preview = mountPreview(plane, session, options.title === undefined ? {} : { title: options.title });
+    preview = mountPreview(plane, session, options);
     ready = preview.ready.then(() => {
       if (disposed || generation !== current) return;
       connect();
@@ -490,7 +492,7 @@ export function mountDocumentInteraction(
   updatePanel();
   render();
   return {
-    element, get ready() { return ready; }, selection: () => selection, fonts: () => preview?.fonts() ?? [],
+    element, get ready() { return ready; }, selection: () => selection, fonts: () => preview?.fonts() ?? [], layout: () => preview?.layout(),
     setMode, setZoom, focusAnnotation,
     dispose: () => {
       if (disposed) return;
