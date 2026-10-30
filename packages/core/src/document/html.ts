@@ -9,6 +9,7 @@ import { parseHtmlTree } from "./html-parser.js";
 import { validateImageAsset } from "./assets.js";
 import { resolveReference } from "./package.js";
 import { checkLimit, freeze, invalid, unsupported } from "./validation.js";
+import { textPositions } from "./text.js";
 
 type Element = DefaultTreeAdapterTypes.Element;
 type Node = DefaultTreeAdapterTypes.Node;
@@ -61,6 +62,7 @@ export interface ParsedHtml {
   peekNode(nodeId: string): Omit<DocumentNode, "text" | "html"> | undefined;
   getNode(nodeId: string): DocumentNode | undefined;
   hasNode(nodeId: string): boolean;
+  textOffset(nodeId: string): number | undefined;
   isContainer(nodeId: string): boolean;
   signature(nodeId: string): string | undefined;
 }
@@ -169,6 +171,7 @@ export function parseHtml(source: string, manifest: DeepReadonly<DocumentManifes
     if (stylePaths.length !== manifest.styles.length || stylePaths.some((path, order) => path !== manifest.styles[order])) {
       invalid("HTML stylesheet links must match the manifest order exactly.");
     }
+    let positions: ReturnType<typeof textPositions> | undefined;
     return {
       html: serialize(tree),
       nodeIds: () => [...index.keys()],
@@ -189,6 +192,11 @@ export function parseHtml(source: string, manifest: DeepReadonly<DocumentManifes
       peekNode: (nodeId) => {
         const entry = index.get(nodeId);
         return entry ? { nodeId, tagName: entry.element.tagName, attributes: Object.fromEntries(entry.element.attrs.map((attr) => [attr.name, attr.value])), parentNodeId: entry.parentId, childNodeIds: entry.children } : undefined;
+      },
+      textOffset: (nodeId) => {
+        positions ??= textPositions(tree);
+        const element = index.get(nodeId)?.element;
+        return element ? positions.get(element)?.from : undefined;
       },
       hasNode: (nodeId) => index.has(nodeId),
       isContainer: (nodeId) => {

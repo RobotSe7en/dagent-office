@@ -69,3 +69,42 @@ test.each(["宋体", "新宋体", "SimSun", "NSimSun", "仿宋", "仿宋_GB2312"
     expect(session.snapshot().html).toBe(original.html);
   },
 );
+
+for (const file of ["08-comments-revisions.docx", "producer/08-comments-revisions.docx"]) {
+  test("maps imported rich comments through editing, history and ZIP reopen: " + file, () => {
+    const model = openDocument(importDocx(new Uint8Array(readFileSync(new URL(file, directory))), { documentId: "anchors" }));
+    const original = model.snapshot().annotations[0]!;
+    if (original.anchor.kind !== "text-set" && original.anchor.kind !== "text") throw new Error("Expected a native text comment");
+    const ranges = original.anchor.kind === "text-set" ? original.anchor.ranges : [original.anchor];
+    const first = ranges[0]!;
+    const second = ranges[1] ?? first;
+    const session = createDocumentSession(model);
+    const transaction = (operations: import("@dagent-office/core").DocumentOperation[]) => session.prepare({
+      protocolVersion: 1, documentId: "anchors", baseRevision: session.snapshot().manifest.revision, operations,
+    });
+    const candidate = transaction([
+      { op: "replaceText", nodeId: first!.nodeId, from: 0, to: 0, expectedText: "", text: "前言😀" },
+      { op: "replaceText", nodeId: second.nodeId, from: second === first ? 5 : 1, to: second === first ? 6 : 2, expectedText: second.quote.slice(1, 2), text: "修改" },
+    ]);
+    session.commit(candidate);
+    const expectedRanges = ranges.map((range, index) => {
+      const from = range.from + (index === 0 ? 4 : 0);
+      const to = range.to + (index === 0 ? 4 : 0) + (range === second ? 1 : 0);
+      const quote = range === second ? range.quote.slice(0, 1) + "修改" + range.quote.slice(2) : range.quote;
+      return { nodeId: range.nodeId, from, to, quote };
+    });
+    const expectedAnchor = original.anchor.kind === "text-set" ? { kind: "text-set", ranges: expectedRanges }
+      : { kind: "text", ...expectedRanges[0] };
+    expect(session.getAnnotations()[0]).toEqual({ ...original, baseRevision: 1, anchor: expectedAnchor });
+    expect(openDocument(readDocumentZip(writeDocumentZip(session.serialize()))).snapshot()).toEqual(session.snapshot());
+    session.undo();
+    expect(session.getAnnotations()[0]).toEqual({ ...original, baseRevision: 2 });
+    session.redo();
+    expect(session.getAnnotations()[0]).toEqual({ ...candidate.preview.annotations[0], baseRevision: 3 });
+    session.commit(transaction([{ op: "removeNode", nodeId: second!.nodeId }]));
+    expect(session.getAnnotations()[0]).toMatchObject({ status: "needs_reanchor", baseRevision: 3, anchor: candidate.preview.annotations[0]!.anchor });
+    expect(session.getAnnotations()[0]!.bodyNodeId).toBe(original.bodyNodeId);
+    expect(openDocument(readDocumentZip(writeDocumentZip(session.serialize()))).snapshot()).toEqual(session.snapshot());
+    session.dispose();
+  });
+}

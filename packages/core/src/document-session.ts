@@ -14,28 +14,11 @@ import type { DocumentState } from "./document/state.js";
 import { checkLimit, freeze, readLimits } from "./document/validation.js";
 import { compareStates, retainedBytes } from "./session/changes.js";
 import { checkTransactionSize, sessionLimits } from "./session/limits.js";
+import { annotationNodes, mapAnnotations } from "./session/anchors.js";
 
 export { DEFAULT_DOCUMENT_SESSION_LIMITS } from "./session/limits.js";
 
 function invalid(message: string): never { throw new DocumentError("InvalidOperation", message); }
-
-function annotationNodes(annotation: Annotation): string[] {
-  const anchor = annotation.anchor;
-  return anchor.kind === "text" || anchor.kind === "node" ? [anchor.nodeId]
-    : anchor.kind === "text-set" ? anchor.ranges.map((range) => range.nodeId) : anchor.nodeIds;
-}
-
-/** R1-06 invalidates uncertain anchors; precise offset/region mapping belongs to R1-07. */
-function invalidateAnnotations(annotations: Annotation[], before: DocumentState, after: ParsedHtml, layoutChanged: boolean, explicit: ReadonlySet<string>): void {
-  for (const annotation of annotations) {
-    if (annotation.status === "needs_reanchor" || explicit.has(annotation.annotationId)) continue;
-    const anchor = annotation.anchor;
-    const missing = annotationNodes(annotation).some((id) => !after.hasNode(id));
-    const textChanged = (anchor.kind === "text" || anchor.kind === "text-set")
-      && annotationNodes(annotation).some((id) => before.html.getNode(id)?.text !== after.getNode(id)?.text);
-    if (missing || textChanged || anchor.kind === "region" && layoutChanged) annotation.status = "needs_reanchor";
-  }
-}
 
 /** Remove definitions only when their complete source object was deleted. Partial damage fails validation. */
 function updateWordMetadata(metadata: DocumentMetadata, before: DocumentState, after: ParsedHtml): void {
@@ -166,8 +149,12 @@ export function createDocumentSession(document: DocumentModel, options: Document
       if (index < 0) invalid("The annotation operation targets a missing annotation.");
       if (operation.op === "removeAnnotation") annotations.splice(index, 1);
       else {
-        annotations[index] = parseContract("annotation", { ...annotations[index], ...operation.changes });
-        if (operation.changes.anchor) explicit.add(operation.annotationId);
+        const annotation = parseContract("annotation", { ...annotations[index], ...operation.changes });
+        if (operation.changes.anchor) {
+          if (annotation.status !== "needs_reanchor" && annotationNodes(annotation).some((id) => !state().html.hasNode(id))) invalid("Annotation targets must belong to the base snapshot.");
+          explicit.add(operation.annotationId);
+        }
+        annotations[index] = annotation;
       }
     }
   }
@@ -197,11 +184,15 @@ export function createDocumentSession(document: DocumentModel, options: Document
         if ("nodeId" in operation) edit.apply(operation);
         else applyAnnotation(operation, annotations, explicit);
       }
+      for (const annotation of annotations) {
+        if (explicit.has(annotation.annotationId) && annotation.status !== "needs_reanchor"
+          && annotationNodes(annotation).some((id) => !base.html.hasNode(id))) invalid("Annotation targets must belong to the base snapshot.");
+      }
       const files = new Map(base.files);
       const source = edit.html();
       files.set(base.snapshot.manifest.entrypoint, encode(source));
       const parsed = parseHtml(source, parseContract("document-manifest", base.snapshot.manifest), files, limits, { nodes: 0 });
-      invalidateAnnotations(annotations, base, parsed, source !== base.snapshot.html, explicit);
+      mapAnnotations(annotations, base.html, parsed, edit, explicit);
       updateWordMetadata(metadata, base, parsed);
       files.set(base.snapshot.manifest.metadata, encode(JSON.stringify(metadata)));
       files.set(base.snapshot.manifest.annotations, encode(JSON.stringify(annotations)));

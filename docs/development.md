@@ -1,6 +1,6 @@
 # 本地开发与工程检查
 
-当前完成 R1-02 至 R1-06、R1-05A 模型设计与 R1-10 声明范围的 DOCX 读取验收。`core` 提供严格契约、Word 语义和只读文档包，`office` 提供 ZIP 与 DOCX 导入，`editor` 提供只读预览；`node` 仍为工程入口。`core` 还提供[编辑会话、事务及历史](document-session.md)；下一步是 R1-07 精确锚点映射，输入、自动分页及 DOCX/PDF 导出尚未实现。API 见[DOCX 读取](docx-import.md)，顺序见[第一轮细则](iteration-1.md)。
+当前完成 R1-02 至 R1-07、R1-05A 模型设计与 R1-10 声明范围的 DOCX 读取验收。`core` 提供严格契约、Word 语义和只读文档包，`office` 提供 ZIP 与 DOCX 导入，`editor` 提供只读预览；`node` 仍为工程入口。`core` 还提供[编辑会话、事务及历史](document-session.md)、精确文字及结构锚点映射和区域批注重定位；下一步是 R1-08 预览与交互，输入、自动分页及 DOCX/PDF 导出尚未实现。API 见[DOCX 读取](docx-import.md)，顺序见[第一轮细则](iteration-1.md)。
 
 ## 环境和安装
 
@@ -27,7 +27,7 @@ Playground 通过公开入口打开 DOCX/文档包、只读预览、下载文档
 | `pnpm check:boundaries` | 检查允许的依赖方向、公开入口及浏览器模块边界 |
 | `pnpm check` | 依次执行包边界、类型、工程测试和生产构建 |
 
-库的 TypeScript 项目引用需要声明输出，所以 `typecheck` 会先构建库；Playground 和工具类型检查使用 `noEmit`。生成物进入各包 `dist`，增量元数据进入根 `.cache`，均不提交。
+库的 TypeScript 项目引用需要声明输出，所以 `typecheck` 会先构建库；Playground 和工具类型检查使用 `noEmit`。生成物进入各包 `dist`，增量元数据进入根 `.cache`，均不提交。GitHub Actions 的 `CI / check` 在 PR 和主分支推送时，以锁定的 Node/pnpm 和依赖运行 `pnpm check`；固定字体浏览器视觉验收仍按下文单独执行。
 
 库使用 NodeNext ESM 解析；相对 TypeScript 源码导入写对应的 `.js` 扩展名。跨包使用 workspace 包名和公开 `exports`，不配置指向其他包源码的路径别名。
 
@@ -46,7 +46,7 @@ pnpm test:watch
 
 打包用例在 workspace 外、包含空格的临时路径中安装四个 tarball，显式复用工作区 pnpm 依赖缓存并覆盖内部包来源，不从注册表下载内部包。验证真实校验 API、公开 JSON、ES2022 类型、私有路径拒绝，以及不安装 React 的普通 JS 浏览器宿主构建。临时消费工程在测试结束后删除。
 
-测试还覆盖只读文档解析、资源摘要、宿主资源收集、ZIP 原始路径及大小校验、保真样例保存重开；DOCX 用例覆盖实际格式输入、独立生产者版本、样式、字段、批注、修订及保存重开；事务用例另覆盖隔离候选、操作、原子性、历史、冲突和预算，以及 DOCX 编辑后文档包重开；输入、自动分页和 Office 导出仍待实现。核心用例放入各包 `tests`，浏览器用例放入根 `tests/browser`。
+测试还覆盖只读文档解析、资源摘要、宿主资源收集、ZIP 原始路径及大小校验、保真样例保存重开；DOCX 用例覆盖实际格式输入、独立生产者版本、样式、字段、批注、修订及保存重开；事务用例另覆盖隔离候选、操作、原子性、历史、冲突和预算，精确 UTF-16/结构映射、跨节点与区域批注，以及 DOCX 原生批注编辑后的历史和文档包重开；输入、自动分页和 Office 导出仍待实现。核心用例放入各包 `tests`，浏览器用例放入根 `tests/browser`。
 
 ## 浏览器烟测
 
