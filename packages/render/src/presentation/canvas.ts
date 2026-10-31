@@ -215,6 +215,10 @@ export function composePresentation(document: Document, model: DocumentModel, li
   for (const link of metadata.hyperlinks) {
     const node = byId.get(link.nodeId); if (node) { ownViewAttribute(node, "data-sdk-hyperlink"); node.setAttribute("data-sdk-hyperlink", ""); }
   }
+  for (const node of root.querySelectorAll<HTMLElement>("[data-node-id]")) {
+    const style = document.defaultView!.getComputedStyle(node);
+    if (property(style, "--office-text-color")) styleView(node, { color: resolvedColor(document, style, "--office-text") });
+  }
   // Script wrappers retain exact UTF-16 text while resolving native font roles.
   const texts: Text[] = [], walker = document.createTreeWalker(root, document.defaultView!.NodeFilter.SHOW_TEXT);
   for (let n = walker.nextNode(); n; n = walker.nextNode()) if (!n.parentElement?.closest("svg,.sdk-ppt-comments,.sdk-field-display")) texts.push(n as Text);

@@ -9,9 +9,17 @@ export function cssStringValue(value: string): string {
 export const numeric = (style: CSSStyleDeclaration, name: string, fallback: number): number => {
   const raw = property(style, name); const value = Number.parseFloat(raw); return Number.isFinite(value) ? value : fallback;
 };
-export function resolvedColor(document: Document, style: CSSStyleDeclaration, prefix: string, fallback = "#000000"): string {
-  const context = document.createElement("canvas").getContext("2d")!;
-  context.fillStyle = fallback; context.fillStyle = property(style, prefix + "-color", fallback);
+const colorContexts = new WeakMap<Document, CanvasRenderingContext2D>();
+export function resolvedColor(document: Document, style: CSSStyleDeclaration, prefix: string, fallback = "#000000", depth = 0): string {
+  if (depth > 4) throw new DocumentError("InvalidDocument", "A presentation color reference is cyclic.");
+  let context = colorContexts.get(document); if (!context) { context = document.createElement("canvas").getContext("2d")!; colorContexts.set(document, context); }
+  let value = property(style, prefix + "-color", fallback);
+  if (property(style, prefix + "-source") === "reference") {
+    const reference = property(style, prefix + "-reference-prefix");
+    if (!["--office-fill-reference", "--office-line-reference", "--office-background-reference", "--office-effect-reference"].includes(reference)) throw new DocumentError("InvalidDocument", "A presentation color reference is unknown.");
+    value = resolvedColor(document, style, reference, fallback, depth + 1);
+  }
+  context.fillStyle = fallback; context.fillStyle = value;
   const raw = context.fillStyle;
   const nativeAlpha = raw.startsWith("#") ? raw.length === 9 ? parseInt(raw.slice(7, 9), 16) / 255 : 1 : Number((raw.match(/[\d.]+/g) ?? [])[3] ?? 1);
   const rgb = raw.startsWith("#") ? [1, 3, 5].map(n => parseInt(raw.slice(n, n + 2), 16) / 255) : (raw.match(/[\d.]+/g) ?? []).slice(0, 3).map(v => Number(v) / 255);

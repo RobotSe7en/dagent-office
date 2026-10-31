@@ -2,6 +2,18 @@ import { DocumentError } from "@dagent-office/core";
 import { markViewNode, ownViewAttribute } from "../view-nodes.js";
 
 const ordinary = ["font-family", "font-size", "font-weight", "font-style", "color", "line-height", "letter-spacing", "text-align", "text-indent", "margin-left", "margin-right", "margin-top", "margin-bottom", "padding-top", "padding-right", "padding-bottom", "padding-left", "tab-size", "text-transform", "font-variant"];
+function inheritedLeading(node: HTMLElement, computed: CSSStyleDeclaration): string {
+  const raw = computed.lineHeight, size = parseFloat(computed.fontSize), height = parseFloat(raw);
+  if (!Number.isFinite(height) || !Number.isFinite(size) || size <= 0) return raw;
+  const typed = node as HTMLElement & { computedStyleMap?: () => { get(name: string): { unit?: string; value?: number } | undefined } };
+  const value = typed.computedStyleMap?.().get("line-height") as { unit?: string; value?: number } | undefined;
+  if (value?.unit === "number") return String(value.value);
+  const before = node.style.getPropertyValue("font-size"), priority = node.style.getPropertyPriority("font-size");
+  node.style.setProperty("font-size", size * 2 + "px", "important");
+  const doubled = parseFloat(node.ownerDocument.defaultView!.getComputedStyle(node).lineHeight);
+  if (before) node.style.setProperty("font-size", before, priority); else node.style.removeProperty("font-size");
+  return Math.abs(doubled - height * 2) < 0.05 ? String(height / size) : raw;
+}
 /** The browser resolves source CSS and variables in the instance's theme. Only
  * low-specificity fallback declarations are added; local source rules win. */
 export class PresentationInheritance {
@@ -35,8 +47,9 @@ export class PresentationInheritance {
       this.work += this.names.length;
       if (this.work > this.budget * 256) throw new DocumentError("ResourceLimitExceeded", "Presentation inheritance exceeds its work budget.");
       const computed = this.document.defaultView!.getComputedStyle(probe);
+      const leading = inheritedLeading(probe, computed);
       for (const key of this.names) {
-        const value = computed.getPropertyValue(key).trim(); if (value) values.set(key, value);
+        const value = key === "line-height" ? leading : computed.getPropertyValue(key).trim(); if (value) values.set(key, value);
       }
       probe.remove();
     }

@@ -3,7 +3,8 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { build } from "vite";
-import { importPptx } from "@dagent-office/office";
+import { importPptx, readDocumentZip } from "@dagent-office/office";
+import { writeOpcZip } from "../../packages/office/src/document-zip.js";
 import { createPresentation, openDocument } from "@dagent-office/core";
 import type { DocumentPackage } from "@dagent-office/core";
 import type { DocumentPreviewOptions } from "@dagent-office/render";
@@ -144,4 +145,31 @@ test("normal and shape auto-fit remain derived and print retains resolved inheri
     const result = { source: [actual.color, actual.fontFamily, actual.fontSize], print: [printed.color, printed.fontFamily, printed.fontSize] }; iframe.remove(); return result;
   });
   expect(print.print).toEqual(print.source);
+});
+
+test("review: inherited relative leading follows a local paragraph font size", async ({ page }) => {
+  const files = new Map(fixture("01-rich-text")), decoder = new TextDecoder(), encoder = new TextEncoder();
+  const model = openDocument(files), master = model.snapshot().metadata.presentation!.masters[0]!;
+  files.set("styles.css", encoder.encode(decoder.decode(files.get("styles.css")) + `\n.${master.otherStyle}-level-0{line-height:1.5}`));
+  files.set("content.html", encoder.encode(decoder.decode(files.get("content.html")).replace(/<p\b[^>]*>/, tag => tag.slice(0, -1) + ' style="font-size:48pt">')));
+  await mount(page, files);
+  const values = await page.frameLocator("iframe").locator('section[data-office-kind="slide"] .sdk-ppt-text p').first().evaluate(node => ({ size: parseFloat(getComputedStyle(node).fontSize), leading: parseFloat(getComputedStyle(node).lineHeight) }));
+  expect(values.leading).toBeCloseTo(values.size * 1.5, 1);
+});
+
+test("review: HTML text uses its declared color transforms as well as its base CSS color", async ({ page }) => {
+  const files = new Map(fixture("01-rich-text")), decoder = new TextDecoder(), encoder = new TextEncoder();
+  files.set("content.html", encoder.encode(decoder.decode(files.get("content.html")).replace(/<p\b[^>]*>/, tag => tag.slice(0, -1) + ' style="color:#c00000;--office-text-color:#c00000;--office-text-alpha:0.5">')));
+  await mount(page, files);
+  const color = await page.frameLocator("iframe").locator('section[data-office-kind="slide"] .sdk-ppt-text p').first().locator("[data-office-script]").first().evaluate(node => getComputedStyle(node).color);
+  expect(color).toBe("rgba(192, 0, 0, 0.5)");
+});
+
+test("review: a native theme style composes reference-color alpha with the format fill", async ({ page }) => {
+  const source = new Map(readDocumentZip(readFileSync("examples/pptx/04-shapes.pptx"))), decoder = new TextDecoder(), encoder = new TextEncoder();
+  const reference = '<p:style><a:lnRef idx="0"><a:srgbClr val="000000"/></a:lnRef><a:fillRef idx="1"><a:schemeClr val="accent1"><a:alpha val="50000"/></a:schemeClr></a:fillRef><a:effectRef idx="0"><a:srgbClr val="000000"/></a:effectRef><a:fontRef idx="minor"><a:schemeClr val="lt1"/></a:fontRef></p:style>';
+  source.set("ppt/slides/slide1.xml", encoder.encode(decoder.decode(source.get("ppt/slides/slide1.xml")).replace(/<p:sp>[\s\S]*?<\/p:sp>/, shape => shape.replace(/<a:solidFill>[\s\S]*?<\/a:solidFill>/, "").replace("<p:txBody>", reference + "<p:txBody>"))));
+  await mount(page, importPptx(writeOpcZip(source), { documentId: "reference-alpha" }));
+  const fill = await page.frameLocator("iframe").locator('article > [data-office-kind="slide"] [data-office-kind="geometry"] svg > path').first().getAttribute("fill");
+  expect(fill).toBe("rgba(68,114,196,0.5)");
 });

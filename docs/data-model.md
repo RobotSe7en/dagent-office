@@ -74,7 +74,7 @@
 
 ## 接口、版本与验收
 
-当前 `openDocument/snapshot/getNode/serialize` 已实现 Word 和 [R2-02 Presentation 文档包模型](presentation-model.md)，并保留 Word 旧包。[PPTX 原生读取](pptx-import.md)已实现声明范围，[只读画布](presentation-preview.md)正在验收；Excel 文档包读取仍未开放，模型实现不代表其他阶段已通过。结构类型来自严格契约及同源 JSON Schema，节点存在、引用、层级、锚点和样式循环另做语义校验。
+当前 `openDocument/snapshot/getNode/serialize` 已实现 Word 和 [R2-02 Presentation 文档包模型](presentation-model.md)，并保留 Word 旧包。[PPTX 原生读取](pptx-import.md)已实现声明范围，[只读画布](presentation-preview.md)已实现声明范围的读取验收；Excel 文档包读取仍未开放，模型实现不代表其他阶段已通过。结构类型来自严格契约及同源 JSON Schema，节点存在、引用、层级、锚点和样式循环另做语义校验。
 
 格式仍为未发布的版本 1 草案。新增字段显式定义，旧报告包继续可读；发布冻结后保留已支持的读取器，不通过忽略未知字段兼容。Word 读取结果必须经过文档包校验，并满足保存、ZIP 打包及重开语义一致。三格式正式实现时分别使用真实格式文件验证原生语义与视觉，不能用模型设计代替实现验收。
 
