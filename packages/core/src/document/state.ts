@@ -4,6 +4,8 @@ import { normalizeCss } from "./css.js";
 import { parseHtml } from "./html.js";
 import { validateAssets } from "./assets.js";
 import { validateWord } from "./word.js";
+import { validatePresentation } from "./presentation.js";
+import type { DocumentMetadata } from "../contracts/document.js";
 import { validateAnnotations } from "./annotations.js";
 import { readManifest } from "./manifest.js";
 import { encode, readJson, readText } from "./package.js";
@@ -19,27 +21,29 @@ export interface DocumentState {
 export function buildDocumentState(input: DocumentPackage, limits: DocumentReadLimits): DocumentState {
   const files = new Map(input);
   const manifest = readManifest(files);
-  if (manifest.kind !== "document") unsupported("Only document packages can be opened by this reader.");
+  if (manifest.kind !== "document" && manifest.kind !== "presentation") unsupported("This document kind is not implemented.");
 
   validateAssets(manifest.assets, files);
-  const metadata = parseContract("document-metadata", readJson(files, manifest.metadata));
+  const metadata: DocumentMetadata = parseContract("document-metadata", readJson(files, manifest.metadata));
+  if ((manifest.kind === "presentation") !== (metadata.presentation !== undefined)) invalid("Manifest kind and metadata kind must match.");
   const annotations = parseContract("annotations", readJson(files, manifest.annotations));
   const cssBudget = { nodes: 0 };
   const styles = manifest.styles.map((path) => ({ path, css: normalizeCss(readText(files, path), "stylesheet", limits, cssBudget) }));
   const html = parseHtml(readText(files, manifest.entrypoint), manifest, files, limits, cssBudget);
 
-  const sectionIds = new Set<string>();
-  const sectionRoots = new Set<string>();
-  for (const section of metadata.sections) {
-    if (sectionIds.has(section.sectionId) || sectionRoots.has(section.rootNodeId) || !html.isContainer(section.rootNodeId)) {
-      invalid("Document sections require unique identities and existing root containers.");
+  if (metadata.presentation === undefined) {
+    const sectionIds = new Set<string>();
+    const sectionRoots = new Set<string>();
+    for (const section of metadata.sections) {
+      if (sectionIds.has(section.sectionId) || sectionRoots.has(section.rootNodeId) || !html.isContainer(section.rootNodeId)) {
+        invalid("Document sections require unique identities and existing root containers.");
+      }
+      sectionIds.add(section.sectionId);
+      sectionRoots.add(section.rootNodeId);
     }
-    sectionIds.add(section.sectionId);
-    sectionRoots.add(section.rootNodeId);
-  }
+    validateWord(metadata, annotations, html);
+  } else validatePresentation(metadata.presentation, annotations, html, styles, limits);
   validateAnnotations(annotations, manifest, html);
-
-  validateWord(metadata, annotations, html);
   const snapshot: DocumentSnapshot = freeze({ manifest, html: html.html, styles, metadata, annotations });
   files.set("manifest.json", encode(JSON.stringify(manifest, null, 2) + "\n"));
   files.set(manifest.entrypoint, encode(snapshot.html));

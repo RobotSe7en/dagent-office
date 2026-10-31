@@ -34,15 +34,25 @@ export type Anchor = z.infer<typeof AnchorSchema>;
 export const AnnotationStatusSchema = z.enum(["open", "resolved", "needs_reanchor"]);
 export type AnnotationStatus = z.infer<typeof AnnotationStatusSchema>;
 
+const author = z.strictObject({ name: z.string(), initials: z.string().optional() });
+const replyIdentity = {
+  replyId: IdentifierSchema, author: author.optional(), date: z.string().optional(), sourceId: IdentifierSchema.optional(),
+};
+export const AnnotationReplySchema = z.union([
+  z.strictObject({ ...replyIdentity, instruction: z.string().min(1), bodyNodeId: z.never().optional() }),
+  z.strictObject({ ...replyIdentity, bodyNodeId: IdentifierSchema, instruction: z.never().optional() }),
+]);
+export type AnnotationReply = z.infer<typeof AnnotationReplySchema>;
 const annotationIdentity = {
   annotationId: IdentifierSchema,
   documentId: IdentifierSchema,
   baseRevision: RevisionSchema,
   status: AnnotationStatusSchema,
   anchor: AnchorSchema,
-  author: z.strictObject({ name: z.string(), initials: z.string().optional() }).optional(),
+  author: author.optional(),
   date: z.string().optional(),
   sourceId: IdentifierSchema.optional(),
+  replies: z.array(AnnotationReplySchema).optional(),
 };
 export const AnnotationSchema = z.union([z.strictObject({
   ...annotationIdentity,

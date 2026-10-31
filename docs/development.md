@@ -1,6 +1,6 @@
 # 本地开发与工程检查
 
-当前完成 R1-02 至 R1-09、R1-05A 模型设计与 R1-10 声明范围的 DOCX 读取验收。`core` 提供严格契约、Word 语义和文档包，`office` 提供 ZIP 与 DOCX 导入，`editor` 提供[预览、选择与批注交互](preview-interaction.md)；`render` 提供共享画布，`node` 提供 PDF/PNG 和字节转换入口。`core` 还提供[编辑会话、事务及历史](document-session.md)、精确文字及结构锚点映射和区域批注重定位；[工作台与协议闭环](workbench.md)支持多批注请求、提案差异和整批应用；[R1-11 正文输入](rich-text.md)也已实现；R1-12 [分页与渲染](pagination-rendering.md)已实现，R1-13 [原生 DOCX 导出](docx-export.md)与 R1-14 [独立 Word 闭环](word-closure.md)也已实现。API 见[DOCX 读取](docx-import.md)，第一轮历史及延期验收见[第一轮细则](iteration-1.md)。当前为[第二轮 PPT](iteration-2.md)的计划阶段，PPT 功能和新增检查命令尚未实现。
+当前完成 R1-02 至 R1-09、R1-05A 模型设计与 R1-10 声明范围的 DOCX 读取验收。`core` 提供严格契约、Word 语义和文档包，`office` 提供 ZIP 与 DOCX 导入，`editor` 提供[预览、选择与批注交互](preview-interaction.md)；`render` 提供共享画布，`node` 提供 PDF/PNG 和字节转换入口。`core` 还提供[编辑会话、事务及历史](document-session.md)、精确文字及结构锚点映射和区域批注重定位；[工作台与协议闭环](workbench.md)支持多批注请求、提案差异和整批应用；[R1-11 正文输入](rich-text.md)也已实现；R1-12 [分页与渲染](pagination-rendering.md)已实现，R1-13 [原生 DOCX 导出](docx-export.md)与 R1-14 [独立 Word 闭环](word-closure.md)也已实现。API 见[DOCX 读取](docx-import.md)，第一轮历史及延期验收见[第一轮细则](iteration-1.md)。当前[第二轮 PPT](iteration-2.md)已实现 [R2-02 文档包模型](presentation-model.md)，原生 PPTX 读取、预览、编辑及新增验收命令仍待后续任务。
 
 ## 环境和安装
 

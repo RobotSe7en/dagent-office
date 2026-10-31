@@ -66,6 +66,7 @@ export function createDocumentSession(document: DocumentModel, options: Document
   const limits = readLimits(options.limits);
   const budgets = sessionLimits(options.sessionLimits);
   let current: DocumentState | undefined = buildDocumentState(copyPackage(document.serialize(), limits), limits);
+  if (current.snapshot.metadata.presentation !== undefined) throw new DocumentError("UnsupportedFeature", "Presentation editing is not implemented yet.");
   let undo: HistoryEntry[] = [];
   let redo: HistoryEntry[] = [];
   const activeCandidates = new Map<CandidateChange, DocumentState>();

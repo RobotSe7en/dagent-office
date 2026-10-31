@@ -1,5 +1,5 @@
 import { DEFAULT_DOCUMENT_READ_LIMITS, DocumentError, openDocument } from "@dagent-office/core";
-import type { DeepReadonly, DocumentModel, DocumentPackage, DocumentReadLimits, DocumentSection, DocumentSnapshot, PageSetup, WordMetadata } from "@dagent-office/core";
+import type { DeepReadonly, DocumentModel, DocumentPackage, DocumentReadLimits, DocumentSection, DocumentSnapshot, PageSetup, WordMetadata, WordDocumentMetadata } from "@dagent-office/core";
 import type { DocumentZipOptions } from "./document-zip.js";
 import { writeOpcZip } from "./document-zip.js";
 import { xml } from "./ooxml/xml.js";
@@ -37,7 +37,7 @@ const date = (raw: string | undefined): string | undefined => {
 };
 class Exporter {
   private readonly files: DocumentPackage;
-  private readonly snapshot: DocumentSnapshot;
+  private readonly snapshot: DocumentSnapshot & { readonly metadata: DeepReadonly<WordDocumentMetadata> };
   private readonly tree: SourceTree;
   private readonly css: ExportCss;
   private readonly styles: ExportStyles;
@@ -64,7 +64,9 @@ class Exporter {
   private readonly visibility = new WeakMap<SourceNode, boolean>();
   private readonly emittedText = new WeakSet<SourceNode>();
   constructor(document: DocumentModel, private readonly limits: DocumentReadLimits) {
-    this.files = document.serialize(); this.snapshot = document.snapshot(); this.tree = parseSource(this.snapshot.html, limits);
+    const snapshot = document.snapshot();
+    if (snapshot.metadata.presentation !== undefined) unsupported("PPT sources cannot be exported as DOCX.");
+    this.files = document.serialize(); this.snapshot = { ...snapshot, metadata: snapshot.metadata }; this.tree = parseSource(this.snapshot.html, limits);
     const word = this.snapshot.metadata.word;
     this.css = new ExportCss(this.snapshot.styles.map((style) => style.css), limits, new Set(word?.revisions.map((item) => item.nodeId)));
     for (const node of this.tree.elements) if (contains(this.tree.root, node)) this.assertFormatting(node, this.css.get(node));

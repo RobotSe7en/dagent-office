@@ -4,7 +4,7 @@ dagent-office 是可嵌入不同产品的通用文档协作 SDK 与工作台。�
 
 本文描述目标架构。工程骨架、R1-03 [结构契约](contracts.md)、R1-04 [只读文档模型](document-model.md)及 R1-05 [资源与 ZIP](resources-and-zip.md)已实现，DOCX 导入和只读预览见[读取说明](docx-import.md)；[核心事务、历史和精确锚点映射](document-session.md)及 R1-08 [预览与交互](preview-interaction.md)已实现；[请求／提案执行及工作台](workbench.md)已实现，[富文本输入](rich-text.md)已实现，[分页、共享画布及 PDF/PNG](pagination-rendering.md)已实现，[原生 DOCX 导出](docx-export.md)及 [R1-14 独立 Word 闭环](word-closure.md)已实现；运行命令见[本地开发](development.md)。交付顺序见[整体实施计划](implementation-plan.md)，首轮支持范围见[第一轮实施细则](iteration-1.md)。
 
-整体按五轮交付。第一轮的 HTML 协作与独立 Word 闭环已完成，R1-15 达智验证按用户决定延期，R1-16 保留未完成的宿主验收。当前进入[第二轮 PPT](iteration-2.md)，R2-01 计划已完成，PPT 功能尚未实现；随后为 Excel、正式宿主存储和发布准备。延期的达智验证保留原编号，恢复时间另行安排。
+整体按五轮交付。第一轮的 HTML 协作与独立 Word 闭环已完成，R1-15 达智验证按用户决定延期，R1-16 保留未完成的宿主验收。当前进入[第二轮 PPT](iteration-2.md)，R2-01 计划及 [R2-02 Presentation 文档模型](presentation-model.md)已完成，原生 PPTX 读取、预览和编辑尚未实现；随后为 Excel、正式宿主存储和发布准备。延期的达智验证保留原编号，恢复时间另行安排。
 
 ## 产品边界与交付形态
 

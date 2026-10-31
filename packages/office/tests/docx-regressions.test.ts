@@ -69,7 +69,7 @@ test.each([false, true])("isolates auxiliary fields, comments and bookmarks acro
   const snapshot = model.snapshot();
   const expected = [instructionOpen ? "main after" : "main beforemain after", "header cache", "footer cache"];
   expect(snapshot.metadata.sections).toHaveLength(2);
-  expect(snapshot.metadata.sections[1]!.headers).toEqual(snapshot.metadata.sections[0]!.headers);
+  expect(snapshot.metadata.sections![1]!.headers).toEqual(snapshot.metadata.sections![0]!.headers);
   expect(snapshot.metadata.word!.fields).toHaveLength(3);
   for (const [index, field] of snapshot.metadata.word!.fields.entries()) {
     expect(field.endNodeId).toBeDefined();

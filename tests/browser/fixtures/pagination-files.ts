@@ -25,7 +25,7 @@ export function fieldsFiles(): DocumentPackage {
   const metadata = JSON.parse(new TextDecoder().decode(files.get("metadata.json"))); metadata.pageSetup = { ...smallSetup, height: 400 };
   for (const section of metadata.sections) section.pageSetup = metadata.pageSetup;
   files.set("metadata.json", new TextEncoder().encode(JSON.stringify(metadata)));
-  const session = createDocumentSession(openDocument(files)), target = session.snapshot().metadata.sections[0]!.rootNodeId;
+  const session = createDocumentSession(openDocument(files)), target = session.snapshot().metadata.sections![0]!.rootNodeId;
   session.commit(session.prepare({ protocolVersion: 1, documentId: "fields-layout", baseRevision: 0, operations: [
     { op: "insertFragment", nodeId: target, position: "start", html: "<h1>Alpha</h1>" },
     { op: "insertFragment", nodeId: target, position: "end", html: '<h2 style="break-before:page">Beta</h2>' },

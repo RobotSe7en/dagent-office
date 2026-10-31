@@ -1,0 +1,208 @@
+{
+  "title": "项目进展演示",
+  "locale": "zh-CN",
+  "presentation": {
+    "size": {
+      "unit": "pt",
+      "width": 960,
+      "height": 540
+    },
+    "commentFormat": "modern",
+    "slides": [
+      {
+        "slideId": "slide-1",
+        "rootNodeId": "slide-root-1",
+        "layoutId": "layout-blank"
+      }
+    ],
+    "themes": [
+      {
+        "themeId": "theme-default",
+        "cssClass": "theme-default"
+      }
+    ],
+    "masters": [
+      {
+        "masterId": "master-default",
+        "rootNodeId": "master-root-default",
+        "themeId": "theme-default"
+      }
+    ],
+    "layouts": [
+      {
+        "layoutId": "layout-blank",
+        "rootNodeId": "layout-root-blank",
+        "masterId": "master-default",
+        "name": "空白"
+      },
+      {
+        "layoutId": "layout-title",
+        "rootNodeId": "layout-root-title",
+        "masterId": "master-default",
+        "name": "标题"
+      },
+      {
+        "layoutId": "layout-body",
+        "rootNodeId": "layout-root-body",
+        "masterId": "master-default",
+        "name": "标题与正文"
+      }
+    ],
+    "notesMasters": [],
+    "stories": [
+      {
+        "storyId": "notes-1",
+        "rootNodeId": "speaker-notes",
+        "kind": "notes",
+        "slideId": "slide-1"
+      },
+      {
+        "storyId": "comment-story",
+        "rootNodeId": "comment-body",
+        "kind": "comment",
+        "slideId": "slide-1"
+      },
+      {
+        "storyId": "reply-story",
+        "rootNodeId": "reply-body",
+        "kind": "comment",
+        "slideId": "slide-1"
+      }
+    ],
+    "objects": [
+      {
+        "nodeId": "title-centered",
+        "placeholder": {
+          "type": "ctrTitle",
+          "index": 0
+        },
+        "kind": "text",
+        "text": {
+          "autoFit": "none",
+          "wrap": true
+        }
+      },
+      {
+        "nodeId": "subtitle",
+        "placeholder": {
+          "type": "subTitle",
+          "index": 1
+        },
+        "kind": "text",
+        "text": {
+          "autoFit": "none",
+          "wrap": true
+        }
+      },
+      {
+        "nodeId": "layout-title",
+        "placeholder": {
+          "type": "title",
+          "index": 0
+        },
+        "kind": "text",
+        "text": {
+          "autoFit": "none",
+          "wrap": true
+        }
+      },
+      {
+        "nodeId": "layout-body",
+        "placeholder": {
+          "type": "body",
+          "index": 1
+        },
+        "kind": "text",
+        "text": {
+          "autoFit": "none",
+          "wrap": true
+        }
+      },
+      {
+        "nodeId": "heading",
+        "kind": "text"
+      },
+      {
+        "nodeId": "milestone",
+        "kind": "geometry",
+        "preset": "roundRect"
+      },
+      {
+        "nodeId": "group-diamond",
+        "kind": "geometry",
+        "preset": "diamond"
+      },
+      {
+        "nodeId": "group-label",
+        "kind": "text"
+      },
+      {
+        "nodeId": "delivery-group",
+        "kind": "group"
+      },
+      {
+        "nodeId": "milestone-link",
+        "kind": "connector",
+        "routing": "straight",
+        "startNodeId": "milestone",
+        "endNodeId": "delivery-group"
+      },
+      {
+        "nodeId": "progress-table",
+        "kind": "table",
+        "grid": [
+          180,
+          180
+        ]
+      },
+      {
+        "nodeId": "progress-chart",
+        "kind": "chart",
+        "chartId": "chart-1"
+      },
+      {
+        "nodeId": "project-image",
+        "kind": "image"
+      }
+    ],
+    "charts": [
+      {
+        "chartId": "chart-1",
+        "nodeId": "progress-chart",
+        "dataSetId": "data-1",
+        "kind": "column",
+        "titleNodeId": "chart-title",
+        "legend": "bottom",
+        "showLabels": true
+      }
+    ],
+    "dataSets": [
+      {
+        "dataSetId": "data-1",
+        "categories": [
+          "第一季度",
+          "第二季度",
+          "第三季度"
+        ],
+        "series": [
+          {
+            "seriesId": "series-1",
+            "name": "交付数",
+            "values": [
+              2,
+              5,
+              8
+            ]
+          }
+        ]
+      }
+    ],
+    "comments": [
+      {
+        "annotationId": "review-1",
+        "format": "modern"
+      }
+    ],
+    "hyperlinks": []
+  }
+}

@@ -55,3 +55,13 @@ test("rejects a UI dependency in the portable document core", () => {
   const root = fixture("packages/core", 'import "react";', { react: "19.3.1" });
   expect(checkBoundaries(root).some((value) => value.includes("Host or UI dependency"))).toBe(true);
 });
+
+test.each(["docx", "pptxgenjs", "exceljs", "@tiptap/core", "prosemirror-view", "@lexical/react", "slate", "quill", "echarts", "chart.js"])("rejects third-party conversion/editing dependency %s before it is imported", (name) => {
+  const root = fixture("packages/editor", "export {};", { [name]: "1.0.0" });
+  expect(checkBoundaries(root).some((value) => value.includes("Third-party Office converter or editor is forbidden"))).toBe(true);
+});
+
+test.each(["fflate", "saxes", "parse5", "css-tree", "@noble/hashes", "zod"])("allows a declared general-purpose primitive %s", (name) => {
+  const root = fixture("packages/office", "export {};", { [name]: "1.0.0" });
+  expect(checkBoundaries(root)).toEqual([]);
+});

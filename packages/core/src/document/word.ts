@@ -1,14 +1,15 @@
-import type { DocumentMetadata } from "../contracts/document.js";
+import type { WordDocumentMetadata } from "../contracts/document.js";
 import type { Annotation } from "../contracts/annotations.js";
 import type { ParsedHtml } from "./html.js";
 import { invalid } from "./validation.js";
 
 /** Validate native semantic references against the same HTML source, never an XML copy. */
 export function validateWord(
-  metadata: DocumentMetadata,
+  metadata: WordDocumentMetadata,
   annotations: readonly Annotation[],
   html: ParsedHtml,
 ): void {
+  if (annotations.some((annotation) => annotation.replies !== undefined)) invalid("Word comment replies are not implemented.");
   const word = metadata.word;
   const node = (id: string) => {
     const result = html.peekNode(id);

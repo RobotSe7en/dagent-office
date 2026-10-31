@@ -345,7 +345,7 @@ test("an incrementally typed variation selector stays in its base character's so
 test("replacing the complete editable story retains document and section identities", async ({ page }) => {
   for (const files of [fixture(), importDocx(readFileSync(new URL("../../examples/docx/04-styles-sections.docx", import.meta.url)), { documentId: "whole-story" })]) {
     await mount(page, files);
-    const sections = await page.evaluate(() => window.textEditorHost.session!.snapshot().metadata.sections.map((section) => section.rootNodeId));
+    const sections = await page.evaluate(() => window.textEditorHost.session!.snapshot().metadata.sections!.map((section) => section.rootNodeId));
     await page.frameLocator('iframe[title="正文编辑"]').getByRole("textbox", { name: "文档正文" }).focus();
     await page.keyboard.press("Control+a"); await page.keyboard.insertText("全篇替换");
     await expect.poll(() => page.evaluate(() => window.textEditorHost.session!.snapshot().html)).toContain("全篇替换");

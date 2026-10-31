@@ -317,7 +317,7 @@ export function decorate(
 function prepareDocument(input: DocumentModel): { model: DocumentModel; document: Document; urls: string[] } {
   const model = openDocument(input.serialize());
   const snapshot = model.snapshot();
-  if (snapshot.manifest.kind !== "document") throw new DocumentError("UnsupportedFormat", "This renderer supports the document flow view.");
+  if (snapshot.manifest.kind !== "document" || snapshot.metadata.presentation !== undefined) throw new DocumentError("UnsupportedFormat", "This renderer supports the document flow view.");
   const files = model.serialize();
   const parsed = new DOMParser().parseFromString(snapshot.html, "text/html");
   for (const link of parsed.querySelectorAll("link")) link.remove();

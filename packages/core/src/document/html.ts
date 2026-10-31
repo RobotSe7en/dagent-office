@@ -58,6 +58,7 @@ function textContent(node: Node): string {
 
 export interface ParsedHtml {
   readonly html: string;
+  directText(nodeId: string): string | undefined;
   nodeIds(): readonly string[];
   peekNode(nodeId: string): Omit<DocumentNode, "text" | "html"> | undefined;
   getNode(nodeId: string): DocumentNode | undefined;
@@ -78,7 +79,7 @@ export function parseHtml(source: string, manifest: DeepReadonly<DocumentManifes
     const roots = body.childNodes.filter(isElement);
     const root = roots[0];
     if (roots.length !== 1 || !root || !containers.has(root.tagName)
-      || attribute(root, "data-office-kind") !== "document"
+      || attribute(root, "data-office-kind") !== manifest.kind
       || body.childNodes.some((node) => node.nodeName === "#text" && "value" in node && node.value.trim() !== "")) {
       invalid("The body must contain one document root container.");
     }
@@ -199,6 +200,8 @@ export function parseHtml(source: string, manifest: DeepReadonly<DocumentManifes
     };
     return {
       html: serialize(tree),
+      directText: (nodeId) => index.get(nodeId)?.element.childNodes.filter((node): node is DefaultTreeAdapterTypes.TextNode => node.nodeName === "#text")
+        .map((node) => node.value).join(""),
       nodeIds: () => [...index.keys()],
       signature: (nodeId) => {
         const entry = index.get(nodeId);
