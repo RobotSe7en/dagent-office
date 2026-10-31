@@ -1,0 +1,296 @@
+{
+  "protocolVersion": 1,
+  "requestId": "2d71ffbe-3094-4a53-9880-f8646d1410a9",
+  "documentId": "presentation-example",
+  "baseRevision": 0,
+  "annotations": [
+    {
+      "annotationId": "review-1",
+      "documentId": "presentation-example",
+      "baseRevision": 0,
+      "status": "open",
+      "anchor": {
+        "nodeId": "milestone-p",
+        "from": 0,
+        "to": 5,
+        "quote": "本季度上线",
+        "kind": "text"
+      },
+      "author": {
+        "name": "审阅者"
+      },
+      "replies": [
+        {
+          "replyId": "reply-1",
+          "author": {
+            "name": "作者"
+          },
+          "bodyNodeId": "reply-body"
+        }
+      ],
+      "bodyNodeId": "comment-body"
+    }
+  ],
+  "context": {
+    "formatVersion": 1,
+    "kind": "presentation",
+    "scope": {
+      "kind": "slides",
+      "slideIds": [
+        "slide-1"
+      ]
+    },
+    "blocks": [
+      {
+        "nodeId": "slide-root-1",
+        "slideId": "slide-1",
+        "html": "<section data-node-id=\"slide-root-1\" data-office-kind=\"slide\" data-office-story=\"slide\"><div data-node-id=\"heading\" data-office-kind=\"text\" data-office-x=\"48\" data-office-y=\"24\" data-office-width=\"864\" data-office-height=\"64\"><p data-node-id=\"heading-p\" style=\"font-size:30pt\">项目进展</p></div><div data-node-id=\"milestone\" data-office-kind=\"geometry\" data-office-x=\"48\" data-office-y=\"120\" data-office-width=\"200\" data-office-height=\"100\" style=\"background-color:var(--office-theme-accent1);color:white\"><p data-node-id=\"milestone-p\">本季度上线</p></div><div data-node-id=\"delivery-group\" data-office-kind=\"group\" data-office-x=\"48\" data-office-y=\"260\" data-office-width=\"400\" data-office-height=\"140\" data-office-child-x=\"0\" data-office-child-y=\"0\" data-office-child-width=\"400\" data-office-child-height=\"140\"><div data-node-id=\"group-diamond\" data-office-kind=\"geometry\" data-office-x=\"0\" data-office-y=\"0\" data-office-width=\"100\" data-office-height=\"100\"><p data-node-id=\"diamond-p\">验收</p></div><div data-node-id=\"group-label\" data-office-kind=\"text\" data-office-x=\"120\" data-office-y=\"0\" data-office-width=\"220\" data-office-height=\"100\"><p data-node-id=\"label-p\">交付与培训</p></div></div><div data-node-id=\"milestone-link\" data-office-kind=\"connector\" data-office-x=\"148\" data-office-y=\"220\" data-office-width=\"0\" data-office-height=\"40\"></div><div data-node-id=\"progress-table\" data-office-kind=\"table\" data-office-x=\"500\" data-office-y=\"120\" data-office-width=\"360\" data-office-height=\"150\"><table data-node-id=\"table\"><tbody><tr data-node-id=\"table-r1\"><th data-node-id=\"table-h1\"><p data-node-id=\"table-h1-p\">阶段</p></th><th data-node-id=\"table-h2\"><p data-node-id=\"table-h2-p\">进度</p></th></tr><tr data-node-id=\"table-r2\"><td data-node-id=\"table-c1\"><p data-node-id=\"table-c1-p\">研发</p></td><td data-node-id=\"table-c2\"><p data-node-id=\"table-c2-p\">完成</p></td></tr></tbody></table></div><div data-node-id=\"progress-chart\" data-office-kind=\"chart\" data-office-x=\"500\" data-office-y=\"300\" data-office-width=\"360\" data-office-height=\"180\"><p data-node-id=\"chart-title\">季度交付</p></div><div data-node-id=\"project-image\" data-office-kind=\"image\" data-office-x=\"48\" data-office-y=\"430\" data-office-width=\"120\" data-office-height=\"70\"><img data-node-id=\"project-image-source\" src=\"assets/sample.png\" alt=\"项目图示\"></div></section>"
+      }
+    ],
+    "dependencies": [
+      {
+        "kind": "theme",
+        "definitionId": "theme-default",
+        "access": "read-only"
+      },
+      {
+        "kind": "master",
+        "definitionId": "master-default",
+        "nodeId": "master-root-default",
+        "html": "<section data-node-id=\"master-root-default\" data-office-kind=\"master\" data-office-story=\"master\"></section>",
+        "access": "read-only"
+      },
+      {
+        "kind": "layout",
+        "definitionId": "layout-blank",
+        "nodeId": "layout-root-blank",
+        "html": "<section data-node-id=\"layout-root-blank\" data-office-kind=\"layout\" data-office-story=\"layout\"></section>",
+        "access": "read-only"
+      },
+      {
+        "kind": "notes",
+        "definitionId": "notes-1",
+        "nodeId": "speaker-notes",
+        "html": "<div data-node-id=\"speaker-notes\" data-office-kind=\"notes\" data-office-story=\"notes\"><p data-node-id=\"speaker-notes-p\">演讲者提示：介绍上线安排与用户培训。</p></div>",
+        "access": "editable"
+      },
+      {
+        "kind": "comment",
+        "definitionId": "comment-story",
+        "nodeId": "comment-body",
+        "html": "<div data-node-id=\"comment-body\" data-office-kind=\"comment\" data-office-story=\"comment\"><p data-node-id=\"comment-body-p\">补充上线风险及应对措施。</p></div>",
+        "access": "editable"
+      },
+      {
+        "kind": "comment",
+        "definitionId": "reply-story",
+        "nodeId": "reply-body",
+        "html": "<div data-node-id=\"reply-body\" data-office-kind=\"comment\" data-office-story=\"comment\"><p data-node-id=\"reply-body-p\">已列入交付检查。</p></div>",
+        "access": "editable"
+      }
+    ],
+    "styles": [
+      {
+        "path": "styles.css",
+        "css": ".theme-default{--office-theme-dk1:#000000;--office-theme-lt1:#ffffff;--office-theme-dk2:#44546a;--office-theme-lt2:#e7e6e6;--office-theme-accent1:#4472c4;--office-theme-accent2:#ed7d31;--office-theme-accent3:#a5a5a5;--office-theme-accent4:#ffc000;--office-theme-accent5:#5b9bd5;--office-theme-accent6:#70ad47;--office-theme-hlink:#0563c1;--office-theme-folHlink:#954f72;--office-major-ascii:\"Liberation Sans\";--office-major-east-asia:\"Noto Sans CJK SC\";--office-minor-ascii:\"Liberation Sans\";--office-minor-east-asia:\"Noto Sans CJK SC\";color:var(--office-theme-dk1);font-family:var(--office-minor-ascii),var(--office-minor-east-asia);font-size:18pt}p{margin:0}"
+      }
+    ],
+    "metadata": {
+      "title": "项目进展演示",
+      "locale": "zh-CN",
+      "presentation": {
+        "size": {
+          "unit": "pt",
+          "width": 960,
+          "height": 540
+        },
+        "commentFormat": "modern",
+        "slides": [
+          {
+            "slideId": "slide-1",
+            "rootNodeId": "slide-root-1",
+            "layoutId": "layout-blank"
+          }
+        ],
+        "themes": [
+          {
+            "themeId": "theme-default",
+            "cssClass": "theme-default"
+          }
+        ],
+        "masters": [
+          {
+            "masterId": "master-default",
+            "rootNodeId": "master-root-default",
+            "themeId": "theme-default"
+          }
+        ],
+        "layouts": [
+          {
+            "layoutId": "layout-blank",
+            "rootNodeId": "layout-root-blank",
+            "masterId": "master-default",
+            "name": "空白"
+          }
+        ],
+        "notesMasters": [],
+        "stories": [
+          {
+            "storyId": "notes-1",
+            "rootNodeId": "speaker-notes",
+            "kind": "notes",
+            "slideId": "slide-1"
+          },
+          {
+            "storyId": "comment-story",
+            "rootNodeId": "comment-body",
+            "kind": "comment",
+            "slideId": "slide-1"
+          },
+          {
+            "storyId": "reply-story",
+            "rootNodeId": "reply-body",
+            "kind": "comment",
+            "slideId": "slide-1"
+          }
+        ],
+        "objects": [
+          {
+            "nodeId": "heading",
+            "kind": "text"
+          },
+          {
+            "nodeId": "milestone",
+            "kind": "geometry",
+            "preset": "roundRect"
+          },
+          {
+            "nodeId": "group-diamond",
+            "kind": "geometry",
+            "preset": "diamond"
+          },
+          {
+            "nodeId": "group-label",
+            "kind": "text"
+          },
+          {
+            "nodeId": "delivery-group",
+            "kind": "group"
+          },
+          {
+            "nodeId": "milestone-link",
+            "kind": "connector",
+            "routing": "straight",
+            "startNodeId": "milestone",
+            "endNodeId": "delivery-group"
+          },
+          {
+            "nodeId": "progress-table",
+            "kind": "table",
+            "grid": [
+              180,
+              180
+            ]
+          },
+          {
+            "nodeId": "progress-chart",
+            "kind": "chart",
+            "chartId": "chart-1"
+          },
+          {
+            "nodeId": "project-image",
+            "kind": "image"
+          }
+        ],
+        "charts": [
+          {
+            "chartId": "chart-1",
+            "nodeId": "progress-chart",
+            "dataSetId": "data-1",
+            "kind": "column",
+            "titleNodeId": "chart-title",
+            "legend": "bottom",
+            "showLabels": true
+          }
+        ],
+        "dataSets": [
+          {
+            "dataSetId": "data-1",
+            "categories": [
+              "第一季度",
+              "第二季度",
+              "第三季度"
+            ],
+            "series": [
+              {
+                "seriesId": "series-1",
+                "name": "交付数",
+                "values": [
+                  2,
+                  5,
+                  8
+                ]
+              }
+            ]
+          }
+        ],
+        "comments": [
+          {
+            "annotationId": "review-1",
+            "format": "modern"
+          }
+        ],
+        "hyperlinks": []
+      }
+    },
+    "assets": [
+      {
+        "path": "assets/sample.png",
+        "mimeType": "image/png",
+        "sha256": "b5591ad6441d94a60acc5e581b4c9f90abe97285369c6102ee40760a62dd9e71"
+      }
+    ],
+    "providedAssets": []
+  },
+  "supportedOperations": [
+    "replaceText",
+    "replaceFragment",
+    "reconcileFragment",
+    "insertFragment",
+    "removeNode",
+    "setStyle",
+    "replaceAsset",
+    "setPresentationGeometry",
+    "insertSlide",
+    "duplicateSlide",
+    "removeSlide",
+    "moveSlide",
+    "setSlideProperties",
+    "insertPresentationObject",
+    "duplicatePresentationObjects",
+    "reorderPresentationObjects",
+    "alignPresentationObjects",
+    "distributePresentationObjects",
+    "groupPresentationObjects",
+    "ungroupPresentationObject",
+    "setPresentationCrop",
+    "setPresentationPreset",
+    "setPresentationConnector",
+    "insertPresentationNotes",
+    "setPresentationNotesMaster",
+    "editPresentationTable",
+    "setPresentationSlideLayout",
+    "setPresentationPlaceholder",
+    "resetPresentationOverrides",
+    "insertPresentationChart",
+    "setPresentationChart",
+    "setPresentationChartData",
+    "setPresentationChartStyle",
+    "addPresentationComment",
+    "addPresentationCommentReply",
+    "removePresentationCommentReply",
+    "setPresentationCommentBody",
+    "updatePresentationComment",
+    "setPresentationTextProperties"
+  ]
+}

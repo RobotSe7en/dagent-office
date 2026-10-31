@@ -7,12 +7,22 @@ export class SourceProjection {
   private readonly wrappers = new WeakSet<Node>();
   private readonly identities = new Map<string, { original: Element; rendered: Element }>();
   private readonly fields = new WeakMap<Element, { original: Element; display: Element }>();
+  private readonly editableRoots=new WeakSet<Node>();
   readonly ignored = (node: Node): boolean => {
-    for (let item: Node | null = node; item; item = item.parentNode) if (this.derived.has(item) || viewNodeRole(item) === "remove") return true;
+    for (let item: Node | null = node; item; item = item.parentNode) {
+      if(this.editableRoots.has(item))return false;
+      if (this.derived.has(item) || viewNodeRole(item) === "remove") return true;
+    }
     return false;
   };
 
   markDerived(node: Node): void { this.derived.add(node); }
+  /** An editor may bind one live notes/comment instance to its exact source root.
+   * Ownership is local to this projection; the global read-only view remains derived. */
+  captureInstance(root:HTMLElement,source:HTMLElement):void {
+    if(!root.dataset.nodeId||root.dataset.nodeId!==source.dataset.nodeId)throw new Error("An editable instance must match its source identity.");
+    this.editableRoots.add(root);this.capture(root,source);
+  }
   capture(root: HTMLElement, source: HTMLElement): void {
     const originals = new Map([source, ...source.querySelectorAll<HTMLElement>("[data-node-id]")].map((node) => [node.dataset.nodeId, node]));
     for (const node of [root, ...root.querySelectorAll<HTMLElement>("*")]) {

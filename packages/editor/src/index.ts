@@ -9,3 +9,7 @@ export { mountDocumentWorkbench } from "./workbench.js";
 export type { DocumentWorkbenchEvent, DocumentWorkbenchOptions, DocumentWorkbenchView } from "./workbench.js";
 export { mountDocumentTextEditor } from "./rich-text.js";
 export type { DocumentTextEditor, DocumentTextEditorOptions } from "./rich-text.js";
+export { mountPresentationEditor } from "./presentation-editor.js";
+export type { PresentationEditorOptions, PresentationEditorView } from "./presentation-editor.js";
+export { mountPresentationWorkbench } from "./presentation-workbench.js";
+export type { PresentationWorkbenchOptions,PresentationWorkbenchView,PresentationWorkbenchEvent } from "./presentation-workbench.js";

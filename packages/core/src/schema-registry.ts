@@ -4,6 +4,7 @@ import { AssetDescriptorSchema, DocumentManifestSchema, DocumentMetadataSchema }
 import { DocumentErrorDataSchema, DocumentEventSchema } from "./contracts/events.js";
 import type { DocumentErrorCode } from "./contracts/events.js";
 import { DocumentInteractionRequestSchema, EditProposalSchema } from "./contracts/interaction.js";
+import { PresentationInteractionRequestSchema,PresentationEditProposalSchema } from "./contracts/presentation-interaction.js";
 import { DocumentContentOperationSchema, DocumentOperationSchema, DocumentTransactionSchema } from "./contracts/operations.js";
 import { FORMAT_VERSION, PROTOCOL_VERSION } from "./contracts/primitives.js";
 import { DocumentError, summarizeIssues } from "./errors.js";
@@ -20,6 +21,8 @@ export const contractSchemas = Object.freeze({
   "document-transaction": DocumentTransactionSchema,
   "interaction-request": DocumentInteractionRequestSchema,
   "edit-proposal": EditProposalSchema,
+  "presentation-interaction-request":PresentationInteractionRequestSchema,
+  "presentation-edit-proposal":PresentationEditProposalSchema,
   "document-error": DocumentErrorDataSchema,
   "document-event": DocumentEventSchema,
 });
@@ -65,7 +68,7 @@ function checkEnvelope(name: ContractName, input: unknown): void {
     }
     checkVersion(data.formatVersion, FORMAT_VERSION);
   }
-  if (["document-transaction", "interaction-request", "edit-proposal", "document-event"].includes(name)) {
+  if (["document-transaction", "interaction-request", "edit-proposal", "presentation-interaction-request","presentation-edit-proposal","document-event"].includes(name)) {
     checkVersion(data.protocolVersion, PROTOCOL_VERSION);
   }
   if (name === "interaction-request") {
@@ -77,6 +80,7 @@ function checkEnvelope(name: ContractName, input: unknown): void {
       }
     }
   }
+  if(name==="presentation-interaction-request"){const context=object(data.context);if(context)checkVersion(context.formatVersion,FORMAT_VERSION);}
 }
 
 // Zod collects every array item's issues before returning. Preflight arrays one
@@ -121,7 +125,7 @@ function checkArrayItems(schema: z.core.$ZodType, input: unknown, path: Property
 export function parseContract<Name extends ContractName>(name: Name, input: unknown): ContractValue<Name> {
   const schema = schemaFor(name);
   checkEnvelope(name, input);
-  const code: DocumentErrorCode = name === "edit-proposal" ? "InvalidProposal"
+  const code: DocumentErrorCode = ["edit-proposal","presentation-edit-proposal"].includes(name) ? "InvalidProposal"
     : ["content-operation", "document-operation", "document-transaction"].includes(name)
       ? "InvalidOperation" : "InvalidDocument";
   const fail = (issues: z.ZodIssue[]): never => {

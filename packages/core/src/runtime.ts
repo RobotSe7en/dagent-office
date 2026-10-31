@@ -3,6 +3,7 @@ import type { AssetDescriptor, DocumentManifest, DocumentMetadata } from "./cont
 import type { DocumentEvent } from "./contracts/events.js";
 import type { ContextStyle, DocumentInteractionRequest, EditProposal } from "./contracts/interaction.js";
 import type { ContentOperationName, DocumentTransaction } from "./contracts/operations.js";
+import type { PresentationInteractionRequest,PresentationEditProposal,PresentationOperationName } from "./contracts/presentation-interaction.js";
 
 export type DeepReadonly<Value> = Value extends readonly (infer Item)[]
   ? readonly DeepReadonly<Item>[]
@@ -71,6 +72,16 @@ export interface InteractionRequestInput {
     readonly maxAssets: number;
   };
 }
+/** Explicit PPT dispatch preserves the existing V1 Word request contract. */
+export interface PresentationInteractionRequestInput {
+  readonly kind:"presentation";
+  readonly annotationIds:readonly string[];
+  readonly scope?:"slides"|"global";
+  readonly supportedOperations?:readonly PresentationOperationName[];
+  readonly assets?:readonly DeepReadonly<AssetDescriptor>[];
+  readonly limits?:InteractionRequestInput["limits"];
+}
+export type PresentationAnnotationSubmissionHandler=(request:DeepReadonly<PresentationInteractionRequest>)=>void|PresentationEditProposal|Promise<void|PresentationEditProposal>;
 
 // Type-only opacity is supplemented by private candidate identity inside the session.
 declare const candidateBrand: unique symbol;
@@ -79,6 +90,8 @@ export interface CandidateChange {
   readonly documentId: string;
   readonly baseRevision: number;
   readonly preview: DocumentSnapshot;
+  /** Immutable candidate source, including staged resources; no editing session. */
+  readonly model:DocumentModel;
   readonly affectedNodeIds: readonly string[];
   /** Stable slide identities whose rendered content or dependencies changed. PPT only. */
   readonly affectedSlideIds?: readonly string[];
@@ -156,6 +169,8 @@ export interface DocumentEditingSession extends DocumentModel {
 
 /** Revision-bound collaboration on the same transaction boundary. */
 export interface DocumentSession extends DocumentEditingSession {
+  buildInteractionRequest(input:PresentationInteractionRequestInput):PresentationInteractionRequest;
   buildInteractionRequest(input: InteractionRequestInput): DocumentInteractionRequest;
+  prepareProposal(request:PresentationInteractionRequest,proposal:PresentationEditProposal,options?:TransactionPrepareOptions):CandidateChange;
   prepareProposal(request: DocumentInteractionRequest, proposal: EditProposal): CandidateChange;
 }

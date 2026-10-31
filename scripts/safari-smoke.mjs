@@ -74,8 +74,40 @@ try {
   assert.equal(await execute("return window.presentationHost.view.element.contentDocument.querySelectorAll('[contenteditable=true]').length"), 0);
   assert.equal(await execute("return /<svg|data-sdk/.test(window.presentationHost.projected())"), false);
   await execute("window.presentationHost.view.dispose()");
-  mkdirSync(root + ".cache", { recursive: true }); writeFileSync(root + ".cache/safari-result.json", JSON.stringify({ capabilities: created.capabilities, checks: ["pure preview pages", "native input", "undo", "cross-page selection", "presentation fixed pages", "three native charts", "reversible presentation projection", "presentation disposal"] }, null, 2));
-  console.log("Safari acceptance passed: Word input/history/selection and presentation pages/charts/projection/disposal.");
+  const pptFiles = [...["manifest.json", "content.html", "styles.css", "metadata.json", "annotations.json", "assets/sample.png"].map(path => [path, [...readFileSync(root + "examples/presentation/" + path)]])];
+  async function installFixture(entry, react = false) {
+    const fixture = await build({ configFile: false, logLevel: "silent", define: { "process.env.NODE_ENV": JSON.stringify("production") }, ...(react ? { resolve: { alias: { react: root + "apps/playground/node_modules/react", "react-dom": root + "apps/playground/node_modules/react-dom" } } } : {}), build: { write: false, target: "es2022", lib: { entry: root + "tests/browser/fixtures/" + entry, formats: ["iife"], name: "PptEditingAcceptance" } } });
+    await execute((Array.isArray(fixture) ? fixture[0].output : fixture.output).filter(item => item.type === "chunk").map(item => item.code).join("\n"));
+  }
+  await installFixture("presentation-editor-host.ts");
+  const editMount = await command("POST", `/session/${session}/execute/async`, { script: "const done=arguments[arguments.length-1];window.presentationEditorHost.mount(arguments[0]).then(()=>done({ok:true}),error=>done({error:String(error)}));", args: [pptFiles] });
+  assert.equal(editMount.ok, true, JSON.stringify(editMount));
+  await execute("window.presentationEditorHost.view.editText('heading')");
+  const pptIframe = await execute("return window.presentationEditorHost.view.element.shadowRoot.querySelector('iframe')");
+  await command("POST", `/session/${session}/frame`, { id: pptIframe });
+  await execute("const input=document.querySelector('[contenteditable=true]'),p=document.querySelector('[data-node-id=heading-p]');input.focus();const range=document.createRange();range.selectNodeContents(p);range.collapse(true);const selection=document.getSelection();selection.removeAllRanges();selection.addRange(range);");
+  const pptInput = await command("POST", `/session/${session}/element`, { using: "css selector", value: "[contenteditable=true]" });
+  await command("POST", `/session/${session}/element/${pptInput[elementKey]}/value`, { text: "S", value: ["S"] });
+  await command("POST", `/session/${session}/frame`, { id: null });
+  assert.equal(await execute("return window.presentationEditorHost.session.getNode('heading-p').text"), "S项目进展");
+  await execute("window.presentationEditorHost.session.undo()");
+  assert.equal(await execute("return window.presentationEditorHost.session.getNode('heading-p').text"), "项目进展");
+  assert.deepEqual(await execute("return window.presentationEditorHost.errors"), []);
+  await execute("window.presentationEditorHost.view.dispose();window.presentationEditorHost.session.dispose()");
+  await installFixture("presentation-workbench-host.ts", true);
+  const workbench = await command("POST", `/session/${session}/execute/async`, { script: "const done=arguments[arguments.length-1];window.presentationWorkbenchHost.mount(arguments[0],'js').then(()=>window.presentationWorkbenchHost.view.submitAnnotations(['review-1'])).then(()=>window.presentationWorkbenchHost.view.ready).then(()=>done({ok:true}),error=>done({error:String(error)}));", args: [pptFiles] });
+  assert.equal(workbench.ok, true, JSON.stringify(workbench));
+  assert.equal(await execute("return window.presentationWorkbenchHost.session.getNode('heading-p').text"), "项目进展");
+  assert.equal(await execute("return window.presentationWorkbenchHost.view.element.shadowRoot.querySelector('iframe[title=\"PPT 候选只读预览\"]').contentDocument.querySelector('[data-node-id=heading-p]').textContent"), "提案标题");
+  await execute("window.presentationWorkbenchHost.view.applyProposal()");
+  assert.equal(await execute("return window.presentationWorkbenchHost.session.getNode('heading-p').text"), "提案标题");
+  assert.equal(await execute("return window.presentationWorkbenchHost.session.history().undoSteps"), 1);
+  await execute("window.presentationWorkbenchHost.session.undo()");
+  assert.equal(await execute("return window.presentationWorkbenchHost.session.getNode('heading-p').text"), "项目进展");
+  assert.deepEqual(await execute("return window.presentationWorkbenchHost.errors"), []);
+  await execute("window.presentationWorkbenchHost.dispose()");
+  mkdirSync(root + ".cache", { recursive: true }); writeFileSync(root + ".cache/safari-result.json", JSON.stringify({ capabilities: created.capabilities, checks: ["pure preview pages", "native input", "undo", "cross-page selection", "presentation fixed pages", "three native charts", "reversible presentation projection", "presentation disposal", "PPT native input/history", "PPT frozen request/candidate/apply/undo", "PPT editor/workbench disposal"] }, null, 2));
+  console.log("Safari acceptance passed: Word input/history/selection and PPT preview/input/proposals/history/disposal.");
 } catch (error) {
   if (session) { try { mkdirSync(root + ".cache", { recursive: true }); writeFileSync(root + ".cache/safari-failure.png", Buffer.from(await command("GET", `/session/${session}/screenshot`), "base64")); } catch {} }
   throw error;

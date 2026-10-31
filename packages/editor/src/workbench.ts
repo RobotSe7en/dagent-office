@@ -1,4 +1,4 @@
-import { DocumentError, openDocument, parseContract } from "@dagent-office/core";
+import { DocumentError, parseContract } from "@dagent-office/core";
 import type {
   AnnotationSubmissionHandler, CandidateChange, DocumentInteractionRequest, DocumentModel, DocumentSelection,
   DocumentSession, EditProposal, InteractionRequestInput, TransactionReceipt,
@@ -9,6 +9,8 @@ import { mountDocumentPreview } from "./preview.js";
 import type { DocumentPreview } from "./preview.js";
 import { mountDocumentTextEditor } from "./rich-text.js";
 import type { DocumentTextEditor } from "./rich-text.js";
+import { mountPresentationWorkbench } from "./presentation-workbench.js";
+import type { PresentationWorkbenchOptions,PresentationWorkbenchView } from "./presentation-workbench.js";
 import { createLayoutFieldTransaction } from "@dagent-office/render";
 
 function immutable<Value>(value: Value): Value {
@@ -24,6 +26,7 @@ export type DocumentWorkbenchEvent =
   | { readonly type: "annotationsSubmitted"; readonly request: DocumentInteractionRequest }
   | { readonly type: "proposalReady"; readonly proposal: EditProposal; readonly candidate: CandidateChange };
 export interface DocumentWorkbenchOptions extends DocumentInteractionOptions {
+  readonly format?:"document";
   readonly editable?: boolean;
   readonly onSubmitAnnotations?: AnnotationSubmissionHandler;
   readonly supportedOperations?: InteractionRequestInput["supportedOperations"];
@@ -40,7 +43,12 @@ export interface DocumentWorkbenchView extends DocumentInteractionView {
 }
 
 /** Host-owned session; no model execution or authoritative file storage is introduced here. */
-export function mountDocumentWorkbench(container: HTMLElement, session: DocumentSession, options: DocumentWorkbenchOptions = {}): DocumentWorkbenchView {
+export function mountDocumentWorkbench(container:HTMLElement,session:DocumentSession,options?:DocumentWorkbenchOptions):DocumentWorkbenchView;
+export function mountDocumentWorkbench(container:HTMLElement,session:DocumentSession,options:PresentationWorkbenchOptions&{readonly format:"presentation"}):PresentationWorkbenchView;
+export function mountDocumentWorkbench(container: HTMLElement, session: DocumentSession, optionsInput: DocumentWorkbenchOptions|(PresentationWorkbenchOptions&{readonly format:"presentation"}) = {}): DocumentWorkbenchView|PresentationWorkbenchView {
+  if(optionsInput.format==="presentation")return mountPresentationWorkbench(container,session,optionsInput);
+  if(optionsInput.format!==undefined&&optionsInput.format!=="document")throw new DocumentError("UnsupportedFormat","Unsupported workbench format.");
+  const options=optionsInput;
   if (session.snapshot().metadata.presentation) throw new DocumentError("UnsupportedFeature", "Presentation workbench requires its format adapter.");
   const document = container.ownerDocument, element = document.createElement("div"), shadow = element.attachShadow({ mode: "open" });
   const style = document.createElement("style");
@@ -167,11 +175,7 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
   function previewModel(change: CandidateChange): DocumentModel {
-    const files = new Map(session.serialize()), snapshot = change.preview, manifest = snapshot.manifest, encoder = new TextEncoder();
-    files.set(manifest.entrypoint, encoder.encode(snapshot.html)); files.set(manifest.metadata, encoder.encode(JSON.stringify(snapshot.metadata)));
-    files.set(manifest.annotations, encoder.encode(JSON.stringify(snapshot.annotations)));
-    for (const entry of snapshot.styles) files.set(entry.path, encoder.encode(entry.css));
-    return openDocument(files);
+    return change.model;
   }
   function loadProposal(request: DocumentInteractionRequest, proposal: EditProposal): CandidateChange {
     ensureActive();

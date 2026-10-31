@@ -29,6 +29,8 @@ export interface DocumentPreviewOptions {
   readonly title?: string;
   readonly layout?: "pages" | "continuous";
   readonly limits?: Partial<RenderLimits>;
+  /** Read-only editing projection of a registered master/layout/notes-master root. */
+  readonly presentationSurfaceId?:string;
 }
 
 export function packagePath(reference: string, entrypoint: string): string {
@@ -405,6 +407,7 @@ export function mountPreview(
   options: DocumentPreviewOptions = {},
 ): DocumentPreview & { source(): PreviewSource | undefined } {
   if (input.snapshot().manifest.kind === "presentation") return mountPresentationPreview(container, input, options);
+  if(options.presentationSurfaceId)throw new DocumentError("InvalidOperation","Definition surfaces are available only for presentations.");
   const limits = renderLimits(options.limits), hostDocument = container.ownerDocument;
   let prepared = prepareDocument(input), model = prepared.model;
   const iframe = hostDocument.createElement("iframe");

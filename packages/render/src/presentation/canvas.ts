@@ -23,7 +23,7 @@ export interface PresentationCanvas {
   measure(): Pick<DocumentRenderReport, "pages" | "nodePages" | "diagnostics">;
 }
 /** Fixed slide composition. Every injected object is a reversible view node. */
-export function composePresentation(document: Document, model: DocumentModel, limits: Readonly<RenderLimits>): PresentationCanvas {
+export function composePresentation(document: Document, model: DocumentModel, limits: Readonly<RenderLimits>,surfaceId?:string): PresentationCanvas {
   const snapshot = model.snapshot(), metadata = snapshot.metadata.presentation;
   if (snapshot.manifest.kind !== "presentation" || !metadata) throw new DocumentError("UnsupportedFormat", "A presentation canvas requires a presentation package.");
   const source = new PreviewSource(document, model), root = source.root;
@@ -38,9 +38,15 @@ export function composePresentation(document: Document, model: DocumentModel, li
   const inheritance = new PresentationInheritance(document, snapshot.styles.map(s => s.css).join("\n"), limits.maxNodes);
   const fields: LayoutFieldResult[] = [], diagnostics: LayoutDiagnostic[] = [], textBoxes: { node: HTMLElement; content: HTMLElement; fit: string; scale: number; lineReduction: number; fonts: readonly { node: HTMLElement; size: number; line: number }[]; resize(width: number, height: number): void; width: number; height: number }[] = [];
   const connectors: { node: HTMLElement; definition: DeepReadonly<Extract<PresentationObject, { kind: "connector" }>> }[] = [];
-  const slides = [...root.children].filter((node): node is HTMLElement => node instanceof document.defaultView!.HTMLElement && node.dataset.officeKind === "slide");
+  const surfaceLayout=metadata.layouts.find(l=>l.rootNodeId===surfaceId),surfaceMaster=metadata.masters.find(m=>m.rootNodeId===surfaceId),surfaceNotesMaster=metadata.notesMasters.find(m=>m.rootNodeId===surfaceId);
+  if(surfaceId&&!surfaceLayout&&!surfaceMaster&&!surfaceNotesMaster)throw new DocumentError("InvalidOperation","The requested presentation definition surface is missing.");
+  const slideNodes = [...root.children].filter((node): node is HTMLElement => node instanceof document.defaultView!.HTMLElement && node.dataset.officeKind === "slide");
+  const slides=surfaceId?[byId.get(surfaceId)!]:slideNodes;
+  const size=surfaceNotesMaster?metadata.notesSize??metadata.size:metadata.size;
+  if(surfaceId){for(const slide of slideNodes)styleView(slide,{display:"none"});styleView(slides[0]!,{display:"block",position:"relative",overflow:"hidden",isolation:"isolate","background-color":"white",margin:"0 0 18pt"});styleView(root,{width:size.width+"pt"});}
+  const entryFor=(node:HTMLElement):DeepReadonly<PresentationMetadata>["slides"][number]=>metadata.slides.find(s=>s.rootNodeId===node.dataset.nodeId)??{slideId:surfaceLayout?.layoutId??surfaceMaster?.masterId??surfaceNotesMaster!.notesMasterId,rootNodeId:surfaceId!,layoutId:surfaceLayout?.layoutId??metadata.layouts[0]!.layoutId};
   const surfaceObjects = (surface: HTMLElement): HTMLElement[] => [...surface.children].filter((node): node is HTMLElement => objects.has(node.getAttribute("data-node-id") ?? ""));
-  const placeholder = (surface: HTMLElement, object: ObjectDefinition): HTMLElement | undefined => surfaceObjects(surface).find(node => {
+  const placeholder = (surface: HTMLElement, object: ObjectDefinition): HTMLElement | undefined => surfaceObjects(surface).find(node=>{const candidate=objects.get(node.dataset.nodeId!)!;return candidate.placeholder&&object.placeholder&&candidate.placeholder.index===object.placeholder.index&&candidate.placeholder.type===object.placeholder.type;})??surfaceObjects(surface).find(node => {
     const candidate = objects.get(node.dataset.nodeId!)!;
     return candidate.placeholder && object.placeholder && candidate.placeholder.index === object.placeholder.index && (candidate.placeholder.type === object.placeholder.type || [candidate.placeholder.type, object.placeholder.type].every(t => ["title", "ctrTitle"].includes(t)));
   });
@@ -85,7 +91,7 @@ export function composePresentation(document: Document, model: DocumentModel, li
       }
       const children = [...node.childNodes]; node.append(svg);
       if (definition.kind === "connector") connectors.push({ node, definition });
-      if (children.length) {
+      if (children.length || definition.kind==="text" || definition.kind==="geometry"&&evaluated.textRect) {
         const content = markViewNode(document.createElement("div"), "unwrap"); content.className = "sdk-ppt-text";
         const rect = evaluated.textRect;
         content.style.cssText += ";" + textTransform(node, rect ?? { x: 0, y: 0, width: g.width, height: g.height }) + `;overflow-wrap:anywhere;padding:${insets.top}px ${insets.right}px ${insets.bottom}px ${insets.left}px;justify-content:${anchor === "ctr" ? "center" : anchor === "b" ? "flex-end" : anchor === "dist" ? "space-around" : anchor === "just" ? "space-between" : "flex-start"}`;
@@ -94,6 +100,7 @@ export function composePresentation(document: Document, model: DocumentModel, li
         let text = {} as NonNullable<Extract<PresentationObject, { kind: "text" }>["text"]>;
         for (const prototype of chain) { const entry = objects.get(prototype.dataset.nodeId!); if (entry && "text" in entry) text = { ...text, ...entry.text }; }
         content.style.whiteSpace = text.wrap === false ? "pre" : "pre-wrap";
+        ownViewAttribute(node,"data-sdk-text-auto-fit");node.setAttribute("data-sdk-text-auto-fit",text.autoFit??"none");
         const role = definition.placeholder?.type, textStyle = role === "title" || role === "ctrTitle" ? master.titleStyle : role === "body" ? master.bodyStyle : master.otherStyle;
         for (const p of content.querySelectorAll<HTMLElement>("p")) {
           const level = p.dataset.officeLevel ?? "0", base = document.createElement("p"); base.className = textStyle ? textStyle + " " + textStyle + "-level-" + level : "";
@@ -147,24 +154,24 @@ export function composePresentation(document: Document, model: DocumentModel, li
     if (definition.kind !== "chart" && definition.kind !== "group") account(node.querySelectorAll("svg *,svg,.sdk-ppt-text").length);
   };
   for (const [index, slide] of slides.entries()) {
-    const entry = metadata.slides.find(s => s.rootNodeId === slide.dataset.nodeId)!, layout = layouts.get(entry.layoutId)!, master = masters.get(layout.masterId)!;
-    const masterRoot = byId.get(master.rootNodeId)!, layoutRoot = byId.get(layout.rootNodeId)!, theme = metadata.themes.find(t => t.themeId === master.themeId)!;
-    ownViewAttribute(masterRoot, "class"); masterRoot.classList.add(theme.cssClass);
+    const entry=entryFor(slide),layout=surfaceId?surfaceLayout:layouts.get(entry.layoutId)!,master=surfaceMaster??(surfaceNotesMaster?{...metadata.masters[0]!,rootNodeId:surfaceNotesMaster.rootNodeId,themeId:surfaceNotesMaster.themeId,otherStyle:surfaceNotesMaster.textStyle}:masters.get(layout!.masterId)!);
+    const masterRoot = byId.get(master.rootNodeId)!, layoutRoot = layout?byId.get(layout.rootNodeId)!:masterRoot, theme = metadata.themes.find(t => t.themeId === master.themeId)!;
+    ownViewAttribute(masterRoot, "class");for(const t of metadata.themes)masterRoot.classList.remove(t.cssClass);masterRoot.classList.add(theme.cssClass);
     // Base theme classes on surfaces are references. Compose them in order so a
     // master color-map override is not reset by the same base theme on each slide.
-    ownViewAttribute(layoutRoot, "class"); ownViewAttribute(slide, "class"); layoutRoot.classList.remove(theme.cssClass); slide.classList.remove(theme.cssClass);
-    inheritance.apply(layoutRoot, [masterRoot]); inheritance.apply(slide, [masterRoot, layoutRoot]);
-    styleView(slide, { width: metadata.size.width + "pt", height: metadata.size.height + "pt" });
+    ownViewAttribute(layoutRoot, "class"); ownViewAttribute(slide, "class");for(const t of metadata.themes){if(layoutRoot!==masterRoot)layoutRoot.classList.remove(t.cssClass);if(slide!==masterRoot)slide.classList.remove(t.cssClass);}
+    if(layoutRoot!==masterRoot)inheritance.apply(layoutRoot, [masterRoot]);if(slide!==masterRoot)inheritance.apply(slide, layoutRoot===slide?[masterRoot]:[masterRoot,layoutRoot]);
+    styleView(slide, { width: size.width + "pt", height: size.height + "pt" });
     const s = document.defaultView!.getComputedStyle(slide), fill = property(s, "--office-fill-kind");
     if (fill === "solid") styleView(slide, { "background-color": resolvedColor(document, s, "--office-fill") });
     else if (fill === "linear") {
-      const background = markViewNode(svgElement(document, "svg", { width: "100%", height: "100%", viewBox: `0 0 ${metadata.size.width} ${metadata.size.height}` })); background.style.cssText = "position:absolute;inset:0;pointer-events:none";
-      background.append(svgElement(document, "rect", { width: metadata.size.width, height: metadata.size.height, fill: svgFill(document, s, background, "slide-bg-" + index) })); slide.prepend(background);
+      const background = markViewNode(svgElement(document, "svg", { width: "100%", height: "100%", viewBox: `0 0 ${size.width} ${size.height}` })); background.style.cssText = "position:absolute;inset:0;pointer-events:none";
+      background.append(svgElement(document, "rect", { width: size.width, height: size.height, fill: svgFill(document, s, background, "slide-bg-" + index) })); slide.prepend(background);
     }
     const instanceIds = new Set<string>(); instancesBySlide.set(slide.dataset.nodeId!, instanceIds);
     const inherited: HTMLElement[] = [];
-    if (entry.showMasterShapes !== false) {
-      for (const template of [...(layout.showMasterShapes === false ? [] : surfaceObjects(masterRoot)), ...surfaceObjects(layoutRoot)]) {
+    if (entry.showMasterShapes !== false&&(!surfaceId||surfaceLayout)) {
+      for (const template of [...(layout?.showMasterShapes === false ? [] : surfaceObjects(masterRoot)), ...(surfaceId?[]:surfaceObjects(layoutRoot))]) {
         const definition = objects.get(template.dataset.nodeId!)!, ph = definition.placeholder;
         if (ph && !["ftr", "hdr", "dt", "sldNum"].includes(ph.type)) continue;
         if (ph) {
@@ -182,19 +189,19 @@ export function composePresentation(document: Document, model: DocumentModel, li
     const first = surfaceObjects(slide)[0]; for (const clone of inherited) { slide.insertBefore(clone, first ?? null); const definition = objects.get(clone.dataset.nodeId!)!; process(clone, definition, [], index, master, true); source.registerInstances(clone); }
     for (const objectNode of surfaceObjects(slide).filter(node => !inherited.includes(node))) {
       const definition = objects.get(objectNode.dataset.nodeId!)!;
-      const prototypes = definition.placeholder ? [placeholder(masterRoot, definition), placeholder(layoutRoot, definition)].filter((n): n is HTMLElement => !!n) : [];
+      const prototypes = definition.placeholder ? [masterRoot!==objectNode.parentElement?placeholder(masterRoot, definition):undefined,layoutRoot!==objectNode.parentElement?placeholder(layoutRoot, definition):undefined].filter((n): n is HTMLElement => !!n) : [];
       process(objectNode, definition, prototypes, index, master);
     }
     if (entry.hidden) { const label = markViewNode(document.createElement("span")); label.className = "sdk-ppt-hidden-label"; label.textContent = "隐藏幻灯片"; slide.append(label); }
-    const note = metadata.stories.find(story => story.kind === "notes" && story.slideId === entry.slideId);
+    const note = !surfaceId&&metadata.stories.find(story => story.kind === "notes" && story.slideId === entry.slideId);
     if (note && note.kind === "notes") {
       const body = byId.get(note.bodyNodeId ?? note.rootNodeId)!, panel = markViewNode(document.createElement("details")), heading = document.createElement("summary");
       panel.className = "sdk-ppt-notes"; heading.textContent = "演讲者备注"; panel.append(heading);
       const noteRoot = byId.get(note.rootNodeId)!, noteMaster = metadata.notesMasters.find(m => m.notesMasterId === note.notesMasterId), noteMasterRoot = noteMaster && byId.get(noteMaster.rootNodeId);
       if (noteMaster && noteMasterRoot) {
         const theme = metadata.themes.find(theme => theme.themeId === noteMaster.themeId)!;
-        ownViewAttribute(noteMasterRoot, "class"); noteMasterRoot.classList.add(theme.cssClass);
-        ownViewAttribute(noteRoot, "class"); noteRoot.classList.remove(theme.cssClass);
+        ownViewAttribute(noteMasterRoot, "class");for(const t of metadata.themes)noteMasterRoot.classList.remove(t.cssClass);noteMasterRoot.classList.add(theme.cssClass);
+        ownViewAttribute(noteRoot, "class");for(const t of metadata.themes)noteRoot.classList.remove(t.cssClass);
       }
       const content = document.createElement("div"), clone = body.cloneNode(true) as HTMLElement;
       content.className = "sdk-ppt-note-content";
@@ -211,13 +218,13 @@ export function composePresentation(document: Document, model: DocumentModel, li
   }
   for (const { node, definition } of connectors) resolveConnector(node, definition, objects);
   const comments = snapshot.annotations;
-  if (comments.length) {
+  if (comments.length&&!surfaceId) {
     const panel = markViewNode(document.createElement("section")); panel.className = "sdk-ppt-comments"; panel.setAttribute("aria-label", "批注");
     const statuses = { open: "待处理", resolved: "已解决", closed: "已关闭", needs_reanchor: "待重新定位" };
     const appendBody = (parent: HTMLElement, id: string | undefined, plain: string | undefined, modern: boolean): void => {
       const body = id && byId.get(id);
       if (!body) { parent.append(document.createTextNode(plain ?? "")); return; }
-      const clone = body.cloneNode(true) as HTMLElement; clone.classList.add("sdk-ppt-rich-story"); parent.append(clone);
+      const clone = body.cloneNode(true) as HTMLElement; clone.classList.add("sdk-ppt-rich-story"); parent.append(clone);source.registerInstances(clone);
       const story = metadata.stories.find(story => story.rootNodeId === id), slide = metadata.slides.find(slide => slide.slideId === story?.slideId);
       if (modern && slide) inheritance.apply(clone, [byId.get(masters.get(layouts.get(slide.layoutId)!.masterId)!.rootNodeId)!]);
     };
@@ -282,8 +289,8 @@ export function composePresentation(document: Document, model: DocumentModel, li
     for (const { node, definition } of connectors) resolveConnector(node, definition, objects);
     const origin = root.getBoundingClientRect(), pages: RenderedPage[] = [], nodePages: Record<string, string[]> = {};
     for (const [index, node] of slides.entries()) {
-      const slide = metadata.slides.find(s => s.rootNodeId === node.dataset.nodeId)!, rect = node.getBoundingClientRect(), pageId = slide.slideId;
-      pages.push({ pageId, index: index + 1, sectionId: slide.slideId, number: index + 1, label: String(index + 1), rect: { x: (rect.left - origin.left) * 0.75, y: (rect.top - origin.top) * 0.75, width: metadata.size.width, height: metadata.size.height }, setup: { unit: "pt", width: metadata.size.width, height: metadata.size.height, margins: { top: 0, right: 0, bottom: 0, left: 0 } }, blank: false });
+      const slide=entryFor(node),rect = node.getBoundingClientRect(), pageId = slide.slideId;
+      pages.push({ pageId, index: index + 1, sectionId: slide.slideId, number: index + 1, label: String(index + 1), rect: { x: (rect.left - origin.left) * 0.75, y: (rect.top - origin.top) * 0.75, width: size.width, height: size.height }, setup: { unit: "pt", width: size.width, height: size.height, margins: { top: 0, right: 0, bottom: 0, left: 0 } }, blank: false });
       for (const id of [node.dataset.nodeId!, ...[...node.querySelectorAll<HTMLElement>("[data-node-id]")].map(n => n.dataset.nodeId!), ...instancesBySlide.get(node.dataset.nodeId!) ?? []]) { const entries = nodePages[id] ??= []; if (!entries.includes(pageId)) entries.push(pageId); }
     }
     const overflow = textBoxes.filter(({ content }) => content.offsetWidth && (content.scrollHeight > content.clientHeight + 1 || content.scrollWidth > content.clientWidth + 1)).map(({ node }) => ({ code: "ContentOverflow" as const, nodeId: node.dataset.nodeId!, message: "Slide text exceeds its resolved text rectangle with the selected fonts." }));
