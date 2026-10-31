@@ -240,7 +240,7 @@ R2-08 至 R2-13 已通过 [PR #21](https://github.com/RobotSe7en/dagent-office/p
 
 ## 导出与独立闭环验收
 
-R2-14～R2-16 的实现与可复验入口见 [PPTX 原生导出与闭环](pptx-export.md)。完整 `pnpm check` 通过 35 个文件、1035 项测试，包含 Word 与打包消费回归。`check:pptx-export` 通过 32 份独立来源／生产者的当前源导出、SDK 重开、官方 Transitional XSD、内嵌工作簿和所选现代批注结构校验、LibreOffice 重存与 PDF；另通过隔离 UNO 实际修改标题、几何、表格、图表数值和备注，再用 SDK 读取。现代线程在 LibreOffice 中丢失，单独记录，未算作外部保留成功。
+R2-14～R2-16 的实现与可复验入口见 [PPTX 原生导出与闭环](pptx-export.md)。完整 `pnpm check` 通过 35 个文件、1040 项测试，包含 Word 与打包消费回归。推送后的独立复查另以五项回归复现并修复：不支持的文本边框／尺寸／内边距静默丢失、CSS 下划线编辑被原生提示覆盖，以及合法 `rowspan="0"` 和直接单元格正文未导出。`check:pptx-export` 通过 32 份独立来源／生产者的当前源导出、SDK 重开、官方 Transitional XSD、内嵌工作簿和所选现代批注结构校验、LibreOffice 重存与 PDF；另通过隔离 UNO 实际修改标题、几何、表格、图表数值和备注，再用 SDK 读取。现代线程在 LibreOffice 中丢失，单独记录，未算作外部保留成功。
 
 `check:presentation-closure` 在工作区外消费五个 tarball，普通 JS 不安装 React，另验证 React 包装、原生输入、宿主请求／固定提案、撤销重做、明确重定位、PPTX、Node PDF/PNG 和字节子进程、Office 重开及资源释放。32 份来源／生产者加当前编辑文稿的 47 页固定字体源／原生导出对照通过；源／输出图、报告、环境和 tarball 摘要保留为 CI 制品。Playground 的 PPT 全流程及 Worker 取消、文稿切换、修订变化在 Chromium、Firefox、WebKit 通过；Word 闭环回归继续保留。
 

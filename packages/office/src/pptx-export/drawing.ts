@@ -97,13 +97,14 @@ export class PresentationDrawingWriter {
             cell: SourceElement;
             row: number;
             column: number;
+            height: number;
         } | undefined>> = Array.from({ length: rows.length }, () => Array(grid.length));
         for (const [rowIndex, row] of rows.entries()) {
             let column = 0;
             for (const cell of children(row)) {
                 while (occupied[rowIndex]![column])
                     column++;
-                const width = Number(cell.attrs.colspan ?? 1), height = Number(cell.attrs.rowspan ?? 1), origin = { cell, row: rowIndex, column };
+                const width = Number(cell.attrs.colspan ?? 1), height = Number(cell.attrs.rowspan ?? 1) || rows.length - rowIndex, origin = { cell, row: rowIndex, column, height };
                 for (let y = rowIndex; y < rowIndex + height; y++)
                     for (let x = column; x < column + width; x++) {
                         if (!occupied[y] || x >= grid.length || occupied[y]![x])
@@ -122,7 +123,7 @@ export class PresentationDrawingWriter {
                 const origin = occupied[rowIndex]![column];
                 if (!origin)
                     unsupported("A native table grid contains an uncovered cell.");
-                const cell = origin.cell, continuation = origin.row !== rowIndex || origin.column !== column, span = { rowSpan: !continuation && Number(cell.attrs.rowspan ?? 1) > 1 ? Number(cell.attrs.rowspan) : undefined, gridSpan: !continuation && Number(cell.attrs.colspan ?? 1) > 1 ? Number(cell.attrs.colspan) : undefined, hMerge: origin.column < column ? 1 : undefined, vMerge: origin.row < rowIndex ? 1 : undefined };
+                const cell = origin.cell, continuation = origin.row !== rowIndex || origin.column !== column, span = { rowSpan: !continuation && origin.height > 1 ? origin.height : undefined, gridSpan: !continuation && Number(cell.attrs.colspan ?? 1) > 1 ? Number(cell.attrs.colspan) : undefined, hMerge: origin.column < column ? 1 : undefined, vMerge: origin.row < rowIndex ? 1 : undefined };
                 result += "<a:tc" + attributes(span) + ">";
                 if (continuation)
                     result += "<a:txBody><a:bodyPr/><a:lstStyle/><a:p/></a:txBody><a:tcPr/>";

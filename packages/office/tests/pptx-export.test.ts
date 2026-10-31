@@ -113,3 +113,31 @@ test("new table cell insets are counted once and nonwrapping text survives nativ
     expect(target.snapshot().html + target.snapshot().styles.map(style => style.css).join("\n")).toContain("white-space:nowrap");
     session.dispose();
 });
+test.each([['p', 'border-left', '2pt solid #123456'], ['p', 'width', '80pt'], ['span', 'padding-left', '3pt']])("review: unsupported %s %s fails instead of losing current source formatting", (tag, property, value) => {
+    const session = createDocumentSession(model("01-rich-text.pptx"));
+    const node = [...session.snapshot().html.matchAll(/data-node-id="([^"]+)"/g)].map(match => session.getNode(match[1]!)!).find(node => node.tagName === tag && node.text)!;
+    session.commit(session.prepare({ protocolVersion: 1, documentId: "native-pptx", baseRevision: 0, operations: [{ op: "setStyle", nodeId: node.nodeId, property, value }] }));
+    const before = session.serialize();
+    expect(() => exportPptx(session)).toThrowError(expect.objectContaining({ code: "UnsupportedFeature" }));
+    expect(session.serialize()).toEqual(before);
+    session.dispose();
+});
+test("review: edited CSS underline style takes precedence over the imported native hint", () => {
+    const session = createDocumentSession(model("01-rich-text.pptx"));
+    const paragraph = [...session.snapshot().html.matchAll(/data-node-id="([^"]+)"/g)].map(match => session.getNode(match[1]!)!).find(node => node.tagName === "p")!;
+    session.commit(session.prepare({ protocolVersion: 1, documentId: "native-pptx", baseRevision: 0, operations: [{ op: "setStyle", nodeId: paragraph.nodeId, property: "text-decoration-line", value: "underline" }, { op: "setStyle", nodeId: paragraph.nodeId, property: "--office-underline", value: "sng" }, { op: "setStyle", nodeId: paragraph.nodeId, property: "text-decoration-style", value: "double" }] }));
+    const native = strFromU8(unzipSync(exportPptx(session).bytes)["ppt/slides/slide1.xml"]!);
+    expect(/<a:pPr\b[\s\S]*?<a:defRPr\b([^>]*)>/.exec(native)![1]).toContain('u="dbl"');
+    session.dispose();
+});
+test("review: HTML rowspan zero covers the remaining table rows in native output", () => {
+    const session = createDocumentSession(openDocument(createPresentation({ documentId: "rowspan-zero" })));
+    session.commit(session.prepare({ protocolVersion: 1, documentId: "rowspan-zero", baseRevision: 0, operations: [{ op: "insertPresentationObject", parentNodeId: "slide-root-1", geometry: { x: 30, y: 30, width: 400, height: 150, rotation: 0, flipH: false, flipV: false }, object: { kind: "table", rows: 3, columns: 2 } }] }));
+    const files = new Map(session.serialize()), entry = session.snapshot().manifest.entrypoint;
+    const table = '<table data-node-id="review-table"><tbody data-node-id="review-body"><tr data-node-id="review-row-1"><td data-node-id="review-cell-1" rowspan="0">A</td><td data-node-id="review-cell-2">B</td></tr><tr data-node-id="review-row-2"><td data-node-id="review-cell-3">C</td></tr><tr data-node-id="review-row-3"><td data-node-id="review-cell-4">D</td></tr></tbody></table>';
+    files.set(entry, strToU8(strFromU8(files.get(entry)!).replace(/<table\b[\s\S]*?<\/table>/, table)));
+    const source = openDocument(files), output = exportPptx(source), native = strFromU8(unzipSync(output.bytes)["ppt/slides/slide1.xml"]!);
+    expect(native).toContain('rowSpan="3"');
+    expect(texts(openDocument(importPptx(output.bytes, { documentId: "rowspan-reopen" })))).toEqual(texts(source));
+    session.dispose();
+});

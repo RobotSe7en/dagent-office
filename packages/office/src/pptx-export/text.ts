@@ -10,6 +10,24 @@ import { relativePart } from "./context.js";
 import { cssString, emu, integer, points, unsupported } from "./values.js";
 const blocks = new Set(["p", "h1", "h2", "h3", "h4", "h5", "h6", "li"]);
 const present = (own: Css, ...keys: string[]): boolean => keys.some(key => own[key] !== undefined);
+function assertTextLayout(node: SourceElement, css: Css, body = false, cell = false): void {
+    for (const key of ["min-width", "max-width", "min-height", "max-height"])
+        if (css[key] !== undefined && !["none", "auto", "initial", ...(key.startsWith("min-") ? ["0", "0pt", "0px"] : [])].includes(css[key]!))
+            unsupported("Minimum and maximum text box dimensions are outside the native PPTX text profile.");
+    if (!body)
+        for (const key of ["width", "height"])
+            if (css[key] !== undefined && !["auto", "initial"].includes(css[key]!))
+                unsupported("Nested text box dimensions are outside the native PPTX text profile.");
+    for (const side of ["top", "right", "bottom", "left"]) {
+        const border = css["border-" + side + "-style"], width = css["border-" + side + "-width"];
+        if (!cell && border && !["none", "hidden"].includes(border) && !["0", "0pt", "0px"].includes(width ?? "medium"))
+            unsupported("Text box borders are outside the native PPTX text profile.");
+        if (!body && css["padding-" + side] !== undefined && points(css["padding-" + side], css) !== 0)
+            unsupported("Nested text padding is outside the native PPTX text profile.");
+        if (!body && !blocks.has(node.tag) && css["margin-" + side] !== undefined && points(css["margin-" + side], css) !== 0)
+            unsupported("Inline text margins are outside the native PPTX text profile.");
+    }
+}
 export interface NativeTextBody {
     readonly node: SourceElement;
     readonly paragraphs: readonly {
@@ -55,6 +73,8 @@ export function runProperties(css: Css, own: Css, raw: Css = own, extra: {
         unsupported("This text transformation has no supported native PPTX representation.");
     if (own["font-style"] !== undefined && !["normal", "italic"].includes(css["font-style"]!))
         unsupported("This font slant has no supported native PPTX representation.");
+    if (own["font-variant"] !== undefined && !["normal", "small-caps"].includes(css["font-variant"]!))
+        unsupported("This font variant has no supported native PPTX representation.");
     if (present(own, "font-size"))
         attrs.sz = integer(points(css["font-size"], css, 18), 100, 100, 400000);
     if (present(own, "font-weight")) {
@@ -72,13 +92,16 @@ export function runProperties(css: Css, own: Css, raw: Css = own, extra: {
     }
     if (present(own, "text-transform", "font-variant"))
         attrs.cap = css["text-transform"] === "uppercase" ? "all" : css["font-variant"] === "small-caps" ? "small" : "none";
-    if (present(own, "text-decoration-line", "--office-underline", "--office-strike")) {
+    if (present(own, "text-decoration-line", "text-decoration-style", "--office-underline", "--office-strike")) {
         const line = css["text-decoration-line"] ?? "none", style = css["text-decoration-style"] ?? "solid";
         if (line.includes("underline") && own["text-decoration-color"] !== undefined && css["text-decoration-color"]?.toLowerCase() !== "currentcolor")
             unsupported("Independent underline color is outside the native PPTX text profile.");
         if (line.includes("overline"))
             unsupported("Overline text is outside the native PPTX profile.");
-        attrs.u = line.includes("underline") ? css["--office-underline"] && css["--office-underline"] !== "none" ? css["--office-underline"] : ({ solid: "sng", double: "dbl", dotted: "dotted", dashed: "dash", wavy: "wavy" }[style] ?? unsupported("This underline style is outside the PPTX profile.")) : "none";
+        const native = css["--office-underline"], nativeStyle = native && ({ sng: "solid", heavy: "solid", dbl: "double", dotted: "dotted", dash: "dashed", wavy: "wavy" }[native]);
+        attrs.u = line.includes("underline") ? nativeStyle === style ? native : ({ solid: "sng", double: "dbl", dotted: "dotted", dashed: "dash", wavy: "wavy" }[style] ?? unsupported("This underline style is outside the PPTX profile.")) : "none";
+        if (line.includes("line-through") && !["solid", "double"].includes(style))
+            unsupported("This strike style is outside the native PPTX text profile.");
         attrs.strike = line.includes("line-through") ? style === "double" ? "dblStrike" : "sngStrike" : "noStrike";
     }
     if (present(own, "color", "--office-text-color")) {
@@ -150,6 +173,7 @@ export class PresentationTextWriter {
         kind: "text" | "geometry";
     }>>, cellRoot: boolean = false): string {
         const css = this.ctx.styles.get(node, surface), own = this.ctx.styles.own(node, surface), raw = this.ctx.styles.raw(node, surface), attrs: Record<string, string | number | undefined> = { wrap: object?.text?.wrap === false || css["white-space"] === "nowrap" ? "none" : "square" };
+        assertTextLayout(node, css, true, cellRoot);
         for (const [side, key] of [["left", "lIns"], ["right", "rIns"], ["top", "tIns"], ["bottom", "bIns"]])
             if (cellRoot)
                 attrs[key!] = 0;
@@ -170,6 +194,9 @@ export class PresentationTextWriter {
         let offset = 0;
         const write = (p: SourceElement, nodes: readonly SourceNode[] = p.children, level = Number(p.attrs["data-office-level"] ?? 0)): void => {
             const computed = this.ctx.styles.get(p, surface), authored = { ...this.ctx.styles.own(p, surface) }, refs = this.ctx.styles.raw(p, surface);
+            assertTextLayout(p, computed, p === node, cellRoot && p === node);
+            if (cellRoot && p === node)
+                delete authored["vertical-align"]; // Cell alignment belongs to tcPr, never a run baseline.
             if (/^h[1-6]$/.test(p.tag) && authored["font-size"] === undefined)
                 authored["font-size"] = computed["font-size"]!;
             if (blocks.has(p.tag))
@@ -197,6 +224,7 @@ export class PresentationTextWriter {
                 if (child.tag === "img" || blocks.has(child.tag) || ["table", "ul", "ol"].includes(child.tag))
                     unsupported("Nested block content cannot be placed in a native DrawingML run.");
                 const style = this.ctx.styles.get(child, surface), local = { ...overrides, ...this.ctx.styles.own(child, surface) }, semantic: Record<string, string> = {};
+                assertTextLayout(child, style);
                 if (["strong", "b"].includes(child.tag))
                     semantic["font-weight"] = style["font-weight"]!;
                 if (["em", "i"].includes(child.tag))
@@ -227,6 +255,8 @@ export class PresentationTextWriter {
             offset += plain.length + 1;
         };
         const walk = (parent: SourceElement, level = 0): void => {
+            if (parent !== node)
+                assertTextLayout(parent, this.ctx.styles.get(parent, surface));
             let loose: SourceNode[] = [];
             const flush = (): void => {
                 if (loose.some(n => element(n) || n.text.trim().length)) {
