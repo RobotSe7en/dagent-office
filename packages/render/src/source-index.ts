@@ -44,6 +44,7 @@ export class PreviewSource {
       const id = node.dataset.nodeId; if (id && this.elements.has(id)) this.instances.set(id, [...this.instances.get(id) ?? [], node]);
     }
   }
+  instanceElements(nodeId:string):readonly HTMLElement[]{return Object.freeze([...(this.instances.get(nodeId)??[])]);}
   elementRectangles(id: string): DOMRect[] {
     const entry = this.elements.get(id), copies = [...this.instances.get(id) ?? []].flatMap((node) => [...node.getClientRects()]);
     if (!entry) return copies;
@@ -180,6 +181,16 @@ export class PreviewSource {
       nodeIds: [...new Set(hits.filter((element) => !hits.some((child) => child !== element && element.contains(child))).map((element) => element.dataset.nodeId!))], layoutKey };
   }
 
+  /** A PPT region is relative to one stable slide, independent of its order. */
+  slideRegion(surfaceId:string,rect:Rectangle):Anchor {
+    const surface=this.elements.get(surfaceId)?.element,p=this.model.snapshot().metadata.presentation;
+    if(!surface||!p?.slides.some(s=>s.rootNodeId===surfaceId))throw new DocumentError("InvalidOperation","A presentation region requires a source slide.");
+    const box=surface.getBoundingClientRect(),width=box.width*.75,height=box.height*.75;
+    if(!Object.values(rect).every(Number.isFinite)||rect.x<0||rect.y<0||rect.width<=0||rect.height<=0||rect.x+rect.width>width+.01||rect.y+rect.height>height+.01)throw new DocumentError("InvalidOperation","The selected region must stay inside its slide.");
+    const nodeIds=[...surface.querySelectorAll<HTMLElement>("[data-node-id]")].filter(node=>this.elements.get(node.dataset.nodeId!)?.element===node&&node.matches(hitTargets)).filter(node=>[...node.getClientRects()].some(hit=>intersects(rect,{x:(hit.left-box.left)*.75,y:(hit.top-box.top)*.75,width:hit.width*.75,height:hit.height*.75}))).map(node=>node.dataset.nodeId!);
+    return {kind:"region",surfaceId,rect:{...rect},nodeIds:[...new Set(nodeIds)],layoutKey:this.layoutKey(surfaceId)};
+  }
+
   rectangles(anchor: DeepReadonly<Anchor>): DOMRect[] {
     if (anchor.kind === "region") {
       const surface = this.elements.get(anchor.surfaceId)?.element;
@@ -205,7 +216,25 @@ export class PreviewSource {
   }
 
   /** Source-relative geometry and resolved faces; scrolling and SDK zoom are excluded. */
-  layoutKey(): string {
+  layoutKey(surfaceId?:string): string {
+    if(surfaceId){
+      const element=this.elements.get(surfaceId)?.element;if(!element)throw new DocumentError("InvalidOperation","The source layout surface is missing.");
+      let hash=2166136261;
+      const add=(value:unknown):void=>{const text=JSON.stringify(value);for(let i=0;i<text.length;i++)hash=Math.imul(hash^text.charCodeAt(i),16777619);};
+      const rootStyle=this.document.defaultView!.getComputedStyle(element);add([rootStyle.width,rootStyle.height]);
+      for(const node of [element,...element.querySelectorAll<HTMLElement>("[data-node-id],[data-office-script],.sdk-ppt-marker,svg,text,path")]){
+        const style=this.document.defaultView!.getComputedStyle(node),connector=!!node.closest('[data-office-kind="connector"]');
+        // Global DOMRects and connector CTMs lose low bits when a slide moves
+        // far down the document in Firefox. Local CSS, offsets and native SVG
+        // coordinates describe the same layout without depending on page order.
+        const offsets=node===element?[]:[node.offsetLeft,node.offsetTop,node.offsetWidth,node.offsetHeight];
+        const geometry=[...node.attributes].filter(a=>/^data-office-(?:x|y|width|height|rotation|flip-.+|child-.+)$/.test(a.name)||!connector&&["d","x","y","width","height","viewBox","cx","cy","r","points","transform"].includes(a.name)).map(a=>[a.name,a.value]);
+        let glyphBox:readonly number[]=[];
+        if(node.localName==="text"&&"getBBox"in node){const box=(node as unknown as SVGGraphicsElement).getBBox();glyphBox=[box.x,box.y,box.width,box.height];}
+        add([node.getAttribute("data-node-id"),node.localName,offsets,geometry,glyphBox,style.left,style.top,style.width,style.height,style.transform,style.fontFamily,style.fontSize,style.fontWeight,style.fontStyle,style.lineHeight,style.letterSpacing]);
+      }
+      return "slide-v1-"+(hash>>>0).toString(16);
+    }
     const view = this.document.defaultView!;
     const surface = this.root.getBoundingClientRect();
     let hash = 2166136261;

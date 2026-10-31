@@ -3,33 +3,33 @@ import type { PresentationGeometry, PresentationMetadata, PresentationObject } f
 import type { PresentationOperation } from "../contracts/operations.js";
 import type { ParsedHtml } from "../document/html.js";
 import type { DocumentEdit } from "../document/edit.js";
-import { readPresentationGeometry } from "../document/presentation.js";
+import { readPresentationGeometry,placeholderReferenceKeys } from "../document/presentation.js";
 import { evaluatePresentationPreset } from "../presentation-geometry.js";
 import { invalid } from "../document/validation.js";
 
-type Matrix = readonly [number, number, number, number, number, number];
+export type Matrix = readonly [number, number, number, number, number, number];
 const identity: Matrix = [1, 0, 0, 1, 0, 0];
-function multiply(a: Matrix, b: Matrix): Matrix {
+export function multiply(a: Matrix, b: Matrix): Matrix {
   return [a[0]*b[0]+a[2]*b[1], a[1]*b[0]+a[3]*b[1], a[0]*b[2]+a[2]*b[3], a[1]*b[2]+a[3]*b[3], a[0]*b[4]+a[2]*b[5]+a[4], a[1]*b[4]+a[3]*b[5]+a[5]];
 }
-function point(m: Matrix, p: { x: number; y: number }): { x: number; y: number } { return { x: m[0]*p.x+m[2]*p.y+m[4], y: m[1]*p.x+m[3]*p.y+m[5] }; }
-function inverse(m: Matrix): Matrix {
+export function point(m: Matrix, p: { x: number; y: number }): { x: number; y: number } { return { x: m[0]*p.x+m[2]*p.y+m[4], y: m[1]*p.x+m[3]*p.y+m[5] }; }
+export function inverse(m: Matrix): Matrix {
   const determinant = m[0]*m[3]-m[1]*m[2];
   if (!Number.isFinite(determinant) || determinant === 0) invalid("A group transform is not invertible.");
   return [m[3]/determinant, -m[1]/determinant, -m[2]/determinant, m[0]/determinant, (m[2]*m[5]-m[3]*m[4])/determinant, (m[1]*m[4]-m[0]*m[5])/determinant];
 }
-function local(g: PresentationGeometry): Matrix {
+export function local(g: PresentationGeometry): Matrix {
   const angle = g.rotation*Math.PI/180, c = Math.cos(angle), s = Math.sin(angle), x = g.flipH ? -1 : 1, y = g.flipV ? -1 : 1;
   return [c*x, s*x, -s*y, c*y, g.x+g.width/2-c*x*g.width/2+s*y*g.height/2, g.y+g.height/2-s*x*g.width/2-c*y*g.height/2];
 }
 const names = ["x", "y", "width", "height", "rotation", "flip-h", "flip-v"] as const;
-function values(g: PresentationGeometry): Record<string, string> {
+export function geometryAttributes(g: PresentationGeometry): Record<string, string> {
   return Object.fromEntries(names.map(name => ["data-office-" + name, String(name === "flip-h" ? g.flipH : name === "flip-v" ? g.flipV : g[name])]));
 }
 const same = (a: PresentationGeometry | undefined, b: PresentationGeometry): boolean => !!a && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height && a.rotation === b.rotation && a.flipH === b.flipH && a.flipV === b.flipV;
 
 /** Private derived geometry; no mutable transform tree is retained between transactions. */
-export function presentationTransforms(p: DeepReadonly<PresentationMetadata>, html: ParsedHtml) {
+export function presentationTransforms(p: DeepReadonly<PresentationMetadata>, html: Pick<ParsedHtml,"peekNode">) {
   const objects = new Map(p.objects.map(o => [o.nodeId, o])), surfaces = new Set([...p.slides, ...p.layouts, ...p.masters, ...p.notesMasters, ...p.stories].map(s => s.rootNodeId));
   const owners = new Map<string, string>(), geometryCache = new Map<string, PresentationGeometry>(), worldCache = new Map<string, Matrix>();
   const owner = (id: string): string => {
@@ -54,10 +54,10 @@ export function presentationTransforms(p: DeepReadonly<PresentationMetadata>, ht
       const master = layout ? p.masters.find(m => m.masterId === layout.masterId) : undefined;
       const notes = p.stories.find(s => s.kind === "notes" && s.rootNodeId === surface);
       const notesMaster = notes?.kind === "notes" ? p.notesMasters.find(m => m.notesMasterId === notes.notesMasterId) : undefined;
-      const key = object?.placeholder ? object.placeholder.type + ":" + object.placeholder.index : "";
+      const keys=object?.placeholder?placeholderReferenceKeys(object.placeholder):[];
       for (const parent of [layout?.rootNodeId, master?.rootNodeId, notesMaster?.rootNodeId]) {
         if (!parent || parent === surface) continue;
-        const inherited = bySurface.get(parent)?.get(key);
+        const inherited=keys.map(key=>bySurface.get(parent)?.get(key)).find(value=>value!==undefined);
         if (inherited) { result = readPresentationGeometry(html.peekNode(inherited.nodeId)!.attributes); if (result) break; }
       }
     }
@@ -91,7 +91,7 @@ export function applyPresentationGeometry(operation: Extract<PresentationOperati
   if (operation.childCoordinates && object.kind !== "group") invalid("Only groups have child coordinates.");
   const source = before.peekNode(operation.nodeId)!.attributes;
   const attrs: Record<string, string | undefined> = same(readPresentationGeometry(source), operation.geometry)
-    ? Object.fromEntries(names.map(name => ["data-office-" + name, source["data-office-" + name]])) : values(operation.geometry);
+    ? Object.fromEntries(names.map(name => ["data-office-" + name, source["data-office-" + name]])) : geometryAttributes(operation.geometry);
   if (operation.childCoordinates) for (const key of ["x", "y", "width", "height"] as const) {
     const name = "data-office-child-" + key, value = operation.childCoordinates[key];
     attrs[name] = Number(source[name]) === value ? source[name] : String(value);
@@ -100,12 +100,17 @@ export function applyPresentationGeometry(operation: Extract<PresentationOperati
 }
 
 /** Bound connector caches move with targets in the same candidate and history entry. */
-export function updatePresentationConnectors(p: PresentationMetadata, before: ParsedHtml, after: ParsedHtml, edit: DocumentEdit): void {
-  const previous = presentationTransforms(p, before), next = presentationTransforms(p, after);
+export function updatePresentationConnectors(p: PresentationMetadata, beforeMetadata: DeepReadonly<PresentationMetadata>, before: ParsedHtml, after: ParsedHtml, edit: DocumentEdit): void {
+  const previous = presentationTransforms(beforeMetadata, before), next = presentationTransforms(p, after);
+  const originalObjects = new Map(beforeMetadata.objects.map(object => [object.nodeId, object]));
   for (const object of p.objects) {
-    if (object.kind !== "connector" || !after.hasNode(object.nodeId) || !before.hasNode(object.nodeId) || !object.startNodeId && !object.endNodeId) continue;
+    if (object.kind !== "connector" || !after.hasNode(object.nodeId) || !object.startNodeId && !object.endNodeId) continue;
     const targets = [object.startNodeId, object.endNodeId].filter((id): id is string => id !== undefined && before.hasNode(id) && after.hasNode(id));
-    const changed = targets.some(id => JSON.stringify(previous.world(id)) !== JSON.stringify(next.world(id)) || JSON.stringify(previous.geometry(id)) !== JSON.stringify(next.geometry(id)))
+    const original = originalObjects.get(object.nodeId);
+    const bindingChanged = original?.kind !== "connector" || object.routing!==original.routing || object.startNodeId !== undefined && (object.startNodeId !== original.startNodeId || object.startSite !== original.startSite)
+      || object.endNodeId !== undefined && (object.endNodeId !== original.endNodeId || object.endSite !== original.endSite);
+    const changed = !before.hasNode(object.nodeId) || bindingChanged
+      || targets.some(id => JSON.stringify(originalObjects.get(id)) !== JSON.stringify(p.objects.find(o => o.nodeId === id)) || JSON.stringify(previous.world(id)) !== JSON.stringify(next.world(id)) || JSON.stringify(previous.geometry(id)) !== JSON.stringify(next.geometry(id)))
       || JSON.stringify(previous.world(object.nodeId)) !== JSON.stringify(next.world(object.nodeId));
     if (!changed) continue;
     const g = next.geometry(object.nodeId), transform = next.world(object.nodeId), parentInverse = inverse(next.parent(object.nodeId));
@@ -113,6 +118,6 @@ export function updatePresentationConnectors(p: PresentationMetadata, before: Pa
     const b = point(parentInverse, object.endNodeId ? next.endpoint(object.endNodeId, object.endSite ?? 0) : point(transform, { x: g.width, y: g.height }));
     const clean = (value: number): number => { if (!Number.isFinite(value)) return invalid("A connector transform exceeds finite geometry."); return Math.abs(value) < 1e-10 ? 0 : value; };
     const result: PresentationGeometry = { x: clean(Math.min(a.x, b.x)), y: clean(Math.min(a.y, b.y)), width: clean(Math.abs(b.x-a.x)), height: clean(Math.abs(b.y-a.y)), rotation: 0, flipH: b.x<a.x, flipV: b.y<a.y };
-    edit.attributes(object.nodeId, values(result));
+    edit.attributes(object.nodeId, geometryAttributes(result));
   }
 }

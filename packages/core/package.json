@@ -27,7 +27,9 @@
     "./schemas/interaction-request.json": "./dist/schemas/interaction-request.json",
     "./schemas/edit-proposal.json": "./dist/schemas/edit-proposal.json",
     "./schemas/document-error.json": "./dist/schemas/document-error.json",
-    "./schemas/document-event.json": "./dist/schemas/document-event.json"
+    "./schemas/document-event.json": "./dist/schemas/document-event.json",
+    "./schemas/presentation-interaction-request.json": "./dist/schemas/presentation-interaction-request.json",
+    "./schemas/presentation-edit-proposal.json": "./dist/schemas/presentation-edit-proposal.json"
   },
   "sideEffects": false,
   "scripts": {

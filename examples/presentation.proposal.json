@@ -1,0 +1,21 @@
+{
+  "protocolVersion": 1,
+  "requestId": "2d71ffbe-3094-4a53-9880-f8646d1410a9",
+  "proposalId": "presentation-example-proposal",
+  "documentId": "presentation-example",
+  "baseRevision": 0,
+  "annotationIds": [
+    "review-1"
+  ],
+  "summary": "明确上线里程碑",
+  "operations": [
+    {
+      "op": "replaceText",
+      "nodeId": "milestone-p",
+      "from": 0,
+      "to": 5,
+      "expectedText": "本季度上线",
+      "text": "11 月正式上线"
+    }
+  ]
+}

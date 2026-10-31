@@ -7,6 +7,7 @@ import type { DocumentRenderReport } from "@dagent-office/render";
 import { blockSelector, bookmark, caretAt, inputProofs, inputStep, offsetAt, restoreBookmark, sourceText } from "./rich-text/dom.js";
 import type { InputStep, SelectionBookmark } from "./rich-text/dom.js";
 import { SourceProjection } from "./rich-text/projection.js";
+import { deleteNativeRange, nativeDeletionRange, styleNativeRange } from "./rich-text/operations.js";
 
 export interface DocumentTextEditorOptions extends DocumentPreviewOptions { readonly onError?: (error: Error) => void }
 export interface DocumentTextEditor {
@@ -154,56 +155,8 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
   function insert(range: Range, content: Node): void {
     deleteRange(range); range.insertNode(content); select(content.parentNode!, [...content.parentNode!.childNodes].indexOf(content as ChildNode) + 1);
   }
-  function deleteRange(range: Range): void {
-    const blockAt = (node: Node): Element | null => (node.nodeType === 1 ? node as Element : node.parentElement)?.closest(blockSelector) ?? null;
-    const first = blockAt(range.startContainer), last = blockAt(range.endContainer);
-    const join = first && last && first !== last && first.parentElement === last.parentElement && !first.matches("td,th,li") && !last.matches("td,th,li");
-    range.deleteContents();
-    if (join) {
-      const offset = first.childNodes.length;
-      first.append(...last.childNodes); last.remove(); range.setStart(first, offset); range.collapse(true);
-    }
-  }
-  function deletionRange(range: Range, kind: string): Range {
-    if (!root || !frame) return range;
-    const point = inputStep(root, range, projection.ignored);
-    if (point.from !== point.to) return range;
-    const blockAt = (node: Node): HTMLElement | null => (node.nodeType === 1 ? node as HTMLElement : node.parentElement)?.closest<HTMLElement>(blockSelector) ?? null;
-    const block = blockAt(range.startContainer), endBlock = blockAt(range.endContainer);
-    if (!block || block !== endBlock) return range;
-    const text = sourceText(block, projection.ignored), offset = offsetAt(block, range.startContainer, range.startOffset, projection.ignored), backward = kind.endsWith("Backward");
-    if (backward && offset === 0 || !backward && offset === text.length) {
-      let sibling = backward ? block.previousElementSibling : block.nextElementSibling;
-      while (sibling && projection.ignored(sibling)) sibling = backward ? sibling.previousElementSibling : sibling.nextElementSibling;
-      if (!block.matches("td,th,li") && sibling?.matches("p,h1,h2,h3,h4,h5,h6")) {
-        const joined = frame.createRange(), first = backward ? sibling : block, last = backward ? block : sibling;
-        joined.setStart(...caretAt(first, sourceText(first, projection.ignored).length, projection.ignored));
-        joined.setEnd(...caretAt(last, 0, projection.ignored, "forward")); return joined;
-      }
-      return range;
-    }
-    let from = offset, to = offset;
-    if (kind.includes("Word")) {
-      if (backward) from -= /(?:\S+\s*|\s+)$/.exec(text.slice(0, offset))?.[0].length ?? 0;
-      else to += /^(?:\s*\S+|\s+)/.exec(text.slice(offset))?.[0].length ?? 0;
-    } else {
-      const segmenter = typeof Intl.Segmenter === "function" ? new Intl.Segmenter(undefined, { granularity: "grapheme" }) : undefined;
-      const boundaries = segmenter ? [...segmenter.segment(text)].map((part) => part.index) : [0];
-      if (!segmenter) {
-        let position = 0, previous = "", regional = 0;
-        for (const character of text) {
-          const code = character.codePointAt(0)!, isRegional = code >= 0x1f1e6 && code <= 0x1f1ff;
-          if (position && !/[\p{Mark}\uFE00-\uFE0F\u{E0100}-\u{E01EF}\u200D]/u.test(character) && previous !== "\u200d"
-            && !(code >= 0x1f3fb && code <= 0x1f3ff) && !(isRegional && regional % 2 === 1)) boundaries.push(position);
-          regional = isRegional ? regional + 1 : 0; previous = character; position += character.length;
-        }
-      }
-      boundaries.push(text.length);
-      if (backward) from = boundaries.filter((value) => value < offset).at(-1) ?? 0;
-      else to = boundaries.find((value) => value > offset) ?? text.length;
-    }
-    const expanded = frame.createRange(); expanded.setStart(...caretAt(block, from, projection.ignored)); expanded.setEnd(...caretAt(block, to, projection.ignored, "forward")); return expanded;
-  }
+  function deleteRange(range: Range): void { deleteNativeRange(range); }
+  function deletionRange(range: Range, kind: string): Range { return root ? nativeDeletionRange(root, range, kind, projection.ignored) : range; }
   function lineBreak(range: Range): void { insert(range, frame!.createElement("br")); }
   function paragraphBreak(range: Range): void {
     deleteRange(range);
@@ -224,19 +177,7 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
     }
     mutate(range, () => styleRange(range, new Map([[property, value]])));
   }
-  function styleRange(range: Range, properties: ReadonlyMap<string, string>): void {
-    if (!root) return;
-    const walker = frame!.createTreeWalker(root!, NodeFilter.SHOW_TEXT), ranges: Range[] = [];
-    let node: Node | null;
-    while ((node = walker.nextNode())) {
-      if (projection.ignored(node.parentNode!) || !range.intersectsNode(node)) continue;
-      const part = frame!.createRange(); part.selectNodeContents(node);
-      if (range.compareBoundaryPoints(Range.START_TO_START, part) > 0) part.setStart(range.startContainer, range.startOffset);
-      if (range.compareBoundaryPoints(Range.END_TO_END, part) < 0) part.setEnd(range.endContainer, range.endOffset);
-      if (!part.collapsed) ranges.push(part);
-    }
-    for (const part of ranges.reverse()) { const span = frame!.createElement("span"); for (const [property, value] of properties) span.style.setProperty(property, value); part.surroundContents(span); }
-  }
+  function styleRange(range: Range, properties: ReadonlyMap<string, string>): void { if (root) styleNativeRange(root, range, properties, projection.ignored); }
   function button(label: string, action: () => void): void {
     const control = document.createElement("button"); control.type = "button"; control.textContent = label;
     control.addEventListener("mousedown", (event) => event.preventDefault(), { signal: controls.signal });

@@ -22,13 +22,13 @@ export function mountPresentationPreview(container: HTMLElement, input: Document
     return result;
   };
   let prepared = prepare(input), canvas: PresentationCanvas | undefined, projection: SourceProjection | undefined, fonts: readonly FontResolution[] = [];
-  let disposed = false, loaded = false, generation = 0, observer: ResizeObserver | undefined, scheduled: number | undefined;
+  let disposed = false, loaded = false,composing=false, generation = 0, observer: ResizeObserver | undefined, scheduled: number | undefined;
   let report: DocumentRenderReport = { documentId: prepared.model.snapshot().manifest.documentId, revision: prepared.model.snapshot().manifest.revision, layout: "pages", pages: [], nodePages: {}, fields: [], fonts: [], diagnostics: [] };
   let resolve: () => void = () => {}, reject: (reason: unknown) => void = () => {};
   const ready = new Promise<void>((r, j) => { resolve = r; reject = j; });
   frame.title = options.title ?? "幻灯片只读预览"; frame.setAttribute("sandbox", "allow-same-origin allow-scripts"); frame.style.cssText = "width:100%;height:480px;display:block;border:0";
   function measure(): void {
-    if (disposed || !canvas) return;
+    if (disposed || !canvas || composing) return;
     const snapshot = prepared.model.snapshot();
     report = Object.freeze({ documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, layout: "pages", ...canvas.measure(), fields: canvas.fields, fonts });
     const document = frame.contentDocument!, scrollbar = Math.max(0, frame.clientHeight - document.documentElement.clientHeight);
@@ -37,7 +37,7 @@ export function mountPresentationPreview(container: HTMLElement, input: Document
   }
   function render(): void {
     observer?.disconnect();
-    const document = frame.contentDocument!; canvas = composePresentation(document, prepared.model, limits);
+    const document = frame.contentDocument!; canvas = composePresentation(document, prepared.model, limits,options.presentationSurfaceId);
     fonts = resolvePreviewFonts(document, "[data-node-id],[data-office-script],.sdk-ppt-marker"); canvas.source.reindex();
     projection = new SourceProjection(); const raw = new DOMParser().parseFromString(prepared.model.snapshot().html, "text/html").querySelector<HTMLElement>('[data-office-kind="presentation"]')!;
     projection.capture(canvas.source.root, raw); measure();
@@ -56,6 +56,8 @@ export function mountPresentationPreview(container: HTMLElement, input: Document
     void frame.contentDocument!.fonts.ready.then(() => {
       if (disposed) return;
       render(); loaded = true;
+      frame.contentDocument!.addEventListener("compositionstart",()=>{composing=true;},true);
+      frame.contentDocument!.addEventListener("compositionend",()=>{composing=false;},true);
       frame.contentDocument!.addEventListener("copy", event => {
         const selection = frame.contentDocument!.getSelection();
         if (selection?.anchorNode && projection?.ignored(selection.anchorNode) || selection?.focusNode && projection?.ignored(selection.focusNode)) return;

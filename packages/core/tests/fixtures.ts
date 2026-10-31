@@ -37,6 +37,8 @@ export const validCases: [ContractName, unknown][] = [
     protocolVersion: 1, documentId: manifest.documentId, baseRevision: 0, operations: proposal.operations,
   }],
   ["interaction-request", request],
+  ["presentation-interaction-request", read("examples/presentation.request.json")],
+  ["presentation-edit-proposal", read("examples/presentation.proposal.json")],
   ["edit-proposal", proposal],
   ["document-error", { code: "InvalidDocument", message: "Invalid document.", details: [] }],
   ["document-event", {
@@ -112,6 +114,8 @@ export const invalidCases: [ContractName, unknown][] = [
   ["edit-proposal", { ...proposal, requestId: "" }],
   ["edit-proposal", { ...proposal, operations: [{ op: "removeAnnotation", annotationId: "a-summary" }] }],
   ["edit-proposal", { ...proposal, accepted: true }],
+  ["presentation-edit-proposal", { ...read("examples/presentation.proposal.json") as object, operations: [{op:"hostExecute", command:"x"}] }],
+  ["presentation-interaction-request", { ...read("examples/presentation.request.json") as object, protocolVersion:2 }],
   ["document-error", { code: "UnspecifiedError", message: "No.", details: [] }],
   ["document-event", { protocolVersion: 1, documentId: "d", revision: 1, type: "documentChanged" }],
   ["document-event", { protocolVersion: 1, documentId: "d", revision: 1, type: "modelRunning" }],

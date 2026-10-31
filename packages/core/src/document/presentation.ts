@@ -1,13 +1,16 @@
 import { parse, walk, ident } from "css-tree";
-import type { Annotation } from "../contracts/annotations.js";
+import type { Anchor,Annotation } from "../contracts/annotations.js";
 import type { PresentationGeometry, PresentationMetadata, PresentationObject } from "../contracts/presentation.js";
 import { PresentationGeometrySchema } from "../contracts/presentation.js";
 import type { ParsedHtml } from "./html.js";
-import type { DocumentReadLimits } from "../runtime.js";
+import type { DeepReadonly,DocumentReadLimits } from "../runtime.js";
 import { checkLimit, invalid } from "./validation.js";
 
 const geometryNames = ["x", "y", "width", "height"] as const;
 const numeric = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i;
+export function placeholderReferenceKeys(placeholder:{readonly type:string;readonly index:number}):readonly string[]{return[placeholder.type+":"+placeholder.index,...(placeholder.type==="title"||placeholder.type==="ctrTitle"?[(placeholder.type==="title"?"ctrTitle":"title")+":"+placeholder.index]:[])];}
+/** Native classic positions are fixed slide points, independent of font layout. */
+export function isPresentationCommentPoint(anchor:DeepReadonly<Anchor>):boolean{return anchor.kind==="region"&&anchor.layoutKey==="pptx-classic-point"&&anchor.rect.width===1&&anchor.rect.height===1&&!anchor.nodeIds.length;}
 function number(value: string | undefined): number {
   if (value === undefined || !numeric.test(value) || !Number.isFinite(Number(value))) invalid("Presentation geometry must contain finite numbers.");
   return Number(value);
@@ -209,9 +212,9 @@ export function validatePresentation(presentation: PresentationMetadata, annotat
     const notes = notesByRoot.get(surface);
     const parents = layout ? [layout.rootNodeId, masters.get(layout.masterId)!.rootNodeId].filter((id) => id !== surface)
       : notes?.notesMasterId ? [notesMasters.get(notes.notesMasterId)!.rootNodeId] : [];
-    const key = object.placeholder!.type + ":" + object.placeholder!.index;
+    const keys=placeholderReferenceKeys(object.placeholder!);
     if (!parents.some((id) => {
-      const inherited = placeholders.get(id)?.get(key);
+      const inherited=keys.map(key=>placeholders.get(id)?.get(key)).find(value=>value!==undefined);
       return inherited !== undefined && transforms.get(inherited.nodeId) !== undefined;
     })) invalid("A placeholder transform cannot be resolved from its layout or master.");
   }

@@ -1,4 +1,5 @@
-import type { Annotation } from "./contracts/annotations.js";
+import type { Anchor,Annotation } from "./contracts/annotations.js";
+import { isPresentationCommentPoint } from "./document/presentation.js";
 import type { DocumentMetadata } from "./contracts/document.js";
 import type { DocumentEvent } from "./contracts/events.js";
 import type { AnnotationOperation, DocumentTransaction } from "./contracts/operations.js";
@@ -17,11 +18,15 @@ import { checkTransactionSize, sessionLimits } from "./session/limits.js";
 import { annotationNodes, mapAnnotations } from "./session/anchors.js";
 import { buildInteractionRequest, validateProposal } from "./session/interaction.js";
 import type { DocumentInteractionRequest, EditProposal } from "./contracts/interaction.js";
-import type { InteractionRequestInput } from "./runtime.js";
+import type { InteractionRequestInput,PresentationInteractionRequestInput } from "./runtime.js";
+import type { PresentationInteractionRequest,PresentationEditProposal } from "./contracts/presentation-interaction.js";
+import { buildPresentationRequest,validatePresentationProposal,validatePresentationCandidate } from "./session/presentation-interaction.js";
 import type { TransactionPrepareOptions } from "./runtime.js";
 import { checkResourceUse, stageResources } from "./session/resources.js";
 import { affectedPresentationSlides, guardPresentationContent, removeDeletedCommentBodies, updatePresentationMetadata, updatePresentationRecovery } from "./session/presentation.js";
-import { applyPresentationGeometry, updatePresentationConnectors } from "./session/presentation-geometry.js";
+import { updatePresentationConnectors } from "./session/presentation-geometry.js";
+import { applyPresentationOperation, isPresentationOperation, validatePresentationTargets } from "./session/presentation-edit.js";
+import { PresentationStyleEdit } from "./session/presentation-styles.js";
 export { DEFAULT_INTERACTION_LIMITS } from "./session/interaction.js";
 
 export { DEFAULT_DOCUMENT_SESSION_LIMITS } from "./session/limits.js";
@@ -76,6 +81,11 @@ export function createDocumentSession(document: DocumentModel, options: Document
   let issued = new WeakMap<CandidateChange, Prepared>();
   const listeners = new Set<DocumentEventListener>();
   const reservedIds = new Set(current.html.nodeIds());
+  const reserveIdentities=(value:unknown,key=""):void=>{
+    if(typeof value==="string"){if(/(?:Ids?|Style|Class)$/.test(key))reservedIds.add(value);return;}
+    if(Array.isArray(value)){for(const item of value)reserveIdentities(item,key);return;}
+    if(value&&typeof value==="object")for(const[name,item]of Object.entries(value))reserveIdentities(item,name);
+  };
   let sequence = 0;
   let publishing = false;
 
@@ -179,24 +189,28 @@ export function createDocumentSession(document: DocumentModel, options: Document
     checkTransactionSize(input, budgets.maxTransactionBytes, limits.maxDepth);
     const transaction = parseContract("document-transaction", input);
     const base = state();
+    reserveIdentities(base.snapshot.metadata);reserveIdentities(base.snapshot.annotations);reserveIdentities(transaction);
     if (transaction.documentId !== base.snapshot.manifest.documentId) invalid("The transaction belongs to another document.");
     if (transaction.baseRevision !== base.snapshot.manifest.revision) throw new DocumentError("RevisionConflict", "The transaction is based on a different document revision.");
     checkLimit(activeCandidates.size + 1, budgets.maxCandidates);
     // Validate every target against the base before applying any operation.
     for (const operation of transaction.operations) {
       if ("nodeId" in operation && !base.html.hasNode(operation.nodeId)) invalid("An operation targets a node outside the base snapshot.");
+      if (isPresentationOperation(operation)) validatePresentationTargets(base, operation);
     }
     const resources = stageResources(base, options, limits);
     const edit = new DocumentEdit(resources.state, limits, allocate);
     let annotations = parseContract("annotations", base.snapshot.annotations);
     const metadata: DocumentMetadata = parseContract("document-metadata", base.snapshot.metadata);
+    const files = new Map(resources.state.files);
+    const styles=new PresentationStyleEdit(files,base.snapshot.manifest.styles,limits);
+    const parseEdited = (): ParsedHtml => parseHtml(edit.html(), resources.state.snapshot.manifest, files, limits, { nodes: 0 });
     const explicit = new Set<string>();
     const unresolved = new Set(base.snapshot.annotations.filter((item) => item.status === "needs_reanchor").map((item) => item.annotationId));
     for (const operation of transaction.operations) {
-      if (operation.op === "setPresentationGeometry" || operation.op === "setPresentationSize") {
+      if (isPresentationOperation(operation)) {
         if (!metadata.presentation) invalid("Presentation operations cannot target a Word document.");
-        if (operation.op === "setPresentationSize") metadata.presentation.size = operation.size;
-        else applyPresentationGeometry(operation, metadata.presentation, edit, base.html);
+        applyPresentationOperation({ base, p: metadata.presentation, edit, parse: parseEdited, allocate, limits,styles,annotations,explicit }, operation);
       }
       else if ("nodeId" in operation) { guardPresentationContent(base, operation); edit.apply(operation); }
       else applyAnnotation(operation, annotations, explicit);
@@ -208,24 +222,24 @@ export function createDocumentSession(document: DocumentModel, options: Document
       if (explicit.has(annotation.annotationId) && annotation.status !== "needs_reanchor"
         && annotationNodes(annotation).some((id) => !base.html.hasNode(id))) invalid("Annotation targets must belong to the base snapshot.");
     }
-    removeDeletedCommentBodies(base, annotations, edit);
-    const files = new Map(resources.state.files);
-    const parseEdited = (): ParsedHtml => parseHtml(edit.html(), resources.state.snapshot.manifest, files, limits, { nodes: 0 });
+    removeDeletedCommentBodies(base, annotations, edit,metadata);
     let parsed = parseEdited();
     updatePresentationMetadata(metadata, base, parsed, annotations);
-    if (metadata.presentation) { updatePresentationConnectors(metadata.presentation, base.html, parsed, edit); parsed = parseEdited(); }
+    if (metadata.presentation) { updatePresentationConnectors(metadata.presentation, base.snapshot.metadata.presentation!, base.html, parsed, edit); parsed = parseEdited(); }
     files.set(base.snapshot.manifest.entrypoint, encode(parsed.html));
     checkResourceUse(resources.added, parsed, base.snapshot.manifest.entrypoint);
-    const impacted = metadata.presentation ? new Set(affectedPresentationSlides(base, { html: parsed, snapshot: { ...resources.state.snapshot, metadata } })) : undefined;
+    const impacted = metadata.presentation ? new Set(affectedPresentationSlides(base, { html: parsed, snapshot: { ...resources.state.snapshot, metadata,styles:styles.snapshot() } },true)) : undefined;
     const affectedSurfaces = impacted ? new Set([...(base.snapshot.metadata.presentation?.slides ?? []), ...(metadata.presentation?.slides ?? [])].filter(s => impacted.has(s.slideId)).map(s => s.rootNodeId)) : undefined;
     const slideSurfaces = new Set(metadata.presentation?.slides.map(s => s.rootNodeId));
-    const regionChanged = affectedSurfaces ? (surfaceId: string): boolean => {
+    const regionChanged = affectedSurfaces ? (surfaceId: string,anchor:Extract<Anchor,{kind:"region"}>): boolean => {
+      if(isPresentationCommentPoint(anchor))return false;
       for (let id: string | null = surfaceId; id !== null; id = parsed.peekNode(id)?.parentNodeId ?? null) if (slideSurfaces.has(id)) return affectedSurfaces.has(id);
       // Old generic regions outside slide surfaces retain the conservative layout rule.
       return base.snapshot.html !== parsed.html || impacted!.size > 0;
     } : undefined;
+    const workflows=new Map(annotations.map(annotation=>[annotation.annotationId,annotation.status]));
     mapAnnotations(annotations, base.html, parsed, edit, explicit, regionChanged);
-    updatePresentationRecovery(metadata, base, annotations);
+    updatePresentationRecovery(metadata, base, annotations,workflows);
     updateWordMetadata(metadata, base, parsed);
     if (resolvedIds) {
       const resolved = new Set(resolvedIds);
@@ -240,11 +254,42 @@ export function createDocumentSession(document: DocumentModel, options: Document
     const next = buildDocumentState(files, limits);
     checkLimit(retainedBytes([...activeCandidates.values(), next]), budgets.maxCandidateBytes);
     const diff = compareStates(base, next, edit.textEdits);
+    const model=Object.freeze({snapshot:()=>next.snapshot,getNode:(nodeId:string)=>next.html.getNode(nodeId),serialize:()=>new Map([...next.files].map(([path,bytes])=>[path,new Uint8Array(bytes)]))});
     const candidate = freeze({ documentId: transaction.documentId, baseRevision: transaction.baseRevision,
-      preview: next.snapshot, ...diff }) as unknown as CandidateChange;
+      preview: next.snapshot,model, ...diff }) as unknown as CandidateChange;
     issued.set(candidate, { baseRevision: transaction.baseRevision, consumed: false });
     activeCandidates.set(candidate, next);
     return candidate;
+  }
+
+  function buildRequest(input:PresentationInteractionRequestInput):PresentationInteractionRequest;
+  function buildRequest(input:InteractionRequestInput):DocumentInteractionRequest;
+  function buildRequest(input:InteractionRequestInput|PresentationInteractionRequestInput):DocumentInteractionRequest|PresentationInteractionRequest {
+    return execute(()=>{
+      checkTransactionSize(input,budgets.maxTransactionBytes,limits.maxDepth);
+      if(state().snapshot.metadata.presentation){
+        if(!input||!("kind"in input)||input.kind!=="presentation")throw new DocumentError("UnsupportedFeature","PPT requests require explicit kind: presentation.");
+        const request=buildPresentationRequest(state(),input);checkLimit(encode(JSON.stringify(request)).byteLength,limits.maxPackageBytes);return request;
+      }
+      const request=buildInteractionRequest(state(),input as InteractionRequestInput);checkLimit(encode(JSON.stringify(request)).byteLength,limits.maxPackageBytes);return request;
+    });
+  }
+  function prepareProposalRequest(request:PresentationInteractionRequest,proposal:PresentationEditProposal,options?:TransactionPrepareOptions):CandidateChange;
+  function prepareProposalRequest(request:DocumentInteractionRequest,proposal:EditProposal):CandidateChange;
+  function prepareProposalRequest(requestInput:DocumentInteractionRequest|PresentationInteractionRequest,proposalInput:EditProposal|PresentationEditProposal,options?:TransactionPrepareOptions):CandidateChange {
+    return execute(()=>{
+      checkTransactionSize(requestInput,limits.maxPackageBytes*8,limits.maxDepth+16);checkLimit(encode(JSON.stringify(requestInput)).byteLength,limits.maxPackageBytes);checkTransactionSize(proposalInput,budgets.maxTransactionBytes,limits.maxDepth);
+      if(state().snapshot.metadata.presentation){
+        if(requestInput?.context?.kind!=="presentation")throw new DocumentError("UnsupportedFeature","PPT proposals require their explicit presentation request contract.");
+        const request=parseContract("presentation-interaction-request",requestInput),proposal=parseContract("presentation-edit-proposal",proposalInput);
+        validatePresentationProposal(state(),request,proposal,options);
+        const candidate=prepareTransaction({protocolVersion:1,documentId:proposal.documentId,baseRevision:proposal.baseRevision,operations:proposal.operations},proposal.annotationIds,options);
+        try{validatePresentationCandidate(state(),request,candidate);}catch(error){activeCandidates.delete(candidate);issued.get(candidate)!.consumed=true;throw error;}return candidate;
+      }
+      if(options!==undefined)invalid("PPT proposal resource options require a presentation session.");
+      const request=parseContract("interaction-request",requestInput),proposal=parseContract("edit-proposal",proposalInput);validateProposal(state(),request,proposal);
+      return prepareTransaction({protocolVersion:1,documentId:proposal.documentId,baseRevision:proposal.baseRevision,operations:proposal.operations},proposal.annotationIds);
+    });
   }
 
   return Object.freeze({
@@ -253,24 +298,8 @@ export function createDocumentSession(document: DocumentModel, options: Document
     getAnnotations: () => state().snapshot.annotations,
     serialize: () => new Map([...state().files].map(([path, bytes]) => [path, new Uint8Array(bytes)])),
     prepare: (input: DocumentTransaction, options?: TransactionPrepareOptions): CandidateChange => execute(() => prepareTransaction(input, undefined, options)),
-    buildInteractionRequest: (input: InteractionRequestInput): DocumentInteractionRequest => execute(() => {
-      if (state().snapshot.metadata.presentation) throw new DocumentError("UnsupportedFeature", "Presentation requests are implemented in R2-13.");
-      checkTransactionSize(input, budgets.maxTransactionBytes, limits.maxDepth);
-      const request = buildInteractionRequest(state(), input);
-      checkLimit(encode(JSON.stringify(request)).byteLength, limits.maxPackageBytes);
-      return request;
-    }),
-    prepareProposal: (requestInput: DocumentInteractionRequest, proposalInput: EditProposal): CandidateChange => execute(() => {
-      if (state().snapshot.metadata.presentation) throw new DocumentError("UnsupportedFeature", "Presentation proposals are implemented in R2-13.");
-      checkTransactionSize(requestInput, limits.maxPackageBytes * 8, limits.maxDepth + 16);
-      checkLimit(encode(JSON.stringify(requestInput)).byteLength, limits.maxPackageBytes);
-      checkTransactionSize(proposalInput, budgets.maxTransactionBytes, limits.maxDepth);
-      const request = parseContract("interaction-request", requestInput);
-      const proposal = parseContract("edit-proposal", proposalInput);
-      validateProposal(state(), request, proposal);
-      return prepareTransaction({ protocolVersion: 1, documentId: proposal.documentId,
-        baseRevision: proposal.baseRevision, operations: proposal.operations }, proposal.annotationIds);
-    }),
+    buildInteractionRequest:buildRequest,
+    prepareProposal:prepareProposalRequest,
     commit: (candidate: CandidateChange): TransactionReceipt => execute(() => {
       const record = issued.get(candidate);
       if (!record || record.consumed) invalid("The candidate is foreign, discarded or already consumed.");

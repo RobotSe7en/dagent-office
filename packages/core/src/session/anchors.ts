@@ -1,11 +1,13 @@
-import type { Annotation, TextRange } from "../contracts/annotations.js";
+import type { Anchor,Annotation, TextRange } from "../contracts/annotations.js";
 import { validTextRanges } from "../document/annotations.js";
 import type { ParsedHtml } from "../document/html.js";
 import { isTextBoundary } from "../document/text.js";
 import type { DeepReadonly, TextOffsetMapping } from "../runtime.js";
 
 export function annotationNodes(annotation: DeepReadonly<Annotation>): readonly string[] {
-  const anchor = annotation.anchor;
+  return anchorNodes(annotation.anchor);
+}
+export function anchorNodes(anchor:DeepReadonly<Anchor>):readonly string[]{
   return anchor.kind === "text" || anchor.kind === "node" ? [anchor.nodeId]
     : anchor.kind === "text-set" ? anchor.ranges.map((range) => range.nodeId)
       : anchor.kind === "region" ? [anchor.surfaceId, ...anchor.nodeIds] : anchor.nodeIds;
@@ -44,7 +46,7 @@ export function mapAnnotations(
   annotations: Annotation[], before: ParsedHtml, after: ParsedHtml,
   edits: { readonly textEdits: readonly TextOffsetMapping[]; readonly replacedTextNodes: ReadonlySet<string>; readonly structuralTextNodes: ReadonlySet<string> },
   explicit: ReadonlySet<string>,
-  regionChanged?: (surfaceId: string) => boolean,
+  regionChanged?: (surfaceId: string,anchor:Extract<Anchor,{kind:"region"}>) => boolean,
 ): void {
   const layoutChanged = before.html !== after.html;
   const byNode = new Map<string, TextOffsetMapping[]>();
@@ -56,7 +58,7 @@ export function mapAnnotations(
   for (const annotation of annotations) {
     if (annotation.status === "needs_reanchor" || explicit.has(annotation.annotationId)) continue;
     const anchor = annotation.anchor;
-    let invalid = annotationNodes(annotation).some((id) => !after.hasNode(id)) || anchor.kind === "region" && (regionChanged ? regionChanged(anchor.surfaceId) : layoutChanged);
+    let invalid = annotationNodes(annotation).some((id) => !after.hasNode(id)) || anchor.kind === "region" && (regionChanged ? regionChanged(anchor.surfaceId,anchor) : layoutChanged);
     if (!invalid && (anchor.kind === "text" || anchor.kind === "text-set") && layoutChanged) {
       const ranges = anchor.kind === "text" ? [anchor] : anchor.ranges;
       // Activating recovery data without a new anchor must not manufacture a matching quote.

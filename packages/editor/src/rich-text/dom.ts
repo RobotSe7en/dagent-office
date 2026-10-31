@@ -1,4 +1,4 @@
-import type { ReconciledTextEdit } from "@dagent-office/core";
+import type { ChangeMapping,ReconciledTextEdit } from "@dagent-office/core";
 
 export type IgnoreNode = (node: Node) => boolean;
 export const blockSelector = "p,h1,h2,h3,h4,h5,h6,li,td,th";
@@ -74,6 +74,16 @@ export function inputProofs(root: HTMLElement, step: InputStep, ignored: IgnoreN
 
 export interface CaretBookmark { readonly nodeId?: string; readonly path: readonly number[]; readonly offset: number; readonly affinity?: "forward" }
 export interface SelectionBookmark { readonly anchor: CaretBookmark; readonly focus: CaretBookmark }
+export function mapSelectionBookmark(value:SelectionBookmark|undefined,mapping:ChangeMapping):SelectionBookmark|undefined {
+  if(!value)return;
+  const point=(entry:CaretBookmark):CaretBookmark=>{
+    const {nodeId,...rest}=entry;let offset=entry.offset;
+    for(const edit of mapping.textEdits)if(edit.nodeId===nodeId){if(offset>=edit.to)offset+=edit.insertedLength-edit.to+edit.from;else if(offset>=edit.from)offset=edit.from+edit.insertedLength;}
+    const target=nodeId&&mapping.nodes.has(nodeId)?mapping.nodes.get(nodeId):nodeId;
+    return{...rest,offset,...(target?{nodeId:target}:{})};
+  };
+  return{anchor:point(value.anchor),focus:point(value.focus)};
+}
 export function bookmark(root: HTMLElement, ignored: IgnoreNode): SelectionBookmark | undefined {
   const selected = root.ownerDocument.getSelection();
   if (!selected?.anchorNode || !selected.focusNode || !root.contains(selected.anchorNode) || !root.contains(selected.focusNode)) return;
@@ -114,7 +124,9 @@ export function restoreBookmark(root: HTMLElement, value: SelectionBookmark | un
       target = root;
       for (const ordinal of entry.path) target = [...target.children].filter((item) => !ignored(item))[ordinal] as HTMLElement ?? target;
     }
-    return caretAt(target, entry.offset, ignored, entry.affinity);
+    const text=sourceText(target,ignored);let offset=Math.max(0,Math.min(entry.offset,text.length));
+    while(offset>0){const before=text.charCodeAt(offset-1),after=text.charCodeAt(offset),next=text.codePointAt(offset);if(!(before>=0xd800&&before<=0xdbff&&after>=0xdc00&&after<=0xdfff)&&!(next!==undefined&&(next>=0xfe00&&next<=0xfe0f||next>=0xe0100&&next<=0xe01ef)))break;offset--;}
+    return caretAt(target, offset, ignored, entry.affinity);
   };
   const selected = root.ownerDocument.getSelection()!;
   selected.setBaseAndExtent(...point(value.anchor), ...point(value.focus));

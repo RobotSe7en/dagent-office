@@ -7,6 +7,7 @@ import type { DocumentEdit } from "../document/edit.js";
 import { assetDigest } from "../document/assets.js";
 import { encode } from "../document/package.js";
 import { invalid } from "../document/validation.js";
+import { presentationStyleImpact } from "./presentation-style-impact.js";
 
 export function guardPresentationContent(base: DocumentState, op: DocumentContentOperation): void {
   const p = base.snapshot.metadata.presentation;
@@ -40,15 +41,15 @@ export function updatePresentationMetadata(metadata: DocumentMetadata, before: D
   for (const annotation of annotations) if (!existing.has(annotation.annotationId) && !previousAnnotations.has(annotation.annotationId)) p.comments.push({ annotationId: annotation.annotationId, format: "modern" });
 }
 
-export function removeDeletedCommentBodies(before: DocumentState, annotations: readonly Annotation[], edit: DocumentEdit): void {
+export function removeDeletedCommentBodies(before: DocumentState, annotations: readonly Annotation[], edit: DocumentEdit,metadata:DocumentMetadata): void {
   if (!before.snapshot.metadata.presentation) return;
   const kept = new Set(annotations.flatMap(a => [a.bodyNodeId, ...(a.replies ?? []).map(r => r.bodyNodeId)]).filter(id => id !== undefined));
-  for (const body of before.snapshot.annotations.flatMap(a => [a, ...(a.replies ?? [])])) {
-    if (body.bodyNodeId && !kept.has(body.bodyNodeId)) edit.apply({ op: "removeNode", nodeId: body.bodyNodeId });
-  }
+  const originals=new Set(before.snapshot.metadata.presentation.stories.map(s=>s.rootNodeId));
+  const roots=new Set([...before.snapshot.annotations.flatMap(a=>[a,...a.replies??[]]).flatMap(b=>b.bodyNodeId?[b.bodyNodeId]:[]),...metadata.presentation!.stories.filter(s=>s.kind==="comment"&&!originals.has(s.rootNodeId)).map(s=>s.rootNodeId)]);
+  for(const root of roots)if(!kept.has(root))edit.removeSource(root);
 }
 
-export function updatePresentationRecovery(metadata: DocumentMetadata, before: DocumentState, annotations: readonly Annotation[]): void {
+export function updatePresentationRecovery(metadata: DocumentMetadata, before: DocumentState, annotations: readonly Annotation[],workflows:ReadonlyMap<string,Annotation["status"]>): void {
   const p = metadata.presentation;
   if (!p) return;
   const originals = new Map(before.snapshot.annotations.map(a => [a.annotationId, a]));
@@ -56,13 +57,15 @@ export function updatePresentationRecovery(metadata: DocumentMetadata, before: D
     const annotation = annotations.find(a => a.annotationId === comment.annotationId)!;
     const original = originals.get(comment.annotationId);
     if (annotation.status === "needs_reanchor") {
-      if (original && original.status !== "needs_reanchor") comment.recoveryStatus = original.status;
+      const workflow=workflows.get(comment.annotationId);
+      if(workflow&&workflow!=="needs_reanchor")comment.recoveryStatus=workflow;
+      else if (original && original.status !== "needs_reanchor") comment.recoveryStatus = original.status;
     } else delete comment.recoveryStatus;
   }
 }
 
 /** A derived fingerprint of each slide and its transitive source/data dependencies. */
-export function presentationSlideFingerprints(state: Pick<DocumentState, "snapshot" | "html">): Map<string, string> {
+export function presentationSlideFingerprints(state: Pick<DocumentState, "snapshot" | "html">,layoutOnly=false): Map<string, string> {
   const { snapshot, html } = state, p = snapshot.metadata.presentation, result = new Map<string, string>();
   if (!p) return result;
   const digest = (value: unknown): string => assetDigest(encode(JSON.stringify(value)));
@@ -86,18 +89,32 @@ export function presentationSlideFingerprints(state: Pick<DocumentState, "snapsh
     const items = bySurface.get(surface) ?? [], chart = object.kind === "chart" ? charts.get(object.chartId) : undefined;
     items.push([object, chart, chart ? data.get(chart.dataSetId) : undefined]); bySurface.set(surface, items);
   }
+  for(const link of [...p.hyperlinks].sort((a,b)=>a.nodeId.localeCompare(b.nodeId))){const surface=owner(link.nodeId);if(surface){const items=bySurface.get(surface)??[];items.push({hyperlink:link});bySurface.set(surface,items);}}
   const surface = (id: string): string => digest([source(id), bySurface.get(id)]);
   const surfaces = new Map([...roots].map(id => [id, surface(id)]));
-  const shared = digest([p.size, snapshot.styles, html.peekNode(html.nodeIds().find(id => html.peekNode(id)?.attributes["data-office-kind"] === "presentation")!)?.attributes]);
+  const root=html.peekNode(html.nodeIds().find(id=>html.peekNode(id)?.attributes["data-office-kind"]==="presentation")!)!;
+  const shared = digest([p.size,root.attributes]);
+  const css=presentationStyleImpact(snapshot.styles),symbols=new Map<string,{classes:Set<string>;ids:Set<string>}>();
+  const collect=(id:string):{classes:Set<string>;ids:Set<string>}=>{
+    const previous=symbols.get(id);if(previous)return previous;const node=html.peekNode(id)!,value={classes:new Set((node.attributes.class??"").split(/\s+/).filter(Boolean)),ids:new Set(node.attributes.id?[node.attributes.id]:[])};
+    for(const child of node.childNodeIds){const nested=collect(child);for(const name of nested.classes)value.classes.add(name);for(const name of nested.ids)value.ids.add(name);}symbols.set(id,value);return value;
+  };
   const layouts = new Map(p.layouts.map(l => [l.layoutId, l])), masters = new Map(p.masters.map(m => [m.masterId, m])), themes = new Map(p.themes.map(t => [t.themeId, t]));
   for (const slide of p.slides) {
     const layout = layouts.get(slide.layoutId), master = layout ? masters.get(layout.masterId) : undefined;
-    result.set(slide.slideId, digest([shared, slide, surfaces.get(slide.rootNodeId), layout, layout ? surfaces.get(layout.rootNodeId) : null, master, master ? surfaces.get(master.rootNodeId) : null, master ? themes.get(master.themeId) : null]));
+    const classes=new Set((root.attributes.class??"").split(/\s+/)),ids=new Set(root.attributes.id?[root.attributes.id]:[]);
+    for(const surface of [slide.rootNodeId,layout?.rootNodeId,master?.rootNodeId])if(surface){const value=collect(surface);for(const name of value.classes)classes.add(name);for(const name of value.ids)ids.add(name);}
+    if(master)classes.add(themes.get(master.themeId)!.cssClass);
+    for(const key of [master?.titleStyle,master?.bodyStyle,master?.otherStyle])if(key){classes.add(key);for(let level=0;level<9;level++)classes.add(key+"-level-"+level);}
+    const dependencies=new Set([slide.rootNodeId,layout?.rootNodeId,master?.rootNodeId]);
+    for(const object of p.objects)if(dependencies.has(owner(object.nodeId))&&object.kind==="chart"){const chart=charts.get(object.chartId)!;for(const[key,value]of Object.entries(chart))if(key.endsWith("CssClass")&&typeof value==="string")classes.add(value);for(const style of [...chart.seriesStyles??[],...chart.pointStyles??[]]){classes.add(style.cssClass);if(style.labelCssClass)classes.add(style.labelCssClass);}}
+    const {name:_slideName,...slideLayout}=slide,{name:_layoutName,...layoutGeometry}=layout??{};
+    result.set(slide.slideId, digest([shared,css(classes,ids),layoutOnly?slideLayout:slide, surfaces.get(slide.rootNodeId), layoutOnly?layoutGeometry:layout, layout ? surfaces.get(layout.rootNodeId) : null, master, master ? surfaces.get(master.rootNodeId) : null, master ? themes.get(master.themeId) : null]));
   }
   return result;
 }
 
-export function affectedPresentationSlides(before: Pick<DocumentState, "snapshot" | "html">, after: Pick<DocumentState, "snapshot" | "html">): string[] {
-  const a = presentationSlideFingerprints(before), b = presentationSlideFingerprints(after);
+export function affectedPresentationSlides(before: Pick<DocumentState, "snapshot" | "html">, after: Pick<DocumentState, "snapshot" | "html">,layoutOnly=false): string[] {
+  const a = presentationSlideFingerprints(before,layoutOnly), b = presentationSlideFingerprints(after,layoutOnly);
   return [...new Set([...a.keys(), ...b.keys()])].filter(id => a.get(id) !== b.get(id));
 }

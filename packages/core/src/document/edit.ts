@@ -5,7 +5,7 @@ import type { DocumentReadLimits, TextOffsetMapping } from "../runtime.js";
 import { DocumentError } from "../errors.js";
 import { normalizeCss, setInlineStyle } from "./css.js";
 import { bodyTags, parseHtml, supportedTags } from "./html.js";
-import { parseHtmlFragment, parseHtmlTree, serializeHtmlTree } from "./html-parser.js";
+import { parseHtmlFragment, parseHtmlTree, serializeHtmlOuter, serializeHtmlTree } from "./html-parser.js";
 import { encode, resolveReference } from "./package.js";
 import type { DocumentState } from "./state.js";
 import { checkLimit } from "./validation.js";
@@ -114,6 +114,77 @@ export class DocumentEdit {
       if (value === undefined) target.attrs = target.attrs.filter((item) => item.name !== name);
       else setAttribute(target, name, value);
     }
+  }
+
+  shellAncestors(): readonly { tagName: string; attributes: Readonly<Record<string,string>> }[] {
+    const html=this.tree.childNodes.find(node=>isElement(node)&&node.tagName==="html");
+    if(!html || !isElement(html)) return [];
+    const body=html.childNodes.find(node=>isElement(node)&&node.tagName==="body");
+    return [body,html].filter((node):node is Element=>!!node&&isElement(node)).map(node=>({tagName:node.tagName,attributes:Object.fromEntries(node.attrs.map(attr=>[attr.name,attr.value]))}));
+  }
+
+  orderAttributes(nodeId:string,names:readonly string[]):void {
+    const target=this.index().get(nodeId);if(!target)fail("The format source is missing.");
+    const original=new Map(names.map((name,index)=>[name,index])),current=new Map(target.attrs.map((attr,index)=>[attr.name,index]));
+    target.attrs.sort((a,b)=>(original.get(a.name)??names.length+current.get(a.name)!)-(original.get(b.name)??names.length+current.get(b.name)!));
+  }
+
+  /** Core-owned format insertion; caller HTML is still parsed, bounded and validated. */
+  insertSource(parentId: string, source: string, beforeId?: string,copyIdentities=false): { rootNodeIds: string[]; identities: ReadonlyMap<string, string> } {
+    const index = this.index(), parent = index.get(parentId), before = beforeId === undefined ? undefined : index.get(beforeId);
+    if (!parent || beforeId !== undefined && (!before || before.parentNode !== parent)) fail("A format insertion requires an existing parent and sibling.");
+    const fragment = parseHtmlFragment(source, parent, this.limits, bodyTags), identities = new Map<string, string>();
+    visit(fragment, node => {
+      if (!isElement(node)) return;
+      const previous = attr(node, "data-node-id"), id = this.allocate();
+      if (previous !== undefined) {
+        if(!copyIdentities)fail("New format content cannot supply source identities.");
+        if (identities.has(previous)) fail("Copied source identities must be unique.");
+        identities.set(previous, id);
+      }
+      setAttribute(node, "data-node-id", id);
+      if (attr(node, "id") !== undefined) fail("Copying custom HTML IDs requires an explicit style mapping.");
+      node.attrs = node.attrs.filter(item => item.name !== "data-office-field-id");
+      const style = attr(node, "style");
+      if (style !== undefined) setAttribute(node, "style", normalizeCss(style, "declarationList", this.limits, { nodes: 0 }));
+    });
+    const positions = textPositions(this.tree), range = positions.get(parent)!, from = before ? positions.get(before)!.from : range.to;
+    this.recordSplice(positions, from, from, parent, textPositions(fragment).get(fragment)!.to, true);
+    const rootNodeIds = fragment.childNodes.filter(isElement).map(node => attr(node, "data-node-id")!);
+    for (const child of [...fragment.childNodes]) { adapter.detachNode(child); if (before) adapter.insertBefore(parent, child, before); else adapter.appendChild(parent, child); }
+    return { rootNodeIds, identities };
+  }
+
+  cloneSource(nodeId: string, parentId: string, beforeId?: string): { rootNodeIds: string[]; identities: ReadonlyMap<string, string> } {
+    const target = this.index().get(nodeId);
+    if (!target) fail("The copied source is missing.");
+    return this.insertSource(parentId, serializeHtmlOuter(target), beforeId,true);
+  }
+
+  /** Internal table adapter may address parser-created row groups by core identity. */
+  sourceParent(nodeId:string):string {
+    const target=this.index().get(nodeId),parent=target?.parentNode;
+    if(!parent||!isElement(parent)||parent.tagName==="body")fail("The source parent is unavailable.");
+    let id=attr(parent,"data-node-id");if(!id){id=this.allocate();setAttribute(parent,"data-node-id",id);}return id;
+  }
+  sourceStyle(nodeId:string,property:string,value:string):void {
+    const target=this.index().get(nodeId);if(!target)fail("The format style target is unavailable.");setAttribute(target,"style",setInlineStyle(attr(target,"style")??"",property,value,this.limits));
+  }
+  removeSource(nodeId:string,contents=false):void {
+    const target=this.index().get(nodeId);if(!target||!target.parentNode||!isElement(target.parentNode)||target.parentNode.tagName==="body")fail("The document root cannot be removed.");
+    const positions=textPositions(this.tree),range=positions.get(target)!;
+    this.recordSplice(positions,range.from,range.to,contents?target:target.parentNode,0,true);
+    if(contents)for(const child of [...target.childNodes])adapter.detachNode(child);else adapter.detachNode(target);
+  }
+
+  /** Structural movement preserves node identity; ancestor text anchors need exact recovery. */
+  moveSource(nodeIds: readonly string[], parentId: string, beforeId?: string): void {
+    const index = this.index(), parent = index.get(parentId), before = beforeId === undefined ? undefined : index.get(beforeId);
+    const targets = nodeIds.map(id => index.get(id));
+    if (!parent || beforeId !== undefined && (!before || before.parentNode !== parent) || targets.some(target => !target)) fail("A format move requires existing source nodes and a sibling.");
+    if (new Set(nodeIds).size !== nodeIds.length || targets.some(target => target === before || ancestors(parent).includes(target!) || targets.some(other => other !== target && ancestors(target!).includes(other!)))) fail("A format move cannot contain cycles or nested selections.");
+    for (const target of targets) for (const ancestor of [...ancestors(target!).slice(1), ...ancestors(parent)]) { const id = attr(ancestor, "data-node-id"); if (id) this.replacedTextNodes.add(id); }
+    for (const target of targets) { adapter.detachNode(target!); if (before) adapter.insertBefore(parent, target!, before); else adapter.appendChild(parent, target!); }
   }
 
   private make(tag: string, attributes: { name: string; value: string }[] = []): Element {
@@ -349,7 +420,7 @@ export class DocumentEdit {
         let style = setInlineStyle(attr(target, "style") ?? "", operation.property, operation.value, this.limits);
         if (this.state.snapshot.metadata.presentation) {
           const property = operation.property.toLowerCase();
-          const prefix = property === "color" ? "--office-text" : property === "background-color" ? "--office-fill" : /^--office-[a-z-]+-color$/.test(operation.property) ? operation.property.slice(0, -6) : undefined;
+          const prefix = property === "color" ? "--office-text" : property === "background-color" ? "--office-fill" : /^--office-[a-z0-9-]+-color$/.test(operation.property) ? operation.property.slice(0, -6) : undefined;
           if (prefix) {
             style = setInlineStyle(style, prefix + "-color", operation.value, this.limits);
             for (const [name, value] of Object.entries({ source: "direct", alpha: "1", "lum-mod": "1", "lum-off": "0", tint: "0", shade: "1" })) style = setInlineStyle(style, prefix + "-" + name, value, this.limits);

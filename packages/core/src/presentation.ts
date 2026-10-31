@@ -1,12 +1,21 @@
 import { z } from "zod";
 import { IdentifierSchema } from "./contracts/primitives.js";
 import { PresentationSizeSchema } from "./contracts/presentation.js";
-import type { PresentationDocumentMetadata, PresentationMetadata } from "./contracts/presentation.js";
+import type { PresentationDocumentMetadata, PresentationMetadata, PresentationGeometry } from "./contracts/presentation.js";
 import { DocumentError } from "./errors.js";
 import { openDocument } from "./document-model.js";
 import { encode } from "./document/package.js";
-import type { DocumentPackage, OpenDocumentOptions } from "./runtime.js";
-import { checkLimit, readLimits } from "./document/validation.js";
+import type { DocumentModel, DocumentPackage, OpenDocumentOptions } from "./runtime.js";
+import { checkLimit, freeze, readLimits } from "./document/validation.js";
+import { presentationTransforms } from "./session/presentation-geometry.js";
+
+/** Resolve source-local geometry through the declared placeholder inheritance chain. */
+export function resolvePresentationGeometry(model: DocumentModel, nodeId: string): Readonly<PresentationGeometry> {
+  const p=model.snapshot().metadata.presentation;
+  if(!p) throw new DocumentError("UnsupportedFormat","Presentation geometry requires a presentation model.");
+  if(!p.objects.some(object=>object.nodeId===nodeId)) throw new DocumentError("InvalidOperation","Geometry resolution requires a registered object.");
+  return freeze(presentationTransforms(p,{peekNode:id=>model.getNode(id)}).geometry(nodeId));
+}
 
 const optionsSchema = z.strictObject({ documentId: IdentifierSchema, title: z.string().optional(), locale: IdentifierSchema.optional(), size: PresentationSizeSchema.optional() });
 export interface CreatePresentationOptions {

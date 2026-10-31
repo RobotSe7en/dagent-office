@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { AnchorSchema, AnnotationSchema, AnnotationStatusSchema } from "./annotations.js";
 import { IdentifierSchema, PackagePathSchema, PROTOCOL_VERSION, RevisionSchema } from "./primitives.js";
-import { PresentationGeometrySchema, PresentationSizeSchema } from "./presentation.js";
+import { PresentationOperationSchema } from "./presentation-operations.js";
+export { PresentationOperationSchema, PresentationObjectInputSchema } from "./presentation-operations.js";
+export type { PresentationOperation, PresentationObjectInput } from "./presentation-operations.js";
 
 export const ReconciledTextEditSchema = z.strictObject({
   nodeId: IdentifierSchema, from: RevisionSchema, to: RevisionSchema,
@@ -69,14 +71,6 @@ export const AnnotationOperationSchema = z.discriminatedUnion("op", [
   z.strictObject({ op: z.literal("removeAnnotation"), annotationId: IdentifierSchema }),
 ]);
 export type AnnotationOperation = z.infer<typeof AnnotationOperationSchema>;
-
-/** Format operations remain separate from the V1 Word proposal operation set. */
-export const PresentationOperationSchema = z.discriminatedUnion("op", [
-  z.strictObject({ op: z.literal("setPresentationGeometry"), nodeId: IdentifierSchema, geometry: PresentationGeometrySchema,
-    childCoordinates: z.strictObject({ x: z.number(), y: z.number(), width: z.number().positive(), height: z.number().positive() }).optional() }),
-  z.strictObject({ op: z.literal("setPresentationSize"), size: PresentationSizeSchema }),
-]);
-export type PresentationOperation = z.infer<typeof PresentationOperationSchema>;
 
 export const DocumentOperationSchema = z.discriminatedUnion("op", [
   ...DocumentContentOperationSchema.options,

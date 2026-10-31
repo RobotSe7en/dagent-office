@@ -146,6 +146,20 @@ test("maps imported modern UTF-16 anchors and retains native rich threads throug
   session.undo(); expect(session.snapshot().html).toBe(model.snapshot().html); expect(session.getAnnotations().map(a => a.replies)).toEqual(model.snapshot().annotations.map(a => a.replies));
 });
 
+test("ungrouping the independent native fixture keeps its explicitly calculated center, rotation and glyph flip parity",()=>{
+  const model=load("05-groups.pptx"),p=model.snapshot().metadata.presentation!,group=p.objects.find(o=>o.kind==="group"&&model.getNode(o.nodeId)!.parentNodeId===p.slides[0]!.rootNodeId)!,child=model.getNode(group.nodeId)!.childNodeIds[0]!,s=createDocumentSession(model);
+  expect(readPresentationGeometry(model.getNode(child)!.attributes)).toMatchObject({x:0,y:0,width:160,height:80});
+  s.commit(s.prepare({protocolVersion:1,documentId:"ppt-test",baseRevision:0,operations:[{op:"ungroupPresentationObject",nodeId:group.nodeId}]}));
+  const g=readPresentationGeometry(s.getNode(child)!.attributes)!,r=10*Math.PI/180;
+  // Fixture: group (48,120,600,300), child origin (-50,-25), child extents
+  // (900,450), rotation 10deg and horizontal flip; child center is (80,40).
+  const dx=-((80+50)*2/3-300),dy=(40+25)*2/3-150;
+  expect(g.x+g.width/2).toBeCloseTo(348+dx*Math.cos(r)-dy*Math.sin(r),9);
+  expect(g.y+g.height/2).toBeCloseTo(270+dx*Math.sin(r)+dy*Math.cos(r),9);
+  expect(g.width).toBeCloseTo(160*2/3,9);expect(g.height).toBeCloseTo(80*2/3,9);expect(g.rotation).toBeCloseTo(10,9);expect(g.flipH).toBe(true);expect(g.flipV).toBe(false);
+  s.undo();expect(s.snapshot().html).toBe(model.snapshot().html);
+});
+
 test("compares native numeric identities by value, including leading-zero aliases and unsigned bounds", () => {
   const duplicate = mutate("01-rich-text.pptx", "ppt/slides/slide1.xml", source => {
     const shape = source.match(/<p:sp>.*?<\/p:sp>/s)![0];
@@ -175,4 +189,12 @@ test("preserves absent text-body overrides for placeholder inheritance instead o
   const object = model.snapshot().metadata.presentation!.objects.find(o => o.kind === "text" && model.getNode(o.nodeId)!.text.includes("继承主题标题"))!;
   expect(object).toMatchObject({ text: {} });
   const node = model.getNode(object.nodeId)!; expect(node.attributes.style ?? "").not.toMatch(/padding-|white-space|text-anchor|tab-size/);
+});
+
+test("native classic comment points keep their slide position during visual edits and recover only when their slide is removed",()=>{
+  const s=createDocumentSession(load("11-classic-comments.pptx")),before=s.getAnnotations()[0]!,p=s.snapshot().metadata.presentation!;
+  expect(before.anchor).toMatchObject({kind:"region",layoutKey:"pptx-classic-point"});const original=p.slides[0]!;
+  const commit=(operations:Parameters<typeof s.prepare>[0]["operations"]):void=>{s.commit(s.prepare({protocolVersion:1,documentId:s.snapshot().manifest.documentId,baseRevision:s.snapshot().manifest.revision,operations}));};
+  commit([{op:"setStyle",nodeId:original.rootNodeId,property:"background-color",value:"#123456"}]);expect(s.getAnnotations()[0]!.status).toBe("open");expect(s.getAnnotations()[0]!.anchor).toEqual(before.anchor);
+  commit([{op:"insertSlide",layoutId:p.layouts[0]!.layoutId}]);commit([{op:"removeSlide",slideId:original.slideId}]);expect(s.getAnnotations()[0]!.status).toBe("needs_reanchor");expect(openDocument(s.serialize()).snapshot().annotations[0]!.anchor).toEqual(before.anchor);
 });
