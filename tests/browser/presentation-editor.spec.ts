@@ -5,7 +5,8 @@ import { expect,test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { createPresentation,openDocument } from "@dagent-office/core";
 import type { DocumentPackage } from "@dagent-office/core";
-import { importPptx } from "@dagent-office/office";
+import { importPptx,readDocumentZip } from "@dagent-office/office";
+import {writeOpcZip} from "../../packages/office/src/document-zip.js";
 import type { PresentationEditorHost } from "./fixtures/presentation-editor-host.js";
 declare global{interface Window{presentationEditorHost:PresentationEditorHost}}
 let code:string;
@@ -242,4 +243,14 @@ test("review: opening a definition canvas does not treat hidden slide regions as
   await mount(page,example());await page.evaluate(()=>{const h=window.presentationEditorHost;h.view!.selectRegion(h.view!.activeSlide(),{x:30,y:25,width:250,height:50});h.view!.perform([{op:"addAnnotation",annotation:{annotationId:"definition-region",documentId:h.session!.snapshot().manifest.documentId,baseRevision:0,status:"open",instruction:"区域",anchor:JSON.parse(JSON.stringify(h.view!.selection()!.anchor))}}]);});await settled(page);
   await page.evaluate(()=>{const h=window.presentationEditorHost;h.view!.setDefinitionSurface(h.session!.snapshot().metadata.presentation!.layouts[0]!.rootNodeId);});await settled(page);await expect(page.getByText("区域布局或字体已变化，请重新选择区域定位批注。",{exact:true})).toBeHidden();expect(await page.evaluate(()=>window.presentationEditorHost.session!.getAnnotations().find(a=>a.annotationId==="definition-region")!.status)).toBe("open");
   await page.evaluate(()=>window.presentationEditorHost.view!.setDefinitionSurface());await settled(page);await expect(page.getByText("区域布局或字体已变化，请重新选择区域定位批注。",{exact:true})).toBeHidden();expect(await page.evaluate(()=>window.presentationEditorHost.errors)).toEqual([]);
+});
+
+
+test("review: editing native theme paints keeps visible alpha and applies direct colors",async({page})=>{
+  const parts=new Map(readDocumentZip(readFileSync("examples/pptx/04-shapes.pptx"))),decoder=new TextDecoder(),encoder=new TextEncoder(),reference='<p:style><a:lnRef idx="1"><a:srgbClr val="204060"><a:alpha val="35000"/></a:srgbClr></a:lnRef><a:fillRef idx="1"><a:schemeClr val="accent1"><a:alpha val="50000"/></a:schemeClr></a:fillRef><a:effectRef idx="0"><a:srgbClr val="000000"/></a:effectRef><a:fontRef idx="minor"><a:schemeClr val="lt1"/></a:fontRef></p:style>';
+  parts.set("ppt/slides/slide1.xml",encoder.encode(decoder.decode(parts.get("ppt/slides/slide1.xml")).replace(/<p:sp>[\s\S]*?<\/p:sp>/,shape=>shape.replace(/<a:solidFill>[\s\S]*?<\/a:solidFill>/,"").replace(/<a:ln\b[\s\S]*?<\/a:ln>/,"").replace("<p:txBody>",reference+"<p:txBody>"))));await mount(page,importPptx(writeOpcZip(parts),{documentId:"theme-paint-edit"}));
+  const id=await page.evaluate(()=>{const h=window.presentationEditorHost,p=h.session!.snapshot().metadata.presentation!,id=p.objects.find(o=>o.kind==="geometry"&&h.session!.getNode(o.nodeId)!.parentNodeId===p.slides[0]!.rootNodeId)!.nodeId;h.view!.selectObjects([id]);return id;}),path=frame(page).locator('[data-node-id="'+id+'"]>svg>path').first();await expect(path).toHaveAttribute("fill","rgba(68,114,196,0.5)");
+  await page.getByLabel("不透明度（%）",{exact:true}).fill("75");await page.getByLabel("不透明度（%）",{exact:true}).press("Tab");await settled(page);await expect(path).toHaveAttribute("fill","rgba(68,114,196,0.75)");await page.getByRole("button",{name:"撤销",exact:true}).click();await settled(page);
+  await page.getByLabel("填充颜色",{exact:true}).fill("#123456");await page.getByLabel("填充颜色",{exact:true}).press("Tab");await settled(page);await expect(path).toHaveAttribute("fill","rgba(18,52,86,0.5)");
+  await page.getByLabel("轮廓颜色",{exact:true}).fill("#abcdef");await page.getByLabel("轮廓颜色",{exact:true}).press("Tab");await settled(page);await expect(path).toHaveAttribute("stroke","rgba(171,205,239,0.35)");expect(await page.evaluate(()=>window.presentationEditorHost.errors)).toEqual([]);
 });
