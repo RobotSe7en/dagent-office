@@ -1,6 +1,7 @@
 import type { ChangeMapping, DocumentNodeChange, TextOffsetMapping } from "../runtime.js";
 import type { DocumentState } from "../document/state.js";
 import { freeze } from "../document/validation.js";
+import { affectedPresentationSlides } from "./presentation.js";
 
 /** ReadonlyMap is a runtime boundary too: Object.freeze(new Map()) still exposes set(). */
 function readonlyMap<Key, Value>(input: Map<Key, Value>): ReadonlyMap<Key, Value> {
@@ -39,7 +40,9 @@ export function compareStates(before: DocumentState, after: DocumentState, textE
   const changedAnnotationIds = [...new Set([...previousAnnotations.keys(), ...nextAnnotations.keys()])]
     .filter((id) => previousAnnotations.get(id) !== nextAnnotations.get(id));
   const mapping: ChangeMapping = Object.freeze({ nodes: readonlyMap(nodes), textEdits: freeze(textEdits.map((edit) => ({ ...edit }))) });
-  return freeze({ changes, affectedNodeIds: [...affected], changedAnnotationIds, mapping });
+  const affectedSlideIds = before.snapshot.metadata.presentation ? affectedPresentationSlides(before, after) : undefined;
+  if (affectedSlideIds) for (const slide of [...(before.snapshot.metadata.presentation?.slides ?? []), ...(after.snapshot.metadata.presentation?.slides ?? [])]) if (affectedSlideIds.includes(slide.slideId)) affected.add(slide.rootNodeId);
+  return freeze({ changes, affectedNodeIds: [...affected], changedAnnotationIds, mapping, ...(affectedSlideIds ? { affectedSlideIds } : {}) });
 }
 
 /** Retained serialized bytes, counting shared immutable buffers only once. */

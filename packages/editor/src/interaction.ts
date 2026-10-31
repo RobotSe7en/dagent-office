@@ -56,6 +56,7 @@ export function mountDocumentInteraction(
   session: DocumentEditingSession,
   options: DocumentInteractionOptions = {},
 ): DocumentInteractionView {
+  if (session.snapshot().metadata.presentation) throw new DocumentError("UnsupportedFeature", "Presentation interaction requires its format adapter.");
   const document = container.ownerDocument;
   const element = document.createElement("div");
   const shadow = element.attachShadow({ mode: "open" });

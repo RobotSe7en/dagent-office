@@ -127,13 +127,23 @@ test("rejects wrong types, cyclic ownership, unsupported geometry and broken con
   for (const [name, part, change, code] of cases) expect(() => importPptx(mutate(name, part, change), { documentId: "bad" })).toThrowError(expect.objectContaining({ code }));
 });
 
-test("enforces byte/node/ZIP budgets, identities, format separation and the editing gate", () => {
+test("enforces byte/node/ZIP budgets, identities, format separation and opens accepted PPT sessions", () => {
   expect(() => importPptx(fixture(), { documentId: "" })).toThrowError(expect.objectContaining({ code: "InvalidDocument" }));
   expect(() => importPptx(fixture(), { documentId: "small", maxZipBytes: 10 })).toThrowError(expect.objectContaining({ code: "ResourceLimitExceeded" }));
   expect(() => importPptx(fixture(), { documentId: "small", limits: { maxNodes: 30 } })).toThrowError(expect.objectContaining({ code: "ResourceLimitExceeded" }));
   const docx = readFileSync(new URL("../../../examples/docx/01-text-numbering.docx", import.meta.url));
   expect(() => importPptx(docx, { documentId: "wrong" })).toThrowError(expect.objectContaining({ code: "UnsupportedFormat" }));
-  expect(() => createDocumentSession(load())).toThrowError(expect.objectContaining({ code: "UnsupportedFeature" }));
+  expect(createDocumentSession(load()).snapshot().manifest.kind).toBe("presentation");
+});
+
+test("maps imported modern UTF-16 anchors and retains native rich threads through history and ZIP reopening", () => {
+  const model = load("12-modern-comments.pptx"), session = createDocumentSession(model), original = session.getAnnotations().find(a => a.anchor.kind === "text")!;
+  if (original.anchor.kind !== "text") throw Error("Expected precise imported text anchor");
+  const transaction = { protocolVersion: 1 as const, documentId: "ppt-test", baseRevision: 0, operations: [{ op: "replaceText" as const, nodeId: original.anchor.nodeId, from: 0, to: 0, expectedText: "", text: "前󠄀😀" }] };
+  session.commit(session.prepare(transaction));
+  expect(session.getAnnotations().find(a => a.annotationId === original.annotationId)!.anchor).toMatchObject({ ...original.anchor, from: original.anchor.from + 5, to: original.anchor.to + 5 });
+  expect(openDocument(readDocumentZip(writeDocumentZip(session.serialize()))).snapshot()).toEqual(session.snapshot());
+  session.undo(); expect(session.snapshot().html).toBe(model.snapshot().html); expect(session.getAnnotations().map(a => a.replies)).toEqual(model.snapshot().annotations.map(a => a.replies));
 });
 
 test("compares native numeric identities by value, including leading-zero aliases and unsigned bounds", () => {

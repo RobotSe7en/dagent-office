@@ -26,6 +26,8 @@ const reopened = openDocument(saved);
 session.dispose();
 ```
 
+R2-07 同一工厂接受 PPT，格式操作、资源准备选项和按页影响见 [PPT 核心事务](presentation-transactions.md)。
+
 工厂返回 `DocumentSession`（扩展 `DocumentEditingSession`），实现 `snapshot/getNode/getAnnotations/serialize`、`prepare/commit/discard`、`undo/redo/history/clearHistory`、`subscribe/dispose`。R1-09 已实现请求生成与 `prepareProposal`，完整规则见[工作台与协议](workbench.md)。富文本 UI 通过[正文输入适配器](rich-text.md)复用本入口；分页和 Office 导出另行实现。
 
 ## 操作和候选
@@ -39,7 +41,7 @@ session.dispose();
 | `insertFragment` | 按父元素上下文解析 `before/after/start/end`；片段不能自带 `data-node-id`，新身份由核心分配，不能在同批操作里猜测引用 |
 | `replaceFragment` | 替换目标的子内容，保留目标身份；浏览器若会重新移动或丢弃插入结构则拒绝 |
 | `removeNode` | 删除完整子树；不能删除文档根；破坏必要节或内容域引用时整批失败 |
-| `replaceAsset` | 当前只替换 `img`，新路径必须已在当前文档清单声明并提供有效字节；保留尺寸和替代文字，不隐式上传或授权资源 |
+| `replaceAsset` | 当前只替换 `img`，新路径必须在当前清单或本次 `prepare` 授权资源中声明并提供有效字节；保留尺寸和替代文字，不隐式上传或授权资源 |
 | 批注操作 | 增加、修改和删除进入同一事务及历史；检查身份、文档、修订及最终锚点原文。富文本批注正文仍通过内容域引用保存 |
 
 Word 字段、原生批注及插入/删除修订在局部编辑后继续保留。完整删除源对象时移除对应语义定义；只删除复杂字段的部分必要标记等情况明确失败。字段结果文字被修改时标记 `dirty`，不执行字段指令或重算结果。
@@ -75,7 +77,7 @@ R1-07 在同一候选内完成精确文字与结构锚点映射。有效批注�
 
 `addAnnotation` 和显式设置 `updateAnnotation.changes.anchor` 使用**最终候选**的坐标及摘录，不再自动叠加同批偏移，操作前后顺序不改变此约定。其有效目标必须属于事务基准快照，不能猜测同批新分配的节点 ID。只修改说明或状态时，已有有效锚点仍参与自动映射。重新定位旧批注时显式提交新 `anchor` 和 `status: "open"` 或 `"resolved"`；仅修改状态不能重新启用旧锚点；可以在同批中分别设置锚点和有效状态。原文或节点校验失败则整批不变。
 
-区域锚点的矩形属于指定 `layoutKey` 下的派生布局。核心不测量 DOM、不平移或缩放旧矩形。任何净 HTML 内容、样式或资源引用变化都会使未显式重定位的区域批注失效，包括空白区域及命中节点之外的变化；仅批注事务不使区域失效。原 `surfaceId/rect/nodeIds/layoutKey/pageId` 及基准修订完整保留。
+区域锚点的矩形属于指定 `layoutKey` 下的派生布局。核心不测量 DOM、不平移或缩放旧矩形。Word 的任何净 HTML 内容、样式或资源引用变化都会使未显式重定位的区域批注失效，包括空白区域及命中节点之外的变化；仅批注事务不使区域失效。原 `surfaceId/rect/nodeIds/layoutKey/pageId` 及基准修订完整保留。
 
 渲染器或宿主发现字体、视口等环境变化导致 `layoutKey` 变化时，通过 `updateAnnotation` 显式标记 `needs_reanchor`；完成重新测量或人工选择后，使用同一事务接口提交新的区域锚点和有效状态。核心校验渲染面是当前容器、命中节点存在且位于该容器内；`layoutKey` 和派生 `pageId` 的实际测量由调用方负责。重新定位同样受修订冲突、原子性和历史规则约束。R1-08 已提供这些操作的[界面和布局检测](preview-interaction.md)。
 
@@ -96,4 +98,4 @@ R1-07 在同一候选内完成精确文字与结构锚点映射。有效批注�
 
 预算须为正的安全整数，未知项拒绝。超限返回 `ResourceLimitExceeded`，失败候选不被消费，当前状态和历史不变；不自动裁剪已有历史。宿主可调整预算或显式 `clearHistory()` 后继续提交。`history()` 返回撤销步数、重做步数和保留字节。默认值是保护边界，尚不是测量后的性能承诺。
 
-核心测试覆盖批量原子性、顺序范围、无变化、会话隔离、候选身份、旧修订、历史分支、UTF-16、片段安全、资源和超限；DOCX 测试覆盖九类源文件及其 LibreOffice 重存版本的编辑、文档包 ZIP 保存重开，以及中文字体名称和角色保留。DOCX 原生可编辑导出与参考应用重开仍在 R1-13 验收。
+核心测试覆盖批量原子性、顺序范围、无变化、会话隔离、候选身份、旧修订、历史分支、UTF-16、片段安全、资源和超限；DOCX 测试覆盖九类源文件及其 LibreOffice 重存版本的编辑、文档包 ZIP 保存重开，以及中文字体名称和角色保留。DOCX 原生可编辑导出与参考应用重开已在 R1-13/14 验收。

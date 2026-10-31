@@ -44,6 +44,7 @@ export function mapAnnotations(
   annotations: Annotation[], before: ParsedHtml, after: ParsedHtml,
   edits: { readonly textEdits: readonly TextOffsetMapping[]; readonly replacedTextNodes: ReadonlySet<string>; readonly structuralTextNodes: ReadonlySet<string> },
   explicit: ReadonlySet<string>,
+  regionChanged?: (surfaceId: string) => boolean,
 ): void {
   const layoutChanged = before.html !== after.html;
   const byNode = new Map<string, TextOffsetMapping[]>();
@@ -55,7 +56,7 @@ export function mapAnnotations(
   for (const annotation of annotations) {
     if (annotation.status === "needs_reanchor" || explicit.has(annotation.annotationId)) continue;
     const anchor = annotation.anchor;
-    let invalid = annotationNodes(annotation).some((id) => !after.hasNode(id)) || anchor.kind === "region" && layoutChanged;
+    let invalid = annotationNodes(annotation).some((id) => !after.hasNode(id)) || anchor.kind === "region" && (regionChanged ? regionChanged(anchor.surfaceId) : layoutChanged);
     if (!invalid && (anchor.kind === "text" || anchor.kind === "text-set") && layoutChanged) {
       const ranges = anchor.kind === "text" ? [anchor] : anchor.ranges;
       // Activating recovery data without a new anchor must not manufacture a matching quote.

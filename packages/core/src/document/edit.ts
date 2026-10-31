@@ -106,6 +106,16 @@ export class DocumentEdit {
     return index;
   }
 
+  /** Private format adapters write typed source attributes, never renderer DOM. */
+  attributes(nodeId: string, values: Readonly<Record<string, string | undefined>>): void {
+    const target = this.index().get(nodeId);
+    if (!target) fail("The format operation targets a missing source node.");
+    for (const [name, value] of Object.entries(values)) {
+      if (value === undefined) target.attrs = target.attrs.filter((item) => item.name !== name);
+      else setAttribute(target, name, value);
+    }
+  }
+
   private make(tag: string, attributes: { name: string; value: string }[] = []): Element {
     checkLimit(++this.createdNodes, this.limits.maxNodes);
     return adapter.createElement(tag, "http://www.w3.org/1999/xhtml" as Element["namespaceURI"], [
@@ -176,7 +186,8 @@ export class DocumentEdit {
     const context = (node: Node) => ancestors(node).find((item) => blocks.has(item.tagName));
     const semantic = (node: Node) => ancestors(node).find((item) => ["ins", "del"].includes(item.tagName)
       || attr(item, "data-word-link") !== undefined || attr(item, "data-word-field") !== undefined
-      || attr(item, "data-word-field-result") !== undefined);
+      || attr(item, "data-word-field-result") !== undefined || attr(item, "data-office-field") !== undefined
+      || attr(item, "data-office-link") !== undefined);
     if (start && selected.some((leaf) => context(leaf.node) !== context(start.node) || semantic(leaf.node) !== semantic(start.node))) {
       fail("Text replacement cannot cross paragraphs, cells, stories or native semantic boundaries.");
     }
@@ -242,6 +253,12 @@ export class DocumentEdit {
         if (!this.baseIds.has(id) || !allowed.has(id) || node === target || id === operation.nodeId || seen.has(id))
           fail("Reconciled identities must be unique descendants of the base target subtree.");
         seen.add(id);
+        if (this.state.snapshot.metadata.presentation && attr(allowed.get(id)!, "data-office-kind") !== undefined) {
+          const original = allowed.get(id)!;
+          const protectedName = (name: string) => /^data-office-(?:kind$|story$|x$|y$|width$|height$|rotation$|flip-|child-|crop-|adjust-|connector-preset$)/.test(name);
+          const names = new Set([...original.attrs, ...node.attrs].map(item => item.name).filter(protectedName));
+          if ([...names].some(name => attr(original, name) !== attr(node, name))) fail("Reconciliation cannot change typed presentation geometry or source roles.");
+        }
       } else setAttribute(node, "data-node-id", this.allocate());
       const style = attr(node, "style");
       if (style !== undefined) setAttribute(node, "style", normalizeCss(style, "declarationList", this.limits, cssBudget));
@@ -328,7 +345,17 @@ export class DocumentEdit {
       case "replaceText": this.replaceText(target, operation); break;
       case "reconcileFragment": this.reconcile(target, operation); break;
       case "setStyle": {
-        const style = setInlineStyle(attr(target, "style") ?? "", operation.property, operation.value, this.limits);
+        let style = setInlineStyle(attr(target, "style") ?? "", operation.property, operation.value, this.limits);
+        if (this.state.snapshot.metadata.presentation) {
+          const property = operation.property.toLowerCase();
+          const prefix = property === "color" ? "--office-text" : property === "background-color" ? "--office-fill" : /^--office-[a-z-]+-color$/.test(operation.property) ? operation.property.slice(0, -6) : undefined;
+          if (prefix) {
+            style = setInlineStyle(style, prefix + "-color", operation.value, this.limits);
+            for (const [name, value] of Object.entries({ source: "direct", alpha: "1", "lum-mod": "1", "lum-off": "0", tint: "0", shade: "1" })) style = setInlineStyle(style, prefix + "-" + name, value, this.limits);
+            if (property === "background-color") style = setInlineStyle(style, "--office-fill-kind", "solid", this.limits);
+          }
+          if (property === "font-family") for (const role of ["ascii", "h-ansi", "east-asia", "complex-script"]) style = setInlineStyle(style, "--office-font-" + role, operation.value, this.limits);
+        }
         setAttribute(target, "style", style);
         break;
       }

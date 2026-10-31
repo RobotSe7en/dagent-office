@@ -36,11 +36,11 @@ PresentationMetadata 显式定义尺寸、批注格式、幻灯片、主题、�
 - 图片对象仅包含一个授权图片，裁剪须保留可见面积。表格对象只包含一张表，单元格覆盖、合并和网格不得越界或重叠；展开前检查工作量预算。
 - 备注与富文本批注有独立内容域。回复正文不能共享可独立编辑的内容根，来源作者仅用于显示。
 
-HTML 继续由同一无脚本解析、安全样式表和资源校验处理。未知格式版本及 workbook 拒绝；清单类型与元数据或根角色不匹配也拒绝。R2-06 读取验收前，createDocumentSession 对重新校验后的 PPT 源明确返回 UnsupportedFeature，不能用调用者伪造的快照绕过阶段边界。
+HTML 继续由同一无脚本解析、安全样式表和资源校验处理。未知格式版本及 workbook 拒绝；清单类型与元数据或根角色不匹配也拒绝。R2-06 读取验收已完成，R2-07 的 createDocumentSession 从重新校验的序列化源开放 [PPT 核心事务](presentation-transactions.md)，调用者快照不成为另一份权威来源。
 
 ## 验证与样例
 
-[完整合成包](../examples/presentation/README.md)包含所有第一批对象类型、图表数据、备注、富文本批注和回复。它可由 openDocument 直接读取，并通过 serialize 保存重开；它不声称当前已有图形渲染或 PPTX 生成。
+[完整合成包](../examples/presentation/README.md)包含所有第一批对象类型、图表数据、备注、富文本批注和回复。它可由 openDocument 读取、由只读画布显示，并通过核心事务修改和 serialize 保存重开；PPTX 生成仍归 R2-14。
 
 对应工程检查：
 

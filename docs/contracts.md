@@ -2,7 +2,7 @@
 
 三格式模型及来源规则见[数据模型](data-model.md)。DOCX 读取及只读验收已前移至 R1-06 前，当前状态与细则见[第一轮计划](iteration-1.md)。
 
-R1-03 提供 `core` 的数据结构校验、推导类型、JSON Schema、稳定校验错误，以及会话等运行时接口的类型声明。R1-04 的文档包打开、HTML/CSS 解析、节点与元数据引用检查见[文档模型](document-model.md)；DOCX 语义扩展及只读预览已在 R1-10 实现，见[读取说明](docx-import.md)；R1-06 已实现[事务执行与历史](document-session.md)，精确锚点映射、请求／提案及 Word 工作台也已实现。R2-02 增加 [Presentation 元数据、对象、图表数据及回复契约](presentation-model.md)，PPT 编辑与交互上下文仍待后续任务。
+R1-03 提供 `core` 的数据结构校验、推导类型、JSON Schema、稳定校验错误，以及会话等运行时接口的类型声明。R1-04 的文档包打开、HTML/CSS 解析、节点与元数据引用检查见[文档模型](document-model.md)；DOCX 语义扩展及只读预览已在 R1-10 实现，见[读取说明](docx-import.md)；R1-06 已实现[事务执行与历史](document-session.md)，精确锚点映射、请求／提案及 Word 工作台也已实现。R2-02 增加 [Presentation 元数据、对象、图表数据及回复契约](presentation-model.md)，R2-07 已提供 [PPT 核心事务](presentation-transactions.md)，PPT 交互上下文仍归 R2-13。
 
 ## 公开入口
 
@@ -33,7 +33,7 @@ const proposalSchema = getContractJsonSchema("edit-proposal");
 | `anchor` | 单节点文字、跨节点文字、节点、节点集合和区域 |
 | `annotation`、`annotations` | 批注及批注列表 |
 | `content-operation` | 当前七种内容操作，包含身份协调及精确文字映射证据 |
-| `document-operation` | 内容操作和三种批注管理操作 |
+| `document-operation` | 七类内容、三种批注管理，以及 PPT 几何和尺寸操作 |
 | `document-transaction` | 协议、文档、基准修订和操作列表 |
 | `interaction-request` | 开放批注、完整区块、样式、元数据、资源和支持操作 |
 | `edit-proposal` | 请求关联、提案身份、已处理批注及内容操作 |
@@ -48,7 +48,7 @@ const proposalSchema = getContractJsonSchema("edit-proposal");
 
 格式和协议的当前设计版本均为 1。显式声明其他整数版本时，SDK 入口返回 `UnsupportedVersion`；缺少版本或把版本写成字符串属于结构错误，不猜测版本。
 
-清单的类型枚举识别 `document`、`presentation`、`workbook`，但识别名称不代表已实现相应文档读取。元数据当前支持 Word 和 Presentation 两个严格分支，交互上下文仍仅开放 Word。PPT 的几何源、定义、图表和回复结构已由 R2-02 显式定义；几何事务、PPT 请求及 Excel 读取／单元格操作继续按对应任务实现。回复结构用于 PPT 模型，不意味着已开放 Word 原生线程或 PPT 编辑，不能通过额外 JSON 字段绕过。
+清单的类型枚举识别 `document`、`presentation`、`workbook`，但识别名称不代表已实现相应文档读取。元数据当前支持 Word 和 Presentation 两个严格分支，交互上下文仍仅开放 Word。PPT 的几何源、定义、图表和回复结构已由 R2-02 显式定义；几何及尺寸事务已由 R2-07 实现；PPT 请求及 Excel 读取／单元格操作继续按对应任务实现。回复结构用于 PPT 模型，不意味着已开放 Word 原生线程或 PPT 线程管理界面，不能通过额外 JSON 字段绕过。
 
 开发草案尚未发布，后续任务可以显式调整契约。发布冻结后，影响严格读取器的新增字段采用显式版本演进和支持的读取器，不能依赖忽略未知字段实现兼容。
 
