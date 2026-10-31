@@ -34,7 +34,7 @@ function numberLabel(value: number, format: string): string {
 }
 export function decorateLists(root: HTMLElement, account: (n: number) => void): void {
   const document = root.ownerDocument;
-  for (const box of root.querySelectorAll<HTMLElement>(".sdk-ppt-text")) {
+  for (const box of root.querySelectorAll<HTMLElement>(".sdk-ppt-text,.sdk-ppt-rich-story")) {
     const counters = new Map<string, number>();
     for (const paragraph of box.querySelectorAll<HTMLElement>("p")) {
       const s = document.defaultView!.getComputedStyle(paragraph), kind = paragraph.hasAttribute("data-office-list-none") ? "none" : paragraph.dataset.officeBullet ? "bullet" : paragraph.dataset.officeNumbering ? "number" : property(s, "--office-list-kind");

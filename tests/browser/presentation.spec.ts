@@ -194,3 +194,25 @@ test("expanding notes updates later slide coordinates and iframe height without 
   });
   expect(prevented).toBe(false);
 });
+
+test("notes body resolves its notes-master typography and background in the read-only panel", async ({ page }) => {
+  const files = new Map(fixture("10-notes")), decoder = new TextDecoder(), encoder = new TextEncoder(), metadata = openDocument(files).snapshot().metadata.presentation!, master = metadata.notesMasters[0]!;
+  files.set("styles.css", encoder.encode(decoder.decode(files.get("styles.css")) + `\n.${master.textStyle}-level-0{font-style:italic;--office-font-east-asia:"Noto Serif CJK SC";color:#990000}`));
+  files.set("content.html", encoder.encode(decoder.decode(files.get("content.html")).replace(new RegExp(`<section data-node-id="${master.rootNodeId}"[^>]*>`), tag => tag.replace('style="', 'style="--office-fill-kind:solid;--office-fill-color:#ffff00;'))));
+  await mount(page, files); await page.frameLocator("iframe").locator(".sdk-ppt-notes summary").click();
+  const span = page.frameLocator("iframe").locator('.sdk-ppt-notes [data-node-id] [data-office-script="east-asia"]').first();
+  const style = await span.evaluate(node => { const s = getComputedStyle(node); return { font: s.fontFamily, italic: s.fontStyle, color: s.color }; });
+  expect(style.font).toContain("Noto Serif CJK SC"); expect(style.italic).toBe("italic"); expect(style.color).toBe("rgb(153, 0, 0)");
+  expect(await page.frameLocator("iframe").locator(".sdk-ppt-note-content").evaluate(node => getComputedStyle(node).backgroundColor)).toBe("rgb(255, 255, 0)");
+});
+
+test("modern comment bodies resolve their slide theme font references and preserve rich lists", async ({ page }) => {
+  const files = new Map(fixture("12-modern-comments")), decoder = new TextDecoder(), encoder = new TextEncoder(), model = openDocument(files), metadata = model.snapshot().metadata.presentation!, body = model.getNode(model.snapshot().annotations[0]!.bodyNodeId!)!;
+  const theme = metadata.themes[0]!, bodyClass = body.attributes.class!.split(" ")[0]!;
+  files.set("styles.css", encoder.encode(decoder.decode(files.get("styles.css")) + `\n.${theme.cssClass}{--office-minor-east-asia:"Noto Serif CJK SC"}\n.${bodyClass}{--office-font-east-asia:var(--office-minor-east-asia);--office-list-kind:bullet;--office-list-character:"•"}`));
+  await mount(page, files);
+  const bodyView = page.frameLocator("iframe").locator(`.sdk-ppt-comments [data-node-id="${body.nodeId}"]`);
+  expect(await bodyView.locator('[data-office-script="east-asia"]').first().evaluate(node => getComputedStyle(node).fontFamily)).toContain("Noto Serif CJK SC");
+  await expect(bodyView.locator(".sdk-ppt-marker")).toHaveText("•");
+  await expect(page.frameLocator("iframe").locator(".sdk-ppt-comments")).toContainText(model.snapshot().annotations[0]!.date!);
+});

@@ -190,27 +190,50 @@ export function composePresentation(document: Document, model: DocumentModel, li
     if (note && note.kind === "notes") {
       const body = byId.get(note.bodyNodeId ?? note.rootNodeId)!, panel = markViewNode(document.createElement("details")), heading = document.createElement("summary");
       panel.className = "sdk-ppt-notes"; heading.textContent = "演讲者备注"; panel.append(heading);
-      const clone = body.cloneNode(true) as HTMLElement; clone.removeAttribute("data-office-kind"); clone.removeAttribute("data-office-story"); panel.append(clone); slide.after(panel); account(panel.querySelectorAll("*").length + 1); source.registerInstances(clone);
+      const noteRoot = byId.get(note.rootNodeId)!, noteMaster = metadata.notesMasters.find(m => m.notesMasterId === note.notesMasterId), noteMasterRoot = noteMaster && byId.get(noteMaster.rootNodeId);
+      if (noteMaster && noteMasterRoot) {
+        const theme = metadata.themes.find(theme => theme.themeId === noteMaster.themeId)!;
+        ownViewAttribute(noteMasterRoot, "class"); noteMasterRoot.classList.add(theme.cssClass);
+        ownViewAttribute(noteRoot, "class"); noteRoot.classList.remove(theme.cssClass);
+      }
+      const content = document.createElement("div"), clone = body.cloneNode(true) as HTMLElement;
+      content.className = "sdk-ppt-note-content";
+      clone.classList.add("sdk-ppt-rich-story");
+      clone.removeAttribute("data-office-kind"); clone.removeAttribute("data-office-story"); content.append(clone); panel.append(content); slide.after(panel);
+      inheritance.apply(content, [...(noteMasterRoot ? [noteMasterRoot] : []), noteRoot]);
+      const appearance = document.defaultView!.getComputedStyle(content);
+      if (property(appearance, "--office-fill-kind") === "solid") content.style.backgroundColor = resolvedColor(document, appearance, "--office-fill");
+      if (noteMaster?.textStyle) for (const p of clone.querySelectorAll<HTMLElement>("p")) {
+        const prototype = document.createElement("p"); prototype.className = noteMaster.textStyle + " " + noteMaster.textStyle + "-level-" + (p.dataset.officeLevel ?? "0"); inheritance.apply(p, [prototype]);
+      }
+      account(panel.querySelectorAll("*").length + 1); source.registerInstances(clone);
     }
   }
   for (const { node, definition } of connectors) resolveConnector(node, definition, objects);
   const comments = snapshot.annotations;
   if (comments.length) {
     const panel = markViewNode(document.createElement("section")); panel.className = "sdk-ppt-comments"; panel.setAttribute("aria-label", "批注");
+    const statuses = { open: "待处理", resolved: "已解决", closed: "已关闭", needs_reanchor: "待重新定位" };
+    const appendBody = (parent: HTMLElement, id: string | undefined, plain: string | undefined, modern: boolean): void => {
+      const body = id && byId.get(id);
+      if (!body) { parent.append(document.createTextNode(plain ?? "")); return; }
+      const clone = body.cloneNode(true) as HTMLElement; clone.classList.add("sdk-ppt-rich-story"); parent.append(clone);
+      const story = metadata.stories.find(story => story.rootNodeId === id), slide = metadata.slides.find(slide => slide.slideId === story?.slideId);
+      if (modern && slide) inheritance.apply(clone, [byId.get(masters.get(layouts.get(slide.layoutId)!.masterId)!.rootNodeId)!]);
+    };
+    root.append(panel);
     for (const comment of comments) {
-      const item = document.createElement("div"); item.textContent = (comment.author?.name ?? "") + " · " + comment.status + "\n";
-      const body = comment.bodyNodeId && byId.get(comment.bodyNodeId);
-      if (body) item.append(body.cloneNode(true)); else item.append(document.createTextNode(comment.instruction ?? ""));
+      const item = document.createElement("div"); item.textContent = (comment.author?.name ?? "") + (comment.date ? " · " + comment.date : "") + " · " + statuses[comment.status] + "\n";
       const info = metadata.comments.find(c => c.annotationId === comment.annotationId);
       if (info) item.dataset.commentFormat = info.format;
       panel.append(item);
+      appendBody(item, comment.bodyNodeId, comment.instruction, info?.format !== "classic");
       for (const reply of comment.replies ?? []) {
-        const child = document.createElement("div"); child.textContent = (reply.author?.name ?? "") + "：";
-        const body = reply.bodyNodeId && byId.get(reply.bodyNodeId);
-        if (body) child.append(body.cloneNode(true)); else child.append(document.createTextNode(reply.instruction ?? "")); item.append(child);
+        const child = document.createElement("div"); child.textContent = (reply.author?.name ?? "") + (reply.date ? " · " + reply.date : "") + "：";
+        item.append(child); appendBody(child, reply.bodyNodeId, reply.instruction, info?.format !== "classic");
       }
     }
-    root.append(panel); account(panel.querySelectorAll("*").length + 1);
+    account(panel.querySelectorAll("*").length + 1);
   }
   for (const link of metadata.hyperlinks) {
     const node = byId.get(link.nodeId); if (node) { ownViewAttribute(node, "data-sdk-hyperlink"); node.setAttribute("data-sdk-hyperlink", ""); }
@@ -221,7 +244,7 @@ export function composePresentation(document: Document, model: DocumentModel, li
   }
   // Script wrappers retain exact UTF-16 text while resolving native font roles.
   const texts: Text[] = [], walker = document.createTreeWalker(root, document.defaultView!.NodeFilter.SHOW_TEXT);
-  for (let n = walker.nextNode(); n; n = walker.nextNode()) if (!n.parentElement?.closest("svg,.sdk-ppt-comments,.sdk-field-display")) texts.push(n as Text);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) if (!n.parentElement?.closest("svg,.sdk-field-display")) texts.push(n as Text);
   for (const text of texts) {
     const parent = text.parentElement!; if (!text.textContent) continue;
     let previous = "ascii"; const chunks: { role: string; value: string }[] = [];
