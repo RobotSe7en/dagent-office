@@ -59,7 +59,7 @@ function labelStyle(context: Context, source: XmlNode | undefined): string | und
 }
 function axisStyle(context: Context, source: XmlNode, prefix: string): string {
   const css: Css = {};
-  for (const [name, key, fallback] of [["axPos", "position", source.name === "catAx" ? "b" : "l"], ["majorTickMark", "major-tick", "none"], ["minorTickMark", "minor-tick", "none"], ["tickLblPos", "label-position", "nextTo"], ["crosses", "crosses", "autoZero"], ["lblAlgn", "label-align", "ctr"], ["lblOffset", "label-offset", "100"], ["tickLblSkip", "label-skip", "1"], ["tickMarkSkip", "tick-skip", "1"], ["crossBetween", "cross-between", "between"], ["minorUnit", "minor-unit", "auto"]]) css["--office-axis-" + key] = val(source, name!, fallback!)!;
+  for (const [name, key, fallback] of [["axPos", "position", source.name === "catAx" ? "b" : "l"], ["majorTickMark", "major-tick", "cross"], ["minorTickMark", "minor-tick", "cross"], ["tickLblPos", "label-position", "nextTo"], ["crosses", "crosses", "autoZero"], ["lblAlgn", "label-align", "ctr"], ["lblOffset", "label-offset", "100"], ["tickLblSkip", "label-skip", "1"], ["tickMarkSkip", "tick-skip", "1"], ["crossBetween", "cross-between", "between"], ["minorUnit", "minor-unit", "auto"]]) if (child(source, name!, C)) css["--office-axis-" + key] = val(source, name!, fallback!)!;
   return style(context, source, prefix, css);
 }
 export function importChart(context: Context, reference: XmlNode, frame: Html): string {

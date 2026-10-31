@@ -2,7 +2,7 @@
 
 面向人和宿主智能体协作的通用办公文档 SDK 与可嵌入工作台。采用 TypeScript 和带语义的 HTML 文档格式，提供 Office 导入、保留样式的网页编辑、框选批注、结构化修改提案和可编辑 Office 导出。达智平台是首个宿主，SDK 同时面向其他应用独立发布。
 
-**当前状态：R1-14 独立 Word 闭环已实现。** 三格式模型设计已明确，`core` 提供严格契约、13 份 JSON Schema、Word 语义及文档包；`office` 提供有界 ZIP 和原生 DOCX 导入／导出。`editor` 提供无脚本预览、文字／对象／矩形选择、批注面板与重定位，见[预览与交互](docs/preview-interaction.md)。Playground 可打开 DOCX、添加或管理批注、缩放、撤销重做、下载文档包并重开，包含中文字体替代和缺字诊断。读取验收使用实际 DOCX、LibreOffice 重存文件与固定字体参考图，范围和限制见 [DOCX 读取](docs/docx-import.md)。隔离候选、七类内容操作、批注事务、单调修订和精确锚点映射见[核心事务与历史](docs/document-session.md)。工作台支持多批注请求、固定提案导入、候选差异和整批应用，见[工作台与协议](docs/workbench.md)。连续正文与表格支持富文本及中文输入，见[正文输入](docs/rich-text.md)。`render` 提供独立只读预览和共享页面画布，`node` 提供受管理的 Chromium、PDF/PNG 与字节协议，见[分页与渲染](docs/pagination-rendering.md)。预览直接显示 HTML，分页覆盖旧 Chromium、Firefox 和 WebKit。原生可编辑导出和批注报告见 [DOCX 导出](docs/docx-export.md)。Playground 原生 DOCX 下载、导出报告和独立打包运行验收见 [Word 闭环](docs/word-closure.md)。R1-15 达智智能体验证按用户决定延期，R1-16 保留尚未完成的宿主验收项；当前转入第二轮 PPT，已完成 R2-01 计划、[R2-02 Presentation 契约与文档模型](docs/presentation-model.md)和 [R2-03 独立 PPTX 样例与参考环境](examples/pptx/README.md)，支持 PPT HTML 包的新建、校验、查询与保存重开；[R2-04/05 PPTX 读取](docs/pptx-import.md)已实现，包括三类图表及常量数据、备注和经典／现代批注；图形预览和编辑仍待后续任务验收。尚未发布 npm 包。
+**当前状态：R1-14 独立 Word 闭环已实现。** 三格式模型设计已明确，`core` 提供严格契约、13 份 JSON Schema、Word 语义及文档包；`office` 提供有界 ZIP 和原生 DOCX 导入／导出。`editor` 提供无脚本预览、文字／对象／矩形选择、批注面板与重定位，见[预览与交互](docs/preview-interaction.md)。Playground 可打开 DOCX、添加或管理批注、缩放、撤销重做、下载文档包并重开，包含中文字体替代和缺字诊断。读取验收使用实际 DOCX、LibreOffice 重存文件与固定字体参考图，范围和限制见 [DOCX 读取](docs/docx-import.md)。隔离候选、七类内容操作、批注事务、单调修订和精确锚点映射见[核心事务与历史](docs/document-session.md)。工作台支持多批注请求、固定提案导入、候选差异和整批应用，见[工作台与协议](docs/workbench.md)。连续正文与表格支持富文本及中文输入，见[正文输入](docs/rich-text.md)。`render` 提供独立只读预览和共享页面画布，`node` 提供受管理的 Chromium、PDF/PNG 与字节协议，见[分页与渲染](docs/pagination-rendering.md)。预览直接显示 HTML，分页覆盖旧 Chromium、Firefox 和 WebKit。原生可编辑导出和批注报告见 [DOCX 导出](docs/docx-export.md)。Playground 原生 DOCX 下载、导出报告和独立打包运行验收见 [Word 闭环](docs/word-closure.md)。R1-15 达智智能体验证按用户决定延期，R1-16 保留尚未完成的宿主验收项；当前转入第二轮 PPT，已完成 R2-01 计划、[R2-02 Presentation 契约与文档模型](docs/presentation-model.md)和 [R2-03 独立 PPTX 样例与参考环境](examples/pptx/README.md)，支持 PPT HTML 包的新建、校验、查询与保存重开；[R2-04/05 PPTX 读取](docs/pptx-import.md)已实现，包括三类图表及常量数据、备注和经典／现代批注；[R2-06 只读画布与读取验收](docs/presentation-preview.md)已实现，编辑由后续 R2-07 开放。尚未发布 npm 包。
 
 ## 本地开发
 
@@ -39,6 +39,7 @@ pnpm dev
 | [结构契约与 JSON Schema](docs/contracts.md) | 已实现的校验 API、严格字段、类型、静态 Schema 与语义校验边界 |
 | [文档包读取与模型](docs/document-model.md) | 只读打开、节点查询、HTML/CSS 支持范围、引用、预算和保存重开 |
 | [Presentation 模型](docs/presentation-model.md) | PPT 严格契约、新建文稿、源几何与引用、完整样例和保存重开 |
+| [PPT 只读画布](docs/presentation-preview.md) | 固定页面、母版／布局投影、形状与图表、字体、参考图及生命周期验收 |
 | [核心事务与历史](docs/document-session.md) | 编辑会话、操作、候选、修订、历史、事件及预算 |
 | [正文富文本输入](docs/rich-text.md) | 自研输入适配、中文输入法、身份保留、跨段落与表格输入及统一历史 |
 | [工作台与协议](docs/workbench.md) | 多批注请求、宿主提交、提案校验、差异应用及 React 包装 |

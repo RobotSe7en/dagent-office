@@ -6,7 +6,8 @@
   "license": "UNLICENSED",
   "description": "Strict document and host-interaction contracts for dagent-office",
   "files": [
-    "dist"
+    "dist",
+    "ECMA-376-GEOMETRY-LICENSE.txt"
   ],
   "types": "./dist/index.d.ts",
   "exports": {

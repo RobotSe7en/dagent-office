@@ -66,7 +66,7 @@ export class PreviewSource {
   constructor(document: Document, model: DocumentModel) {
     this.document = document;
     this.model = model;
-    const documentRoot = document.querySelector<HTMLElement>('body > [data-office-kind="document"][data-node-id]');
+    const documentRoot = document.querySelector<HTMLElement>('body > [data-office-kind="document"][data-node-id],body > [data-office-kind="presentation"][data-node-id]');
     if (!documentRoot) throw new DocumentError("InvalidDocument", "预览文档缺少根容器。");
     this.index(documentRoot);
     const main = model.snapshot().metadata.word?.stories.find((story) => story.kind === "main");
@@ -77,7 +77,7 @@ export class PreviewSource {
   /** Text splitting at measured line boundaries changes DOM positions, never source offsets. */
   reindex(): void {
     this.elements.clear(); this.tokens.length = 0; this.fieldViews = new WeakMap();
-    this.index(this.document.querySelector<HTMLElement>('body > [data-office-kind="document"][data-node-id]')!);
+    this.index(this.document.querySelector<HTMLElement>('body > [data-office-kind="document"][data-node-id],body > [data-office-kind="presentation"][data-node-id]')!);
     for (const [id, display] of this.fieldScopes) this.setFieldView(id, display);
   }
   private index(documentRoot: HTMLElement): void {

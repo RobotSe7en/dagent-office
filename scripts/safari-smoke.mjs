@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
+import { importPptx } from "@dagent-office/office";
 
 if (process.platform !== "darwin") throw new Error("Safari acceptance requires macOS and enabled safaridriver.");
 const origin = "http://127.0.0.1:4173", endpoint = "http://127.0.0.1:4445";
@@ -62,8 +63,19 @@ try {
   const selected = await execute("return window.paginationHost.interaction.selection()?.anchor"); assert.equal(selected?.kind, "text"); assert.equal(selected?.nodeId, "long");
   assert.ok(await execute("return window.paginationHost.layout().pages.length>1"));
   assert.deepEqual(await execute("return window.paginationHost.errors"), []);
-  mkdirSync(root + ".cache", { recursive: true }); writeFileSync(root + ".cache/safari-result.json", JSON.stringify({ capabilities: created.capabilities, checks: ["pure preview pages", "native input", "undo", "cross-page selection"] }, null, 2));
-  console.log("Safari acceptance passed: preview, native input, undo, cross-page selection.");
+  await execute("window.paginationHost.view.dispose();window.paginationHost.session?.dispose();");
+  const pptBuild = await build({ configFile: false, logLevel: "silent", build: { write: false, minify: false, target: "es2022", lib: { entry: root + "tests/browser/fixtures/presentation-host.ts", formats: ["iife"], name: "PresentationAcceptance" } } });
+  await execute((Array.isArray(pptBuild) ? pptBuild[0].output : pptBuild.output).filter(item => item.type === "chunk").map(item => item.code).join("\n"));
+  const ppt = importPptx(readFileSync(root + "examples/pptx/09-charts.pptx"), { documentId: "safari-presentation" });
+  const mounted = await command("POST", `/session/${session}/execute/async`, { script: "const done=arguments[arguments.length-1];window.presentationHost.mount(arguments[0]).then(()=>done({ok:true}),error=>done({mountError:{message:String(error),stack:error?.stack}}));", args: [[...ppt].map(([path, data]) => [path, [...data]])] });
+  assert.equal(mounted.ok, true, JSON.stringify(mounted));
+  assert.equal(await execute("return window.presentationHost.view.layout().pages.length"), 3);
+  assert.equal(await execute("return window.presentationHost.view.element.contentDocument.querySelectorAll('svg[data-sdk-chart]').length"), 3);
+  assert.equal(await execute("return window.presentationHost.view.element.contentDocument.querySelectorAll('[contenteditable=true]').length"), 0);
+  assert.equal(await execute("return /<svg|data-sdk/.test(window.presentationHost.projected())"), false);
+  await execute("window.presentationHost.view.dispose()");
+  mkdirSync(root + ".cache", { recursive: true }); writeFileSync(root + ".cache/safari-result.json", JSON.stringify({ capabilities: created.capabilities, checks: ["pure preview pages", "native input", "undo", "cross-page selection", "presentation fixed pages", "three native charts", "reversible presentation projection", "presentation disposal"] }, null, 2));
+  console.log("Safari acceptance passed: Word input/history/selection and presentation pages/charts/projection/disposal.");
 } catch (error) {
   if (session) { try { mkdirSync(root + ".cache", { recursive: true }); writeFileSync(root + ".cache/safari-failure.png", Buffer.from(await command("GET", `/session/${session}/screenshot`), "base64")); } catch {} }
   throw error;

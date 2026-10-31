@@ -1,6 +1,6 @@
 # PPTX 读取
 
-R2-04 提供 `importPptx(bytes, { documentId, limits?, maxZipBytes? })`，将宿主授权的 PPTX 字节映射到同一 HTML/CSS/元数据／资源文档包。它不调用 Office 进程、网络或第三方演示文稿库。R2-05 增加三类图表、备注和两类批注；完整读取及只读画面验收属于 R2-06。编辑入口继续关闭。
+R2-04 提供 `importPptx(bytes, { documentId, limits?, maxZipBytes? })`，将宿主授权的 PPTX 字节映射到同一 HTML/CSS/元数据／资源文档包。它不调用 Office 进程、网络或第三方演示文稿库。R2-05 增加三类图表、备注和两类批注；[R2-06 只读画布与读取验收](presentation-preview.md)已覆盖独立来源与生产者样例，编辑入口由后续 R2-07 开放。
 
 ```ts
 import { openDocument } from "@dagent-office/core";

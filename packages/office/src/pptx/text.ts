@@ -138,24 +138,28 @@ export function importText(context: Context, body: XmlNode, target: Html, part: 
   const kinds = ["noAutofit", "normAutofit", "spAutoFit"].filter(name => child(properties, name, A));
   if (kinds.length > 1) fail(properties, "Text auto-fit is repeated.");
   const normal = child(properties, "normAutofit", A);
-  const wrap = value(properties, "wrap") ?? "square";
-  if (!["square", "none"].includes(wrap)) fail(properties, "Text wrapping is invalid.");
-  const result: NonNullable<Extract<PresentationObject, { kind: "text" }>["text"]> = { autoFit: kinds[0] === "normAutofit" ? "normal" : kinds[0] === "spAutoFit" ? "shape" : "none", wrap: wrap === "square" };
+  const wrap = value(properties, "wrap");
+  if (wrap !== undefined && !["square", "none"].includes(wrap)) fail(properties, "Text wrapping is invalid.");
+  const result: NonNullable<Extract<PresentationObject, { kind: "text" }>["text"]> = {};
+  if (kinds.length) result.autoFit = kinds[0] === "normAutofit" ? "normal" : kinds[0] === "spAutoFit" ? "shape" : "none";
+  if (wrap !== undefined) result.wrap = wrap === "square";
   if (normal) {
     result.fontScale = integer(normal, "fontScale", 100000) / 100000;
     result.lineSpacingReduction = integer(normal, "lnSpcReduction", 0) / 100000;
     if (result.fontScale <= 0 || result.fontScale > 1 || result.lineSpacingReduction < 0 || result.lineSpacingReduction > 1) fail(normal, "Text auto-fit scales are invalid.");
   }
-  const css: Css = { ...fill(properties, "--office-text-fill"), "tab-size": points(properties, "defTabSz", 914400) + "pt" };
+  const css: Css = { ...fill(properties, "--office-text-fill") };
+  if (value(properties, "defTabSz") !== undefined) css["tab-size"] = points(properties, "defTabSz") + "pt";
   for (const [name, side, fallback] of [["lIns", "left", 91440], ["rIns", "right", 91440], ["tIns", "top", 45720], ["bIns", "bottom", 45720]] as const) {
+    if (value(properties, name) === undefined) continue;
     const amount = points(properties, name, fallback);
     if (amount < 0) fail(properties, "Text insets cannot be negative.");
     css["padding-" + side] = amount + "pt";
   }
-  const anchor = value(properties, "anchor") ?? "t";
-  if (!["t", "ctr", "b", "just", "dist"].includes(anchor)) unsupported(properties);
-  css["--office-text-anchor"] = anchor; css["white-space"] = result.wrap ? "pre-wrap" : "pre";
-  css["--office-text-anchor-center"] = String(bool(properties, "anchorCtr"));
+  const anchor = value(properties, "anchor");
+  if (anchor !== undefined && !["t", "ctr", "b", "just", "dist"].includes(anchor)) unsupported(properties);
+  if (anchor !== undefined) css["--office-text-anchor"] = anchor;
+  if (value(properties, "anchorCtr") !== undefined) css["--office-text-anchor-center"] = String(bool(properties, "anchorCtr"));
   target.attrs.style = (target.attrs.style ? target.attrs.style + ";" : "") + Object.entries(css).map(([k, v]) => k + ":" + v).join(";");
   const listStyle = context.id("text-style");
   importTextStyle(context, child(body, "lstStyle", A), listStyle);

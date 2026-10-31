@@ -13,6 +13,7 @@ import { layoutFields } from "./fields.js";
 import type { LayoutFields } from "./fields.js";
 import { SourceProjection } from "./projection.js";
 import { copyPreviewSelection } from "./clipboard.js";
+import { mountPresentationPreview } from "./presentation/preview.js";
 
 export interface DocumentPreview {
   readonly element: HTMLIFrameElement;
@@ -403,6 +404,7 @@ export function mountPreview(
   input: DocumentModel,
   options: DocumentPreviewOptions = {},
 ): DocumentPreview & { source(): PreviewSource | undefined } {
+  if (input.snapshot().manifest.kind === "presentation") return mountPresentationPreview(container, input, options);
   const limits = renderLimits(options.limits), hostDocument = container.ownerDocument;
   let prepared = prepareDocument(input), model = prepared.model;
   const iframe = hostDocument.createElement("iframe");

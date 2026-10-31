@@ -14,6 +14,8 @@ export { DEFAULT_DOCUMENT_READ_LIMITS, openDocument } from "./document-model.js"
 export { createPresentation } from "./presentation.js";
 export type { CreatePresentationOptions } from "./presentation.js";
 export { readPresentationGeometry } from "./document/presentation.js";
+export { evaluatePresentationPreset } from "./presentation-geometry.js";
+export type { PresentationPathCommand, PresentationPresetGeometry } from "./presentation-geometry.js";
 export { createDocumentSession, DEFAULT_DOCUMENT_SESSION_LIMITS, DEFAULT_INTERACTION_LIMITS } from "./document-session.js";
 export { collectDocumentAssets, createAssetDescriptor } from "./assets.js";
 export type {

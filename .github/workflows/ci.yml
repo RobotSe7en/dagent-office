@@ -38,13 +38,19 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: node scripts/playwright.mjs install --with-deps chromium firefox webkit --only-shell
-      - run: sudo apt-get install -y poppler-utils fonts-noto-cjk
+      - run: sudo apt-get install -y poppler-utils fonts-noto-cjk fonts-liberation2 python3-pil
       - run: pnpm build
-      - run: node scripts/playwright.mjs test interaction.spec.ts workbench.spec.ts text-editor.spec.ts pagination.spec.ts rendering.spec.ts remote-access.spec.ts word-closure.spec.ts
+      - run: node scripts/playwright.mjs test interaction.spec.ts workbench.spec.ts text-editor.spec.ts pagination.spec.ts rendering.spec.ts remote-access.spec.ts word-closure.spec.ts presentation.spec.ts
+      - run: /usr/bin/python3 scripts/check-presentation-reference.py && /usr/bin/python3 scripts/check-presentation-reference.py --browser firefox && /usr/bin/python3 scripts/check-presentation-reference.py --browser webkit
       - run: node scripts/install-legacy-chromium.mjs
-      - run: node scripts/playwright.mjs test pagination.spec.ts --project=chromium
+      - run: node scripts/playwright.mjs test pagination.spec.ts presentation.spec.ts --project=chromium
         env:
           DAGENT_OFFICE_BROWSER_EXECUTABLE: ${{ github.workspace }}/.cache/legacy-browser/chromium-1041/chrome-linux/chrome
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: presentation-preview-acceptance
+          path: .cache/presentation-preview/
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

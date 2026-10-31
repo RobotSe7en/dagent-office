@@ -36,8 +36,9 @@ export function onlyColor(node: XmlNode): Color {
 }
 export function paint(css: Css, prefix: string, source: Color): void {
   css[prefix + "-color"] = source.css;
+  css[prefix + "-source"] = source.css.includes("--office-placeholder-color") ? "placeholder" : "direct";
   for (const key of ["alpha", "lumMod", "lumOff", "tint", "shade"] as const)
-    if (source[key] !== undefined) css[prefix + "-" + key.replace(/[A-Z]/g, c => "-" + c.toLowerCase())] = String(source[key]);
+    css[prefix + "-" + key.replace(/[A-Z]/g, c => "-" + c.toLowerCase())] = String(source[key] ?? (key === "alpha" || key === "lumMod" || key === "shade" ? 1 : 0));
 }
 export function fill(source: XmlNode | undefined, prefix = "--office-fill"): Css {
   const css: Css = {};
@@ -180,6 +181,9 @@ export function importTheme(context: Context, path: string): string {
     elements(list, undefined, A).forEach((item, index) => {
       const css = map(item);
       for (const key of Object.keys(css)) css[key] = css[key]!.replaceAll("--office-placeholder-color", "--office-" + prefix + "-reference-color");
+      for (const key of Object.keys(css)) if (key.endsWith("-source") && css[key] === "placeholder") {
+        css[key] = "reference"; css[key.slice(0, -7) + "-reference-prefix"] = "--office-" + prefix + "-reference";
+      }
       context.rule(id + "-" + prefix + "-" + (index + 1), css);
     });
   }

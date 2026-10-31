@@ -142,7 +142,7 @@ exportPptx(model, options?): PptxExportResult
 | R2-03 | 已完成 | 独立样例与验收环境 | R2-01；独立 ZIP/XML 生成器、独立内容预期、固定字体及 Impress/Calc 就绪 |
 | R2-04 | 已完成 | PPTX 基础读取 | R2-02/03；OPC、主题、母版、布局、幻灯片、文字、图片、形状、连接线、表格和组读取通过 |
 | R2-05 | 已完成 | 图表、备注与批注读取 | R2-04；三类图表及内嵌常量数据、备注、经典与现代批注可读并保存重开 |
-| R2-06 | 未开始 | 只读预览及读取验收 | R2-04/05；固定画布、继承、组变换、字体、图表及参考渲染通过，读取矩阵逐项有结果 |
+| R2-06 | 已完成 | 只读预览及读取验收 | R2-04/05；固定画布、继承、组变换、字体、图表及参考渲染通过，读取矩阵逐项有结果 |
 | R2-07 | 未开始 | PPT 事务与锚点映射 | R2-06；格式操作、资源原子性、整批失败不变、撤销重做及影响范围测试通过 |
 | R2-08 | 未开始 | 幻灯片与对象编辑 | R2-07；编排、多选、几何、层级、对齐分布、组合及键盘操作可用 |
 | R2-09 | 未开始 | 文字、表格与备注输入 | R2-08；中文输入、格式、跨段落和单元格编辑、备注输入共享核心历史 |
@@ -208,12 +208,18 @@ exportPptx(model, options?): PptxExportResult
 
 ### 命令、CI 与结果
 
-以下是随实现新增的命令目标，当前尚不存在，不能作为已可运行命令使用：
+已提供以下读取与独立参考命令：
 
 ```text
 pnpm fixtures:pptx
+pnpm check:pptx-fixtures
 pnpm check:pptx-reference
 pnpm record:pptx-reference
+```
+
+`node scripts/playwright.mjs test presentation.spec.ts` 检查只读画布；`/usr/bin/python3 scripts/check-presentation-reference.py` 核对浏览器与独立原生参考的对象边界。原生导出与独立打包闭环的以下命令仍为后续任务目标，尚不可运行：
+
+```text
 pnpm check:pptx-export
 pnpm check:presentation-closure
 ```
