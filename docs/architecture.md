@@ -2,9 +2,9 @@
 
 dagent-office 是可嵌入不同产品的通用文档协作 SDK 与工作台。它将 Office 文件转换为带语义的 HTML 文档包，在浏览器中完成编辑、批注和修改提案预览，再从当前文档源生成 Office 文件。
 
-本文描述目标架构。工程骨架、R1-03 [结构契约](contracts.md)、R1-04 [只读文档模型](document-model.md)及 R1-05 [资源与 ZIP](resources-and-zip.md)已实现，DOCX 导入和只读预览见[读取说明](docx-import.md)；[核心事务、历史和精确锚点映射](document-session.md)及 R1-08 [预览与交互](preview-interaction.md)已实现；[请求／提案执行及工作台](workbench.md)已实现，[富文本输入](rich-text.md)已实现，[分页、共享画布及 PDF/PNG](pagination-rendering.md)已实现，原生 DOCX 导出仍待实现；运行命令见[本地开发](development.md)。交付顺序见[整体实施计划](implementation-plan.md)，首轮支持范围见[第一轮实施细则](iteration-1.md)。
+本文描述目标架构。工程骨架、R1-03 [结构契约](contracts.md)、R1-04 [只读文档模型](document-model.md)及 R1-05 [资源与 ZIP](resources-and-zip.md)已实现，DOCX 导入和只读预览见[读取说明](docx-import.md)；[核心事务、历史和精确锚点映射](document-session.md)及 R1-08 [预览与交互](preview-interaction.md)已实现；[请求／提案执行及工作台](workbench.md)已实现，[富文本输入](rich-text.md)已实现，[分页、共享画布及 PDF/PNG](pagination-rendering.md)已实现，[原生 DOCX 导出](docx-export.md)及 [R1-14 独立 Word 闭环](word-closure.md)已实现；运行命令见[本地开发](development.md)。交付顺序见[整体实施计划](implementation-plan.md)，首轮支持范围见[第一轮实施细则](iteration-1.md)。
 
-整体按五轮交付。第一轮将 HTML 协作基础与 Word 完整闭环合并：先完成独立 Playground 的 DOCX 导入、人工输入、分页、批注、提案和 DOCX/PDF 导出重开，再接入达智现有智能体验证；后续依次覆盖 PPT、Excel、正式宿主存储和发布准备。
+整体按五轮交付。第一轮的 HTML 协作与独立 Word 闭环已完成，R1-15 达智验证按用户决定延期，R1-16 保留未完成的宿主验收。当前进入[第二轮 PPT](iteration-2.md)，R2-01 计划已完成，PPT 功能尚未实现；随后为 Excel、正式宿主存储和发布准备。延期的达智验证保留原编号，恢复时间另行安排。
 
 ## 产品边界与交付形态
 
@@ -26,7 +26,7 @@ dagent-office 是可嵌入不同产品的通用文档协作 SDK 与工作台。�
 
 达智是首个真实智能体宿主；独立 Playground 验证同一组件与 API 能脱离达智运行。其他产品无需引入达智的后端类型、路由或业务模型。
 
-[三格式模型设计](data-model.md)、DOCX 读取、样式映射和声明范围的独立只读验收已先行完成，R1-06 至 R1-08 的事务、历史、精确锚点映射及交互也已完成，R1-09 工作台与协议闭环也已完成，R1-11 富文本输入已完成，R1-12 自研分页与 PDF 渲染已完成，下一步进入 R1-13 原生 DOCX 导出。只读预览接受 `DocumentModel`，交互组件接受宿主拥有的 `DocumentEditingSession`，复用同一渲染实现；完整工作台接受 `DocumentSession` 并复用同一渲染及事务边界。
+[三格式模型设计](data-model.md)、DOCX 读取、样式映射和声明范围的独立只读验收已先行完成，R1-06 至 R1-08 的事务、历史、精确锚点映射及交互也已完成，R1-09 工作台与协议闭环也已完成，R1-11 富文本输入已完成，R1-12 自研分页与 PDF 渲染、R1-13 原生 DOCX 导出和 R1-14 独立 Word 闭环也已完成。当前 PPT 按第二轮细则先完成读取及只读验收再进入编辑。只读预览接受 `DocumentModel`，交互组件接受宿主拥有的 `DocumentEditingSession`，复用同一渲染实现；完整工作台接受 `DocumentSession` 并复用同一渲染及事务边界。
 
 ## 模块关系
 

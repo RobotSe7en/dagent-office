@@ -2,7 +2,7 @@
 
 面向人和宿主智能体协作的通用办公文档 SDK 与可嵌入工作台。采用 TypeScript 和带语义的 HTML 文档格式，提供 Office 导入、保留样式的网页编辑、框选批注、结构化修改提案和可编辑 Office 导出。达智平台是首个宿主，SDK 同时面向其他应用独立发布。
 
-**当前状态：R1-14 独立 Word 闭环已实现。** 三格式模型设计已明确，`core` 提供严格契约、13 份 JSON Schema、Word 语义及文档包；`office` 提供有界 ZIP 和原生 DOCX 导入／导出。`editor` 提供无脚本预览、文字／对象／矩形选择、批注面板与重定位，见[预览与交互](docs/preview-interaction.md)。Playground 可打开 DOCX、添加或管理批注、缩放、撤销重做、下载文档包并重开，包含中文字体替代和缺字诊断。读取验收使用实际 DOCX、LibreOffice 重存文件与固定字体参考图，范围和限制见 [DOCX 读取](docs/docx-import.md)。隔离候选、七类内容操作、批注事务、单调修订和精确锚点映射见[核心事务与历史](docs/document-session.md)。工作台支持多批注请求、固定提案导入、候选差异和整批应用，见[工作台与协议](docs/workbench.md)。连续正文与表格支持富文本及中文输入，见[正文输入](docs/rich-text.md)。`render` 提供独立只读预览和共享页面画布，`node` 提供受管理的 Chromium、PDF/PNG 与字节协议，见[分页与渲染](docs/pagination-rendering.md)。预览直接显示 HTML，分页覆盖旧 Chromium、Firefox 和 WebKit。原生可编辑导出和批注报告见 [DOCX 导出](docs/docx-export.md)。Playground 原生 DOCX 下载、导出报告和独立打包运行验收见 [Word 闭环](docs/word-closure.md)。下一步为 R1-15 达智智能体验证；尚未发布 npm 包。
+**当前状态：R1-14 独立 Word 闭环已实现。** 三格式模型设计已明确，`core` 提供严格契约、13 份 JSON Schema、Word 语义及文档包；`office` 提供有界 ZIP 和原生 DOCX 导入／导出。`editor` 提供无脚本预览、文字／对象／矩形选择、批注面板与重定位，见[预览与交互](docs/preview-interaction.md)。Playground 可打开 DOCX、添加或管理批注、缩放、撤销重做、下载文档包并重开，包含中文字体替代和缺字诊断。读取验收使用实际 DOCX、LibreOffice 重存文件与固定字体参考图，范围和限制见 [DOCX 读取](docs/docx-import.md)。隔离候选、七类内容操作、批注事务、单调修订和精确锚点映射见[核心事务与历史](docs/document-session.md)。工作台支持多批注请求、固定提案导入、候选差异和整批应用，见[工作台与协议](docs/workbench.md)。连续正文与表格支持富文本及中文输入，见[正文输入](docs/rich-text.md)。`render` 提供独立只读预览和共享页面画布，`node` 提供受管理的 Chromium、PDF/PNG 与字节协议，见[分页与渲染](docs/pagination-rendering.md)。预览直接显示 HTML，分页覆盖旧 Chromium、Firefox 和 WebKit。原生可编辑导出和批注报告见 [DOCX 导出](docs/docx-export.md)。Playground 原生 DOCX 下载、导出报告和独立打包运行验收见 [Word 闭环](docs/word-closure.md)。R1-15 达智智能体验证按用户决定延期，R1-16 保留尚未完成的宿主验收项；当前转入第二轮 PPT，已完成 [R2-01 详细计划](docs/iteration-2.md)，PPT 功能尚未实现。尚未发布 npm 包。
 
 ## 本地开发
 
@@ -48,7 +48,8 @@ pnpm dev
 | [DOCX 读取与只读预览](docs/docx-import.md) | 导入 API、范围、中文字体、样例、参考渲染和限制 |
 | [资源与 ZIP](docs/resources-and-zip.md) | 资源摘要、图片容器识别、宿主资源收集、ZIP 预算及保真样例 |
 | [整体实施计划](docs/implementation-plan.md) | 五轮交付顺序、具体产物、能力范围和验收门槛 |
-| [第一轮实施细则](docs/iteration-1.md) | 首轮支持范围、公共契约、任务依赖、技术验证及演示脚本 |
+| [第一轮实施细则](docs/iteration-1.md) | Word 支持范围、任务依赖、独立闭环及延期的宿主验收 |
+| [第二轮实施细则](docs/iteration-2.md) | PPT 已定范围、自研路线、任务依赖及读取／编辑／导出验收门槛 |
 | [本地开发](docs/development.md) | 环境、启动、构建、类型检查、工程测试及本地打包 |
 | [达智集成](docs/dagent-integration.md) | 平台接入、身份隔离、工作区及运行边界 |
 | [技术选型](docs/technology-selection.md) | 候选依赖、复用范围及参考工程 |
@@ -73,6 +74,6 @@ HTML 文档包
 
 使用一个 TypeScript monorepo，组织 `core`、`render`、`editor`、`office`、`node` 五个库模块，并提供独立 Playground。编辑器提供普通 JavaScript 挂载、可选 React 包装和底层 API；其他产品主要适配批注提交、提案回传、授权资源和存储。Node 转换进程用于服务端导出和浏览器渲染，具体运行方式由宿主选择。包名、第一方许可证及正式版本在初次发布时确定。
 
-第一轮先完成三格式数据模型设计，再完成 DOCX 读取、样式映射及独立只读预览验收；通过后进入 R1-06 事务与历史，继续完成富文本、分页、批注、提案、DOCX/PDF 导出与重开，最后接入达智现有智能体验证。PPT、Excel、正式宿主存储和发布准备依次进入第二至第五轮。Playground 使用固定提案文件，不提供独立模型服务。
+第一轮的三格式模型设计、DOCX 读取验收、事务与历史、富文本、分页、批注、提案、DOCX/PDF 导出与重开已完成独立闭环。R1-15 达智真实智能体验证延期，保留原编号及未通过的宿主验收项。当前进入第二轮 PPT，按“模型与独立样例 → 完整读取与只读验收 → 统一事务和编辑 → 原生导出与独立闭环”推进；随后为 Excel、正式宿主存储和发布准备。Playground 使用固定提案文件，不提供独立模型服务。
 
 第一版正式交付覆盖 DOCX、PPTX 和 XLSX 的常见办公内容。WPS 生成的这三种文件走同一条路径；`.wps`、`.et`、`.dps` 通过可选格式转换适配器导入，第一版统一导出标准 OOXML 文件。

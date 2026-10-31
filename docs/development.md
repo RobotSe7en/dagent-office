@@ -1,6 +1,6 @@
 # 本地开发与工程检查
 
-当前完成 R1-02 至 R1-09、R1-05A 模型设计与 R1-10 声明范围的 DOCX 读取验收。`core` 提供严格契约、Word 语义和文档包，`office` 提供 ZIP 与 DOCX 导入，`editor` 提供[预览、选择与批注交互](preview-interaction.md)；`render` 提供共享画布，`node` 提供 PDF/PNG 和字节转换入口。`core` 还提供[编辑会话、事务及历史](document-session.md)、精确文字及结构锚点映射和区域批注重定位；[工作台与协议闭环](workbench.md)支持多批注请求、提案差异和整批应用；[R1-11 正文输入](rich-text.md)也已实现；R1-12 [分页与渲染](pagination-rendering.md)已实现，R1-13 [原生 DOCX 导出](docx-export.md)与 R1-14 [独立 Word 闭环](word-closure.md)也已实现。API 见[DOCX 读取](docx-import.md)，顺序见[第一轮细则](iteration-1.md)。
+当前完成 R1-02 至 R1-09、R1-05A 模型设计与 R1-10 声明范围的 DOCX 读取验收。`core` 提供严格契约、Word 语义和文档包，`office` 提供 ZIP 与 DOCX 导入，`editor` 提供[预览、选择与批注交互](preview-interaction.md)；`render` 提供共享画布，`node` 提供 PDF/PNG 和字节转换入口。`core` 还提供[编辑会话、事务及历史](document-session.md)、精确文字及结构锚点映射和区域批注重定位；[工作台与协议闭环](workbench.md)支持多批注请求、提案差异和整批应用；[R1-11 正文输入](rich-text.md)也已实现；R1-12 [分页与渲染](pagination-rendering.md)已实现，R1-13 [原生 DOCX 导出](docx-export.md)与 R1-14 [独立 Word 闭环](word-closure.md)也已实现。API 见[DOCX 读取](docx-import.md)，第一轮历史及延期验收见[第一轮细则](iteration-1.md)。当前为[第二轮 PPT](iteration-2.md)的计划阶段，PPT 功能和新增检查命令尚未实现。
 
 ## 环境和安装
 
@@ -46,7 +46,7 @@ pnpm test:watch
 
 打包用例在 workspace 外、包含空格的临时路径中安装五个 tarball，优先复用工作区 pnpm 依赖缓存；冷缓存时允许获取第三方依赖及其注册表元数据。内部包通过显式 tarball 覆盖固定来源，不从注册表下载内部包。验证真实校验 API、公开 JSON、ES2022 类型、私有路径拒绝，以及不安装 React 的普通 JS 浏览器宿主构建。临时消费工程在测试结束后删除。
 
-测试还覆盖只读文档解析、资源摘要、宿主资源收集、ZIP 原始路径及大小校验、保真样例保存重开；DOCX 用例覆盖实际格式输入、独立生产者版本、样式、字段、批注、修订及保存重开；事务用例另覆盖隔离候选、操作、原子性、历史、冲突和预算，精确 UTF-16/结构映射、跨节点与区域批注，以及 DOCX 原生批注编辑后的历史和文档包重开；正文输入增加身份协调、精确映射证据和中文组合输入；自动分页和 Office 导出仍待实现。核心用例放入各包 `tests`，浏览器用例放入根 `tests/browser`。
+测试还覆盖只读文档解析、资源摘要、宿主资源收集、ZIP 原始路径及大小校验、保真样例保存重开；DOCX 用例覆盖实际格式输入、独立生产者版本、样式、字段、批注、修订及保存重开；事务用例另覆盖隔离候选、操作、原子性、历史、冲突和预算，精确 UTF-16/结构映射、跨节点与区域批注，以及 DOCX 原生批注编辑后的历史和文档包重开；正文输入增加身份协调、精确映射证据和中文组合输入；分页与原生 DOCX 导出及独立打包闭环也已有对应验收；PPT 读取、编辑与导出尚未实现。核心用例放入各包 `tests`，浏览器用例放入根 `tests/browser`。
 
 ## 浏览器烟测
 

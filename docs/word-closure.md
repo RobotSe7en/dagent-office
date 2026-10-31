@@ -33,7 +33,7 @@ pnpm check:word-closure
 
 `.cache/word-closure-acceptance/` 保存实际 DOCX、HTML 包、PDF、界面截图、报告、tarball 哈希及运行环境记录；CI 上传这些产物。原生 Word 语义的 21 个 Office 重开样例继续由 `check:docx-export` 验证。
 
-Office 重开基线采用用户确认的 LibreOffice；Word／WPS 尚未验证。该闭环使用公开合成文档与固定提案，没有真实模型执行、正式宿主存储或 npm 发布。达智真实智能体往返属于 R1-15。
+Office 重开基线采用用户确认的 LibreOffice；Word／WPS 尚未验证。该闭环使用公开合成文档与固定提案，没有真实模型执行、正式宿主存储或 npm 发布。达智真实智能体往返属于 R1-15，当前按用户决定延期；下一阶段为[第二轮 PPT](iteration-2.md)，不将第一轮宿主验收标为通过。
 
 ## 远程开发访问
 
