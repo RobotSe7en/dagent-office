@@ -89,6 +89,7 @@ export function resolvePreviewFonts(
   canvas.width = 128;
   canvas.height = 128;
   const hashes = new Map<string, number>();
+  const unavailableAudits = new Set<string>();
   let audited = 0;
   const glyphHash = (font: string, character: string): number => {
     const key = font + "\0" + character;
@@ -109,6 +110,7 @@ export function resolvePreviewFonts(
     const resolution = resolutions.get(selected.get(node) ?? "");
     if (!resolution) continue;
     const font = document.defaultView!.getComputedStyle(node).fontFamily;
+    if (unavailableAudits.has(font)) { resolution.glyphAuditComplete = false; continue; }
     for (const character of new Set(node.textContent ?? "")) {
       const key = font + "\0" + character;
       if (!hashes.has(key) && audited >= 4096) {
@@ -116,11 +118,15 @@ export function resolvePreviewFonts(
         continue;
       }
       if (!hashes.has(key)) audited++;
-      if (
-        glyphHash(font, character) === glyphHash(font, "\u{10ffff}") &&
-        glyphHash(font, character) === glyphHash(font, "\uffff")
-      )
-        resolution.missingCharacters.add(character);
+      try {
+        if (glyphHash(font, character) === glyphHash(font, "\u{10ffff}") && glyphHash(font, character) === glyphHash(font, "\uffff")) resolution.missingCharacters.add(character);
+      } catch (error) {
+        // Platform/privacy raster failures cannot establish missing glyphs.
+        // Keep rendering with an explicit incomplete audit, and stop retrying
+        // this face. Source font names and already established results survive.
+        if (!(error instanceof document.defaultView!.DOMException)) throw error;
+        unavailableAudits.add(font); resolution.glyphAuditComplete = false; break;
+      }
     }
   }
   return Object.freeze(

@@ -173,3 +173,10 @@ test("review: a native theme style composes reference-color alpha with the forma
   const fill = await page.frameLocator("iframe").locator('article > [data-office-kind="slide"] [data-office-kind="geometry"] svg > path').first().getAttribute("fill");
   expect(fill).toBe("rgba(68,114,196,0.5)");
 });
+
+test("a platform glyph-raster failure is reported as incomplete rather than rejecting a readable deck", async ({ page }) => {
+  await page.addInitScript(() => { CanvasRenderingContext2D.prototype.getImageData = () => { throw new DOMException("Raster unavailable", "InvalidStateError"); }; });
+  await mount(page, fixture("09-charts"));
+  const report = await page.evaluate(() => window.presentationHost.view!.layout()); expect(report.pages).toHaveLength(3); expect(report.fonts.some(font => !font.glyphAuditComplete)).toBe(true);
+  await expect(page.frameLocator("iframe").locator('[role="note"]')).toContainText("部分字形未核验");
+});

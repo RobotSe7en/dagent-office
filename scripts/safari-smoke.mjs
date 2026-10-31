@@ -64,10 +64,10 @@ try {
   assert.ok(await execute("return window.paginationHost.layout().pages.length>1"));
   assert.deepEqual(await execute("return window.paginationHost.errors"), []);
   await execute("window.paginationHost.view.dispose();window.paginationHost.session?.dispose();");
-  const pptBuild = await build({ configFile: false, logLevel: "silent", build: { write: false, target: "es2022", lib: { entry: root + "tests/browser/fixtures/presentation-host.ts", formats: ["iife"], name: "PresentationAcceptance" } } });
+  const pptBuild = await build({ configFile: false, logLevel: "silent", build: { write: false, minify: false, target: "es2022", lib: { entry: root + "tests/browser/fixtures/presentation-host.ts", formats: ["iife"], name: "PresentationAcceptance" } } });
   await execute((Array.isArray(pptBuild) ? pptBuild[0].output : pptBuild.output).filter(item => item.type === "chunk").map(item => item.code).join("\n"));
   const ppt = importPptx(readFileSync(root + "examples/pptx/09-charts.pptx"), { documentId: "safari-presentation" });
-  const mounted = await command("POST", `/session/${session}/execute/async`, { script: "const done=arguments[arguments.length-1];window.presentationHost.mount(arguments[0]).then(()=>done({ok:true}),error=>done({error:String(error)}));", args: [[...ppt].map(([path, data]) => [path, [...data]])] });
+  const mounted = await command("POST", `/session/${session}/execute/async`, { script: "const done=arguments[arguments.length-1];window.presentationHost.mount(arguments[0]).then(()=>done({ok:true}),error=>done({mountError:{message:String(error),stack:error?.stack}}));", args: [[...ppt].map(([path, data]) => [path, [...data]])] });
   assert.equal(mounted.ok, true, JSON.stringify(mounted));
   assert.equal(await execute("return window.presentationHost.view.layout().pages.length"), 3);
   assert.equal(await execute("return window.presentationHost.view.element.contentDocument.querySelectorAll('svg[data-sdk-chart]').length"), 3);
