@@ -1,0 +1,312 @@
+{
+  "format": "dagent-office-pptx-fixtures",
+  "version": 1,
+  "generator": "Independent Python ZIP/XML, no SDK exporter or third-party Office library.",
+  "cases": [
+    {
+      "file": "01-rich-text.pptx",
+      "sha256": "c3e5dd25e82b13e692ad58e1aff3c65b3461d4e9f1583c5081c879415af50906",
+      "text": [
+        "中文与 Latin 😀，粗体和斜体",
+        "第一项",
+        "第二级",
+        "访问示例",
+        "换行前",
+        "换行后",
+        "扩展字𠀀与变体葛󠄀"
+      ],
+      "slides": 1,
+      "objects": 1
+    },
+    {
+      "file": "02-theme-placeholders.pptx",
+      "sha256": "27b42df7f6ee27b5e642e2dd2f25d8fb54a185ce7dc41aabb09627915df60f12",
+      "text": [
+        "继承主题标题"
+      ],
+      "slides": 1,
+      "inheritedGeometry": {
+        "x": 60,
+        "y": 40,
+        "width": 840,
+        "height": 100
+      },
+      "masters": 2
+    },
+    {
+      "file": "03-masters-layouts.pptx",
+      "sha256": "d64f8963cb04b3a6421b91a6f58ee4f2822ec53888aa0176d6d84d49ea04286f",
+      "text": [
+        "第一主题页面",
+        "第二主题页面"
+      ],
+      "slides": 2,
+      "masters": 2
+    },
+    {
+      "file": "04-shapes.pptx",
+      "sha256": "c5531ed89a9e68b443d834bcc70a3cc60c1f889894dc783aff3e57bf753a5b1c",
+      "text": [
+        "rect",
+        "roundRect",
+        "ellipse",
+        "triangle",
+        "diamond",
+        "parallelogram",
+        "trapezoid",
+        "pentagon",
+        "hexagon",
+        "rightArrow",
+        "leftArrow",
+        "upArrow",
+        "downArrow",
+        "leftRightArrow",
+        "chevron",
+        "line"
+      ],
+      "slides": 1,
+      "objects": 16,
+      "presets": [
+        "rect",
+        "roundRect",
+        "ellipse",
+        "triangle",
+        "diamond",
+        "parallelogram",
+        "trapezoid",
+        "pentagon",
+        "hexagon",
+        "rightArrow",
+        "leftArrow",
+        "upArrow",
+        "downArrow",
+        "leftRightArrow",
+        "chevron",
+        "line"
+      ]
+    },
+    {
+      "file": "05-groups.pptx",
+      "sha256": "3cac8fc8d101961c07d58dec80190dbca54fd60e6c0036ac1371053585d511fc",
+      "text": [
+        "局部坐标",
+        "组内文字"
+      ],
+      "slides": 1,
+      "objects": 4
+    },
+    {
+      "file": "06-connectors.pptx",
+      "sha256": "3d78a440a584017ca7a153141ddfdc36a6b7009e2267b13918ea534a60a54eea",
+      "text": [
+        "起点",
+        "终点"
+      ],
+      "slides": 1,
+      "objects": 4
+    },
+    {
+      "file": "07-images.pptx",
+      "sha256": "f1d4f1cf3792f1bcfdf690cf500e1d8748d1293e1619830baca11bebeb357f75",
+      "text": [
+        "PNG JPEG WebP"
+      ],
+      "slides": 1,
+      "objects": 4,
+      "images": 3
+    },
+    {
+      "file": "08-table-merges.pptx",
+      "sha256": "a0d0389c09c7f0191c471f783a1301c7711fb147639a589e53f258ea7b3a4df5",
+      "text": [
+        "合并表格",
+        "合并标题",
+        "第三列",
+        "跨行",
+        "甲",
+        "乙",
+        "丙",
+        "丁"
+      ],
+      "slides": 1,
+      "objects": 2
+    },
+    {
+      "file": "09-charts.pptx",
+      "sha256": "5370a42fe9d80a314f4b50040b0e71da19c4d27e8bfc8f8d4fd218420c3956cb",
+      "text": [
+        "图表 column",
+        "图表 line",
+        "图表 pie"
+      ],
+      "slides": 3,
+      "charts": 3,
+      "data": {
+        "categories": [
+          "第一季度",
+          "第二季度",
+          "第三季度"
+        ],
+        "values": [
+          2,
+          5,
+          8
+        ]
+      }
+    },
+    {
+      "file": "10-notes.pptx",
+      "sha256": "8da128e5539b8ae0e38e5f2f3479fd822d7f50080903b042b73bb8848a10b4ff",
+      "text": [
+        "带备注的幻灯片"
+      ],
+      "slides": 1,
+      "notes": [
+        "演讲者备注：介绍上线、风险与培训。"
+      ]
+    },
+    {
+      "file": "11-classic-comments.pptx",
+      "sha256": "211115532488320d0bab530383060a4e3f5a9333b1a96b6d4d9396697a4f3d46",
+      "text": [
+        "经典批注来源"
+      ],
+      "slides": 1,
+      "classicComments": 1,
+      "commentText": [
+        "经典批注：补充交付细节。"
+      ]
+    },
+    {
+      "file": "12-modern-comments.pptx",
+      "sha256": "b83a768f8fd008234e3bf6d34d49e025ef3515112fe83458dc5bd620402dfc8b",
+      "text": [
+        "现代批注 slide",
+        "现代批注 object",
+        "中文𠀀😀批注锚点"
+      ],
+      "slides": 3,
+      "modernComments": 3,
+      "replies": 3,
+      "textAnchor": {
+        "cp": 2,
+        "length": 4,
+        "quote": "𠀀😀"
+      },
+      "referenceText": [
+        "现代批注 slide",
+        "现代批注 object",
+        "中文",
+        "😀",
+        "批注锚点"
+      ],
+      "referenceLimits": [
+        "LibreOffice 25.8 omits U+20000 from PDF text and reorders the emoji text run; original XML and UTF-16 anchor remain exact."
+      ]
+    },
+    {
+      "file": "13-multi-slide.pptx",
+      "sha256": "0f1bd2f88a9244e87d97d9361d56a283639f16f53f152f236faa7b1733e2423c",
+      "text": [
+        "项目进展报告",
+        "交付数据",
+        "隐藏的补充页"
+      ],
+      "slides": 3,
+      "hiddenSlides": 1,
+      "charts": 1,
+      "classicComments": 1,
+      "modernComments": 1,
+      "replies": 1
+    },
+    {
+      "file": "15-strict-namespaces.pptx",
+      "sha256": "0f4b004ecf707e69d08a6b14e6683701676e4c7b1af75b2a281fe775ac11bcc6",
+      "text": [
+        "命名空间不依赖前缀"
+      ],
+      "slides": 1,
+      "objects": 1
+    },
+    {
+      "file": "16-alternate-prefixes.pptx",
+      "sha256": "03d3b6424ba32a7143fd73cae2ae407068fea3c49edea1c7b7cf7dc64ff0478f",
+      "text": [
+        "命名空间不依赖前缀"
+      ],
+      "slides": 1,
+      "objects": 1
+    },
+    {
+      "file": "17-renamed-parts.pptx",
+      "sha256": "9fdae17f136bc862613f560199e4b95462943c0225a630e6f4de3a856eea05a3",
+      "text": [
+        "命名空间不依赖前缀"
+      ],
+      "slides": 1,
+      "objects": 1
+    }
+  ],
+  "negativeCases": [
+    {
+      "file": "invalid/missing-slide.pptx",
+      "sha256": "249572b90657b15fb2cd45b1db240a2b0227acd1ef02224bae9e3afed6e63a3a",
+      "error": "InvalidDocument",
+      "reason": "An internal relationship targets a missing part."
+    },
+    {
+      "file": "invalid/duplicate-native-id.pptx",
+      "sha256": "0f45aaa28678e2174dd4c83fd025de08244f0aa7c8289fd5ca25ac8e8e0e3984",
+      "error": "InvalidDocument",
+      "reason": "Native drawing identities repeat inside one slide."
+    },
+    {
+      "file": "invalid/doctype.pptx",
+      "sha256": "87960ae86b512a8d9a14b44164f6585a3a7afc968163f23d39a308fd13d71711",
+      "error": "InvalidDocument",
+      "reason": "DOCTYPE and external entities are prohibited."
+    },
+    {
+      "file": "invalid/unsupported-object.pptx",
+      "sha256": "e9d33c1e67d7d0c4a97ebc77c978e976c679127208dc0cbc3b6f12a082f3c158",
+      "error": "UnsupportedFeature",
+      "reason": "An unimplemented visible graphic cannot be silently dropped."
+    },
+    {
+      "file": "invalid/animation.pptx",
+      "sha256": "ad970d878f994f3b1514996b4d5e7750d7a9fae968f47b1beb0b6df85f0dfc99",
+      "error": "UnsupportedFeature",
+      "reason": "Animation is outside the declared static scope."
+    },
+    {
+      "file": "invalid/external-image.pptx",
+      "sha256": "62e347c19b09506e7f84d138b406799ffe8d7f0ce442cd9979d2e0f15f749d6a",
+      "error": "UnsupportedFeature",
+      "reason": "External images cannot trigger resource or network access."
+    },
+    {
+      "file": "invalid/chart-formula.pptx",
+      "sha256": "26cc790e3ef0fba7820b8cb54bfc99c44fd574b047ab384678479bbd45bafe4a",
+      "error": "UnsupportedFeature",
+      "reason": "Cell formulas are not graph data constants; range references remain supported."
+    },
+    {
+      "file": "invalid/external-chart-data.pptx",
+      "sha256": "f1849613cd93ded1e4d4e6c58a107d34b1f89dcbeefd98389524067fb214c0b2",
+      "error": "UnsupportedFeature",
+      "reason": "Chart data cannot load an external workbook."
+    },
+    {
+      "file": "invalid/unknown-comment-author.pptx",
+      "sha256": "d9012c9648791c8e3aa3dcd3a26bdf4aaaebbe683553a01c80a1a1cd6c6f4e12",
+      "error": "InvalidDocument",
+      "reason": "A modern comment references an undefined author."
+    },
+    {
+      "file": "invalid/truncated-zip.pptx",
+      "sha256": "7029346aae8ab18f333cafa59f161fe0160821e46c3e7226eb99f96a4f2d6437",
+      "error": "InvalidDocument",
+      "reason": "ZIP directory is missing."
+    }
+  ]
+}

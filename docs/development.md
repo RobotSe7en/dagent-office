@@ -86,3 +86,5 @@ pnpm pack:packages
 修改后运行相应的窄范围检查与 `git diff --check`。只有验证所覆盖的能力才可在 README 标为已实现，产品范围和宿主边界以[总体架构](architecture.md)及[交互协议](editing-protocol.md)为准。
 
 R1-12 的浏览器 CI 使用 Ubuntu 24.04、固定 Playwright 引擎、Poppler 和宿主 Noto 字体；另校验官方归档后安装 Chromium 109，并在 macOS 15 使用真实 SafariDriver。Safari 输出实际版本及验收结果，不能用 Linux WebKit 结果冒充 Safari。PDF 开发中间件默认只接受本机连接；远程访问可将 Vite 绑定 `0.0.0.0` 并显式配置确切同源开发地址，见 [Word 闭环](word-closure.md#远程开发访问)。正式转换认证由宿主管理。
+
+PPT 的独立 ZIP/XML 样例与参考环境见 [PPTX 样例](../examples/pptx/README.md)。`pnpm check:pptx-fixtures` 不需要 Office；`pnpm check:pptx-reference` 需要 Impress、Calc、Poppler 和上述字体，会实际打开、重存并重开。环境不同只运行内容检查并明确记录未比较像素，不自动刷新基线。
