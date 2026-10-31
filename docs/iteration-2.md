@@ -208,12 +208,18 @@ exportPptx(model, options?): PptxExportResult
 
 ### 命令、CI 与结果
 
-以下是随实现新增的命令目标，当前尚不存在，不能作为已可运行命令使用：
+已提供以下读取与独立参考命令：
 
 ```text
 pnpm fixtures:pptx
+pnpm check:pptx-fixtures
 pnpm check:pptx-reference
 pnpm record:pptx-reference
+```
+
+`node scripts/playwright.mjs test presentation.spec.ts` 检查只读画布；`/usr/bin/python3 scripts/check-presentation-reference.py` 核对浏览器与独立原生参考的对象边界。原生导出与独立打包闭环的以下命令仍为后续任务目标，尚不可运行：
+
+```text
 pnpm check:pptx-export
 pnpm check:presentation-closure
 ```

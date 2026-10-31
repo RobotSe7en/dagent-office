@@ -180,3 +180,17 @@ test("a platform glyph-raster failure is reported as incomplete rather than reje
   const report = await page.evaluate(() => window.presentationHost.view!.layout()); expect(report.pages).toHaveLength(3); expect(report.fonts.some(font => !font.glyphAuditComplete)).toBe(true);
   await expect(page.frameLocator("iframe").locator('[role="note"]')).toContainText("部分字形未核验");
 });
+
+test("expanding notes updates later slide coordinates and iframe height without changing the source", async ({ page }) => {
+  await mount(page, fixture("13-multi-slide"));
+  const before = await page.evaluate(() => ({ html: window.presentationHost.model!.snapshot().html, y: window.presentationHost.view!.layout().pages[1]!.rect.y, height: parseFloat(window.presentationHost.view!.element.style.height) }));
+  await page.frameLocator("iframe").locator(".sdk-ppt-notes summary").click();
+  await expect.poll(() => page.evaluate(() => window.presentationHost.view!.layout().pages[1]!.rect.y)).toBeGreaterThan(before.y);
+  expect(await page.evaluate(() => parseFloat(window.presentationHost.view!.element.style.height))).toBeGreaterThan(before.height);
+  expect(await page.evaluate(() => window.presentationHost.model!.snapshot().html)).toBe(before.html);
+  const prevented = await page.frameLocator("iframe").locator(".sdk-ppt-notes p").first().evaluate(node => {
+    const range = document.createRange(); range.selectNodeContents(node); const selection = document.getSelection()!; selection.removeAllRanges(); selection.addRange(range);
+    const event = new ClipboardEvent("copy", { bubbles: true, cancelable: true, clipboardData: new DataTransfer() }); document.dispatchEvent(event); return event.defaultPrevented;
+  });
+  expect(prevented).toBe(false);
+});

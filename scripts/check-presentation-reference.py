@@ -8,7 +8,8 @@ from pathlib import Path
 import argparse
 import hashlib
 import json
-from PIL import Image
+import sys
+from PIL import Image, __version__ as pillow_version
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -22,7 +23,8 @@ def bounds(image, box, predicate):
 
 
 def main(browser):
-    result = {"browser": browser, "reference": "Independent LibreOffice source PDF raster, examples/pptx/reference.json", "checks": [], "inputs": {}}
+    result = {"browser": browser, "reference": "Independent LibreOffice source PDF raster, examples/pptx/reference.json", "checks": [], "inputs": {},
+              "tools": {"python": sys.version, "pillow": pillow_version, "pillowLicenseSource": f"https://github.com/python-pillow/Pillow/blob/{pillow_version}/LICENSE"}}
     def pair(name, page):
         native = ROOT / f"examples/pptx/reference/{name}-{page}.png"
         actual = ROOT / f".cache/presentation-preview/{browser}/source-{name}.pptx-{page}.png"
