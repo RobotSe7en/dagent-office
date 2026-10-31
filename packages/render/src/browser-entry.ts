@@ -16,7 +16,13 @@ window.__dagentOfficeRender = {
       document.body.style.margin = "0";
       const host = document.createElement("div"); document.body.replaceChildren(host);
       renderer = mountPreview(host, openDocument(input), options);
-      const report = await renderer.settled(); return { ok: true, report };
+      const report = await renderer.settled();
+      // Renderer-owned labels are preview UI, never part of a PNG or PDF.
+      const source = renderer.source();
+      if (!source) throw new DocumentError("InvalidOperation", "The rendered source is unavailable.");
+      const canvasDocument = source.root.ownerDocument;
+      const clean = canvasDocument.createElement("style"); clean.textContent = ".sdk-ppt-hidden-label{display:none!important}"; canvasDocument.head.append(clean);
+      return { ok: true, report };
     } catch (reason) { return failure(reason); }
   },
   async preparePrint() {

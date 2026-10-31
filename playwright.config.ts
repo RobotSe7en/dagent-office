@@ -9,8 +9,8 @@ export default defineConfig({
   snapshotPathTemplate: "{testDir}/{testFilePath}-snapshots/{arg}-{platform}{ext}",
   projects: [
     { name: "chromium", use: { browserName: "chromium", ...(process.env.DAGENT_OFFICE_BROWSER_EXECUTABLE ? { launchOptions: { executablePath: process.env.DAGENT_OFFICE_BROWSER_EXECUTABLE } } : {}) } },
-    { name: "firefox", testMatch: /(?:pagination|compatibility|remote-access|word-closure|presentation(?:-(?:editor|workbench))?)\.spec\.ts/, use: { browserName: "firefox" } },
-    { name: "webkit", testMatch: /(?:pagination|compatibility|remote-access|word-closure|presentation(?:-(?:editor|workbench))?)\.spec\.ts/, use: { browserName: "webkit" } },
+    { name: "firefox", testMatch: /(?:pagination|compatibility|remote-access|word-closure|presentation(?:-(?:editor|workbench|closure))?)\.spec\.ts/, use: { browserName: "firefox" } },
+    { name: "webkit", testMatch: /(?:pagination|compatibility|remote-access|word-closure|presentation(?:-(?:editor|workbench|closure))?)\.spec\.ts/, use: { browserName: "webkit" } },
   ],
   use: {
     browserName: "chromium",

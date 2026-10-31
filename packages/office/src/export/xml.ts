@@ -35,32 +35,34 @@ export function orderedProperties(kind: string, source: string): string {
   if (depth !== 0 || fragments.some((fragment) => !order.includes(fragment.name))) throw new DocumentError("ExportFailed", "Generated native properties violate their supported sequence.");
   return fragments.sort((left, right) => order.indexOf(left.name) - order.indexOf(right.name)).map((fragment) => fragment.xml).join("");
 }
+export interface XmlPartBudget { bytes: number; nodes: number; files: number }
+
 export class XmlParts {
   readonly files: Map<string, Uint8Array> = new Map<string, Uint8Array>();
-  private bytes = 0;
-  private nodes = 0;
   private readonly encoder = new (globalThis as unknown as { TextEncoder: new () => { encode(value: string): Uint8Array } }).TextEncoder();
-  constructor(readonly limits: DocumentReadLimits) {}
+  constructor(readonly limits: DocumentReadLimits, private readonly budget:XmlPartBudget = {bytes:0,nodes:0,files:0}) {}
   buffer(path: string): { add(value: string): void; finish(): void } {
     const chunks: string[] = []; let length = 0;
     return { add: (value) => {
       const bytes = this.encoder.encode(value).length;
-      length += bytes; this.bytes += bytes; this.nodes += (value.match(/<(?![!?/])/g) ?? []).length;
-      if (length > this.limits.maxFileBytes || this.bytes > this.limits.maxPackageBytes || this.nodes > this.limits.maxNodes)
-        throw new DocumentError("ResourceLimitExceeded", "Native DOCX XML exceeds its output budget.");
+      length += bytes; this.budget.bytes += bytes; this.budget.nodes += (value.match(/<(?![!?/])/g) ?? []).length;
+      if (length > this.limits.maxFileBytes || this.budget.bytes > this.limits.maxPackageBytes || this.budget.nodes > this.limits.maxNodes)
+        throw new DocumentError("ResourceLimitExceeded", "Native Office XML exceeds its output budget.");
       chunks.push(value);
     }, finish: () => {
-      if (this.files.has(path) || this.files.size >= this.limits.maxFiles) throw new DocumentError("ResourceLimitExceeded", "Native DOCX part count exceeds its budget.");
+      if (this.files.has(path) || this.budget.files >= this.limits.maxFiles) throw new DocumentError("ResourceLimitExceeded", "Native Office part count exceeds its budget.");
+      this.budget.files++;
       this.files.set(path, this.encoder.encode(chunks.join("")));
     } };
   }
   put(path: string, data: string | Uint8Array): void {
     if (this.files.has(path)) throw new DocumentError("ExportFailed", "An OPC output part was repeated.");
     const bytes = typeof data === "string" ? this.encoder.encode(data) : new Uint8Array(data);
-    if (typeof data === "string") this.nodes += (data.match(/<(?![!?/])/g) ?? []).length;
-    this.bytes += bytes.length;
-    if (bytes.length > this.limits.maxFileBytes || this.bytes > this.limits.maxPackageBytes || this.files.size + 1 > this.limits.maxFiles || this.nodes > this.limits.maxNodes)
-      throw new DocumentError("ResourceLimitExceeded", "Native DOCX output exceeds its package budget.");
+    if (typeof data === "string") this.budget.nodes += (data.match(/<(?![!?/])/g) ?? []).length;
+    this.budget.bytes += bytes.length;
+    if (bytes.length > this.limits.maxFileBytes || this.budget.bytes > this.limits.maxPackageBytes || this.budget.files + 1 > this.limits.maxFiles || this.budget.nodes > this.limits.maxNodes)
+      throw new DocumentError("ResourceLimitExceeded", "Native Office output exceeds its package budget.");
+    this.budget.files++;
     this.files.set(path, bytes);
   }
 }

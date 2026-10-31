@@ -93,7 +93,13 @@ export function paragraphProperties(node: XmlNode | undefined, listDefaults = fa
     css[property!] = percent ? property === "line-height" ? String(n) : n + "em" : n + "pt";
   }
   const tabs = child(node, "tabLst", A);
-  if (tabs && elements(tabs, undefined, A).length) unsupported(tabs, "Explicit presentation tab stops are not yet supported.");
+  if (tabs && elements(tabs, undefined, A).length) {
+    const stops=elements(tabs,undefined,A);
+    // Impress can emit a redundant left-aligned origin stop on resave. Keep
+    // this marker in source; the regular tab grid already includes the origin.
+    if(stops.length!==1||stops[0]!.name!=="tab"||value(stops[0],"algn")!=="l"||integer(stops[0]!,"pos")!==0)unsupported(tabs,"Explicit presentation tab stops are not yet supported.");
+    css["--office-tab-origin"]="left";
+  }
   if (value(node, "defTabSz") !== undefined) {
     const size = points(node, "defTabSz");
     if (size <= 0) fail(node, "A default tab interval must be positive.");
@@ -104,7 +110,11 @@ export function paragraphProperties(node: XmlNode | undefined, listDefaults = fa
   const bulletFont = child(node, "buFont", A);
   if (bulletFont) css["--office-bullet-font"] = fontCss(bulletFont, "ascii") ?? "inherit";
   const bulletPercent = child(node, "buSzPct", A), bulletPoints = child(node, "buSzPts", A);
-  if (bulletPercent) css["--office-bullet-size"] = integer(bulletPercent, "val") / 100000 + "em";
+  if (bulletPercent) {
+    const raw=value(bulletPercent,"val")!, amount=raw.endsWith("%")?Number(raw.slice(0,-1))/100:integer(bulletPercent,"val")/100000;
+    if(!Number.isFinite(amount)||amount<.25||amount>4)fail(bulletPercent,"A bullet size percentage is outside its native range.");
+    css["--office-bullet-size"]=amount+"em";
+  }
   if (bulletPoints) css["--office-bullet-size"] = integer(bulletPoints, "val") / 100 + "pt";
   if (listDefaults) {
     const bullet = child(node, "buChar", A), numbering = child(node, "buAutoNum", A), none = child(node, "buNone", A);

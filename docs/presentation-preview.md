@@ -34,7 +34,7 @@ view.dispose();
 
 文字 body 属性中的 autoFit、wrap、边距及锚定缺省值保留“未声明”，在实例中解析继承。显式新颜色重设其颜色变换缺省值，避免继承父对象透明度。绑定连接线在所有对象就绪后解析原生连接点；缓存端点已经一致时保留其预设和调整路径，不一致时采用直线或正交路径，源缓存不被静默修改。正交重新布线不承诺与所有 Office 应用采用同一路由算法。
 
-`layout()` 绑定 documentId/revision，返回稳定幻灯片身份、源节点到页面的映射、当前页码显示、字体报告与溢出诊断。来源字段缓存不随只读显示改变。`printDocument()` 只投影每张实际画布，包含动态 CSSOM 继承规则；PDF/PNG 的 Node 分派和 Playground 入口仍归 R2-15。
+`layout()` 绑定 documentId/revision，返回稳定幻灯片身份、源节点到页面的映射、当前页码显示、字体报告与溢出诊断。来源字段缓存不随只读显示改变。`printDocument()` 只投影每张实际画布，包含动态 CSSOM 继承规则；PDF/PNG 的 Node 分派和 Playground 入口由 [R2-15](pptx-export.md#node-和-playground) 提供。
 
 ## 标准数据来源
 
@@ -56,7 +56,7 @@ Chromium 固定字体截图覆盖形状、组及三类图表，沿用 `maxDiffPi
 
 浏览器和 LibreOffice 的字距、基线及段落度量仍有差异；字体替代、缺字及溢出逐项报告。图表自动布局采用本项目确定性布局，不承诺复刻各应用的标题和图例自动排版。数字格式限 General、普通整数／小数、千分位、百分比及基本正负分段；超出范围明确失败。普通自动适应在布局预算内缩小字形和行距；形状自动适应只调整派生画面尺寸，源几何保持不变。更广泛的样式组合仍需独立样例，不把当前矩阵等同于任意 PPTX 都能打开。
 
-PowerPoint/WPS 未实机验证；LibreOffice 重存丢失现代线程的事实沿用独立参考记录。SDK 保存与源格式结构检查不替代真实现代批注应用验收。编辑仍由后续 R2-07 开放，原生可编辑 PPTX 导出和外部编辑重开归 R2-14～16。
+PowerPoint/WPS 未实机验证；LibreOffice 重存丢失现代线程的事实沿用独立参考记录。SDK 保存与源格式结构检查不替代真实现代批注应用验收。[R2-07 核心事务](presentation-transactions.md)、[R2-08～13 编辑协作](presentation-editing.md)及 [R2-14～16 原生导出和独立闭环](pptx-export.md)已实现。渲染报告通过 `kind: "presentation"` 与 `slides` 给出明确幻灯片语义，`pages` 保留现有公共画布投影。
 
 ## 推送后审查
 

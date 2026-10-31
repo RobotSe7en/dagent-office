@@ -87,3 +87,5 @@ PDF 将测量画布按真实纸张裁切，保留可搜索文字；PNG 使用同
 Playwright 1.64.1 固定 Chromium 156.0.8078.4、Firefox 157.0、WebKit 27.2；额外使用 Chromium 109.0.5414.46 验证没有新列布局能力的内核。旧 Chromium 安装脚本校验官方归档 SHA-256 `1ec3528cecff35bd20184dc7fd07deb794624023607388b0ea8fda696730805d`。分页实现不依赖 Chromium 145 的 `column-height`／`column-wrap`。
 
 Linux WebKit 验证记录为引擎验收，不冒充实际 Safari。CI 另设 macOS 15 的 SafariDriver 验收，结果记录 Safari 实际版本；本机没有 Safari。Word／WPS 尚未验证。固定字体、视口、引擎和图片摘要见[分页参考记录](../examples/render-reference.json)。读取参考使用固定字体，分页、重复表头 PNG、真实 PDF 文字／页数、CLI、取消、资源预算、编辑撤销和三引擎交互均有独立回归。
+
+PPT 的固定画布与 Node PDF/PNG 已接入同一转换器；字节输入支持 `pptx`，报告提供 `kind: "presentation"` 和 `slides`，保留既有公共页面投影。输出包含全部逻辑幻灯片，隐藏页标签不进入 PDF/PNG。具体范围与验收见 [PPTX 导出与闭环](pptx-export.md)。

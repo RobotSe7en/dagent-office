@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
-import { openDocument } from "@dagent-office/core";
+import { createPresentation, openDocument } from "@dagent-office/core";
 import type { DocumentModel } from "@dagent-office/core";
-import { writeDocumentZip } from "@dagent-office/office";
+import { writeDocumentZip, exportPptx } from "@dagent-office/office";
 import { createDocumentConverter, executeConversionRequest, parseConversionRequest, serveConversionProtocol } from "@dagent-office/node";
 import type { ConversionRequestV1, DocumentConverter, RenderedOutput } from "@dagent-office/node";
 
@@ -93,4 +93,13 @@ test("converter configuration, cancellation and quota failures do not require br
   await converter.close(); await converter.close();
   await expect(converter.renderPdf(model)).rejects.toMatchObject({ code: "InvalidOperation" });
   expect(() => parseConversionRequest({})).toThrow();
+});
+
+test("native PPTX bytes and PPT packages use the same bounded conversion boundary",async()=>{
+  const files=createPresentation({documentId:"private-ppt"}),native=exportPptx(openDocument(files)).bytes;
+  for(const[format,bytes]of[["pptx",native],["document-package-zip",writeDocumentZip(files)]]as const){
+    const converter=fake(),result=await executeConversionRequest(converter,{protocolVersion:1,taskId:"ppt-conversion",format:"pdf",input:{format,documentId:"private-ppt",bytesBase64:Buffer.from(bytes).toString("base64")}});
+    expect(result).toMatchObject({ok:true,output:{report:{documentId:"private-ppt"}}});expect(converter.calls).toEqual(["private-ppt"]);
+  }
+  expect(()=>parseConversionRequest({protocolVersion:1,taskId:"missing-id",format:"pdf",input:{format:"pptx",bytesBase64:"AA=="}})).toThrow();
 });

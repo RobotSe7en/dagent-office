@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "license": "UNLICENSED",
-  "description": "Bounded document ZIP adapters and native DOCX import/export",
+  "description": "Bounded document ZIP adapters and native DOCX/PPTX import/export",
   "files": [
     "dist"
   ],
