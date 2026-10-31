@@ -87,6 +87,15 @@ def features(path):
 
 
 def verify_saved(record):
+    expected = json.loads((SAMPLES / "expected.json").read_text())["cases"]
+    if [item["file"] for item in record["fixtures"]] != [item["file"] for item in expected]:
+        raise RuntimeError("Reference fixture identities or count differ from the independent corpus.")
+    for item, case in zip(record["fixtures"], expected):
+        if item["sha256"] != case["sha256"] or item["pages"] != case["slides"]:
+            raise RuntimeError("Reference source or page count differs from independent expectations.")
+        images = item["images"]
+        if len(images) != case["slides"] or len({image["file"] for image in images}) != len(images):
+            raise RuntimeError("Reference images are missing or duplicated.")
     for item in record["fixtures"]:
         for name, expected in [(item["file"], item["sha256"]),
                                (item["producerFile"], item["producerSha256"]),
@@ -96,6 +105,14 @@ def verify_saved(record):
         for image in item["images"]:
             if digest(SAMPLES / "reference" / image["file"]) != image["sha256"]:
                 raise RuntimeError("Saved reference differs: " + image["file"])
+
+
+def verify_features(source, producer):
+    # Different Office versions may preserve modern comments or drop them; the
+    # result records either outcome. Loss of supported base content always fails.
+    for key in ["slides", "charts", "notes", "classicComments"]:
+        if source[key] != producer[key]:
+            raise RuntimeError("LibreOffice resave lost supported base content: " + key)
 
 
 def main():
@@ -149,6 +166,7 @@ def main():
                 raise RuntimeError("Reference image count differs: " + source.name)
             source_features = features(source)
             producer_features = features(producer / source.name)
+            verify_features(source_features, producer_features)
             records.append({"file": source.name, "sha256": digest(source), "pages": pages,
                             "images": [{"file": image.name, "sha256": digest(image)} for image in images],
                             "producerFile": "producer/" + source.name,

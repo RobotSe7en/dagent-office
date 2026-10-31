@@ -112,4 +112,32 @@ except Exception as error:
     require(isinstance(error, BadZipFile), "Unexpected malformed ZIP result")
 else:
     raise AssertionError("ZIP negative fixture is ineffective")
+
+# A reference check must reject an incomplete baseline even on a CI host whose
+# rendering environment differs. Otherwise zip() can silently skip missing cases.
+reference_spec = importlib.util.spec_from_file_location("pptx_reference", ROOT / "scripts/pptx-reference.py")
+reference = importlib.util.module_from_spec(reference_spec)
+reference_spec.loader.exec_module(reference)
+baseline = json.loads((samples / "reference.json").read_text())
+from copy import deepcopy
+for mutation in ["missing-case", "missing-image"]:
+    broken = deepcopy(baseline)
+    if mutation == "missing-case":
+        broken["fixtures"].pop()
+    else:
+        broken["fixtures"][0]["images"] = []
+    try:
+        reference.verify_saved(broken)
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("Incomplete reference baseline was accepted: " + mutation)
+source = baseline["fixtures"][8]["sourceFeatures"]
+lost_chart = {**source, "charts": 0}
+try:
+    reference.verify_features(source, lost_chart)
+except RuntimeError:
+    pass
+else:
+    raise AssertionError("Reference resave accepted chart loss")
 print("Verified 16 deterministic independent PPTX sources, 10 negative cases, native relationships, chart constants and UTF-16 comment anchor.")
