@@ -184,10 +184,11 @@ export class DocumentEdit {
     if (selected.some((leaf) => ancestors(leaf.node).some((node) => attr(node, "data-word-tab") !== undefined
       || attr(node, "data-word-break") !== undefined))) fail("Native tabs and explicit page breaks require structural operations.");
     const context = (node: Node) => ancestors(node).find((item) => blocks.has(item.tagName));
+    const presentationLinks = new Set(this.state.snapshot.metadata.presentation?.hyperlinks.map(link => link.nodeId));
     const semantic = (node: Node) => ancestors(node).find((item) => ["ins", "del"].includes(item.tagName)
       || attr(item, "data-word-link") !== undefined || attr(item, "data-word-field") !== undefined
       || attr(item, "data-word-field-result") !== undefined || attr(item, "data-office-field") !== undefined
-      || attr(item, "data-office-link") !== undefined);
+      || attr(item, "data-office-link") !== undefined || presentationLinks.has(attr(item, "data-node-id")!));
     if (start && selected.some((leaf) => context(leaf.node) !== context(start.node) || semantic(leaf.node) !== semantic(start.node))) {
       fail("Text replacement cannot cross paragraphs, cells, stories or native semantic boundaries.");
     }

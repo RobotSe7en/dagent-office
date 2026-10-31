@@ -32,6 +32,11 @@ test("new decks render fixed pages without an editing session or changes to the 
   expect(projected).not.toMatch(/svg|data-sdk|sdk-ppt|position:|transform:/);
 });
 
+test("Word UI adapters reject PPT without retaining a partial mount", async ({ page }) => {
+  await mount(page, createPresentation({ documentId: "format-gate" }));
+  expect(await page.evaluate(() => window.presentationHost.wordAdapterGates())).toEqual(Array.from({ length: 3 }, () => ({ code: "UnsupportedFeature", children: 0 })));
+});
+
 test("PPT core edits update the same preview and source with one undo/redo revision", async ({ page }) => {
   const files = fixture("01-rich-text"), model = openDocument(files), p = model.snapshot().metadata.presentation!, slide = model.getNode(p.slides[0]!.rootNodeId)!, object = p.objects.find(o => o.kind === "text" && slide.childNodeIds.includes(o.nodeId))!, node = model.getNode(object.nodeId)!, geometry = readPresentationGeometry(node.attributes)!;
   const paragraph = model.getNode(node.childNodeIds[0]!)!, text = paragraph.text;

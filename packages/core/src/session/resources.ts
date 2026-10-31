@@ -7,12 +7,13 @@ import { encode, resolveReference } from "../document/package.js";
 import { validateAsset } from "../document/assets.js";
 import { checkLimit, invalid } from "../document/validation.js";
 import { parseContract } from "../schema-registry.js";
+import { checkTransactionSize } from "./limits.js";
 
 /** Copy authorized bytes before they can be mutated by the caller. No provider or network. */
 export function stageResources(base: DocumentState, options: TransactionPrepareOptions | undefined, limits: DocumentReadLimits): { state: DocumentState; added: ReadonlySet<string> } {
   const added = new Set<string>();
   if (options === undefined) return { state: base, added };
-  if (!options || typeof options !== "object" || Object.keys(options).some(key => key !== "assets")
+  if (!options || typeof options !== "object" || Array.isArray(options) || Object.keys(options).some(key => key !== "assets")
     || options.assets !== undefined && !Array.isArray(options.assets)) invalid("Invalid transaction preparation options.");
   if (!options.assets?.length) return { state: base, added };
   checkLimit(options.assets.length, limits.maxFiles);
@@ -20,7 +21,8 @@ export function stageResources(base: DocumentState, options: TransactionPrepareO
   let total = [...files.values()].reduce((sum, bytes) => sum + bytes.byteLength, 0);
   const seen = new Set<string>();
   for (const input of options.assets) {
-    if (!input || typeof input !== "object" || Object.keys(input).some(key => key !== "descriptor" && key !== "bytes") || !(input.bytes instanceof Uint8Array)) invalid("Transaction resources require descriptors and authorized bytes.");
+    if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).some(key => key !== "descriptor" && key !== "bytes") || !(input.bytes instanceof Uint8Array)) invalid("Transaction resources require descriptors and authorized bytes.");
+    checkTransactionSize(input.descriptor, limits.maxFileBytes, limits.maxDepth);
     const descriptor = parseContract("asset-descriptor", input.descriptor);
     if (seen.has(descriptor.path)) invalid("Transaction resource paths must be unique.");
     seen.add(descriptor.path);

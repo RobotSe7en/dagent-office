@@ -218,7 +218,13 @@ export function createDocumentSession(document: DocumentModel, options: Document
     checkResourceUse(resources.added, parsed, base.snapshot.manifest.entrypoint);
     const impacted = metadata.presentation ? new Set(affectedPresentationSlides(base, { html: parsed, snapshot: { ...resources.state.snapshot, metadata } })) : undefined;
     const affectedSurfaces = impacted ? new Set([...(base.snapshot.metadata.presentation?.slides ?? []), ...(metadata.presentation?.slides ?? [])].filter(s => impacted.has(s.slideId)).map(s => s.rootNodeId)) : undefined;
-    mapAnnotations(annotations, base.html, parsed, edit, explicit, affectedSurfaces ? id => affectedSurfaces.has(id) : undefined);
+    const slideSurfaces = new Set(metadata.presentation?.slides.map(s => s.rootNodeId));
+    const regionChanged = affectedSurfaces ? (surfaceId: string): boolean => {
+      for (let id: string | null = surfaceId; id !== null; id = parsed.peekNode(id)?.parentNodeId ?? null) if (slideSurfaces.has(id)) return affectedSurfaces.has(id);
+      // Old generic regions outside slide surfaces retain the conservative layout rule.
+      return base.snapshot.html !== parsed.html || impacted!.size > 0;
+    } : undefined;
+    mapAnnotations(annotations, base.html, parsed, edit, explicit, regionChanged);
     updatePresentationRecovery(metadata, base, annotations);
     updateWordMetadata(metadata, base, parsed);
     if (resolvedIds) {

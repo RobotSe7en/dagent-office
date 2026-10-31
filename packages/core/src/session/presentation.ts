@@ -12,7 +12,7 @@ export function guardPresentationContent(base: DocumentState, op: DocumentConten
   const p = base.snapshot.metadata.presentation;
   if (!p) return;
   const object = p.objects.find(o => o.nodeId === op.nodeId), node = base.html.peekNode(op.nodeId)!;
-  if (op.op === "setStyle" && node.attributes["data-office-kind"] !== undefined && /^(?:(?:min|max)-)?(?:width|height)$/i.test(op.property)) invalid("Presentation object dimensions require a typed geometry operation.");
+  if (op.op === "setStyle" && node.attributes["data-office-kind"] !== undefined && /^(?:(?:(?:min|max)-)?(?:width|height)|margin(?:-(?:top|right|bottom|left))?)$/i.test(op.property)) invalid("Presentation object coordinates and dimensions require a typed geometry operation.");
   if (op.op === "removeNode" && ["presentation", "slide", "master", "layout", "notes-master", "notes", "comment"].includes(node.attributes["data-office-kind"] ?? "")) invalid("Presentation surfaces require a format management operation.");
   if (["replaceText", "replaceFragment", "insertFragment", "reconcileFragment"].includes(op.op) && node.attributes["data-office-kind"] !== undefined
     && (!object || !["text", "geometry", "table", "chart"].includes(object.kind)) && !["notes", "comment"].includes(node.attributes["data-office-kind"]!)) invalid("Content operations require a presentation text content domain.");
@@ -36,7 +36,8 @@ export function updatePresentationMetadata(metadata: DocumentMetadata, before: D
   const byId = new Map(annotations.map(a => [a.annotationId, a]));
   p.comments = p.comments.filter(item => byId.has(item.annotationId));
   const existing = new Set(p.comments.map(c => c.annotationId));
-  for (const annotation of annotations) if (!existing.has(annotation.annotationId)) p.comments.push({ annotationId: annotation.annotationId, format: "modern" });
+  const previousAnnotations = new Set(before.snapshot.annotations.map(a => a.annotationId));
+  for (const annotation of annotations) if (!existing.has(annotation.annotationId) && !previousAnnotations.has(annotation.annotationId)) p.comments.push({ annotationId: annotation.annotationId, format: "modern" });
 }
 
 export function removeDeletedCommentBodies(before: DocumentState, annotations: readonly Annotation[], edit: DocumentEdit): void {

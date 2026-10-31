@@ -41,6 +41,7 @@ export interface DocumentWorkbenchView extends DocumentInteractionView {
 
 /** Host-owned session; no model execution or authoritative file storage is introduced here. */
 export function mountDocumentWorkbench(container: HTMLElement, session: DocumentSession, options: DocumentWorkbenchOptions = {}): DocumentWorkbenchView {
+  if (session.snapshot().metadata.presentation) throw new DocumentError("UnsupportedFeature", "Presentation workbench requires its format adapter.");
   const document = container.ownerDocument, element = document.createElement("div"), shadow = element.attachShadow({ mode: "open" });
   const style = document.createElement("style");
   style.textContent = ":host{display:block;font:14px system-ui;color:#20252b}button,input{font:inherit}button{padding:6px 10px;cursor:pointer}button:disabled{cursor:default}section{margin:16px 0;padding:12px;border:1px solid #d5dbe2}h2{font-size:16px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}label{display:block;margin:8px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto}li{margin:12px 0}.error{color:#a00000}.candidate{max-height:60vh;overflow:auto}button:focus-visible,input:focus-visible{outline:2px solid #245aa5;outline-offset:2px}";

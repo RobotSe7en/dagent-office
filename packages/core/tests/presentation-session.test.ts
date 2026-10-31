@@ -112,6 +112,13 @@ describe("PPT transactions share atomic candidates, revisions and history", () =
     expect(c.affectedSlideIds).toEqual(["slide-1"]); s.commit(c); expect(geometry(s, "heading")).toEqual(g);
     s.undo(); expect(readPresentationGeometry(s.getNode("heading")!.attributes)).toBeUndefined();
   });
+  test("a definition change affects its referencing slides without invalidating another layout", () => {
+    const files = twoSlides(), data = metadata(files); data.presentation.slides[0]!.layoutId = "layout-body";
+    data.presentation.comments = []; json(files, "metadata.json", data); json(files, "annotations.json", [region("r1", "slide-root-1"), region("r2", "slide-root-2")]);
+    const s = session(files), c = prepare(s, [move(s, "layout-title", 12)]);
+    expect(c.affectedSlideIds).toEqual(["slide-1"]); s.commit(c); expect(s.getAnnotations().map(a => a.status)).toEqual(["needs_reanchor", "open"]);
+    s.undo(); expect(s.getAnnotations().map(a => a.status)).toEqual(["open", "open"]);
+  });
   test("bound connector caches update atomically when target or parent group moves", () => {
     const files = example(), data = metadata(files), link = data.presentation.objects.find(o => o.nodeId === "milestone-link")!;
     if (link.kind !== "connector") throw Error(); link.endNodeId = "group-diamond"; link.startSite = 1; link.endSite = 0; json(files, "metadata.json", data);
@@ -160,6 +167,24 @@ describe("PPT transactions share atomic candidates, revisions and history", () =
     const s = session(); s.commit(prepare(s, [{ op: "setStyle", nodeId: "heading-p", property: "color", value: "#008800" }]));
     expect(s.getNode("heading-p")!.attributes.style).toContain("--office-text-color:#008800");
     expect(s.getNode("heading-p")!.attributes.style).toContain("--office-text-source:direct");
+  });
+  test("review: an empty batch preserves valid legacy annotations without native registry entries", () => {
+    const files = example(), data = metadata(files); data.presentation.comments = []; json(files, "metadata.json", data);
+    const s = session(files), before = s.snapshot(); expect(s.commit(prepare(s, [])).changed).toBe(false); expect(s.snapshot()).toEqual(before);
+  });
+  test("review: a region on an object container cannot retain a stale rectangle after its slide changes", () => {
+    const files = example(); json(files, "annotations.json", [region("review-1", "milestone")]);
+    const s = session(files); s.commit(prepare(s, [move(s, "milestone", 10)])); expect(s.getAnnotations()[0]!.status).toBe("needs_reanchor");
+  });
+  test("review: a CSS margin cannot provide an alternative object coordinate", () => {
+    const s = session(); fail(() => prepare(s, [{ op: "setStyle", nodeId: "heading", property: "margin-left", value: "24pt" }]));
+    expect(s.snapshot().manifest.revision).toBe(0);
+  });
+  test("review: text replacement cannot silently cross a native metadata-only hyperlink boundary", () => {
+    const files = example(), data = metadata(files); data.presentation.hyperlinks.push({ nodeId: "link-run", target: "https://example.com" }); json(files, "metadata.json", data);
+    files.set("content.html", encode(decode(files.get("content.html")).replace('data-node-id="heading-p" style="font-size:30pt">项目进展', 'data-node-id="heading-p" style="font-size:30pt">项目<span data-node-id="link-run">进展</span>')));
+    const s = session(files); fail(() => prepare(s, [{ op: "replaceText", nodeId: "heading-p", from: 0, to: 4, expectedText: "项目进展", text: "全部更新" }]));
+    expect(s.snapshot().metadata.presentation!.hyperlinks).toHaveLength(1);
   });
 });
 
