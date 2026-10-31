@@ -33,7 +33,7 @@ export function exportPptx(document: DocumentModel, options: PptxExportOptions =
         }
         if (layout) {
             attrs.showMasterSp = layout.showMasterShapes === false ? 0 : 1;
-            attrs.type = surface.node.attrs["data-office-layout-type"] ?? "blank";
+            attrs.type = surface.node.attrs["data-office-layout-type"] ?? "cust";
             attrs.preserve = 1;
         }
         if (surface.kind === "notes")

@@ -60,8 +60,10 @@ pnpm check:pptx-export
 pnpm check:presentation-closure
 ```
 
-外部验收需要 LibreOffice Impress/Calc、Python UNO、lxml、Poppler、Noto Sans CJK SC 和 Liberation Sans；不在 SDK 运行时下载字体或启动 Office。`check:pptx-export` 使用独立样例和生产者版本，保存源、原生文件、SDK 重开包、报告和环境摘要；用未修改的官方 Transitional XSD 校验标准部件及内嵌工作簿，并检查所选 MS-PPTX 现代批注结构。另通过隔离的 UNO 进程实际修改标题、几何、表格、图表数值和备注，重存后用 SDK 读取。
+外部验收固定 LibreOffice 25.8.1.1 Impress/Calc，另需 Python UNO、lxml、Poppler、Noto Sans CJK SC 和 Liberation Sans；不在 SDK 运行时下载字体或启动 Office。`check:pptx-export` 使用独立样例和生产者版本，保存源、原生文件、SDK 重开包、报告和环境摘要；用未修改的官方 Transitional XSD 校验标准部件及内嵌工作簿，并检查所选 MS-PPTX 现代批注结构。另通过隔离的 UNO 进程实际修改标题、几何、表格、图表数值和备注，重存后用 SDK 读取。
 
 `check:presentation-closure` 在工作区之外安装五个 tarball，验证无 React 的普通 JS、可选 React、原生输入、请求／提案、历史、导出、Node PDF/PNG／子进程协议与 Office 重开；按固定字体和视口比较独立样例每页的源／原生导出预览。源图、输出图、报告、工具和字体摘要及 tarball 留在 `.cache/presentation-closure-acceptance/`。不自动改写参考基线。
+
+固定 Office 工具的校验安装及 24.2 重存重复身份限制见[本地开发](development.md#依赖与状态)。SDK 不修补或忽略外部应用生成的重复对象身份。
 
 标准校验包及许可证位于 [scripts/fixtures/ooxml](../scripts/fixtures/ooxml/README.md)。CI 同时保留 Word 闭环。达智接入仍按用户决定延期，不能以本轮独立 PPT 验收宣称 R1-16 的宿主验收已完成。

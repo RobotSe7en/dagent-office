@@ -244,6 +244,8 @@ R2-14～R2-16 的实现与可复验入口见 [PPTX 原生导出与闭环](pptx-e
 
 `check:presentation-closure` 在工作区外消费五个 tarball，普通 JS 不安装 React，另验证 React 包装、原生输入、宿主请求／固定提案、撤销重做、明确重定位、PPTX、Node PDF/PNG 和字节子进程、Office 重开及资源释放。32 份来源／生产者加当前编辑文稿的 47 页固定字体源／原生导出对照通过；源／输出图、报告、环境和 tarball 摘要保留为 CI 制品。Playground 的 PPT 全流程及 Worker 取消、文稿切换、修订变化在 Chromium、Firefox、WebKit 通过；Word 闭环回归继续保留。
 
+外部 Office 验收固定到官方归档与 SHA-256 校验的 LibreOffice 25.8.1.1。CI 原有 24.2 在未使用布局重存时产生重复原生身份，已隔离复现并保留严格拒绝；没有通过放宽读取或跳过实际编辑门槛规避，详见[开发环境](development.md#依赖与状态)。
+
 上述结果是第二轮独立 PPT 的验收，PowerPoint/WPS 明确未实机验证。R1-15 达智接入仍延期，R1-16 的宿主验收仍未完成。阶段合并仍要求最终提交的全部 CI 通过。
 
 ## 阶段交付流程

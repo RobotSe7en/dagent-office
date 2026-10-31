@@ -32,10 +32,15 @@ def edit(source, target):
         with socket.socket() as port:
             port.bind(("127.0.0.1", 0))
             number = port.getsockname()[1]
+        # pyuno can alter the C environment outside os.environ. A separate
+        # Office installation must bootstrap its own server, not the client.
+        environment = {name: value for name, value in os.environ.items()
+                       if name not in {"URE_BOOTSTRAP", "UNO_PATH", "UNO_TYPES", "UNO_SERVICES"}}
         process = subprocess.Popen(["libreoffice", "-env:UserInstallation=" + Path(profile).as_uri(),
                                     "--headless", "--norestore", "--nodefault", "--nofirststartwizard",
                                     f"--accept=socket,host=127.0.0.1,port={number};urp;StarOffice.ComponentContext"],
-                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True,
+                                   env=environment)
         document = None
         try:
             resolver = uno.getComponentContext().ServiceManager.createInstanceWithContext(

@@ -90,3 +90,7 @@ R1-12 的浏览器 CI 使用 Ubuntu 24.04、固定 Playwright 引擎、Poppler �
 PPT 的独立 ZIP/XML 样例与参考环境见 [PPTX 样例](../examples/pptx/README.md)。`pnpm check:pptx-fixtures` 不需要 Office；`pnpm check:pptx-reference` 需要 Impress、Calc、Poppler 和上述字体，会实际打开、重存并重开。环境不同只运行内容检查并明确记录未比较像素，不自动刷新基线。
 
 PPT 导出与独立闭环使用 `pnpm check:pptx-export` 和 `pnpm check:presentation-closure`，需要 `python3-uno`、`python3-lxml`、Impress/Calc、Poppler 和既定字体。普通 JS／React／Node 在工作区外安装 tarball；输出及环境见 `.cache/pptx-export-acceptance/` 和 `.cache/presentation-closure-acceptance/`。完整范围、现代批注限制及 PowerPoint/WPS 未验证项见 [PPTX 导出](pptx-export.md)。
+
+Office CI 固定使用官方 LibreOffice 25.8.1.1 归档，`node scripts/install-acceptance-office.mjs` 校验官方 SHA-256 后仅解包到 `.cache/acceptance-office/`，不替换系统 Office。CI 将其 `bin` 加入当前任务 PATH，并保留版本、来源和摘要；本地 Ubuntu 24.04 x64 在装齐上述原生依赖后可用同一命令，再把该 `bin` 加入 PATH；其他系统可使用已验证的本机版本。归档随附的许可保留在解包目录，工具不会进入 SDK 发布包。
+
+LibreOffice 24.2 在含未使用自定义布局的新建文稿重存中会生成重复原生对象 ID；此结果在隔离 Ubuntu 24.04 中复现，SDK 继续明确拒绝，不放宽重复身份校验。本轮外部打开、实际编辑和重存验收以固定的 25.8.1.1 为准，其他 Office 版本需单独验证。
