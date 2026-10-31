@@ -127,6 +127,11 @@ export function validatePresentation(presentation: PresentationMetadata, annotat
       || parent === null || parent !== surface && objects.get(parent)?.kind !== "group") invalid("A presentation object has an invalid source type or parent.");
     if (["notes", "comment"].includes(roots.get(surface)!)) invalid("Rich-text stories cannot contain positioned slide objects.");
     const transform = readPresentationGeometry(value.attributes);
+    const connectorPreset = value.attributes["data-office-connector-preset"];
+    if (connectorPreset !== undefined && (object.kind !== "connector" || !(object.routing === "straight" ? ["line", "straightConnector1"] : ["bentConnector2", "bentConnector3", "bentConnector4", "bentConnector5"]).includes(connectorPreset))) invalid("A native connector preset must match its routing kind.");
+    for (const [name, raw] of Object.entries(value.attributes)) if (name.startsWith("data-office-adjust-")) {
+      if (!["geometry", "connector", "text"].includes(object.kind) || !/^data-office-adjust-[a-z][a-z0-9]*$/.test(name) || !/^-?\d+$/.test(raw) || !Number.isSafeInteger(Number(raw))) invalid("Preset adjustments require safe integer constants on a shape or connector.");
+    }
     transforms.set(object.nodeId, transform);
     if (!transform && (!object.placeholder || parent !== surface)) invalid("Positioned objects require a local transform; only surface placeholders may inherit one.");
     if (transform && object.kind !== "connector" && !(object.kind === "geometry" && object.preset === "line") && (!transform.width || !transform.height)) invalid("Two-dimensional objects require positive dimensions.");

@@ -8,6 +8,9 @@ export const R: string =
   "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 export const A: string =
   "http://schemas.openxmlformats.org/drawingml/2006/main";
+export const P: string = "http://schemas.openxmlformats.org/presentationml/2006/main";
+export const C: string = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+export const S: string = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
 export const WP: string =
   "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
 export const PIC: string =
@@ -20,6 +23,9 @@ const aliases: Readonly<Record<string, string>> = {
   "http://purl.oclc.org/ooxml/wordprocessingml/main": W,
   "http://purl.oclc.org/ooxml/officeDocument/relationships": R,
   "http://purl.oclc.org/ooxml/drawingml/main": A,
+  "http://purl.oclc.org/ooxml/presentationml/main": P,
+  "http://purl.oclc.org/ooxml/drawingml/chart": C,
+  "http://purl.oclc.org/ooxml/spreadsheetml/main": S,
   "http://purl.oclc.org/ooxml/drawingml/wordprocessingDrawing": WP,
   "http://purl.oclc.org/ooxml/drawingml/picture": PIC,
 };
