@@ -129,6 +129,19 @@ describe("Presentation package model", () => {
     expectFailure(() => openDocument(files));
   });
 
+  test("does not interpret inherited slide geometry as a group's local coordinates", () => {
+    const files = initial(); addText(files, "text-a");
+    const child = openDocument(files).getNode("text-a")!.html;
+    const inherited = child.replace(' data-office-x="-10" data-office-y="20" data-office-width="120" data-office-height="60"', "");
+    files.set("content.html", encoder.encode(source(files).replace(child, '<div data-node-id="group" data-office-kind="group" data-office-x="100" data-office-y="100" data-office-width="400" data-office-height="200" data-office-child-x="0" data-office-child-y="0" data-office-child-width="400" data-office-child-height="200">' + inherited + '</div>')));
+    editMetadata(files, (data) => {
+      data.presentation.slides[0]!.layoutId = "layout-body";
+      data.presentation.objects.push({ nodeId: "group", kind: "group" });
+      data.presentation.objects.find((item) => item.nodeId === "text-a")!.placeholder = { type: "title", index: 0 };
+    });
+    expectFailure(() => openDocument(files));
+  });
+
   test("validates native table grids and row spans before allocating expanded cells", () => {
     const files = initial(); addText(files, "table-object", "");
     const table = '<table data-node-id="table"><tr data-node-id="row-1"><td data-node-id="cell-a" rowspan="2"><p data-node-id="p-a">跨行</p></td><td data-node-id="cell-b"><p data-node-id="p-b">乙</p></td></tr><tr data-node-id="row-2"><td data-node-id="cell-c"><p data-node-id="p-c">丙</p></td></tr></table>';
@@ -138,6 +151,9 @@ describe("Presentation package model", () => {
       data.presentation.objects.push({ nodeId: "table-object", kind: "table", grid: [60, 60] });
     });
     expect(openDocument(files).getNode("cell-a")!.text).toBe("跨行");
+    const grouped = new Map(files);
+    grouped.set("content.html", encoder.encode(source(grouped).replace('<table data-node-id="table">', '<table data-node-id="table"><tbody data-node-id="table-body">').replace('</table>', '</tbody></table>')));
+    expect(openDocument(grouped).getNode("cell-a")!.text).toBe("跨行");
     const wide = new Map(files);
     editMetadata(wide, (data) => { const tableObject = data.presentation.objects.find((item) => item.kind === "table")!; if (tableObject.kind === "table") tableObject.grid = new Array<number>(1000).fill(1); });
     expectFailure(() => openDocument(wide, { limits: { maxNodes: 200 } }), "ResourceLimitExceeded");
@@ -176,6 +192,9 @@ describe("Presentation package model", () => {
       data.presentation.dataSets.push({ dataSetId: "data", categories: ["甲", "乙"], series: [{ seriesId: "s", name: "销售额", values: [2, null] }] });
     });
     expect(openDocument(files).snapshot().metadata.presentation!.charts).toHaveLength(1);
+    const extra = new Map(files);
+    extra.set("content.html", encoder.encode(source(extra).replace('<p data-node-id="chart-object-p"></p>', '<p data-node-id="chart-object-p">不能丢失的内容</p>')));
+    expectFailure(() => openDocument(extra));
     editMetadata(files, (data) => { data.presentation.dataSets[0]!.series[0]!.values.pop(); });
     expectFailure(() => openDocument(files));
   });

@@ -128,7 +128,7 @@ export function validatePresentation(presentation: PresentationMetadata, annotat
     if (["notes", "comment"].includes(roots.get(surface)!)) invalid("Rich-text stories cannot contain positioned slide objects.");
     const transform = readPresentationGeometry(value.attributes);
     transforms.set(object.nodeId, transform);
-    if (!transform && !object.placeholder) invalid("Positioned objects require a source transform.");
+    if (!transform && (!object.placeholder || parent !== surface)) invalid("Positioned objects require a local transform; only surface placeholders may inherit one.");
     if (transform && object.kind !== "connector" && !(object.kind === "geometry" && object.preset === "line") && (!transform.width || !transform.height)) invalid("Two-dimensional objects require positive dimensions.");
     if (object.nativeId !== undefined) {
       const ids = nativeIds.get(surface) ?? new Set<string>();
@@ -163,7 +163,7 @@ export function validatePresentation(presentation: PresentationMetadata, annotat
     if (object.kind === "table") {
       const tables = value.childNodeIds.filter((id) => node(id).tagName === "table");
       if (tables.length !== 1 || value.childNodeIds.length !== 1 || html.directText(object.nodeId)?.trim()) invalid("A table object requires exactly one table source.");
-      const rows = node(tables[0]!).childNodeIds;
+      const rows = node(tables[0]!).childNodeIds.flatMap((id) => ["thead", "tbody", "tfoot"].includes(node(id).tagName) ? node(id).childNodeIds : [id]);
       const occupied = new Array<number>(object.grid.length).fill(0);
       for (const [rowIndex, rowId] of rows.entries()) {
         if (node(rowId).tagName !== "tr") invalid("Presentation table children must be rows.");
@@ -222,6 +222,16 @@ export function validatePresentation(presentation: PresentationMetadata, annotat
       let parent: string | null = chart.titleNodeId;
       while (parent !== null && parent !== chart.nodeId) parent = node(parent).parentNodeId;
       if (parent !== chart.nodeId || chart.titleNodeId === chart.nodeId) invalid("A chart title must be inside its chart source.");
+    }
+    const stack = [...node(chart.nodeId).childNodeIds];
+    if (html.directText(chart.nodeId)?.trim()) invalid("Chart text requires an explicitly referenced title.");
+    while (stack.length) {
+      checkLimit(++work, limits.maxNodes);
+      const id = stack.pop()!;
+      if (id === chart.titleNodeId) continue;
+      const value = node(id);
+      if (html.directText(id)?.trim() || ["img", "br", "table"].includes(value.tagName)) invalid("Chart content outside its explicit title cannot be preserved.");
+      stack.push(...value.childNodeIds);
     }
     if (chart.minimum !== undefined && chart.maximum !== undefined && chart.minimum >= chart.maximum) invalid("Chart axis bounds are invalid.");
     if (chart.kind === "pie" && (dataSet.series.length !== 1 || negativeDataSets.has(dataSet.dataSetId))) invalid("A pie chart requires one nonnegative series.");
