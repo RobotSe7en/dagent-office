@@ -10,3 +10,4 @@ playwright-report/
 .env.*
 !.env.example
 fixtures/private/
+__pycache__/
