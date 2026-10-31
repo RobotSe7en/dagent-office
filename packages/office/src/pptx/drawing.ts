@@ -3,7 +3,7 @@ import type { PresentationObject } from "@dagent-office/core";
 import { A, attr, check, child, elements, fail, MC, P, R, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import type { Css } from "../ooxml/styles.js";
-import { bool, Context, integer, points, value } from "./context.js";
+import { bool, Context, integer, points, unsigned, value } from "./context.js";
 import type { Html, Surface } from "./context.js";
 import { colorMap, effects, fill, onlyColor, outline, paint } from "./styles.js";
 import { importHyperlink, importText } from "./text.js";
@@ -91,7 +91,13 @@ export class Drawings {
     check(content, ["spTree", "bg", "custDataLst", "controls", "extLst"], P);
     if (child(content, "controls", P)) unsupported(content, "Embedded controls are not supported.");
     const map = child(source, "clrMap", P), override = child(source, "clrMapOvr", P);
+    check(override, ["masterClrMapping", "overrideClrMapping"], A);
+    if (override && elements(override, undefined, A).length !== 1) fail(override, "A color mapping override requires one mode.");
     const css: Css = colorMap(map ?? child(override, "overrideClrMapping", A));
+    const headerFooter = child(source, "hf", P);
+    if (headerFooter) for (const [key, name] of [["hdr", "header"], ["ftr", "footer"], ["dt", "date"], ["sldNum", "slide-number"]]) surface.root.attrs["data-office-show-" + name] = String(bool(headerFooter, key!, true));
+    if (source.name === "sldLayout" && value(source, "type")) surface.root.attrs["data-office-layout-type"] = value(source, "type")!;
+    if (source.name === "sldMaster" && value(content, "name") !== undefined) surface.root.attrs["data-office-name"] = value(content, "name")!;
     const background = child(content, "bg", P);
     if (background) {
       check(background, ["bgPr", "bgRef"], P);
@@ -101,12 +107,13 @@ export class Drawings {
       if (reference) {
         const index = integer(reference, "idx") - 1000, name = surface.themeId + "-background-" + index;
         if (!context.css.some(rule => rule.startsWith("." + name + "{"))) fail(reference, "A theme background reference is missing.");
-        surface.root.attrs.class += " " + name; css["--office-placeholder-color"] = onlyColor(reference).css;
+        surface.root.attrs.class += " " + name; paint(css, "--office-background-reference", onlyColor(reference));
       }
     }
     context.style(surface.root, css);
-    const native = child(child(tree, "nvGrpSpPr", P), "cNvPr", P), nativeId = native && value(native, "id");
-    if (!nativeId || !/^\d+$/.test(nativeId)) fail(tree, "A drawing tree identity is invalid.");
+    const native = child(child(tree, "nvGrpSpPr", P), "cNvPr", P);
+    if (!native) fail(tree, "A drawing tree identity is invalid.");
+    const nativeId = String(unsigned(native, "id"));
     context.nativeNodes.set(surface.id, new Map([[nativeId, surface.root.attrs["data-node-id"]!]]));
     const rootTransform = child(child(tree, "grpSpPr", P), "xfrm", A);
     let parent = surface.root;
@@ -129,8 +136,9 @@ export class Drawings {
     check({ ...source, content: content.filter(node => !(n === "graphicFrame" && node.uri === A && node.name === "graphic")) },
       [nvName, n === "grpSp" ? "grpSpPr" : n === "graphicFrame" ? "xfrm" : "spPr", "style", ...(n === "sp" ? ["txBody"] : n === "pic" ? ["blipFill"] : n === "grpSp" ? ["sp", "pic", "grpSp", "cxnSp", "graphicFrame"] : []), "extLst"], P);
     // a:graphic is the sole cross-namespace child of a graphic frame.
-    const nv = child(source, nvName, P), native = child(nv, "cNvPr", P), id = native && value(native, "id");
-    if (!native || !id || !/^\d+$/.test(id)) fail(source, "An object identity is invalid.");
+    const nv = child(source, nvName, P), native = child(nv, "cNvPr", P);
+    if (!native) fail(source, "An object identity is invalid.");
+    const id = String(unsigned(native, "id"));
     const identities = context.nativeNodes.get(surface.id)!;
     if (identities.has(id)) fail(native, "Native object identities repeat inside a surface.");
     const target = context.make("div"), nodeId = target.attrs["data-node-id"]!;
@@ -164,9 +172,9 @@ export class Drawings {
         object = { ...base, kind: "connector", routing: preset === "line" || preset === "straightConnector1" ? "straight" : "elbow" };
         target.attrs["data-office-connector-preset"] = preset;
         const c = child(nv, "cNvCxnSpPr", P), start = child(c, "stCxn", A), end = child(c, "endCxn", A);
-        if (start) object.startSite = integer(start, "idx");
-        if (end) object.endSite = integer(end, "idx");
-        this.connections.push({ object, surface: surface.id, ...(start ? { start: value(start, "id") ?? fail(start, "A connection target is missing.") } : {}), ...(end ? { end: value(end, "id") ?? fail(end, "A connection target is missing.") } : {}) });
+        if (start) object.startSite = unsigned(start, "idx");
+        if (end) object.endSite = unsigned(end, "idx");
+        this.connections.push({ object, surface: surface.id, ...(start ? { start: String(unsigned(start, "id")) } : {}), ...(end ? { end: String(unsigned(end, "id")) } : {}) });
       } else {
         const parsed = PresentationPresetSchema.safeParse(preset);
         if (!parsed.success) unsupported(geometry, "This preset geometry is not supported.");

@@ -22,6 +22,7 @@ export function importTable(context: Context, source: XmlNode, frame: Html, part
   if (!rows.length) fail(source, "A presentation table requires rows.");
   context.count(rows.length * grid.length);
   const occupied = Array.from({ length: rows.length }, () => Array<number>(grid.length).fill(0));
+  const origins = new Map<number, { row: number; column: number }>();
   const table = context.make("table");
   context.style(table, { "border-collapse": "collapse", "table-layout": "fixed", width: "100%", ...fill(properties, "--office-table-fill") });
   const tbody = context.make("tbody");
@@ -39,12 +40,14 @@ export function importTable(context: Context, source: XmlNode, frame: Html, part
       const rowSpan = integer(sourceCell, "rowSpan", 1), colSpan = integer(sourceCell, "gridSpan", 1);
       if (rowSpan < 1 || colSpan < 1 || rowIndex + rowSpan > rows.length || columnIndex + colSpan > grid.length) fail(sourceCell, "A cell merge exceeds its table.");
       if (continuation) {
-        if (!occupied[rowIndex]![columnIndex]) fail(sourceCell, "A merge continuation has no origin.");
+        const origin = origins.get(occupied[rowIndex]![columnIndex]!);
+        if (!origin || bool(sourceCell, "hMerge") !== (origin.column < columnIndex) || bool(sourceCell, "vMerge") !== (origin.row < rowIndex)) fail(sourceCell, "A merge continuation direction disagrees with its origin.");
         const body = child(sourceCell, "txBody", A);
         if (body && elements(body, "p", A).some(p => elements(p, undefined, A).some(run => run.name === "br" || ["r", "fld"].includes(run.name) && text(child(run, "t", A)) !== ""))) unsupported(sourceCell, "Merged continuation cells cannot discard their text.");
         return;
       }
       const cellIdentity = ++identity;
+      origins.set(cellIdentity, { row: rowIndex, column: columnIndex });
       for (let y = rowIndex; y < rowIndex + rowSpan; y++) for (let x = columnIndex; x < columnIndex + colSpan; x++) {
         context.count();
         if (occupied[y]![x]) fail(sourceCell, "Presentation table merges overlap.");

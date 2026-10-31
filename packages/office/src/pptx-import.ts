@@ -6,7 +6,7 @@ import type { OpcPackage } from "./ooxml/package.js";
 import { attr, check, child, elements, fail, P, R, text, unsupported } from "./ooxml/xml.js";
 import type { XmlNode } from "./ooxml/xml.js";
 import { escapeHtml } from "./ooxml/styles.js";
-import { bool, Context, encode, integer, points, serialize, value } from "./pptx/context.js";
+import { bool, Context, encode, integer, points, serialize, unsigned, value } from "./pptx/context.js";
 import type { Html, Surface } from "./pptx/context.js";
 import { compatible, Drawings } from "./pptx/drawing.js";
 import { importTheme } from "./pptx/styles.js";
@@ -52,10 +52,12 @@ class Importer {
       seenSlides.add(path); nativeSlides.add(native); context.slidePaths.set(path, "slide-" + native);
     }
     if (!seenSlides.size) fail(source, "A presentation must contain at least one slide.");
-    const seenMasters = new Set<string>();
+    const seenMasters = new Set<string>(), nativeMasters = new Set<number>(), nativeLayouts = new Set<number>();
     for (const entry of elements(child(source, "sldMasterIdLst", P), "sldMasterId", P)) {
       const path = context.relation(this.main, attr(entry, "id", R), "slideMaster").target;
-      if (seenMasters.has(path)) fail(entry, "Slide master references are duplicated.");
+      const nativeId = unsigned(entry, "id", 2147483648);
+      if (seenMasters.has(path) || nativeMasters.has(nativeId)) fail(entry, "Slide master references or numeric identities are duplicated.");
+      nativeMasters.add(nativeId);
       seenMasters.add(path);
       const masterSource = context.part(path, "presentationml.slideMaster", "sldMaster", P);
       this.validateSurface(masterSource, ["sldLayoutIdLst", "txStyles", "hf", "timing", "transition"]);
@@ -73,7 +75,9 @@ class Importer {
       const layoutPaths = new Set<string>();
       for (const layoutEntry of elements(child(masterSource, "sldLayoutIdLst", P), "sldLayoutId", P)) {
         const layoutPath = context.relation(path, attr(layoutEntry, "id", R), "slideLayout").target;
-        if (layoutPaths.has(layoutPath) || context.surfaces.has(layoutPath)) fail(layoutEntry, "A layout has multiple native owners or duplicate references.");
+        const nativeId = unsigned(layoutEntry, "id", 2147483648);
+        if (layoutPaths.has(layoutPath) || context.surfaces.has(layoutPath) || nativeLayouts.has(nativeId)) fail(layoutEntry, "A layout has multiple native owners or duplicate identities.");
+        nativeLayouts.add(nativeId);
         layoutPaths.add(layoutPath);
         if (context.related(layoutPath, "slideMaster") !== path) fail(layoutEntry, "A layout's master relation disagrees with its owner.");
         const layoutSource = context.part(layoutPath, "presentationml.slideLayout", "sldLayout", P);

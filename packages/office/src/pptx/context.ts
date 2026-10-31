@@ -15,6 +15,11 @@ export function serialize(node: Html): string {
 export const encode = (value: string): Uint8Array => new (globalThis as unknown as { TextEncoder: new () => { encode(value: string): Uint8Array } }).TextEncoder().encode(value);
 export const value = (node: XmlNode | undefined, name = "val"): string | undefined => attr(node, name, "");
 export const integer = (node: XmlNode, name: string, fallback?: number): number => number(value(node, name), node, fallback);
+export function unsigned(node: XmlNode, name: string, minimum = 0, maximum = 4294967295): number {
+  const n = integer(node, name);
+  if (n < minimum || n > maximum) fail(node, "A native unsigned identity or index is outside its range.");
+  return n;
+}
 export const points = (node: XmlNode, name: string, fallback?: number): number => integer(node, name, fallback) / 12700;
 export function bool(node: XmlNode, name: string, fallback = false): boolean {
   const v = value(node, name);

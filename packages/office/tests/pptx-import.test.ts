@@ -139,3 +139,26 @@ test("enforces byte/node/ZIP budgets, identities, format separation and the edit
   expect(() => importPptx(docx, { documentId: "wrong" })).toThrowError(expect.objectContaining({ code: "UnsupportedFormat" }));
   expect(() => createDocumentSession(load())).toThrowError(expect.objectContaining({ code: "UnsupportedFeature" }));
 });
+
+test("compares native numeric identities by value, including leading-zero aliases and unsigned bounds", () => {
+  const duplicate = mutate("01-rich-text.pptx", "ppt/slides/slide1.xml", source => {
+    const shape = source.match(/<p:sp>.*?<\/p:sp>/s)![0];
+    return source.replace("</p:spTree>", shape.replace('id="2"', 'id="02"') + "</p:spTree>");
+  });
+  const outside = mutate("01-rich-text.pptx", "ppt/slides/slide1.xml", source => source.replace('id="2"', 'id="4294967296"'));
+  const masters = mutate("02-theme-placeholders.pptx", "ppt/presentation.xml", source => source.replace('id="2147483649"', 'id="2147483648"'));
+  for (const bytes of [duplicate, outside, masters]) expect(() => importPptx(bytes, { documentId: "identity" })).toThrowError(expect.objectContaining({ code: "InvalidDocument" }));
+});
+
+test("rejects a table continuation whose direction disagrees with its merge origin", () => {
+  const bytes = mutate("08-table-merges.pptx", "ppt/slides/slide1.xml", source => source.replace('vMerge="1"', 'hMerge="1"'));
+  expect(() => importPptx(bytes, { documentId: "merge" })).toThrowError(expect.objectContaining({ code: "InvalidDocument" }));
+});
+
+test("preserves the reference color and transforms for a theme background", () => {
+  const bytes = mutate("01-rich-text.pptx", "ppt/slides/slide1.xml", source => source.replace('<p:spTree>', '<p:bg><p:bgRef idx="1001"><a:srgbClr val="123456"><a:alpha val="50000"/></a:srgbClr></p:bgRef></p:bg><p:spTree>'));
+  const snapshot = openDocument(importPptx(bytes, { documentId: "background" })).snapshot();
+  expect(snapshot.html).toContain("--office-background-reference-color:#123456");
+  expect(snapshot.html).toContain("--office-background-reference-alpha:0.5");
+  expect(snapshot.styles[0]!.css).toContain("var(--office-background-reference-color");
+});
