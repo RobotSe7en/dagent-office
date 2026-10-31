@@ -21,7 +21,7 @@ const objectBase = {
   placeholder: placeholder.optional(),
 };
 const textProperties = z.strictObject({
-  autoFit: z.enum(["none", "normal", "shape"]), wrap: z.boolean(),
+  autoFit: z.enum(["none", "normal", "shape"]).optional(), wrap: z.boolean().optional(),
   fontScale: z.number().positive().max(1).optional(), lineSpacingReduction: z.number().min(0).max(1).optional(),
 });
 export const PresentationObjectSchema = z.discriminatedUnion("kind", [

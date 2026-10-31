@@ -158,3 +158,11 @@ test("preserves the reference color and transforms for a theme background", () =
   expect(snapshot.html).toContain("--office-background-reference-alpha:0.5");
   expect(snapshot.styles[0]!.css).toContain("var(--office-background-reference-color");
 });
+
+test("preserves absent text-body overrides for placeholder inheritance instead of manufacturing defaults", () => {
+  const input = mutate("02-theme-placeholders.pptx", "ppt/slides/slide1.xml", source => source.replace(/<a:bodyPr[^>]*>[\s\S]*?<\/a:bodyPr>/g, "<a:bodyPr/>"));
+  const model = openDocument(importPptx(input, { documentId: "body-inheritance" }));
+  const object = model.snapshot().metadata.presentation!.objects.find(o => o.kind === "text" && model.getNode(o.nodeId)!.text.includes("继承主题标题"))!;
+  expect(object).toMatchObject({ text: {} });
+  const node = model.getNode(object.nodeId)!; expect(node.attributes.style ?? "").not.toMatch(/padding-|white-space|text-anchor|tab-size/);
+});

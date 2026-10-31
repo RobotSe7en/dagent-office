@@ -104,7 +104,7 @@ export function resolvePreviewFonts(
     return hash >>> 0;
   };
   for (const node of nodes.filter((item) =>
-    item.matches('[data-word-script="eastAsia"],.sdk-number-marker'),
+    item.matches('[data-word-script="eastAsia"],[data-office-script="east-asia"],.sdk-number-marker,.sdk-ppt-marker'),
   )) {
     const resolution = resolutions.get(selected.get(node) ?? "");
     if (!resolution) continue;

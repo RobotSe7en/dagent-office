@@ -37,7 +37,7 @@ export function onlyColor(node: XmlNode): Color {
 export function paint(css: Css, prefix: string, source: Color): void {
   css[prefix + "-color"] = source.css;
   for (const key of ["alpha", "lumMod", "lumOff", "tint", "shade"] as const)
-    if (source[key] !== undefined) css[prefix + "-" + key.replace(/[A-Z]/g, c => "-" + c.toLowerCase())] = String(source[key]);
+    css[prefix + "-" + key.replace(/[A-Z]/g, c => "-" + c.toLowerCase())] = String(source[key] ?? (key === "alpha" || key === "lumMod" || key === "shade" ? 1 : 0));
 }
 export function fill(source: XmlNode | undefined, prefix = "--office-fill"): Css {
   const css: Css = {};

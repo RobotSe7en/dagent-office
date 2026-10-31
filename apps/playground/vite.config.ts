@@ -40,5 +40,5 @@ function collaborationExamples(): Plugin {
 export default defineConfig({
   plugins: [react(), collaborationExamples(), localConversion()],
   publicDir: fileURLToPath(new URL("../../examples/docx/", import.meta.url)),
-  build: { target: "es2022" },
+  build: { target: "es2022", rolldownOptions: { output: { banner: "/*! @license\n" + readFileSync(new URL("../../packages/core/ECMA-376-GEOMETRY-LICENSE.txt", import.meta.url), "utf8") + "\n*/", comments: { legal: true } } } },
 });
