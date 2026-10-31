@@ -17,7 +17,7 @@ for (const producer of ["", "producer/"]) for (const name of readdirSync(new URL
     const reopened = openDocument(importDocx(result.bytes, { documentId: "reopened" }));
     expect(mainText(reopened)).toBe(mainText(source));
     const actual = reopened.snapshot();
-    expect(actual.metadata.sections).toHaveLength(snapshot.metadata.sections.length);
+    expect(actual.metadata.sections).toHaveLength(snapshot.metadata.sections!.length);
     expect(actual.metadata.locale).toBe(snapshot.metadata.locale);
     const word = actual.metadata.word!, expected = snapshot.metadata.word!;
     expect(word.fields.map((field) => ({ instruction: field.instruction, locked: field.locked, dirty: field.dirty, complex: Boolean(field.endNodeId) }))).toEqual(expected.fields.map((field) => ({ instruction: field.instruction, locked: field.locked, dirty: field.dirty, complex: Boolean(field.endNodeId) })));

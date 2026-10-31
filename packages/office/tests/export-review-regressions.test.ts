@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
 import { openDocument, DEFAULT_DOCUMENT_READ_LIMITS } from "@dagent-office/core";
-import type { DocumentMetadata, WordMetadata } from "@dagent-office/core";
+import type { WordDocumentMetadata, WordMetadata } from "@dagent-office/core";
 import { exportDocx, importDocx, readDocumentZip } from "@dagent-office/office";
 import { attr, child, elements, W, xml } from "../src/ooxml/xml.js";
 import type { XmlNode } from "../src/ooxml/xml.js";
@@ -111,7 +111,7 @@ test("unused source class names cannot supply an implicit native baseline", () =
 
 function wordSource(body: string, styles: WordMetadata["styles"], css: string) {
   const model = authored('<div data-node-id="story" data-office-story="main"><section data-node-id="section">' + body + '</section></div>', css), files = new Map(model.serialize());
-  const metadata = JSON.parse(decoder.decode(files.get("metadata.json"))) as DocumentMetadata;
+  const metadata = JSON.parse(decoder.decode(files.get("metadata.json"))) as WordDocumentMetadata;
   metadata.sections = [{ sectionId: "section", rootNodeId: "section" }];
   metadata.word = { stories: [{ storyId: "main", kind: "main", rootNodeId: "story" }], styles, numbering: [], hyperlinks: [], bookmarks: [], fields: [], tabs: [], revisions: [], tables: [] };
   files.set("metadata.json", encoder.encode(JSON.stringify(metadata))); return openDocument(files);

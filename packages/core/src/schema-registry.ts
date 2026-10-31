@@ -96,10 +96,9 @@ function checkArrayItems(schema: z.core.$ZodType, input: unknown, path: Property
       }
     }
   } else if (schema instanceof z.ZodUnion) {
-    // Annotation content variants share their nested anchor/identity schemas.
-    // Preflight shared arrays without asking Zod to parse an entire variant first.
-    const option = schema.options[0];
-    if (option) checkArrayItems(option, input, path, fail);
+    // Metadata variants have different nested arrays. Preflight each bounded
+    // alternative without parsing a whole variant (or collecting every issue).
+    for (const option of schema.options) checkArrayItems(option, input, path, fail);
   } else if (schema instanceof z.ZodObject) {
     const data = object(input);
     if (!data) return;

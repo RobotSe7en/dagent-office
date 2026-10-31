@@ -43,6 +43,7 @@ export interface Pagination {
 
 /** Browser-independent measured pages over a single, reversible source DOM. */
 export function paginate(document: Document, source: PreviewSource, metadata: DeepReadonly<DocumentMetadata>, limits: Readonly<RenderLimits>): Pagination {
+  if (metadata.presentation !== undefined) throw new DocumentError("UnsupportedFeature", "Presentation surfaces do not use Word pagination.");
   const root = source.root;
   const diagnostics: LayoutDiagnostic[] = [], groups: Group[] = [];
   const sourceElements = new Map([root, ...root.querySelectorAll<HTMLElement>("[data-node-id]")].map((node) => [node.dataset.nodeId!, node]));

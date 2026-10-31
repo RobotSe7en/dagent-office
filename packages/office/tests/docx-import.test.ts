@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
-import type { DocumentMetadata } from "@dagent-office/core";
+import type { WordDocumentMetadata } from "@dagent-office/core";
 import { DocumentError, openDocument } from "@dagent-office/core";
 import {
   importDocx,
@@ -52,8 +52,8 @@ test("preserves style inheritance, direct overrides, sections and shared stories
     importDocx(fixture("04-styles-sections.docx"), { documentId: "styles" }),
   ).snapshot();
   expect(snapshot.metadata.sections).toHaveLength(2);
-  expect(snapshot.metadata.sections[1]!.headers).toEqual(
-    snapshot.metadata.sections[0]!.headers,
+  expect(snapshot.metadata.sections![1]!.headers).toEqual(
+    snapshot.metadata.sections![0]!.headers,
   );
   expect(
     snapshot.metadata.word!.stories.filter((x) => x.kind === "header"),
@@ -68,7 +68,7 @@ test("preserves style inheritance, direct overrides, sections and shared stories
   expect(
     snapshot.html + snapshot.styles.map((item) => item.css).join("\n"),
   ).toContain("font-style:italic");
-  expect(snapshot.metadata.pageSetup.width).toBe(595.3);
+  expect(snapshot.metadata.pageSetup!.width).toBe(595.3);
 });
 test("preserves native rich comments, UTF-16 anchors and insertion/deletion records", () => {
   const model = openDocument(
@@ -327,15 +327,15 @@ test("validates semantic field, story and rich-comment references on reopening",
     documentId: "semantics",
   });
   for (const change of [
-    (data: DocumentMetadata) => {
+    (data: WordDocumentMetadata) => {
       data.word!.fields[1]!.endNodeId = "absent";
     },
-    (data: DocumentMetadata) => {
+    (data: WordDocumentMetadata) => {
       data.word!.fields[2]!.instructionFields = [
         { offset: 0, fieldNodeId: data.word!.fields[2]!.nodeId },
       ];
     },
-    (data: DocumentMetadata) => {
+    (data: WordDocumentMetadata) => {
       data.word!.stories.push({
         ...data.word!.stories[0]!,
         storyId: "duplicate-root",
@@ -345,7 +345,7 @@ test("validates semantic field, story and rich-comment references on reopening",
     const files = new Map(base);
     const data = JSON.parse(
       new TextDecoder().decode(files.get("metadata.json")),
-    ) as DocumentMetadata;
+    ) as WordDocumentMetadata;
     change(data);
     files.set("metadata.json", new TextEncoder().encode(JSON.stringify(data)));
     expect(() => openDocument(files)).toThrowError(

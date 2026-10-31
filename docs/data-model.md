@@ -1,6 +1,6 @@
 # 三格式数据模型
 
-本文定义 V1 数据模型及其扩展边界。Word、PPT、Excel 共用身份、资源、样式引用和协作协议，分别保持流式文档、定位对象和工作簿语义。模型设计不代表三种格式均已实现；当前执行顺序见[第一轮细则](iteration-1.md#任务分解与依赖)。
+本文定义 V1 数据模型及其扩展边界。Word、PPT、Excel 共用身份、资源、样式引用和协作协议，分别保持流式文档、定位对象和工作簿语义。模型设计不代表三种格式均已实现；Word 独立闭环已完成，R1-15 宿主验证延期；当前执行顺序见[第二轮 PPT 细则](iteration-2.md#任务分解与阶段门槛)，第一轮历史依赖见[第一轮细则](iteration-1.md#任务分解与依赖)。
 
 ## 权威来源和运行时
 
@@ -74,13 +74,13 @@
 
 ## 接口、版本与验收
 
-本轮保留 `openDocument/snapshot/getNode/serialize`，实现 Word 语义扩展；三格式模型设计不开放尚未实现的 PPT/Excel 读取。结构类型来自严格契约及同源 JSON Schema，节点存在、引用、层级、锚点和样式循环另做语义校验。
+当前 `openDocument/snapshot/getNode/serialize` 已实现 Word 和 [R2-02 Presentation 文档包模型](presentation-model.md)，并保留 Word 旧包。PPTX 原生读取及 Excel 文档包读取仍未开放；模型实现不代表原生格式或预览验收已通过。结构类型来自严格契约及同源 JSON Schema，节点存在、引用、层级、锚点和样式循环另做语义校验。
 
 格式仍为未发布的版本 1 草案。新增字段显式定义，旧报告包继续可读；发布冻结后保留已支持的读取器，不通过忽略未知字段兼容。Word 读取结果必须经过文档包校验，并满足保存、ZIP 打包及重开语义一致。三格式正式实现时分别使用真实格式文件验证原生语义与视觉，不能用模型设计代替实现验收。
 
 ## 类型与来源映射
 
-以下是三格式运行时的设计类型，不是第三方 AST，也不是新的保存文件。当前实现的 Word 契约由 `core` 的 Zod 定义推导；PPT/Excel 类型在对应迭代落地，读取器当前仍拒绝这两种文档。
+以下是三格式运行时的设计类型，不是第三方 AST，也不是新的保存文件。当前 Word 和 R2-02 Presentation 契约由 `core` 的 Zod 定义推导；下列宽泛枚举还包含后续类型，不能据此推断实现范围。Excel 类型在第三轮落地，当前读取器仍拒绝 workbook。
 
 ```ts
 type NodeId = string;
@@ -117,18 +117,24 @@ type CellValueKind = "blank" | "text" | "number" | "boolean" | "error" | "formul
 
 ### PPT 元数据设计示例
 
-下面的 JSON 是第二轮的目标结构示例，仅校验 JSON 语法。当前 `document-metadata` 契约尚不接受该结构。对象的几何仍位于 HTML 属性，不在元数据再存一份。
+下面的 JSON 是 R2-02 已接受的元数据结构示例；完整可校验文档包见 [Presentation 样例](../examples/presentation/README.md)。对象几何位于 HTML 属性，不在元数据再存一份；该示例不表示原生 PPTX 读取已实现。
 
 ```json
 {
   "presentation": {
     "size": { "unit": "pt", "width": 960, "height": 540 },
+    "commentFormat": "modern",
     "slides": [{ "slideId": "slide-1", "rootNodeId": "slide-root-1", "layoutId": "layout-1" }],
     "themes": [{ "themeId": "theme-1", "cssClass": "theme-1" }],
     "masters": [{ "masterId": "master-1", "rootNodeId": "master-root-1", "themeId": "theme-1" }],
     "layouts": [{ "layoutId": "layout-1", "rootNodeId": "layout-root-1", "masterId": "master-1" }],
-    "objects": [{ "nodeId": "title-1", "kind": "text", "placeholder": "title" }],
-    "charts": []
+    "notesMasters": [],
+    "stories": [],
+    "objects": [{ "nodeId": "title-1", "kind": "text", "placeholder": { "type": "title", "index": 0 } }],
+    "charts": [],
+    "dataSets": [],
+    "comments": [],
+    "hyperlinks": []
   }
 }
 ```

@@ -1,0 +1,80 @@
+import { z } from "zod";
+import { IdentifierSchema } from "./primitives.js";
+
+export const PresentationSizeSchema = z.strictObject({ unit: z.literal("pt"), width: z.number().positive(), height: z.number().positive() });
+export type PresentationSize = z.infer<typeof PresentationSizeSchema>;
+export const PresentationGeometrySchema = z.strictObject({
+  x: z.number(), y: z.number(), width: z.number().min(0), height: z.number().min(0),
+  rotation: z.number(), flipH: z.boolean(), flipV: z.boolean(),
+});
+export type PresentationGeometry = z.infer<typeof PresentationGeometrySchema>;
+export const PresentationPresetSchema = z.enum([
+  "rect", "roundRect", "ellipse", "triangle", "diamond", "parallelogram", "trapezoid", "pentagon", "hexagon",
+  "rightArrow", "leftArrow", "upArrow", "downArrow", "leftRightArrow", "chevron", "line",
+]);
+const placeholder = z.strictObject({
+  type: z.enum(["title", "body", "ctrTitle", "subTitle", "dt", "sldNum", "ftr", "hdr", "obj", "chart", "tbl", "clipArt", "dgm", "media", "sldImg", "pic"]),
+  index: z.number().int().min(0),
+});
+const objectBase = {
+  nodeId: IdentifierSchema, name: z.string().optional(), nativeId: IdentifierSchema.optional(), creationId: IdentifierSchema.optional(),
+  placeholder: placeholder.optional(),
+};
+const textProperties = z.strictObject({
+  autoFit: z.enum(["none", "normal", "shape"]), wrap: z.boolean(),
+  fontScale: z.number().positive().max(1).optional(), lineSpacingReduction: z.number().min(0).max(1).optional(),
+});
+export const PresentationObjectSchema = z.discriminatedUnion("kind", [
+  z.strictObject({ ...objectBase, kind: z.literal("text"), text: textProperties.optional() }),
+  z.strictObject({ ...objectBase, kind: z.literal("image") }),
+  z.strictObject({ ...objectBase, kind: z.literal("geometry"), preset: PresentationPresetSchema, text: textProperties.optional() }),
+  z.strictObject({ ...objectBase, kind: z.literal("connector"), routing: z.enum(["straight", "elbow"]),
+    startNodeId: IdentifierSchema.optional(), endNodeId: IdentifierSchema.optional(), startSite: z.number().int().min(0).optional(), endSite: z.number().int().min(0).optional() }),
+  z.strictObject({ ...objectBase, kind: z.literal("table"), grid: z.array(z.number().positive()).min(1) }),
+  z.strictObject({ ...objectBase, kind: z.literal("chart"), chartId: IdentifierSchema }),
+  z.strictObject({ ...objectBase, kind: z.literal("group") }),
+]);
+export type PresentationObject = z.infer<typeof PresentationObjectSchema>;
+export const PresentationDataSetSchema = z.strictObject({
+  dataSetId: IdentifierSchema,
+  categories: z.array(z.string()),
+  series: z.array(z.strictObject({ seriesId: IdentifierSchema, name: z.string(), values: z.array(z.union([z.number(), z.null()])) })).min(1),
+});
+export type PresentationDataSet = z.infer<typeof PresentationDataSetSchema>;
+export const PresentationChartSchema = z.strictObject({
+  chartId: IdentifierSchema, nodeId: IdentifierSchema, dataSetId: IdentifierSchema, kind: z.enum(["column", "line", "pie"]),
+  titleNodeId: IdentifierSchema.optional(), legend: z.enum(["none", "left", "right", "top", "bottom"]),
+  showLabels: z.boolean(), numberFormat: z.string().optional(),
+  minimum: z.number().optional(), maximum: z.number().optional(), majorUnit: z.number().positive().optional(),
+});
+export type PresentationChart = z.infer<typeof PresentationChartSchema>;
+export const PresentationMetadataSchema = z.strictObject({
+  size: PresentationSizeSchema,
+  commentFormat: z.enum(["classic", "modern"]),
+  slides: z.array(z.strictObject({
+    slideId: IdentifierSchema, rootNodeId: IdentifierSchema, layoutId: IdentifierSchema,
+    name: z.string().optional(), hidden: z.boolean().optional(), showMasterShapes: z.boolean().optional(),
+  })).min(1),
+  themes: z.array(z.strictObject({ themeId: IdentifierSchema, cssClass: IdentifierSchema })).min(1),
+  masters: z.array(z.strictObject({ masterId: IdentifierSchema, rootNodeId: IdentifierSchema, themeId: IdentifierSchema,
+    titleStyle: IdentifierSchema.optional(), bodyStyle: IdentifierSchema.optional(), otherStyle: IdentifierSchema.optional() })).min(1),
+  layouts: z.array(z.strictObject({ layoutId: IdentifierSchema, rootNodeId: IdentifierSchema, masterId: IdentifierSchema,
+    name: z.string().optional(), showMasterShapes: z.boolean().optional() })).min(1),
+  notesMasters: z.array(z.strictObject({ notesMasterId: IdentifierSchema, rootNodeId: IdentifierSchema, themeId: IdentifierSchema })),
+  stories: z.array(z.discriminatedUnion("kind", [
+    z.strictObject({ storyId: IdentifierSchema, rootNodeId: IdentifierSchema, kind: z.literal("notes"), slideId: IdentifierSchema, notesMasterId: IdentifierSchema.optional() }),
+    z.strictObject({ storyId: IdentifierSchema, rootNodeId: IdentifierSchema, kind: z.literal("comment"), slideId: IdentifierSchema.optional() }),
+  ])),
+  objects: z.array(PresentationObjectSchema),
+  charts: z.array(PresentationChartSchema),
+  dataSets: z.array(PresentationDataSetSchema),
+  comments: z.array(z.strictObject({ annotationId: IdentifierSchema, format: z.enum(["classic", "modern"]) })),
+  hyperlinks: z.array(z.strictObject({ nodeId: IdentifierSchema, target: z.string().min(1).optional(), slideId: IdentifierSchema.optional() })),
+});
+export type PresentationMetadata = z.infer<typeof PresentationMetadataSchema>;
+export const PresentationDocumentMetadataSchema = z.strictObject({
+  title: z.string().optional(), locale: IdentifierSchema.optional(), presentation: PresentationMetadataSchema,
+});
+export type PresentationDocumentMetadata = z.infer<typeof PresentationDocumentMetadataSchema> & {
+  readonly word?: never; readonly pageSetup?: never; readonly sections?: never;
+};

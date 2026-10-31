@@ -1,0 +1,20 @@
+{
+  "format": "dagent-office",
+  "formatVersion": 1,
+  "documentId": "presentation-example",
+  "kind": "presentation",
+  "revision": 0,
+  "entrypoint": "content.html",
+  "styles": [
+    "styles.css"
+  ],
+  "metadata": "metadata.json",
+  "annotations": "annotations.json",
+  "assets": [
+    {
+      "path": "assets/sample.png",
+      "mimeType": "image/png",
+      "sha256": "b5591ad6441d94a60acc5e581b4c9f90abe97285369c6102ee40760a62dd9e71"
+    }
+  ]
+}

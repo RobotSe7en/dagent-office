@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { DocumentKindSchema, FORMAT_VERSION, IdentifierSchema, PackagePathSchema, RevisionSchema } from "./primitives.js";
 import { WordMetadataSchema } from "./word.js";
+import { PresentationDocumentMetadataSchema } from "./presentation.js";
+import type { PresentationDocumentMetadata } from "./presentation.js";
 
 export const AssetDescriptorSchema = z.strictObject({
   path: PackagePathSchema,
@@ -51,11 +53,13 @@ export const DocumentSectionSchema = z.strictObject({
 });
 export type DocumentSection = z.infer<typeof DocumentSectionSchema>;
 
-export const DocumentMetadataSchema = z.strictObject({
+export const WordDocumentMetadataSchema = z.strictObject({
   title: z.string().optional(),
   locale: IdentifierSchema.optional(),
   pageSetup: PageSetupSchema,
   sections: z.array(DocumentSectionSchema).min(1),
   word: WordMetadataSchema.optional(),
 });
-export type DocumentMetadata = z.infer<typeof DocumentMetadataSchema>;
+export type WordDocumentMetadata = z.infer<typeof WordDocumentMetadataSchema> & { readonly presentation?: never };
+export const DocumentMetadataSchema = z.union([WordDocumentMetadataSchema, PresentationDocumentMetadataSchema]);
+export type DocumentMetadata = WordDocumentMetadata | PresentationDocumentMetadata;

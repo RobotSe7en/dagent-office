@@ -13,6 +13,9 @@ const layers = {
   "packages/node": ["packages/core", "packages/office", "packages/render"],
   "apps/playground": ["packages/core", "packages/editor", "packages/office", "packages/node"],
 };
+// Office and input mappings are first-party implementations. General-purpose
+// ZIP/XML/HTML/CSS/hashing/browser primitives remain allowed behind adapters.
+const forbiddenOfficeOrEditor = /^(?:docx|pptxgenjs|exceljs|lexical|slate(?:-.+)?|quill|tinymce|draft-js|remirror|@tiptap\/.+|prosemirror-.+|@lexical\/.+|@ckeditor\/.+|@tinymce\/.+|@remirror\/.+|echarts|chart\.js|highcharts|plotly\.js)$/i;
 
 function sourceFiles(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -70,6 +73,7 @@ export function checkBoundaries(root = repositoryRoot) {
     const allDependencies = { ...runtime, ...project.manifest.devDependencies };
     const report = (file, message) => violations.push(relative(root, file) + ": " + message);
     for (const [name, version] of Object.entries(allDependencies)) {
+      if (forbiddenOfficeOrEditor.test(name)) report(resolve(project.directory, "package.json"), "Third-party Office converter or editor is forbidden: " + name);
       const target = projects.find((item) => item.manifest.name === name);
       if (!target) continue;
       if (!project.allowed.includes(target.path)) {

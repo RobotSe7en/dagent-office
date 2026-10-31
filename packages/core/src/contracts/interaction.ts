@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AnnotationSchema } from "./annotations.js";
-import { AssetDescriptorSchema, DocumentMetadataSchema } from "./document.js";
+import { AssetDescriptorSchema, WordDocumentMetadataSchema } from "./document.js";
 import { ContentOperationNameSchema, DocumentContentOperationSchema } from "./operations.js";
 import { FORMAT_VERSION, IdentifierSchema, PackagePathSchema, PROTOCOL_VERSION, RevisionSchema } from "./primitives.js";
 
@@ -21,7 +21,7 @@ export const InteractionContextSchema = z.strictObject({
   kind: z.literal("document"),
   blocks: z.array(ContextBlockSchema).min(1),
   styles: z.array(ContextStyleSchema),
-  metadata: DocumentMetadataSchema,
+  metadata: WordDocumentMetadataSchema,
   assets: z.array(AssetDescriptorSchema),
 });
 export type InteractionContext = z.infer<typeof InteractionContextSchema>;

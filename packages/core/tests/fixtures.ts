@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type {
   Annotation, ContractName, DocumentInteractionRequest, DocumentManifest,
-  DocumentMetadata, EditProposal,
+  WordDocumentMetadata, EditProposal,
 } from "@dagent-office/core";
 
 export const repository = fileURLToPath(new URL("../../../", import.meta.url));
@@ -10,7 +10,7 @@ function read(path: string): unknown {
   return JSON.parse(readFileSync(new URL("../../../" + path, import.meta.url), "utf8")) as unknown;
 }
 export const manifest = read("examples/report/manifest.json") as DocumentManifest;
-export const metadata = read("examples/report/metadata.json") as DocumentMetadata;
+export const metadata = read("examples/report/metadata.json") as WordDocumentMetadata;
 export const annotations = read("examples/report/annotations.json") as Annotation[];
 export const request = read("examples/report.request.json") as DocumentInteractionRequest;
 export const proposal = read("examples/report.proposal.json") as EditProposal;

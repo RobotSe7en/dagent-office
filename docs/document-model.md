@@ -2,7 +2,7 @@
 
 三格式模型及来源规则见[数据模型](data-model.md)。DOCX 读取及只读验收已前移至 R1-06 前，当前状态与细则见[第一轮计划](iteration-1.md)。
 
-R1-04 提供 `document` 类型、格式版本 1 的只读文档模型，R1-05 增加[资源校验、宿主资源收集和 ZIP 适配](resources-and-zip.md)。输入是宿主已授权的虚拟文件 Map；核心不访问文件系统、网络或模型服务。
+R1-04 提供 `document` 类型、格式版本 1 的只读文档模型，R1-05 增加[资源校验、宿主资源收集和 ZIP 适配](resources-and-zip.md)，R2-02 增加 [Presentation 严格契约、新建与文档包模型](presentation-model.md)。输入是宿主已授权的虚拟文件 Map；核心不访问文件系统、网络或模型服务。
 
 ```ts
 import { openDocument } from "@dagent-office/core";
@@ -24,7 +24,7 @@ const reopened = openDocument(savedFiles);
 
 ## 读取规则
 
-- `manifest.json` 决定格式版本、入口及文件角色。未知整数版本返回 `UnsupportedVersion`；当前读取器对 `presentation`、`workbook` 返回 `UnsupportedFeature`。
+- `manifest.json` 决定格式版本、入口及文件角色。未知整数版本返回 `UnsupportedVersion`；当前已支持 `document` 和 `presentation` 文档包，`workbook` 仍返回 `UnsupportedFeature`。Presentation 的几何、引用、内容域及批注规则另见模型说明，原生 PPTX 读取尚未实现。
 - 所有文件路径必须为规范 POSIX 相对路径。包内所有文件均不能与另一文件的祖先路径冲突，包括未被清单引用的文件；同一路径不能同时作为文件和目录。清单中的正文、样式、元数据、批注及资源路径不能重复或重叠。
 - 正文、样式和 JSON 文件必须存在，文本必须是有效 UTF-8。读取错误返回有界 `DocumentError`，不回显原始内容或解析器错误。
 - HTML 采用 HTML5 doctype 和一个 UTF-8 charset 声明。正文仅有一个 `article`、`section` 或 `div` 根，其 `data-office-kind` 为 `document`。解析错误、重复属性和不支持的结构均拒绝，不静默删除内容。

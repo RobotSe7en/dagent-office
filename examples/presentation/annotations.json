@@ -1,0 +1,28 @@
+[
+  {
+    "annotationId": "review-1",
+    "documentId": "presentation-example",
+    "baseRevision": 0,
+    "status": "open",
+    "anchor": {
+      "nodeId": "milestone-p",
+      "from": 0,
+      "to": 5,
+      "quote": "本季度上线",
+      "kind": "text"
+    },
+    "author": {
+      "name": "审阅者"
+    },
+    "replies": [
+      {
+        "replyId": "reply-1",
+        "author": {
+          "name": "作者"
+        },
+        "bodyNodeId": "reply-body"
+      }
+    ],
+    "bodyNodeId": "comment-body"
+  }
+]

@@ -20,6 +20,12 @@ export interface DocumentTextEditor {
 
 /** Native input over the same scriptless HTML/CSS renderer used by preview. */
 export function mountDocumentTextEditor(container: HTMLElement, session: DocumentEditingSession, options: DocumentTextEditorOptions = {}): DocumentTextEditor {
+  const wordMetadata = () => {
+    const metadata = session.snapshot().metadata;
+    if (metadata.presentation !== undefined) throw new DocumentError("UnsupportedFeature", "Presentation input is not implemented yet.");
+    return metadata;
+  };
+  wordMetadata();
   const document = container.ownerDocument, element = document.createElement("div"), shadow = element.attachShadow({ mode: "open" });
   const style = document.createElement("style");
   style.textContent = ":host{display:block;font:14px system-ui}button,select{font:inherit;padding:6px 10px}.toolbar{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.stage{max-height:70vh;overflow:auto;border:1px solid #ccd3dc}.error{color:#a00000}";
@@ -70,7 +76,7 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
   }
   function normalizedRoot(): HTMLElement {
     const value = projection.serialize(root!), source = sourceDocument(), original = rootElement(source);
-    const sections = session.snapshot().metadata.sections.map((section) => source.querySelector<HTMLElement>('[data-node-id="' + CSS.escape(section.rootNodeId) + '"]'))
+    const sections = wordMetadata().sections.map((section) => source.querySelector<HTMLElement>('[data-node-id="' + CSS.escape(section.rootNodeId) + '"]'))
       .filter((section): section is HTMLElement => Boolean(section && section !== original && original.contains(section)))
       .sort((a, b) => a.compareDocumentPosition(b) & 4 ? -1 : 1);
     const survivingSections = sections.some((section) => value.querySelector('[data-node-id="' + CSS.escape(section.dataset.nodeId!) + '"]'));
@@ -357,7 +363,7 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
       viewStyle.textContent = "[data-office-editor]:focus{outline:none}[data-office-editor]{min-height:100px}[data-office-editor] [data-word-tab]{user-select:all}"; frame.head.append(viewStyle);
     }
     if (!root.querySelector(blockSelector)) {
-      const first = session.snapshot().metadata.sections[0]!.rootNodeId;
+      const first = wordMetadata().sections[0]!.rootNodeId;
       const target = first === root.dataset.nodeId ? root.querySelector(".sdk-page-flow") ?? root : root.querySelector('[data-node-id="' + CSS.escape(first) + '"]') ?? root;
       const paragraph = frame.createElement("p"); paragraph.append(...target.childNodes); target.append(paragraph);
       if (!paragraph.childNodes.length) { const filler = frame.createElement("br"); projection.markDerived(filler); paragraph.append(filler); }

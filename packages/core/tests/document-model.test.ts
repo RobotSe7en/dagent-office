@@ -65,7 +65,7 @@ describe("document package reading and serialization", () => {
     input.get("content.html")!.fill(0);
     input.clear();
     expect(Reflect.set(snapshot.manifest, "revision", 99)).toBe(false);
-    expect(Reflect.set(snapshot.metadata.pageSetup.margins, "top", 0)).toBe(false);
+    expect(Reflect.set(snapshot.metadata.pageSetup!.margins, "top", 0)).toBe(false);
     expect(Reflect.set(snapshot.annotations[0]!, "instruction", "changed")).toBe(false);
     expect(Reflect.set(node.attributes, "style", "color:red")).toBe(false);
     expect(Reflect.set(node.childNodeIds, "0", "changed")).toBe(false);
@@ -97,10 +97,10 @@ describe("document package reading and serialization", () => {
     expect([...input.get("manifest.json")!]).toEqual(before);
   });
 
-  test.each(["presentation", "workbook"])("recognizes but cannot open %s packages", (kind) => {
+  test.each(["presentation", "workbook"])("rejects unsupported kinds or metadata belonging to another kind: %s", (kind) => {
     const input = files();
     json(input, "manifest.json", { ...manifest, kind });
-    failure(input, "UnsupportedFeature");
+    failure(input, kind === "workbook" ? "UnsupportedFeature" : "InvalidDocument");
   });
 
   test.each(["manifest.json", "content.html", "styles.css", "metadata.json", "annotations.json"])("rejects missing %s", (path) => {

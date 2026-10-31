@@ -54,6 +54,6 @@ view.dispose();
 
 Playground 提供报告协作样例和固定提案，使用公开 React 入口。固定示例提案调整当前请求的关联身份和修订后仍经过完整校验；它只能用于包含相应节点和内容的报告。界面交接给本地演示宿主，不执行模型。测试覆盖双批注请求、提案、应用、撤销重做、文档包下载重开及实际 DOCX 导入语义。
 
-[R1-11 富文本输入](rich-text.md)已实现；自动分页和 DOCX／PDF 导出分别进入 R1-12 和 R1-13。完整任务与验收顺序见[第一轮细则](iteration-1.md)。
+[R1-11 富文本输入](rich-text.md)、[R1-12 分页／PDF 渲染](pagination-rendering.md)及 [R1-13 原生 DOCX 导出](docx-export.md)已实现。第一轮历史与延期的宿主验收见[第一轮细则](iteration-1.md)；当前[第二轮 PPT](iteration-2.md)计划扩展格式、只读依赖、全局作用域及批注回复，这些 PPT 能力尚未实现。
 
 Playground 的 DOCX／PDF 下载、修订守卫、导出报告及独立打包消费验收见 [Word 闭环](word-closure.md)。

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import { createDocumentSession, openDocument } from "@dagent-office/core";
-import type { DocumentMetadata } from "@dagent-office/core";
+import type { WordDocumentMetadata } from "@dagent-office/core";
 import { importDocx, writeDocumentZip } from "@dagent-office/office";
 
 export function mutateDocx(
@@ -144,7 +144,7 @@ export function sectionPackageFixture(articleRoot: boolean): Uint8Array {
   const files = new Map(importDocx(mutateDocx("04-styles-sections.docx", {}), {
     documentId: "section-package",
   }));
-  const metadata = JSON.parse(strFromU8(files.get("metadata.json")!)) as DocumentMetadata;
+  const metadata = JSON.parse(strFromU8(files.get("metadata.json")!)) as WordDocumentMetadata;
   const setup = { ...metadata.pageSetup, width: 841.9 };
   metadata.sections[0]!.pageSetup = setup;
   delete metadata.sections[1]!.pageSetup;
