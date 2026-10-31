@@ -10,6 +10,7 @@ export function validateWord(
   html: ParsedHtml,
 ): void {
   if (annotations.some((annotation) => annotation.replies !== undefined)) invalid("Word comment replies are not implemented.");
+  if (annotations.some((annotation) => annotation.status === "closed")) invalid("Closed native comment state is supported only for presentation threads.");
   const word = metadata.word;
   const node = (id: string) => {
     const result = html.peekNode(id);

@@ -11,6 +11,7 @@ import type { Html, Surface } from "./pptx/context.js";
 import { compatible, Drawings } from "./pptx/drawing.js";
 import { importTheme } from "./pptx/styles.js";
 import { importTextStyle } from "./pptx/text.js";
+import { Comments } from "./pptx/comments.js";
 
 export interface PptxImportOptions extends DocumentZipOptions { readonly documentId: string }
 
@@ -21,7 +22,7 @@ class Importer {
   constructor(readonly main: string, readonly options: PptxImportOptions, opc: OpcPackage) {
     this.context = new Context(opc); this.context.bytes(options.documentId.length * 6); this.drawings = new Drawings(this.context);
   }
-  createSurface(path: string, kind: "master" | "layout" | "slide", id: string, themeId: string, source: XmlNode): Surface {
+  createSurface(path: string, kind: "master" | "layout" | "slide" | "notes-master" | "notes", id: string, themeId: string, source: XmlNode): Surface {
     const root = this.context.make("section", { "data-office-kind": kind, "data-office-story": kind, class: themeId });
     const surface = { id, root, source, themeId }; this.context.surfaces.set(path, surface); this.roots.push(root); return surface;
   }
@@ -38,11 +39,13 @@ class Importer {
     const { context } = this, { opc, metadata } = context;
     const source = context.part(this.main, "presentationml.presentation.main", "presentation", P);
     check(source, ["sldMasterIdLst", "notesMasterIdLst", "handoutMasterIdLst", "sldIdLst", "sldSz", "notesSz", "defaultTextStyle", "extLst", "embeddedFontLst", "custDataLst", "photoAlbum", "custShowLst", "kinsoku"], P);
-    for (const name of ["handoutMasterIdLst", "embeddedFontLst", "photoAlbum", "custShowLst", "notesMasterIdLst"]) if (child(source, name, P)) unsupported(source, "This presentation-level feature is outside the current base reading stage.");
+    for (const name of ["handoutMasterIdLst", "embeddedFontLst", "photoAlbum", "custShowLst"]) if (child(source, name, P)) unsupported(source, "This presentation-level feature is outside the reading scope.");
     const size = child(source, "sldSz", P);
     if (!size) fail(source, "The presentation slide size is missing.");
     metadata.size = { unit: "pt", width: points(size, "cx"), height: points(size, "cy") };
     if (metadata.size.width <= 0 || metadata.size.height <= 0) fail(size, "Slide dimensions must be positive.");
+    const notesSize = child(source, "notesSz", P);
+    if (notesSize) metadata.notesSize = { unit: "pt", width: points(notesSize, "cx"), height: points(notesSize, "cy") };
     const defaultStyle = child(source, "defaultTextStyle", P);
     importTextStyle(context, defaultStyle, "presentation-default");
     const seenSlides = new Set<string>(), nativeSlides = new Set<number>();
@@ -90,18 +93,48 @@ class Importer {
       }
     }
     if (!metadata.masters.length || !metadata.layouts.length) fail(source, "A presentation requires master and layout definitions.");
+    for (const entry of elements(child(source, "notesMasterIdLst", P), "notesMasterId", P)) {
+      const path = context.relation(this.main, attr(entry, "id", R), "notesMaster").target;
+      if (context.surfaces.has(path)) fail(entry, "Notes master references are duplicated or have the wrong kind.");
+      const native = context.part(path, "presentationml.notesMaster", "notesMaster", P);
+      this.validateSurface(native, ["hf", "notesStyle"]);
+      const themeId = importTheme(context, context.related(path, "theme")!), id = context.id("notes-master");
+      const surface = this.createSurface(path, "notes-master", id, themeId, native), textStyle = id + "-text-style";
+      importTextStyle(context, child(native, "notesStyle", P), textStyle);
+      metadata.notesMasters.push({ notesMasterId: id, rootNodeId: surface.root.attrs["data-node-id"]!, themeId, ...(child(native, "notesStyle", P) ? { textStyle } : {}) });
+      this.drawings.surface(surface);
+    }
     for (const [path, id] of context.slidePaths) {
       const layout = context.surfaces.get(context.related(path, "slideLayout")!);
       if (!layout || !metadata.layouts.some(item => item.layoutId === layout.id)) fail(source, "A slide refers to a layout outside its declared masters.");
       const slideSource = context.part(path, "presentationml.slide", "sld", P);
       this.validateSurface(slideSource, ["transition", "timing"]);
       if (child(slideSource, "timing", P)) unsupported(slideSource, "Animation is not supported.");
-      for (const relation of opc.relationships(path).values()) if (["notesSlide", "comments"].some(kind => relation.type.endsWith("/" + kind))) unsupported(slideSource, "Notes and comments require the remaining reading stage.");
       const slide = this.createSurface(path, "slide", id, layout.themeId, slideSource), name = value(child(slideSource, "cSld", P), "name");
       metadata.slides.push({ slideId: id, rootNodeId: slide.root.attrs["data-node-id"]!, layoutId: layout.id, ...(name !== undefined ? { name } : {}), hidden: !bool(slideSource, "show", true), showMasterShapes: bool(slideSource, "showMasterSp", true) });
       this.drawings.surface(slide);
+      const notesPath = context.related(path, "notesSlide", false);
+      if (notesPath) {
+        if (context.surfaces.has(notesPath) || context.related(notesPath, "slide") !== path) fail(slideSource, "A notes part has duplicate or conflicting slide ownership.");
+        const native = context.part(notesPath, "presentationml.notesSlide", "notes", P);
+        this.validateSurface(native, []);
+        const masterPath = context.related(notesPath, "notesMaster", false), master = masterPath ? context.surfaces.get(masterPath) : undefined;
+        if (masterPath && (!master || !metadata.notesMasters.some(m => m.notesMasterId === master.id))) fail(native, "A notes master is outside the declared definitions.");
+        const notesId = context.id("notes"), notes = this.createSurface(notesPath, "notes", notesId, master?.themeId ?? slide.themeId, native);
+        notes.root.attrs["data-office-show-master-shapes"] = String(bool(native, "showMasterSp", true));
+        this.drawings.surface(notes);
+        const body = metadata.objects.filter(o => o.placeholder?.type === "body" && notes.root.children.some(n => typeof n !== "string" && n.attrs["data-node-id"] === o.nodeId));
+        if (body.length > 1) unsupported(native, "Multiple notes text bodies are not supported.");
+        metadata.stories.push({ storyId: notesId, rootNodeId: notes.root.attrs["data-node-id"]!, kind: "notes", slideId: id, ...(master ? { notesMasterId: master.id } : {}), ...(body[0] ? { bodyNodeId: body[0].nodeId } : {}) });
+      }
     }
     this.drawings.finish();
+    const comments = new Comments(context, this.main, this.options.documentId, this.roots);
+    for (const [path, id] of context.slidePaths) {
+      const slide = context.surfaces.get(path)!;
+      if (slide.id !== id) fail(slide.source, "A comment slide identity is inconsistent.");
+      comments.read(slide, path);
+    }
     const corePath = opc.related("", "metadata/core-properties");
     const core = corePath ? opc.read(corePath) : undefined;
     const title = text(child(core, "title", "http://purl.org/dc/elements/1.1/")) || "未命名演示文稿";
@@ -112,7 +145,7 @@ class Importer {
     const manifest: DocumentManifest = { format: "dagent-office", formatVersion: 1, documentId: this.options.documentId, kind: "presentation", revision: 0,
       entrypoint: "content.html", styles: ["styles.css"], metadata: "metadata.json", annotations: "annotations.json", assets: context.assets };
     context.files.set("manifest.json", encode(JSON.stringify(manifest))); context.files.set("content.html", encode(html));
-    context.files.set("metadata.json", encode(JSON.stringify(documentMetadata))); context.files.set("annotations.json", encode("[]"));
+    context.files.set("metadata.json", encode(JSON.stringify(documentMetadata))); context.files.set("annotations.json", encode(JSON.stringify(context.annotations)));
     context.files.set("styles.css", encode("p{margin:0}" + context.css.join("\n")));
     return openDocument(context.files, this.options).serialize();
   }

@@ -18,6 +18,7 @@ export interface Relationship {
 export interface OpcPackage {
   readonly files: DocumentPackage;
   readonly limits: DocumentReadLimits;
+  readonly xmlBudget: XmlBudget;
   read(part: string): XmlNode;
   relationships(part: string): ReadonlyMap<string, Relationship>;
   related(part: string, type: string): string | undefined;
@@ -74,13 +75,14 @@ export function resolvePart(source: string, target: string): string {
 export function openOpc(
   bytes: Uint8Array,
   options: DocumentZipOptions,
+  sharedXmlBudget?: XmlBudget,
 ): OpcPackage {
   const files = readDocumentZip(bytes, options);
   const limits: DocumentReadLimits = {
     ...DEFAULT_DOCUMENT_READ_LIMITS,
     ...options.limits,
   };
-  const budget: XmlBudget = { nodes: 0 };
+  const budget: XmlBudget = sharedXmlBudget ?? { nodes: 0 };
   const parsed = new Map<string, XmlNode>();
   const relationCache = new Map<string, ReadonlyMap<string, Relationship>>();
   const read = (part: string): XmlNode => {
@@ -173,6 +175,7 @@ export function openOpc(
   return {
     files,
     limits,
+    xmlBudget: budget,
     read,
     relationships,
     related: (part, type) => {

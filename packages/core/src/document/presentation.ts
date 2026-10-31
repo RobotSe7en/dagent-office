@@ -53,6 +53,8 @@ export function validatePresentation(presentation: PresentationMetadata, annotat
     checkLimit(work, limits.maxNodes);
   }
   for (const annotation of annotations) { work += 1 + (annotation.replies?.length ?? 0); checkLimit(work, limits.maxNodes); }
+  for (const chart of presentation.charts) { work += (chart.seriesStyles?.length ?? 0) + (chart.pointStyles?.length ?? 0) + (chart.labelContents?.length ?? 0); checkLimit(work, limits.maxNodes); }
+  for (const comment of presentation.comments) { work += comment.replyAuthors?.length ?? 0; checkLimit(work, limits.maxNodes); }
   const classes = new Set<string>();
   for (const style of styles) walk(parse(style.css), (node) => { if (node.type === "ClassSelector") classes.add(ident.decode(node.name)); });
   const themes = unique(presentation.themes, (item) => item.themeId);
@@ -63,6 +65,7 @@ export function validatePresentation(presentation: PresentationMetadata, annotat
   const charts = unique(presentation.charts, (item) => item.chartId);
   const dataSets = unique(presentation.dataSets, (item) => item.dataSetId);
   const notesMasters = unique(presentation.notesMasters, (item) => item.notesMasterId);
+  const commentAuthors = unique(presentation.commentAuthors ?? [], (item) => item.authorId);
   unique(presentation.stories, (item) => item.storyId);
   const roots = new Map<string, string>();
   const node = (id: string) => {
@@ -97,6 +100,7 @@ export function validatePresentation(presentation: PresentationMetadata, annotat
   }
   for (const master of presentation.notesMasters) {
     if (!themes.has(master.themeId)) invalid("A notes master refers to a missing theme.");
+    if (master.textStyle !== undefined && !classes.has(master.textStyle)) invalid("A notes master text style must refer to a defined CSS class.");
     addRoot(master.rootNodeId, "notes-master");
   }
   const notes = new Set<string>();
@@ -119,13 +123,14 @@ export function validatePresentation(presentation: PresentationMetadata, annotat
   const transforms = new Map<string, PresentationGeometry | undefined>();
   const slidesByRoot = new Map(presentation.slides.map((item) => [item.rootNodeId, item]));
   const layoutsByRoot = new Map(presentation.layouts.map((item) => [item.rootNodeId, item]));
+  const notesByRoot = new Map(presentation.stories.filter(item => item.kind === "notes").map(item => [item.rootNodeId, item]));
   const nativeIds = new Map<string, Set<string>>();
   const placeholderKeys = new Map<string, Set<string>>();
   for (const object of objects.values()) {
     const value = node(object.nodeId), surface = owner(object.nodeId), parent = value.parentNodeId;
     if (!html.isContainer(object.nodeId) || value.attributes["data-office-kind"] !== object.kind
       || parent === null || parent !== surface && objects.get(parent)?.kind !== "group") invalid("A presentation object has an invalid source type or parent.");
-    if (["notes", "comment"].includes(roots.get(surface)!)) invalid("Rich-text stories cannot contain positioned slide objects.");
+    if (roots.get(surface) === "comment") invalid("Rich comments cannot contain positioned slide objects.");
     const transform = readPresentationGeometry(value.attributes);
     const connectorPreset = value.attributes["data-office-connector-preset"];
     if (connectorPreset !== undefined && (object.kind !== "connector" || !(object.routing === "straight" ? ["line", "straightConnector1"] : ["bentConnector2", "bentConnector3", "bentConnector4", "bentConnector5"]).includes(connectorPreset))) invalid("A native connector preset must match its routing kind.");
@@ -201,7 +206,9 @@ export function validatePresentation(presentation: PresentationMetadata, annotat
     if (transforms.get(object.nodeId)) continue;
     const slide = slidesByRoot.get(surface);
     const layout = slide ? layouts.get(slide.layoutId) : layoutsByRoot.get(surface);
-    const parents = layout ? [layout.rootNodeId, masters.get(layout.masterId)!.rootNodeId].filter((id) => id !== surface) : [];
+    const notes = notesByRoot.get(surface);
+    const parents = layout ? [layout.rootNodeId, masters.get(layout.masterId)!.rootNodeId].filter((id) => id !== surface)
+      : notes?.notesMasterId ? [notesMasters.get(notes.notesMasterId)!.rootNodeId] : [];
     const key = object.placeholder!.type + ":" + object.placeholder!.index;
     if (!parents.some((id) => {
       const inherited = placeholders.get(id)?.get(key);
@@ -214,6 +221,11 @@ export function validatePresentation(presentation: PresentationMetadata, annotat
     if (Object.keys(value.attributes).some((key) => key.startsWith("data-word-"))) invalid("Word semantics cannot be embedded in a presentation source.");
     if (value.attributes["data-office-story"] !== undefined && !roots.has(id)) invalid("Presentation stories must be registered content roots.");
     if (roots.has(id) && !["notes", "comment"].includes(roots.get(id)!) && (value.childNodeIds.some((child) => !objects.has(child)) || html.directText(id)?.trim())) invalid("A slide surface may only contain registered objects.");
+  }
+  for (const story of presentation.stories) if (story.kind === "notes") {
+    const children = node(story.rootNodeId).childNodeIds;
+    if (children.some(id => objects.has(id)) && (children.some(id => !objects.has(id)) || html.directText(story.rootNodeId)?.trim())) invalid("Native notes cannot mix positioned objects and unpositioned rich text.");
+    if (story.bodyNodeId !== undefined && (!objects.has(story.bodyNodeId) || owner(story.bodyNodeId) !== story.rootNodeId || !["text", "geometry"].includes(objects.get(story.bodyNodeId)!.kind))) invalid("A notes body reference must target text on its own notes surface.");
   }
   for (const dataSet of dataSets.values()) {
     unique(dataSet.series, (item) => item.seriesId);
@@ -239,6 +251,11 @@ export function validatePresentation(presentation: PresentationMetadata, annotat
       stack.push(...value.childNodeIds);
     }
     if (chart.minimum !== undefined && chart.maximum !== undefined && chart.minimum >= chart.maximum) invalid("Chart axis bounds are invalid.");
+    for (const cssClass of [chart.plotCssClass, chart.legendCssClass, chart.textCssClass, chart.categoryAxisCssClass, chart.valueAxisCssClass, chart.gridCssClass]) if (cssClass !== undefined && !classes.has(cssClass)) invalid("Chart styles must refer to defined CSS classes.");
+    const seriesIds = new Set(dataSet.series.map(item => item.seriesId));
+    for (const style of unique(chart.seriesStyles ?? [], item => item.seriesId).values()) if (!seriesIds.has(style.seriesId) || !classes.has(style.cssClass)) invalid("Chart series styles must reference data and CSS classes.");
+    for (const style of unique(chart.pointStyles ?? [], item => item.seriesId + ":" + item.index).values()) if (!seriesIds.has(style.seriesId) || style.index >= dataSet.categories.length || !classes.has(style.cssClass)) invalid("Chart point styles must reference data and CSS classes.");
+    if (chart.labelContents && (new Set(chart.labelContents).size !== chart.labelContents.length || chart.showLabels !== !!chart.labelContents.length)) invalid("Chart label options must be unique and agree with label visibility.");
     if (chart.kind === "pie" && (dataSet.series.length !== 1 || negativeDataSets.has(dataSet.dataSetId))) invalid("A pie chart requires one nonnegative series.");
   }
   for (const link of unique(presentation.hyperlinks, (item) => item.nodeId).values()) {
@@ -247,8 +264,27 @@ export function validatePresentation(presentation: PresentationMetadata, annotat
       || link.target !== undefined && (!/^(https?:\/\/|mailto:)/i.test(link.target) || /[\u0000-\u0020\u007f]/.test(link.target))) invalid("Presentation hyperlinks require one supported target.");
   }
   const annotationMap = unique(annotations, (item) => item.annotationId);
-  for (const comment of unique(presentation.comments, (item) => item.annotationId).values())
-    if (!annotationMap.has(comment.annotationId)) invalid("Native comment metadata refers to a missing annotation.");
+  const authorNames = new Map<string, string>();
+  const checkAuthor = (id: string, format: "classic" | "modern", author: Annotation["author"]): void => {
+    const definition = commentAuthors.get(id);
+    if (!definition || definition.format !== format || !author) invalid("A native comment author reference is invalid.");
+    const display = JSON.stringify(author), previous = authorNames.get(id);
+    if (previous !== undefined && previous !== display) invalid("One native author identity cannot have conflicting display information.");
+    authorNames.set(id, display);
+  };
+  for (const comment of unique(presentation.comments, (item) => item.annotationId).values()) {
+    const annotation = annotationMap.get(comment.annotationId);
+    if (!annotation) invalid("Native comment metadata refers to a missing annotation.");
+    if (comment.recoveryStatus !== undefined && annotation.status !== "needs_reanchor") invalid("Comment recovery workflow state requires an unresolved anchor.");
+    if (comment.authorId) checkAuthor(comment.authorId, comment.format, annotation.author);
+    for (const reply of unique(comment.replyAuthors ?? [], item => item.replyId).values()) {
+      const source = annotation.replies?.find(item => item.replyId === reply.replyId);
+      if (!source || comment.format !== "modern") invalid("Native reply authors require a reply in their modern thread.");
+      checkAuthor(reply.authorId, comment.format, source.author);
+    }
+  }
+  unique(presentation.commentAuthors ?? [], item => item.format + ":" + item.nativeId);
+  for (const author of commentAuthors.values()) if (author.format === "classic" && (author.userId !== undefined || author.providerId !== undefined)) invalid("Classic authors cannot contain modern provider attributes.");
   const replyIds = new Set(annotationMap.keys());
   const bodies = new Set<string>();
   for (const annotation of annotations) for (const body of [annotation, ...(annotation.replies ?? [])]) {

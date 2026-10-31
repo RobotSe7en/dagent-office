@@ -34,7 +34,7 @@ export class ExportStyles {
     this.paragraphDefaults = { "margin-top": "0pt", "margin-bottom": "0pt" };
     // Replay only our generated, theme-free run properties through the shared
     // Word semantics. This reader has no external parts or I/O capability.
-    this.reader = new DocxStyles({ files: new Map(), limits, related: () => undefined, relationships: () => new Map(), contentType: () => undefined,
+    this.reader = new DocxStyles({ files: new Map(), limits, xmlBudget: { nodes: 0 }, related: () => undefined, relationships: () => new Map(), contentType: () => undefined,
       read: () => { throw new DocumentError("ExportFailed", "Native style baseline cannot read an external part."); } }, "word/document.xml");
     word?.numbering.forEach((definition, index) => this.numberingIds.set(definition.numberingId, String(index + 1)));
   }

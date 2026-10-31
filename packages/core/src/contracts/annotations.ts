@@ -31,12 +31,13 @@ export const AnchorSchema = z.discriminatedUnion("kind", [
 ]);
 export type Anchor = z.infer<typeof AnchorSchema>;
 
-export const AnnotationStatusSchema = z.enum(["open", "resolved", "needs_reanchor"]);
+export const AnnotationStatusSchema = z.enum(["open", "resolved", "closed", "needs_reanchor"]);
 export type AnnotationStatus = z.infer<typeof AnnotationStatusSchema>;
 
 const author = z.strictObject({ name: z.string(), initials: z.string().optional() });
 const replyIdentity = {
   replyId: IdentifierSchema, author: author.optional(), date: z.string().optional(), sourceId: IdentifierSchema.optional(),
+  status: z.enum(["open", "resolved", "closed"]).optional(),
 };
 export const AnnotationReplySchema = z.union([
   z.strictObject({ ...replyIdentity, instruction: z.string().min(1), bodyNodeId: z.never().optional() }),

@@ -34,7 +34,7 @@ function immutable<Value>(value: Value): Value {
   }
   return value;
 }
-const statusLabels = { open: "待处理", resolved: "已处理", needs_reanchor: "需要重新定位" };
+const statusLabels = { open: "待处理", resolved: "已处理", closed: "已关闭", needs_reanchor: "需要重新定位" };
 function anchorLabel(anchor: DeepReadonly<Anchor>, model: DocumentModel): string {
   if (anchor.kind === "text") return anchor.quote;
   if (anchor.kind === "text-set") return anchor.ranges.map((range) => range.quote).join(" … ");

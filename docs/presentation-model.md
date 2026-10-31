@@ -51,3 +51,5 @@ pnpm exec tsc --project tsconfig.tools.json
 ```
 
 模型用例覆盖严格 Schema 与独立 Ajv 校验、来源顺序、负坐标、UTF-16、继承引用、表格合并、图表数据、回复身份、危险 HTML、源隔离、预算、保存重开和编辑入口阻断。公共 Word 类型调用处按 WordDocumentMetadata 或已检查的元数据分支收窄，保留原有 Word 读取、事务及导出回归。
+
+R2-05 增加 notesSize、原生备注正文引用、图表样式与轴选项、原生作者关联及批注恢复状态，见 [PPTX 读取](pptx-import.md)。AnnotationStatus 的 closed 只在 PPT 线程中开放；Word 源仍拒绝该状态和回复。

@@ -1,6 +1,6 @@
 import { PresentationPresetSchema } from "@dagent-office/core";
 import type { PresentationObject } from "@dagent-office/core";
-import { A, attr, check, child, elements, fail, MC, P, R, unsupported } from "../ooxml/xml.js";
+import { A, attr, C, check, child, elements, fail, MC, P, R, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import type { Css } from "../ooxml/styles.js";
 import { bool, Context, integer, points, unsigned, value } from "./context.js";
@@ -8,6 +8,7 @@ import type { Html, Surface } from "./context.js";
 import { colorMap, effects, fill, onlyColor, outline, paint } from "./styles.js";
 import { importHyperlink, importText } from "./text.js";
 import { importTable } from "./table.js";
+import { importChart } from "./chart.js";
 
 /** Select markup compatibility by namespace support, never prefix spelling. */
 export function compatible(source: XmlNode): XmlNode[] {
@@ -210,11 +211,17 @@ export class Drawings {
       const graphic = child(source, "graphic", A), data = child(graphic, "graphicData", A);
       if (!data) fail(source, "A graphic frame has no graphic content.");
       check(graphic, ["graphicData"], A);
-      if (!["http://schemas.openxmlformats.org/drawingml/2006/table", "http://purl.oclc.org/ooxml/drawingml/table"].includes(value(data, "uri") ?? "")) unsupported(data, "Charts and this graphic type require the remaining reading stage.");
-      check(data, ["tbl"], A);
-      const table = child(data, "tbl", A);
-      if (!table) fail(data, "A table graphic is missing its native table.");
-      object = { ...base, kind: "table", grid: importTable(context, table, target, source.part) };
+      if (["http://schemas.openxmlformats.org/drawingml/2006/table", "http://purl.oclc.org/ooxml/drawingml/table"].includes(value(data, "uri") ?? "")) {
+        check(data, ["tbl"], A);
+        const table = child(data, "tbl", A);
+        if (!table) fail(data, "A table graphic is missing its native table.");
+        object = { ...base, kind: "table", grid: importTable(context, table, target, source.part) };
+      } else if ([C, "http://purl.oclc.org/ooxml/drawingml/chart"].includes(value(data, "uri") ?? "")) {
+        check(data, ["chart"], C);
+        const chart = child(data, "chart", C);
+        if (!chart) fail(data, "A chart graphic is missing its chart reference.");
+        object = { ...base, kind: "chart", chartId: importChart(context, chart, target) };
+      } else unsupported(data, "This graphic frame type is not supported.");
     }
     target.attrs["data-office-kind"] = object.kind; context.metadata.objects.push(object);
     return target;
