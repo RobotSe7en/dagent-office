@@ -2,7 +2,7 @@ import { DocumentError } from "@dagent-office/core";
 import type { DocumentModel } from "@dagent-office/core";
 import type { DocumentPreview, DocumentPreviewOptions } from "../preview.js";
 import { renderLimits } from "../contracts.js";
-import type { DocumentRenderReport, FontResolution } from "../contracts.js";
+import type { PresentationRenderReport, FontResolution } from "../contracts.js";
 import { resolvePreviewFonts } from "../fonts.js";
 import { preparePreviewPackage } from "../preview-package.js";
 import { SourceProjection } from "../projection.js";
@@ -23,14 +23,16 @@ export function mountPresentationPreview(container: HTMLElement, input: Document
   };
   let prepared = prepare(input), canvas: PresentationCanvas | undefined, projection: SourceProjection | undefined, fonts: readonly FontResolution[] = [];
   let disposed = false, loaded = false,composing=false, generation = 0, observer: ResizeObserver | undefined, scheduled: number | undefined;
-  let report: DocumentRenderReport = { documentId: prepared.model.snapshot().manifest.documentId, revision: prepared.model.snapshot().manifest.revision, layout: "pages", pages: [], nodePages: {}, fields: [], fonts: [], diagnostics: [] };
+  let report: PresentationRenderReport = { kind:"presentation",slides:[], documentId: prepared.model.snapshot().manifest.documentId, revision: prepared.model.snapshot().manifest.revision, layout: "pages", pages: [], nodePages: {}, fields: [], fonts: [], diagnostics: [] };
   let resolve: () => void = () => {}, reject: (reason: unknown) => void = () => {};
   const ready = new Promise<void>((r, j) => { resolve = r; reject = j; });
   frame.title = options.title ?? "幻灯片只读预览"; frame.setAttribute("sandbox", "allow-same-origin allow-scripts"); frame.style.cssText = "width:100%;height:480px;display:block;border:0";
   function measure(): void {
     if (disposed || !canvas || composing) return;
     const snapshot = prepared.model.snapshot();
-    report = Object.freeze({ documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, layout: "pages", ...canvas.measure(), fields: canvas.fields, fonts });
+    const measured=canvas.measure(),p=snapshot.metadata.presentation!;
+    const slides=measured.pages.flatMap(page=>{const slide=p.slides.find(slide=>slide.slideId===page.pageId);return slide?[Object.freeze({slideId:slide.slideId,rootNodeId:slide.rootNodeId,index:page.index,hidden:slide.hidden??false,rect:page.rect})]:[];});
+    report = Object.freeze({ kind:"presentation",slides:Object.freeze(slides), documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, layout: "pages", ...measured, fields: canvas.fields, fonts });
     const document = frame.contentDocument!, scrollbar = Math.max(0, frame.clientHeight - document.documentElement.clientHeight);
     const height = Math.ceil(Math.max(200, document.body.scrollHeight) + scrollbar) + "px";
     if (frame.style.height !== height) frame.style.height = height;

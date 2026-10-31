@@ -1,6 +1,6 @@
 import { DocumentError, openDocument } from "@dagent-office/core";
 import type { ValidationIssue } from "@dagent-office/core";
-import { importDocx, readDocumentZip } from "@dagent-office/office";
+import { importDocx, importPptx, readDocumentZip } from "@dagent-office/office";
 import type { DocumentRenderReport, RenderLimits } from "@dagent-office/render/contracts";
 import { ConversionError, DEFAULT_CONVERTER_LIMITS } from "./render.js";
 import type { ConversionErrorCode, DocumentConverter, PageRenderOptions, RenderedOutput } from "./render.js";
@@ -9,7 +9,7 @@ export interface ConversionRequestV1 {
   readonly protocolVersion: 1;
   readonly taskId: string;
   readonly format: "pdf" | "png";
-  readonly input: { readonly format: "document-package-zip" | "docx"; readonly bytesBase64: string; readonly documentId?: string };
+  readonly input: { readonly format: "document-package-zip" | "docx" | "pptx"; readonly bytesBase64: string; readonly documentId?: string };
   readonly options?: Omit<PageRenderOptions, "signal">;
 }
 export type ConversionResponseV1 = {
@@ -32,9 +32,9 @@ export function parseConversionRequest(input: unknown): ConversionRequestV1 {
   if (!identifier(request.taskId)) throw new ConversionError("InvalidRequest", "A bounded task identifier is required.");
   if (!["pdf", "png"].includes(request.format as string)) throw new ConversionError("UnsupportedFormat", "Unknown conversion output format.");
   const source = object(request.input, ["format", "bytesBase64", "documentId"]);
-  if (!["document-package-zip", "docx"].includes(source.format as string)) throw new ConversionError("UnsupportedFormat", "Unknown conversion input format.");
+  if (!["document-package-zip", "docx", "pptx"].includes(source.format as string)) throw new ConversionError("UnsupportedFormat", "Unknown conversion input format.");
   if (typeof source.bytesBase64 !== "string" || !source.bytesBase64.length) throw new ConversionError("InvalidRequest", "Authorized input bytes are required.");
-  if (source.documentId !== undefined && !identifier(source.documentId) || source.format === "docx" && !identifier(source.documentId)) throw new ConversionError("InvalidRequest", "DOCX conversion requires a bounded document identifier.");
+  if (source.documentId !== undefined && !identifier(source.documentId) || ["docx", "pptx"].includes(source.format as string) && !identifier(source.documentId)) throw new ConversionError("InvalidRequest", "Native Office conversion requires a bounded document identifier.");
   if (request.options !== undefined) {
     const options = object(request.options, ["pageIndex", "scale", "timeoutMs", "limits"]);
     if (options.pageIndex !== undefined && !integer(options.pageIndex, 0) || options.timeoutMs !== undefined && !integer(options.timeoutMs, 1)
@@ -62,7 +62,7 @@ export async function executeConversionRequest(converter: DocumentConverter, inp
     const bytes = Buffer.from(encoded, "base64");
     if (bytes.length > maximum) throw new ConversionError("ResourceLimitExceeded", "Conversion input exceeds its byte budget.");
     if (bytes.toString("base64") !== encoded) throw new ConversionError("InvalidRequest", "Input bytes must use canonical base64.");
-    const model = openDocument(request.input.format === "docx" ? importDocx(bytes, { documentId: request.input.documentId! }) : readDocumentZip(bytes));
+    const model = openDocument(request.input.format === "docx" ? importDocx(bytes, { documentId: request.input.documentId! }) : request.input.format === "pptx" ? importPptx(bytes, { documentId: request.input.documentId! }) : readDocumentZip(bytes));
     if (request.input.documentId !== undefined && model.snapshot().manifest.documentId !== request.input.documentId) throw new ConversionError("InvalidDocument", "Package identity differs from the asserted document identifier.");
     const output = request.format === "pdf" ? await converter.renderPdf(model, request.options) : await converter.renderPage(model, request.options);
     return { protocolVersion: 1, taskId, ok: true, output: { bytesBase64: Buffer.from(output.bytes).toString("base64"), mimeType: output.mimeType, report: output.report, engine: output.engine } };

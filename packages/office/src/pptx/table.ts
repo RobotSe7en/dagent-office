@@ -64,7 +64,7 @@ export function importTable(context: Context, source: XmlNode, frame: Html, part
           Object.assign(css, declarations);
           if (line) {
             const width = points(line, "w", 12700), color = declarations["--office-cell-border-" + side + "-color"] ?? "transparent";
-            css["border-" + side] = width + "pt " + (declarations["--office-cell-border-" + side + "-dash"]?.includes("dot") ? "dotted" : declarations["--office-cell-border-" + side + "-dash"]?.includes("ash") ? "dashed" : "solid") + " " + color;
+            css["border-" + side] = width + "pt " + (declarations["--office-cell-border-"+side+"-kind"]==="none"?"none":declarations["--office-cell-border-" + side + "-dash"]?.includes("dot") ? "dotted" : declarations["--office-cell-border-" + side + "-dash"]?.includes("ash") ? "dashed" : "solid") + " " + color;
           }
         }
         for (const [name, side] of [["marL", "left"], ["marR", "right"], ["marT", "top"], ["marB", "bottom"]]) {
@@ -79,7 +79,8 @@ export function importTable(context: Context, source: XmlNode, frame: Html, part
       }
       const textBody = child(sourceCell, "txBody", A);
       if (!textBody) fail(sourceCell, "A table cell text body is missing.");
-      const body = context.make("div"); importText(context, textBody, body, part);
+      const body = context.make("div"); const textProperties=importText(context, textBody, body, part);
+      if(textProperties?.wrap===false){context.bytes(120);body.attrs.style=(body.attrs.style?body.attrs.style+";":"")+"white-space:nowrap";}
       cell.children.push(body); context.style(cell, css); row.children.push(cell);
     });
     tbody.children.push(row);

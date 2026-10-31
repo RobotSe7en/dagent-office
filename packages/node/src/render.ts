@@ -76,8 +76,7 @@ export function createDocumentConverter(options: ConverterOptions = {}): Documen
       if (size > quota.maxInputBytes) throw new ConversionError("ResourceLimitExceeded", "Document exceeds the conversion input byte budget.");
     }
     const checked = openDocument(files), metadata = checked.snapshot().metadata;
-    if (metadata.presentation !== undefined) throw new ConversionError("UnsupportedFeature", "Presentation conversion is not implemented yet.");
-    const width = Math.max(metadata.pageSetup.width, ...metadata.sections.map((section) => (section.pageSetup ?? metadata.pageSetup).width));
+    const width = metadata.presentation ? metadata.presentation.size.width : Math.max(metadata.pageSetup.width, ...metadata.sections.map((section) => (section.pageSetup ?? metadata.pageSetup).width));
     if (width > 20_000) throw new ConversionError("UnsupportedFeature", "Page width exceeds the renderer size limit.");
     const scale = settings.scale ?? 1, pageIndex = settings.pageIndex ?? 0;
     if (!Number.isFinite(scale) || scale < 1 || scale > 4 || !Number.isSafeInteger(pageIndex) || pageIndex < 0) throw new ConversionError("InvalidRequest", "Page index or image scale is invalid.");

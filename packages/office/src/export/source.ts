@@ -32,11 +32,11 @@ export function sourceText(node: SourceNode): string {
 }
 /** Only validated, normalized source reaches this adapter. The second parse never
  * introduces DOM, browser layout, runtime font substitutions or an authority. */
-export function parseSource(html: string, limits: DocumentReadLimits): SourceTree {
+export function parseSource(html: string, limits: DocumentReadLimits, kind: "document" | "presentation" = "document"): SourceTree {
   const byId = new Map<string, SourceElement>(), elements: SourceElement[] = [];
   let offset = 0, count = 0;
   function visit(node: Tree.Node, parent: SourceElement | undefined, depth: number): SourceNode | undefined {
-    if (++count > limits.maxNodes || depth > limits.maxDepth) throw new DocumentError("ResourceLimitExceeded", "DOCX source tree exceeds its budget.");
+    if (++count > limits.maxNodes || depth > limits.maxDepth) throw new DocumentError("ResourceLimitExceeded", "Office source tree exceeds its budget.");
     if (node.nodeName === "#text" && "value" in node) {
       if (!parent) return;
       const from = offset; offset += node.value.length; return { text: node.value, parent, from, to: offset };
@@ -51,7 +51,7 @@ export function parseSource(html: string, limits: DocumentReadLimits): SourceTre
     result.to = offset; return result;
   }
   const document = visit(parse(html), undefined, 0) as SourceElement;
-  const root = elements.find((node) => node.attrs["data-office-kind"] === "document" && node.parent?.tag === "body");
-  if (!root) throw new DocumentError("UnsupportedFormat", "Native DOCX export requires a document source.");
+  const root = elements.find((node) => node.attrs["data-office-kind"] === kind && node.parent?.tag === "body");
+  if (!root) throw new DocumentError("UnsupportedFormat", "The native exporter requires the matching Office source kind.");
   return { document, root, byId, elements };
 }

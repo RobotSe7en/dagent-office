@@ -48,7 +48,7 @@ export interface LayoutFieldResult {
   readonly kind: "PAGE" | "NUMPAGES" | "TOC";
 }
 /** Derived geometry is bound to one immutable document revision. All values use points. */
-export interface DocumentRenderReport {
+interface RenderReport {
   readonly documentId: string;
   readonly revision: number;
   readonly layout: "pages" | "continuous";
@@ -58,6 +58,20 @@ export interface DocumentRenderReport {
   readonly diagnostics: readonly LayoutDiagnostic[];
   readonly fonts: readonly FontResolution[];
 }
+
+export interface WordRenderReport extends RenderReport { readonly kind?: "document" }
+export interface RenderedSlide {
+  readonly slideId:string;
+  readonly rootNodeId:string;
+  readonly index:number;
+  readonly hidden:boolean;
+  readonly rect:Readonly<Rectangle>;
+}
+export interface PresentationRenderReport extends RenderReport {
+  readonly kind:"presentation";
+  readonly slides:readonly RenderedSlide[];
+}
+export type DocumentRenderReport=WordRenderReport|PresentationRenderReport;
 
 export interface RenderOptions { readonly title?: string; readonly layout?: "pages" | "continuous"; readonly limits?: Partial<RenderLimits> }
 export type BrowserRenderResult = { readonly ok: true; readonly report: DocumentRenderReport } | { readonly ok: false; readonly error: DocumentErrorData };

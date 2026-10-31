@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import type { Plugin } from "vite";
@@ -18,17 +18,20 @@ function localConversion(): Plugin {
 /** Public synthetic inputs belong to this development host, never to SDK runtime I/O. */
 function collaborationExamples(): Plugin {
   const files = ["manifest.json", "content.html", "styles.css", "metadata.json", "annotations.json"];
-  const assets: Record<string, string> = {
+  const assets: Record<string, string | Uint8Array> = {
     "report-demo.json": JSON.stringify(files.map((path) => [path, readFileSync(new URL("../../examples/report/" + path, import.meta.url), "utf8")])),
+    "presentation-demo.json": JSON.stringify([...files,"assets/sample.png"].map(path => [path,readFileSync(new URL("../../examples/presentation/"+path,import.meta.url)).toString("base64")])),
+    "presentation.proposal.json": readFileSync(new URL("../../examples/presentation.proposal.json",import.meta.url),"utf8"),
     "report.proposal.json": readFileSync(new URL("../../examples/report.proposal.json", import.meta.url), "utf8"),
   };
+  for (const name of readdirSync(new URL("../../examples/pptx/", import.meta.url)).filter(name => name.endsWith(".pptx"))) assets["pptx/"+name]=readFileSync(new URL("../../examples/pptx/"+name,import.meta.url));
   return {
     name: "collaboration-examples",
     configureServer(server) {
       server.middlewares.use((request, response, next) => {
         const source = assets[(request.url ?? "").split("?")[0]!.replace(/^\//, "")];
         if (source === undefined) { next(); return; }
-        response.setHeader("Content-Type", "application/json; charset=utf-8"); response.end(source);
+        response.setHeader("Content-Type", typeof source === "string" ? "application/json; charset=utf-8" : "application/vnd.openxmlformats-officedocument.presentationml.presentation"); response.end(source);
       });
     },
     generateBundle() {

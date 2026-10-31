@@ -7,4 +7,4 @@ export { SourceProjection } from "./projection.js";
 export { sourceSelectionText, stripClipboardIdentities } from "./clipboard.js";
 export { createLayoutFieldTransaction } from "./fields.js";
 export { DEFAULT_RENDER_LIMITS, renderLimits } from "./contracts.js";
-export type { DocumentRenderReport, LayoutDiagnostic, LayoutFieldResult, RenderedPage, RenderLimits } from "./contracts.js";
+export type { DocumentRenderReport, WordRenderReport, PresentationRenderReport, RenderedSlide, LayoutDiagnostic, LayoutFieldResult, RenderedPage, RenderLimits } from "./contracts.js";

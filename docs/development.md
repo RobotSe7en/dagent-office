@@ -1,6 +1,6 @@
 # 本地开发与工程检查
 
-当前完成 R1-02 至 R1-09、R1-05A 模型设计与 R1-10 声明范围的 DOCX 读取验收。`core` 提供严格契约、Word 语义和文档包，`office` 提供 ZIP 与 DOCX 导入，`editor` 提供[预览、选择与批注交互](preview-interaction.md)；`render` 提供共享画布，`node` 提供 PDF/PNG 和字节转换入口。`core` 还提供[编辑会话、事务及历史](document-session.md)、精确文字及结构锚点映射和区域批注重定位；[工作台与协议闭环](workbench.md)支持多批注请求、提案差异和整批应用；[R1-11 正文输入](rich-text.md)也已实现；R1-12 [分页与渲染](pagination-rendering.md)已实现，R1-13 [原生 DOCX 导出](docx-export.md)与 R1-14 [独立 Word 闭环](word-closure.md)也已实现。API 见[DOCX 读取](docx-import.md)，第一轮历史及延期验收见[第一轮细则](iteration-1.md)。当前[第二轮 PPT](iteration-2.md)已实现文档包模型、原生 PPTX 读取、固定画布和 [PPT 编辑协作](presentation-editing.md)，原生导出与独立闭环仍待完成。
+当前完成 R1-02 至 R1-09、R1-05A 模型设计与 R1-10 声明范围的 DOCX 读取验收。`core` 提供严格契约、Word 语义和文档包，`office` 提供 ZIP 与 DOCX 导入，`editor` 提供[预览、选择与批注交互](preview-interaction.md)；`render` 提供共享画布，`node` 提供 PDF/PNG 和字节转换入口。`core` 还提供[编辑会话、事务及历史](document-session.md)、精确文字及结构锚点映射和区域批注重定位；[工作台与协议闭环](workbench.md)支持多批注请求、提案差异和整批应用；[R1-11 正文输入](rich-text.md)也已实现；R1-12 [分页与渲染](pagination-rendering.md)已实现，R1-13 [原生 DOCX 导出](docx-export.md)与 R1-14 [独立 Word 闭环](word-closure.md)也已实现。API 见[DOCX 读取](docx-import.md)，第一轮历史及延期验收见[第一轮细则](iteration-1.md)。当前[第二轮 PPT](iteration-2.md)已实现文档包模型、原生 PPTX 读取、固定画布和 [PPT 编辑协作](presentation-editing.md)，[原生 PPTX、Node 输出与独立闭环](pptx-export.md)也已实现。
 
 ## 环境和安装
 
@@ -46,7 +46,7 @@ pnpm test:watch
 
 打包用例在 workspace 外、包含空格的临时路径中安装五个 tarball，优先复用工作区 pnpm 依赖缓存；冷缓存时允许获取第三方依赖及其注册表元数据。内部包通过显式 tarball 覆盖固定来源，不从注册表下载内部包。验证真实校验 API、公开 JSON、ES2022 类型、私有路径拒绝，以及不安装 React 的普通 JS 浏览器宿主构建。临时消费工程在测试结束后删除。
 
-测试还覆盖只读文档解析、资源摘要、宿主资源收集、ZIP 原始路径及大小校验、保真样例保存重开；DOCX 用例覆盖实际格式输入、独立生产者版本、样式、字段、批注、修订及保存重开；事务用例另覆盖隔离候选、操作、原子性、历史、冲突和预算，精确 UTF-16/结构映射、跨节点与区域批注，以及 DOCX 原生批注编辑后的历史和文档包重开；正文输入增加身份协调、精确映射证据和中文组合输入；分页与原生 DOCX 导出及独立打包闭环也已有对应验收；PPT 用例覆盖模型、实际 PPTX／独立生产者读取、固定画布、编辑与提案；原生导出验收仍待实现。核心用例放入各包 `tests`，浏览器用例放入根 `tests/browser`。
+测试还覆盖只读文档解析、资源摘要、宿主资源收集、ZIP 原始路径及大小校验、保真样例保存重开；DOCX 用例覆盖实际格式输入、独立生产者版本、样式、字段、批注、修订及保存重开；事务用例另覆盖隔离候选、操作、原子性、历史、冲突和预算，精确 UTF-16/结构映射、跨节点与区域批注，以及 DOCX 原生批注编辑后的历史和文档包重开；正文输入增加身份协调、精确映射证据和中文组合输入；分页与原生 DOCX 导出及独立打包闭环也已有对应验收；PPT 用例覆盖模型、实际 PPTX／独立生产者读取、固定画布、编辑与提案；原生导出、官方 XSD、外部编辑、PDF/PNG、独立打包和源／导出逐页视觉对照均有验收入口。核心用例放入各包 `tests`，浏览器用例放入根 `tests/browser`。
 
 ## 浏览器烟测
 
@@ -88,3 +88,9 @@ pnpm pack:packages
 R1-12 的浏览器 CI 使用 Ubuntu 24.04、固定 Playwright 引擎、Poppler 和宿主 Noto 字体；另校验官方归档后安装 Chromium 109，并在 macOS 15 使用真实 SafariDriver。Safari 输出实际版本及验收结果，不能用 Linux WebKit 结果冒充 Safari。PDF 开发中间件默认只接受本机连接；远程访问可将 Vite 绑定 `0.0.0.0` 并显式配置确切同源开发地址，见 [Word 闭环](word-closure.md#远程开发访问)。正式转换认证由宿主管理。
 
 PPT 的独立 ZIP/XML 样例与参考环境见 [PPTX 样例](../examples/pptx/README.md)。`pnpm check:pptx-fixtures` 不需要 Office；`pnpm check:pptx-reference` 需要 Impress、Calc、Poppler 和上述字体，会实际打开、重存并重开。环境不同只运行内容检查并明确记录未比较像素，不自动刷新基线。
+
+PPT 导出与独立闭环使用 `pnpm check:pptx-export` 和 `pnpm check:presentation-closure`，需要 `python3-uno`、`python3-lxml`、Impress/Calc、Poppler 和既定字体。普通 JS／React／Node 在工作区外安装 tarball；输出及环境见 `.cache/pptx-export-acceptance/` 和 `.cache/presentation-closure-acceptance/`。完整范围、现代批注限制及 PowerPoint/WPS 未验证项见 [PPTX 导出](pptx-export.md)。
+
+Office CI 固定使用官方 LibreOffice 25.8.1.1 归档，`node scripts/install-acceptance-office.mjs` 校验官方 SHA-256 后仅解包到 `.cache/acceptance-office/`，不替换系统 Office。CI 将其 `bin` 加入当前任务 PATH，并保留版本、来源和摘要；本地 Ubuntu 24.04 x64 在装齐上述原生依赖后可用同一命令，再把该 `bin` 加入 PATH；其他系统可使用已验证的本机版本。归档随附的许可保留在解包目录，工具不会进入 SDK 发布包。
+
+LibreOffice 24.2 在含未使用自定义布局的新建文稿重存中会生成重复原生对象 ID；此结果在隔离 Ubuntu 24.04 中复现，SDK 继续明确拒绝，不放宽重复身份校验。本轮外部打开、实际编辑和重存验收以固定的 25.8.1.1 为准，其他 Office 版本需单独验证。

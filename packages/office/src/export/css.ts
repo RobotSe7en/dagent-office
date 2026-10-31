@@ -10,6 +10,7 @@ interface Compound { tag?: string; classes: string[]; attrs: { name: string; val
 type Specificity = readonly [number, number, number];
 interface Rule { compounds: Compound[]; declarations: Declaration[]; specificity: Specificity; order: number; key: string; revisionDisplay: boolean }
 interface Entry { value: string; important: boolean; specificity: Specificity; order: number }
+type CascadeRule = Pick<Rule,"declarations"|"specificity"|"order"> & {fallback?:boolean};
 const inherited = new Set(["color", "font-family", "font-size", "font-weight", "font-style", "font-variant", "text-transform", "text-align", "text-indent", "line-height", "letter-spacing", "word-spacing", "white-space", "widows", "orphans", "tab-size", "overflow-wrap", "list-style-type", "list-style-position"]);
 const inline = new Set(["span", "a", "strong", "b", "em", "i", "u", "s", "sub", "sup", "ins", "del", "code"]);
 const initial: Css = { "margin-top": "0pt", "margin-right": "0pt", "margin-bottom": "0pt", "margin-left": "0pt", color: "#000000", "font-family": '"Noto Sans CJK SC",serif', "font-size": "12pt", "font-weight": "normal", "font-style": "normal", "font-variant": "normal", "text-transform": "none", "text-align": "left", "text-indent": "0pt", "line-height": "normal", "letter-spacing": "normal", "word-spacing": "normal", "white-space": "normal", "vertical-align": "baseline", "background-color": "transparent", "text-decoration-line": "none", "text-decoration-style": "solid", "text-decoration-color": "currentColor", widows: "2", orphans: "2", "break-before": "auto", "break-after": "auto", "break-inside": "auto" };
@@ -97,6 +98,7 @@ function higher(next: Entry, previous: Entry | undefined): boolean {
 export class ExportCss {
   private readonly indexed = new Map<string, Rule[]>();
   private readonly cache = new WeakMap<SourceElement, Css>();
+  private readonly specifiedCache = new WeakMap<SourceElement, Css>();
   private work = 0;
   private rootFont = 12;
   constructor(styles: readonly string[], private readonly limits: DocumentReadLimits, private readonly revisionIds: ReadonlySet<string> = new Set()) {
@@ -137,25 +139,47 @@ export class ExportCss {
     }
     return true;
   }
-  get(node: SourceElement): Css {
-    const known = this.cache.get(node); if (known) return known;
-    const parent = node.parent ? this.get(node.parent) : initial;
+  private entries(node:SourceElement):CascadeRule[] {
     const selected = new Set<Rule>();
     for (const key of ["*", node.tag, ...(node.tag === "html" ? [":root"] : []), ...(node.attrs.class ?? "").split(/\s+/).filter(Boolean).map((name) => "." + name), ...Object.keys(node.attrs).map((name) => "[" + name)])
       for (const rule of this.indexed.get(key) ?? []) if (this.matches(node, rule) && !(rule.revisionDisplay && this.revisionIds.has(node.attrs["data-node-id"] ?? ""))) selected.add(rule);
-    const entries: { declarations: Declaration[]; specificity: Specificity; order: number }[] = [...selected];
+    const entries:CascadeRule[]=[...selected];
     if (node.attrs.style) {
       const ast = parse(node.attrs.style, { context: "declarationList", parseCustomProperty: true });
       if (ast.type === "DeclarationList") entries.push({ declarations: ast.children.toArray().filter((item): item is Declaration => item.type === "Declaration"), specificity: [1, 0, 0], order: Number.MAX_SAFE_INTEGER });
     }
-    const result = this.compute(parent, entries, node);
-    this.cache.set(node, result); return result;
+    return entries;
   }
-  classStyle(name: string, parent: Css = initial): Css {
-    const rules = (this.indexed.get("." + name) ?? []).filter((rule) => rule.compounds.length === 1 && rule.compounds[0]!.classes.length > 0 && rule.compounds[0]!.classes.every((value) => value === name)
+  get(node: SourceElement): Css {
+    const known=this.cache.get(node);if(known)return known;
+    const parent=node.parent?this.get(node.parent):initial,entries=this.entries(node);
+    const result=this.compute(parent,entries,node);this.cache.set(node,result);return result;
+  }
+  /** Match the preview's native inheritance fallback: a late type selector;
+   * authored classes, attribute selectors, inline styles and priority still win. */
+  withFallback(node:SourceElement,defaults:Css,initialDefaults:Css={},nativeDefaults:Css={}):Css {
+    const ast=parse(Object.entries(defaults).map(([name,value])=>name+":"+value).join(";"),{context:"declarationList",parseCustomProperty:true});
+    if(ast.type!=="DeclarationList")throw new DocumentError("ExportFailed","Native style defaults are invalid.");
+    const entries=this.entries(node),baseAst=parse(Object.entries(initialDefaults).map(([name,value])=>name+":"+value).join(";"),{context:"declarationList",parseCustomProperty:true});
+    if(baseAst.type==="DeclarationList")entries.unshift({declarations:baseAst.children.toArray().filter((n):n is Declaration=>n.type==="Declaration"),specificity:[0,0,0],order:-1,fallback:true});
+    const nativeAst=parse(Object.entries(nativeDefaults).map(([name,value])=>name+":"+value).join(";"),{context:"declarationList",parseCustomProperty:true});
+    if(nativeAst.type==="DeclarationList")entries.unshift({declarations:nativeAst.children.toArray().filter((n):n is Declaration=>n.type==="Declaration"),specificity:[0,0,1],order:-2,fallback:true});
+    entries.push({declarations:ast.children.toArray().filter((n):n is Declaration=>n.type==="Declaration"),specificity:[0,0,1],order:Number.MAX_SAFE_INTEGER-1,fallback:true});
+    const parent=node.parent?this.get(node.parent):initial;this.specifiedCache.set(node,this.rawDeclarations(entries));const result=this.compute(parent,entries,node);this.cache.set(node,result);return result;
+  }
+  private classRules(name:string):Rule[] {
+    return (this.indexed.get("." + name) ?? []).filter((rule) => rule.compounds.length === 1 && rule.compounds[0]!.classes.length > 0 && rule.compounds[0]!.classes.every((value) => value === name)
       && !rule.compounds[0]!.tag && !rule.compounds[0]!.root && rule.compounds[0]!.attrs.length === 0);
-    return this.compute(parent, rules);
   }
+  private rawDeclarations(rules:readonly CascadeRule[]):Css {
+    const winners=new Map<string,Entry & {fallback:boolean}>();let serial=0;
+    for(const rule of [...rules].sort((a,b)=>a.order-b.order))for(const declaration of rule.declarations){this.step();const property=ident.decode(declaration.property),raw=generate(declaration.value);for(const[name,value]of property.startsWith("--")?[[property,raw]]:expand(property.toLowerCase(),raw)){const entry={value:value!,important:Boolean(declaration.important),specificity:rule.specificity,order:serial++,fallback:Boolean(rule.fallback)};if(higher(entry,winners.get(name!)))winners.set(name!,entry);}}
+    return Object.fromEntries([...winners].filter(([,entry])=>!entry.fallback).map(([name,entry])=>[name,entry.value]));
+  }
+  /** Winning authored declarations, retaining native role references before var(). */
+  specified(node:SourceElement):Css {this.get(node);let result=this.specifiedCache.get(node);if(!result){result=this.rawDeclarations(this.entries(node));this.specifiedCache.set(node,result);}return result;}
+  specifiedClass(name:string):Css {return this.rawDeclarations(this.classRules(name));}
+  classStyle(name: string, parent: Css = initial): Css {return this.compute(parent,this.classRules(name));}
   emptyStyle(): Css { return this.compute(initial, []); }
   classKeys(name: string): readonly string[] {
     const keys = new Set<string>();

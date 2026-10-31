@@ -14,7 +14,7 @@ export function resolvedColor(document: Document, style: CSSStyleDeclaration, pr
   if (depth > 4) throw new DocumentError("InvalidDocument", "A presentation color reference is cyclic.");
   let context = colorContexts.get(document); if (!context) { context = document.createElement("canvas").getContext("2d")!; colorContexts.set(document, context); }
   let value = property(style, prefix + "-color", fallback);
-  if (property(style, prefix + "-source") === "reference") {
+  if (property(style, prefix + "-source") === "reference" && property(style,prefix+"-color")) {
     const reference = property(style, prefix + "-reference-prefix");
     if (!["--office-fill-reference", "--office-line-reference", "--office-background-reference", "--office-effect-reference"].includes(reference)) throw new DocumentError("InvalidDocument", "A presentation color reference is unknown.");
     value = resolvedColor(document, style, reference, fallback, depth + 1);
@@ -40,7 +40,7 @@ export function resolvedColor(document: Document, style: CSSStyleDeclaration, pr
 export function svgFill(document: Document, style: CSSStyleDeclaration, svg: SVGSVGElement, id: string, prefix = "--office-fill", fallback = "none", account?: (amount: number) => void): string {
   const kind = property(style, prefix + "-kind");
   if (kind === "none") return "none";
-  if (kind !== "linear") return kind === "solid" || property(style, prefix + "-color") ? resolvedColor(document, style, prefix) : fallback;
+  if (kind !== "linear") return kind === "solid" || property(style, prefix + "-color") ? resolvedColor(document, style, prefix) : fallback === "none" ? "none" : resolvedColor(document,style,prefix,fallback);
   const count = numeric(style, prefix + "-stop-count", 0);
   if (!Number.isSafeInteger(count) || count < 2 || count > 1024) throw new DocumentError("ResourceLimitExceeded", "A presentation gradient exceeds its stop budget.");
   account?.(count + 2);
@@ -51,7 +51,7 @@ export function svgFill(document: Document, style: CSSStyleDeclaration, svg: SVG
   const defs = svgElement(document, "defs"); defs.append(gradient); svg.append(defs); return `url(#${id})`;
 }
 export function strokeAttributes(document: Document, style: CSSStyleDeclaration, prefix = "--office-line", fallback = "none"): Record<string, string | number> {
-  const kind = property(style, prefix + "-kind"), color = kind === "none" ? "none" : property(style, prefix + "-color") ? resolvedColor(document, style, prefix) : fallback;
+  const kind = property(style, prefix + "-kind"), color = kind === "none" ? "none" : property(style, prefix + "-color") ? resolvedColor(document, style, prefix) : fallback === "none" ? "none" : resolvedColor(document,style,prefix,fallback);
   const width = numeric(style, prefix + "-width", 1), dash = property(style, prefix + "-dash", "solid");
   const patterns: Record<string, readonly number[]> = { dash: [4, 3], dot: [1, 3], lgDash: [8, 3], dashDot: [4, 3, 1, 3], lgDashDot: [8, 3, 1, 3], lgDashDotDot: [8, 3, 1, 3, 1, 3], sysDash: [3, 1], sysDot: [1, 1], sysDashDot: [3, 1, 1, 1], sysDashDotDot: [3, 1, 1, 1, 1, 1] };
   const cap = property(style, prefix + "-cap", "flat");
