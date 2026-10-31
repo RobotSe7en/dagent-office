@@ -52,6 +52,8 @@ export class Comments {
       const source = context.opc.read(relation.target); rootName(source, modern ? "authorLst" : "cmAuthorLst", uri);
       check(source, [modern ? "author" : "cmAuthor"], uri);
       for (const native of elements(source, modern ? "author" : "cmAuthor", uri)) {
+        const extensions = child(native, "extLst", uri);
+        if (extensions?.content.some(n => typeof n !== "string" || n.trim())) unsupported(extensions, "Author extensions are not supported.");
         context.count();
         const nativeId = modern ? guid(native, "id") : String(unsigned(native, "id"));
         const key = (modern ? "modern:" : "classic:") + nativeId;
@@ -115,6 +117,7 @@ export class Comments {
     if (!this.context.metadata.comments.some(c => c.format === "modern")) this.context.metadata.commentFormat = "classic";
   }
   modern(source: XmlNode, slide: Surface): void {
+    this.extensions(source);
     const rootId = guid(source, "id"), author = this.authors.get("modern:" + guid(source, "authorId"));
     if (!author) fail(source, "A modern comment references an undefined author.");
     this.authorBytes(author);
@@ -133,6 +136,7 @@ export class Comments {
     const replyList = child(source, "replyLst", MODERN);
     check(replyList, ["reply"], MODERN);
     for (const reply of elements(replyList, "reply", MODERN)) {
+      this.extensions(reply);
       check(reply, ["txBody", "extLst"], MODERN);
       const nativeId = guid(reply, "id"), replyAuthor = this.authors.get("modern:" + guid(reply, "authorId"));
       if (!replyAuthor) fail(reply, "A reply references an undefined author.");
@@ -154,6 +158,10 @@ export class Comments {
   }
   authorBytes(author: Author): void {
     this.context.bytes(512 + (author.display.name.length + (author.display.initials?.length ?? 0)) * 6);
+  }
+  extensions(source: XmlNode): void {
+    const list = child(source, "extLst", MODERN);
+    if (list?.content.some(n => typeof n !== "string" || n.trim())) unsupported(list, "Undeclared modern comment extensions are not supported.");
   }
   anchor(lists: XmlNode[], slide: Surface): Anchor {
     const nodes: string[] = [], ranges: TextRange[] = [];

@@ -111,6 +111,7 @@ class Importer {
       this.validateSurface(slideSource, ["transition", "timing"]);
       if (child(slideSource, "timing", P)) unsupported(slideSource, "Animation is not supported.");
       const slide = this.createSurface(path, "slide", id, layout.themeId, slideSource), name = value(child(slideSource, "cSld", P), "name");
+      slide.layoutId = layout.id;
       metadata.slides.push({ slideId: id, rootNodeId: slide.root.attrs["data-node-id"]!, layoutId: layout.id, ...(name !== undefined ? { name } : {}), hidden: !bool(slideSource, "show", true), showMasterShapes: bool(slideSource, "showMasterSp", true) });
       this.drawings.surface(slide);
       const notesPath = context.related(path, "notesSlide", false);

@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
-import { DocumentError, openDocument } from "@dagent-office/core";
-import { importPptx, readDocumentZip, writeDocumentZip } from "@dagent-office/office";
+import { Ajv2020 } from "ajv/dist/2020.js";
+import { DocumentError, getContractJsonSchema, openDocument, parseContract } from "@dagent-office/core";
+import type { Annotation, PresentationDocumentMetadata } from "@dagent-office/core";
+import { importDocx, importPptx, readDocumentZip, writeDocumentZip } from "@dagent-office/office";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 
 const directory = new URL("../../../examples/pptx/", import.meta.url);
@@ -141,4 +143,71 @@ test("bounds nested XLSX expansion, cache lengths and reply work", () => {
   expect(() => importPptx(input, { documentId: "nested", limits: { maxPackageBytes: baseBytes + 20 } })).toThrowError(expect.objectContaining({ code: "ResourceLimitExceeded" }));
   const huge = mutate("09-charts.pptx", "ppt/charts/chart1.xml", source => source.replace('ptCount val="3"', 'ptCount val="999999999"'));
   expect(() => importPptx(huge, { documentId: "huge" })).toThrowError(expect.objectContaining({ code: "ResourceLimitExceeded" }));
+});
+
+test("preserves visible label formatting and axis options in the source styles", () => {
+  const input = mutate("09-charts.pptx", "ppt/charts/chart1.xml", source => source.replace('</c:ser>',
+    '<c:dLbls><c:numFmt formatCode="0.00" sourceLinked="0"/><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1200"/></a:pPr></a:p></c:txPr><c:dLblPos val="outEnd"/><c:showVal val="1"/><c:separator> / </c:separator></c:dLbls></c:ser>')
+    .replace('<c:catAx>', '<c:catAx><c:majorTickMark val="out"/><c:tickLblPos val="low"/>'));
+  const s = openDocument(importPptx(input, { documentId: "labels" })).snapshot(), chart = s.metadata.presentation!.charts[0]!;
+  expect(chart.labelContents).toEqual(["value"]);
+  expect(s.styles[0]!.css).toContain('--office-label-number-format:"0.00"');
+  expect(s.styles[0]!.css).toContain("--office-axis-major-tick:out");
+  expect(s.styles[0]!.css).toContain("--office-axis-label-position:low");
+});
+
+test("retains a hidden chart title's content instead of discarding it", () => {
+  const input = mutate("09-charts.pptx", "ppt/charts/chart1.xml", source => source.replace('<c:plotArea>', '<c:autoTitleDeleted val="1"/><c:plotArea>'));
+  const model = openDocument(importPptx(input, { documentId: "hidden-title" })), chart = model.snapshot().metadata.presentation!.charts[0]!;
+  expect(model.getNode(chart.titleNodeId!)?.text).toBe("图表 column");
+  expect(chart.titleVisible).toBe(false);
+});
+
+test("preserves an explicitly encoded carriage return through HTML package reopening", () => {
+  const input = mutate("01-rich-text.pptx", "ppt/slides/slide1.xml", source => source.replace('中文与 Latin 😀，', '甲&#13;乙'));
+  const model = openDocument(importPptx(input, { documentId: "cr" })), p = model.snapshot().metadata.presentation!;
+  expect(model.getNode(p.slides[0]!.rootNodeId)!.text).toContain("甲\r乙");
+  expect(openDocument(model.serialize()).getNode(p.slides[0]!.rootNodeId)!.text).toContain("甲\r乙");
+});
+
+test("rejects undeclared modern comment extensions instead of dropping them", () => {
+  const input = mutate("12-modern-comments.pptx", "ppt/comments/modernComment1.xml", source => source.replace('</p188:cm>', '<p188:extLst xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:ext uri="unsupported-task"><p188:task/></p:ext></p188:extLst></p188:cm>'));
+  expect(() => importPptx(input, { documentId: "extension" })).toThrowError(expect.objectContaining({ code: "UnsupportedFeature" }));
+});
+
+test("resolves an omitted slide placeholder type through its unique native layout index", () => {
+  const input = mutate("02-theme-placeholders.pptx", "ppt/slides/slide1.xml", source => source.replace('<p:ph type="title" idx="0"/>', '<p:ph idx="0"/>'));
+  const model = openDocument(importPptx(input, { documentId: "placeholder" })), p = model.snapshot().metadata.presentation!;
+  const objectId = model.getNode(p.slides[0]!.rootNodeId)!.childNodeIds[0]!;
+  expect(p.objects.find(o => o.nodeId === objectId)!.placeholder).toEqual({ type: "title", index: 0 });
+  expect(model.getNode(objectId)!.attributes["data-office-x"]).toBeUndefined();
+});
+
+test("keeps JSON Schema contracts and cross-source references valid for the new stories and chart fields", () => {
+  const files = new Map(importPptx(bytes("13-multi-slide.pptx"), { documentId: "contracts" }));
+  const metadata = JSON.parse(strFromU8(files.get("metadata.json")!)) as PresentationDocumentMetadata;
+  const annotations = JSON.parse(strFromU8(files.get("annotations.json")!)) as Annotation[];
+  const validator = new Ajv2020({ strict: false });
+  expect(validator.compile(getContractJsonSchema("document-metadata"))(metadata)).toBe(true);
+  expect(validator.compile(getContractJsonSchema("annotations"))(annotations)).toBe(true);
+  expect(parseContract("document-metadata", metadata)).toEqual(metadata);
+  const invalid = [
+    (m: PresentationDocumentMetadata) => { m.presentation.charts[0]!.seriesStyles![0]!.cssClass = "missing"; },
+    (m: PresentationDocumentMetadata) => { m.presentation.comments[0]!.authorId = "missing"; },
+    (m: PresentationDocumentMetadata) => { const note = m.presentation.stories.find(s => s.kind === "notes")!; if (note.kind === "notes") note.bodyNodeId = m.presentation.slides[0]!.rootNodeId; },
+    (m: PresentationDocumentMetadata) => { m.presentation.comments[0]!.recoveryStatus = "resolved"; },
+  ];
+  for (const change of invalid) {
+    const changed = structuredClone(metadata); change(changed);
+    const candidate = new Map(files); candidate.set("metadata.json", strToU8(JSON.stringify(changed)));
+    expect(() => openDocument(candidate)).toThrowError(expect.objectContaining({ code: "InvalidDocument" }));
+  }
+});
+
+test("continues rejecting modern closed state in Word source packages", () => {
+  const source = readFileSync(new URL("../docx/08-comments-revisions.docx", directory));
+  const files = new Map(importDocx(source, { documentId: "word-closed" }));
+  const annotations = JSON.parse(strFromU8(files.get("annotations.json")!)) as Annotation[];
+  annotations[0]!.status = "closed"; files.set("annotations.json", strToU8(JSON.stringify(annotations)));
+  expect(() => openDocument(files)).toThrowError(expect.objectContaining({ code: "InvalidDocument" }));
 });

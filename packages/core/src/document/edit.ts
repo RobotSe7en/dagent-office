@@ -1,11 +1,11 @@
-import { defaultTreeAdapter as adapter, serialize } from "parse5";
+import { defaultTreeAdapter as adapter } from "parse5";
 import type { DefaultTreeAdapterTypes as Tree } from "parse5";
 import type { DocumentContentOperation } from "../contracts/operations.js";
 import type { DocumentReadLimits, TextOffsetMapping } from "../runtime.js";
 import { DocumentError } from "../errors.js";
 import { normalizeCss, setInlineStyle } from "./css.js";
 import { bodyTags, parseHtml, supportedTags } from "./html.js";
-import { parseHtmlFragment, parseHtmlTree } from "./html-parser.js";
+import { parseHtmlFragment, parseHtmlTree, serializeHtmlTree } from "./html-parser.js";
 import { encode, resolveReference } from "./package.js";
 import type { DocumentState } from "./state.js";
 import { checkLimit } from "./validation.js";
@@ -393,7 +393,7 @@ export class DocumentEdit {
         break;
       }
     }
-    const source = serialize(this.tree);
+    const source = serializeHtmlTree(this.tree);
     checkLimit(source.length, this.limits.maxFileBytes);
     checkLimit(encode(source).byteLength, this.limits.maxFileBytes);
     // Catch browser tree correction instead of silently moving or dropping inserted content.
@@ -402,5 +402,5 @@ export class DocumentEdit {
     }
   }
 
-  html(): string { return serialize(this.tree); }
+  html(): string { return serializeHtmlTree(this.tree); }
 }

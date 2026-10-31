@@ -8,7 +8,7 @@ import { declarations, escapeHtml } from "../ooxml/styles.js";
 import type { Css } from "../ooxml/styles.js";
 
 export interface Html { tag: string; attrs: Record<string, string>; children: (Html | string)[] }
-export interface Surface { id: string; root: Html; source: XmlNode; themeId: string; masterId?: string }
+export interface Surface { id: string; root: Html; source: XmlNode; themeId: string; masterId?: string; layoutId?: string }
 export interface NativeParagraph { nodeId: string; start: number; text: string; nativeText: string }
 export function serialize(node: Html): string {
   const attrs = Object.entries(node.attrs).map(([name, value]) => " " + name + '="' + escapeHtml(value) + '"').join("");

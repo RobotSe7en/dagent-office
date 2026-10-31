@@ -35,18 +35,32 @@ function noLayout(node: XmlNode | undefined): void {
   const layout = child(node, "layout", C);
   if (layout && elements(layout, undefined, C).length) unsupported(layout, "Manual chart layout is outside the basic chart scope.");
 }
-function labels(node: XmlNode | undefined): NonNullable<PresentationChart["labelContents"]> {
-  if (!node) return [];
+function labels(node: XmlNode | undefined, defaults: NonNullable<PresentationChart["labelContents"]> = []): NonNullable<PresentationChart["labelContents"]> {
+  if (!node) return defaults;
   check(node, ["dLbl", "delete", "numFmt", "spPr", "txPr", "dLblPos", "showLegendKey", "showVal", "showCatName", "showSerName", "showPercent", "showBubbleSize", "separator", "showLeaderLines", "leaderLines", "extLst"], C);
   if (flag(node, "delete")) return [];
   if (flag(node, "showLegendKey") || flag(node, "showBubbleSize")) unsupported(node, "Legend keys and bubble labels are not supported.");
   const result: NonNullable<PresentationChart["labelContents"]> = [];
-  for (const [name, kind] of [["showVal", "value"], ["showCatName", "category"], ["showSerName", "series"], ["showPercent", "percent"]] as const) if (flag(node, name)) result.push(kind);
+  for (const [name, kind] of [["showVal", "value"], ["showCatName", "category"], ["showSerName", "series"], ["showPercent", "percent"]] as const) if (flag(node, name, defaults.includes(kind))) result.push(kind);
   for (const point of elements(node, "dLbl", C)) {
-    const selected = labels({ ...point, content: point.content.filter(n => typeof n === "string" || n.uri !== C || n.name !== "idx") });
+    const selected = labels({ ...point, content: point.content.filter(n => typeof n === "string" || n.uri !== C || n.name !== "idx") }, result);
     if (JSON.stringify(selected) !== JSON.stringify(result)) unsupported(point, "Per-point label visibility is outside the basic chart scope.");
   }
   return result;
+}
+function cssString(value: string): string { return '"' + value.replace(/["\\\u0000-\u001f\u007f]/g, c => c === '"' || c === "\\" ? "\\" + c : "\\" + c.charCodeAt(0).toString(16) + " ") + '"'; }
+function labelStyle(context: Context, source: XmlNode | undefined): string | undefined {
+  if (!source) return undefined;
+  const css: Css = {}, format = child(source, "numFmt", C), separator = child(source, "separator", C), position = val(source, "dLblPos");
+  if (format && value(format, "formatCode") !== undefined) css["--office-label-number-format"] = cssString(value(format, "formatCode")!);
+  if (separator) css["--office-label-separator"] = cssString(text(separator));
+  if (position) css["--office-label-position"] = position;
+  return style(context, source, "chart-label-style", css);
+}
+function axisStyle(context: Context, source: XmlNode, prefix: string): string {
+  const css: Css = {};
+  for (const [name, key, fallback] of [["axPos", "position", source.name === "catAx" ? "b" : "l"], ["majorTickMark", "major-tick", "none"], ["minorTickMark", "minor-tick", "none"], ["tickLblPos", "label-position", "nextTo"], ["crosses", "crosses", "autoZero"], ["lblAlgn", "label-align", "ctr"], ["lblOffset", "label-offset", "100"], ["tickLblSkip", "label-skip", "1"], ["tickMarkSkip", "tick-skip", "1"], ["crossBetween", "cross-between", "between"], ["minorUnit", "minor-unit", "auto"]]) css["--office-axis-" + key] = val(source, name!, fallback!)!;
+  return style(context, source, prefix, css);
 }
 export function importChart(context: Context, reference: XmlNode, frame: Html): string {
   const path = context.relation(reference.part, attr(reference, "id", R), "chart").target;
@@ -83,6 +97,9 @@ export function importChart(context: Context, reference: XmlNode, frame: Html): 
   const indices = new Set<number>(), orders = new Set<number>();
   const ordered = series.map(s => ({ source: s, order: integer(child(s, "order", C) ?? s, "val") })).sort((a, b) => a.order - b.order);
   definition.seriesStyles = []; definition.pointStyles = [];
+  const globalLabels = child(native, "dLbls", C);
+  const globalLabelContents = labels(globalLabels), globalLabelStyle = labelStyle(context, globalLabels);
+  if (globalLabelStyle) definition.labelCssClass = globalLabelStyle;
   let commonLabels: string | undefined;
   for (const [index, item] of ordered.entries()) {
     const s = item.source;
@@ -110,14 +127,21 @@ export function importChart(context: Context, reference: XmlNode, frame: Html): 
     if (!["none", "circle", "square", "diamond", "triangle", "x", "star", "plus", "dot", "dash"].includes(symbol)) unsupported(marker ?? s, "This chart marker is not supported.");
     const markerSize = decimal(marker ?? s, "size") ?? 5;
     const seriesCss = style(context, s, "series-style", { "--office-invert-negative": String(flag(s, "invertIfNegative")) });
-    definition.seriesStyles.push({ seriesId, cssClass: seriesCss, marker: symbol as NonNullable<PresentationChart["seriesStyles"]>[number]["marker"] & string, markerSize });
+    const seriesLabel = child(s, "dLbls", C), labelCssClass = labelStyle(context, seriesLabel);
+    definition.seriesStyles.push({ seriesId, cssClass: seriesCss, marker: symbol as NonNullable<PresentationChart["seriesStyles"]>[number]["marker"] & string, markerSize, ...(labelCssClass ? { labelCssClass } : {}) });
     for (const point of elements(s, "dPt", C)) {
       check(point, ["idx", "invertIfNegative", "marker", "bubble3D", "explosion", "spPr", "extLst"], C);
       if ((decimal(point, "explosion") ?? 0) !== 0 || flag(point, "bubble3D") || child(point, "marker", C)) unsupported(point, "This point override is outside the basic chart scope.");
       const pointIndex = integer(child(point, "idx", C) ?? point, "val");
       definition.pointStyles.push({ seriesId, index: pointIndex, cssClass: style(context, point, "point-style") });
     }
-    const label = labels(child(s, "dLbls", C) ?? child(native, "dLbls", C));
+    const label = labels(seriesLabel, globalLabelContents);
+    for (const pointLabel of elements(seriesLabel ?? globalLabels, "dLbl", C)) {
+      const pointIndex = integer(child(pointLabel, "idx", C) ?? pointLabel, "val"), cssClass = labelStyle(context, pointLabel);
+      let point = definition.pointStyles.find(p => p.seriesId === seriesId && p.index === pointIndex);
+      if (!point) { const empty = context.id("point-style"); context.rule(empty, {}); point = { seriesId, index: pointIndex, cssClass: empty }; definition.pointStyles.push(point); }
+      if (cssClass) point.labelCssClass = cssClass;
+    }
     const serialized = JSON.stringify(label);
     if (commonLabels !== undefined && commonLabels !== serialized) unsupported(s, "Different label contents per series are not supported.");
     commonLabels = serialized; definition.labelContents = label;
@@ -137,7 +161,8 @@ export function importChart(context: Context, reference: XmlNode, frame: Html): 
     context.metadata.dataSets.push(data); context.dataSetsByRange.set(rangeKey, data.dataSetId); definition.dataSetId = data.dataSetId;
   }
   const title = child(chart, "title", C);
-  if (title && !flag(chart, "autoTitleDeleted")) {
+  if (title) {
+    definition.titleVisible = !flag(chart, "autoTitleDeleted");
     noLayout(title);
     if (flag(title, "overlay")) unsupported(title, "Overlay chart titles are not supported.");
     const tx = child(title, "tx", C), rich = child(tx, "rich", C), target = context.make("div");
@@ -167,9 +192,9 @@ export function importChart(context: Context, reference: XmlNode, frame: Html): 
     check(scaling, ["orientation", "max", "min", "logBase", "extLst"], C);
     if (child(scaling, "logBase", C)) unsupported(axis, "Logarithmic axes are not supported.");
     const reverse = val(scaling, "orientation", "minMax") === "maxMin";
-    if (axis.name === "catAx") { definition.categoryAxisCssClass = style(context, axis, "chart-category-axis"); definition.showCategoryAxis = !flag(axis, "delete"); definition.reverseCategories = reverse; }
+    if (axis.name === "catAx") { definition.categoryAxisCssClass = axisStyle(context, axis, "chart-category-axis"); definition.showCategoryAxis = !flag(axis, "delete"); definition.reverseCategories = reverse; }
     else {
-      definition.valueAxisCssClass = style(context, axis, "chart-value-axis"); definition.showValueAxis = !flag(axis, "delete"); definition.reverseValues = reverse;
+      definition.valueAxisCssClass = axisStyle(context, axis, "chart-value-axis"); definition.showValueAxis = !flag(axis, "delete"); definition.reverseValues = reverse;
       for (const [native, key] of [["min", "minimum"], ["max", "maximum"]] as const) { const n = scaling && decimal(scaling, native); if (n !== undefined) definition[key] = n; }
       const unit = decimal(axis, "majorUnit"); if (unit !== undefined) definition.majorUnit = unit;
       const format = child(axis, "numFmt", C); if (format && value(format, "formatCode") !== undefined) definition.numberFormat = value(format, "formatCode")!;

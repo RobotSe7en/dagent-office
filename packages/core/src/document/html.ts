@@ -1,11 +1,10 @@
-import { serialize, serializeOuter } from "parse5";
 import type { DefaultTreeAdapterTypes } from "parse5";
 import type { DocumentManifest } from "../contracts/document.js";
 import type { DeepReadonly, DocumentNode, DocumentPackage, DocumentReadLimits } from "../runtime.js";
 import { DocumentError } from "../errors.js";
 import { normalizeCss } from "./css.js";
 import type { CssBudget } from "./css.js";
-import { parseHtmlTree } from "./html-parser.js";
+import { parseHtmlTree, serializeHtmlOuter, serializeHtmlTree } from "./html-parser.js";
 import { validateImageAsset } from "./assets.js";
 import { resolveReference } from "./package.js";
 import { checkLimit, freeze, invalid, unsupported } from "./validation.js";
@@ -199,7 +198,7 @@ export function parseHtml(source: string, manifest: DeepReadonly<DocumentManifes
       return scopes;
     };
     return {
-      html: serialize(tree),
+      html: serializeHtmlTree(tree),
       directText: (nodeId) => index.get(nodeId)?.element.childNodes.filter((node): node is DefaultTreeAdapterTypes.TextNode => node.nodeName === "#text")
         .map((node) => node.value).join(""),
       nodeIds: () => [...index.keys()],
@@ -263,7 +262,7 @@ export function parseHtml(source: string, manifest: DeepReadonly<DocumentManifes
           parentNodeId: entry.parentId,
           childNodeIds: [...entry.children],
           text: textContent(entry.element),
-          html: serializeOuter(entry.element),
+          html: serializeHtmlOuter(entry.element),
         });
       },
     };

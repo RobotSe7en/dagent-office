@@ -37,6 +37,20 @@ function failure(action: () => unknown, code: DocumentErrorCode = "InvalidOperat
 }
 
 describe("isolated document transactions and history", () => {
+  test("preserves explicit carriage returns through text transactions, conflicts, history and reopening", () => {
+    const s = session('<p data-node-id="p" title="甲&#x000D;乙">甲&#13;乙</p>');
+    expect(s.getNode("p")!.text).toBe("甲\r乙");
+    expect(s.getNode("p")!.attributes.title).toBe("甲\r乙");
+    const first = prepare(s, [text("p", "甲", "丙😀")]);
+    const stale = prepare(s, [text("p", "甲\r乙", "不能应用")]);
+    s.commit(first);
+    expect(s.getNode("p")!.text).toBe("丙😀\r乙");
+    failure(() => s.commit(stale), "RevisionConflict");
+    expect(openDocument(s.serialize()).getNode("p")!.text).toBe("丙😀\r乙");
+    s.undo(); expect(s.getNode("p")!.text).toBe("甲\r乙");
+    s.redo(); expect(s.getNode("p")!.text).toBe("丙😀\r乙");
+    for (const reference of ["&#1;", "&#128;", "&#xD", "&#0;"]) expect(() => session('<p data-node-id="p">' + reference + '</p>')).toThrowError(DocumentError);
+  });
   test("runs the report's content operations, preserves the source, and saves/reopens the result", () => {
     const source = openDocument(files());
     const original = source.snapshot();
