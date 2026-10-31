@@ -117,7 +117,7 @@ type CellValueKind = "blank" | "text" | "number" | "boolean" | "error" | "formul
 
 ### PPT 元数据设计示例
 
-下面的 JSON 是 R2-02 已接受的元数据结构示例；完整可校验文档包见 [Presentation 样例](../examples/presentation/README.md)。对象几何位于 HTML 属性，不在元数据再存一份；该示例不表示原生 PPTX 读取已实现。
+下面的 JSON 是 R2-02 已接受的元数据结构示例；完整可校验文档包见 [Presentation 样例](../examples/presentation/README.md)。对象几何位于 HTML 属性，不在元数据再存一份；原生 PPTX 的实际读取范围与限制见 [PPTX 读取](pptx-import.md)。
 
 ```json
 {
