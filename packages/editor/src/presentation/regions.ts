@@ -33,8 +33,11 @@ export function bindPresentationRegions(frame: Document, host: RegionHost): Pres
             height: number;
         };
     } | undefined, disposed = false;
-    const clear = (): void => { for (const node of overlays)
-        node.remove(); overlays.length = 0; };
+    const clear = (): void => {
+        for (const node of overlays)
+            node.remove();
+        overlays.length = 0;
+    };
     const draw = (rect: {
         left: number;
         top: number;
@@ -49,6 +52,9 @@ export function bindPresentationRegions(frame: Document, host: RegionHost): Pres
         const keys = new Map<string, string>();
         for (const annotation of host.session.getAnnotations())
             if (annotation.status !== "needs_reanchor") {
+                // Definition views hide slide canvases; measure them again after returning.
+                if (annotation.anchor.kind === "region" && !host.source.elements.get(annotation.anchor.surfaceId)?.element.getClientRects().length)
+                    continue;
                 let changed = false;
                 if (annotation.anchor.kind === "region" && !isPresentationCommentPoint(annotation.anchor)) {
                     const id = annotation.anchor.surfaceId;
@@ -74,11 +80,16 @@ export function bindPresentationRegions(frame: Document, host: RegionHost): Pres
         }
         host.stale(stale);
     };
-    const cancel = (): void => { const old = drag; drag = undefined; if (old)
-        try {
-            old.target.releasePointerCapture(old.pointerId);
-        }
-        catch { /* Capture can already be gone. */ } paint(); };
+    const cancel = (): void => {
+        const old = drag;
+        drag = undefined;
+        if (old)
+            try {
+                old.target.releasePointerCapture(old.pointerId);
+            }
+            catch { /* Capture can already be gone. */ }
+        paint();
+    };
     frame.addEventListener("pointerdown", event => {
         if (!host.enabled() || event.button !== 0)
             return;
@@ -91,29 +102,52 @@ export function bindPresentationRegions(frame: Document, host: RegionHost): Pres
         surface.setPointerCapture(event.pointerId);
         paint();
     }, { signal: controls.signal });
-    frame.addEventListener("pointermove", event => { if (!drag || event.pointerId !== drag.pointerId)
-        return; const box = drag.surface.getBoundingClientRect(), x = Math.min(box.width, Math.max(0, event.clientX - box.left)) * .75, y = Math.min(box.height, Math.max(0, event.clientY - box.top)) * .75; drag.rect = { x: Math.min(x, drag.x), y: Math.min(y, drag.y), width: Math.abs(x - drag.x), height: Math.abs(y - drag.y) }; paint(); }, { signal: controls.signal });
-    frame.addEventListener("pointerup", event => { if (!drag || event.pointerId !== drag.pointerId)
-        return; const old = drag; cancel(); if (old.revision !== host.session.snapshot().manifest.revision || old.rect.width < 1 || old.rect.height < 1)
-        return; try {
-        host.select(host.source.slideRegion(old.surface.dataset.nodeId!, old.rect));
-    }
-    catch (error) {
-        host.error(error);
-    } }, { signal: controls.signal });
+    frame.addEventListener("pointermove", event => {
+        if (!drag || event.pointerId !== drag.pointerId)
+            return;
+        const box = drag.surface.getBoundingClientRect(), x = Math.min(box.width, Math.max(0, event.clientX - box.left)) * .75, y = Math.min(box.height, Math.max(0, event.clientY - box.top)) * .75;
+        drag.rect = { x: Math.min(x, drag.x), y: Math.min(y, drag.y), width: Math.abs(x - drag.x), height: Math.abs(y - drag.y) };
+        paint();
+    }, { signal: controls.signal });
+    frame.addEventListener("pointerup", event => {
+        if (!drag || event.pointerId !== drag.pointerId)
+            return;
+        const old = drag;
+        cancel();
+        if (old.revision !== host.session.snapshot().manifest.revision || old.rect.width < 1 || old.rect.height < 1)
+            return;
+        try {
+            host.select(host.source.slideRegion(old.surface.dataset.nodeId!, old.rect));
+        }
+        catch (error) {
+            host.error(error);
+        }
+    }, { signal: controls.signal });
     frame.addEventListener("pointercancel", cancel, { signal: controls.signal });
-    frame.addEventListener("lostpointercapture", () => { if (drag)
-        cancel(); }, { signal: controls.signal });
-    frame.addEventListener("keydown", event => { if (event.key === "Escape")
-        cancel(); }, { signal: controls.signal });
+    frame.addEventListener("lostpointercapture", () => {
+        if (drag)
+            cancel();
+    }, { signal: controls.signal });
+    frame.addEventListener("keydown", event => {
+        if (event.key === "Escape")
+            cancel();
+    }, { signal: controls.signal });
     frame.defaultView!.addEventListener("blur", cancel, { signal: controls.signal });
     frame.defaultView!.addEventListener("resize", paint, { signal: controls.signal });
     frame.addEventListener("scroll", paint, { capture: true, signal: controls.signal });
     paint();
-    return { paint, cancel, dispose() { if (disposed)
-            return; disposed = true; controls.abort(); const old = drag; drag = undefined; if (old)
-            try {
-                old.target.releasePointerCapture(old.pointerId);
-            }
-            catch { /* Already released. */ } clear(); } };
+    return { paint, cancel, dispose() {
+            if (disposed)
+                return;
+            disposed = true;
+            controls.abort();
+            const old = drag;
+            drag = undefined;
+            if (old)
+                try {
+                    old.target.releasePointerCapture(old.pointerId);
+                }
+                catch { /* Already released. */ }
+            clear();
+        } };
 }

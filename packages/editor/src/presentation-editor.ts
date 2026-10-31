@@ -224,7 +224,7 @@ export function mountPresentationEditor(container: HTMLElement, session: Documen
         renderControls();
         notify();
     }
-    function regionLayoutKey(slideId: string): string { ensure(); const slide = p().slides.find(s => s.slideId === slideId); if (!slide || definitionSurface || !current())
+    function regionLayoutKey(slideId: string): string { ensure(); if(definitionSurface)throw new DocumentError("InvalidOperation","请先返回幻灯片画布，再核对区域布局。"); const slide = p().slides.find(s => s.slideId === slideId); if (!slide || !current())
         throw new DocumentError("InvalidOperation", "请等待幻灯片画布就绪后检查区域布局。"); return preview.source()!.layoutKey(slide.rootNodeId); }
     const regionTool = button("框选区域", () => { finishInput(); regionMode = !regionMode; gestures?.cancel(); regions?.cancel(); gestures?.paint(); renderControls(); });
     const geometryBatch = (change: (geometry: Readonly<PresentationGeometry>) => PresentationGeometry): DocumentOperation[] => selected.map(nodeId => ({ op: "setPresentationGeometry", nodeId, geometry: change(resolvePresentationGeometry(session, nodeId)) }));

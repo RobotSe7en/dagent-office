@@ -25,12 +25,19 @@ export function buildPresentationRequest(state: DocumentState, input: Presentati
     for (const [key, value] of Object.entries(limits))
         if (!Object.hasOwn(DEFAULT_INTERACTION_LIMITS, key) || !Number.isSafeInteger(value) || value <= 0)
             throw new DocumentError("InvalidOperation", "PPT context limits must be positive safe integers.");
-    const annotations = input.annotationIds.map(id => { const a = state.snapshot.annotations.find(a => a.annotationId === id); if (!a || a.status !== "open" || a.baseRevision !== state.snapshot.manifest.revision)
-        throw new DocumentError("AnchorNotFound", "Only open annotations at the current revision can be submitted."); return a; });
+    const annotations = input.annotationIds.map(id => {
+        const a = state.snapshot.annotations.find(a => a.annotationId === id);
+        if (!a || a.status !== "open" || a.baseRevision !== state.snapshot.manifest.revision)
+            throw new DocumentError("AnchorNotFound", "Only open annotations at the current revision can be submitted.");
+        return a;
+    });
     const global = input.scope === "global", selected = new Set<string>(), slideByRoot = new Map(p.slides.map(s => [s.rootNodeId, s.slideId]));
-    const owner = (nodeId: string): string | undefined => { for (let id: string | null = nodeId; id !== null; id = state.html.peekNode(id)?.parentNodeId ?? null)
-        if (slideByRoot.has(id))
-            return slideByRoot.get(id); return undefined; };
+    const owner = (nodeId: string): string | undefined => {
+        for (let id: string | null = nodeId; id !== null; id = state.html.peekNode(id)?.parentNodeId ?? null)
+            if (slideByRoot.has(id))
+                return slideByRoot.get(id);
+        return undefined;
+    };
     if (global)
         for (const slide of p.slides)
             selected.add(slide.slideId);
@@ -126,11 +133,14 @@ export function validatePresentationProposal(state: DocumentState, request: Pres
         invalid("The PPT request differs from the complete frozen source context.");
     if (!unique(proposal.annotationIds) || proposal.annotationIds.some(id => !request.annotations.some(a => a.annotationId === id)))
         invalid("The PPT proposal claims annotations outside this request.");
-    const writable = new Set<string>(), add = (nodeId: string): void => { const stack = [nodeId]; while (stack.length) {
-        const id = stack.pop()!;
-        writable.add(id);
-        stack.push(...state.html.peekNode(id)!.childNodeIds);
-    } };
+    const writable = new Set<string>(), add = (nodeId: string): void => {
+        const stack = [nodeId];
+        while (stack.length) {
+            const id = stack.pop()!;
+            writable.add(id);
+            stack.push(...state.html.peekNode(id)!.childNodeIds);
+        }
+    };
     for (const b of request.context.blocks)
         add(b.nodeId);
     for (const d of request.context.dependencies)
@@ -170,6 +180,12 @@ export function validatePresentationProposal(state: DocumentState, request: Pres
     }
 }
 export function validatePresentationCandidate(state: DocumentState, request: PresentationInteractionRequest, candidate: CandidateChange): void {
+    const assets = new Set(request.context.assets.map(a => a.path));
+    for (const change of candidate.changes) {
+        const node = candidate.model.getNode(change.nodeId);
+        if (node?.tagName === "img" && !assets.has(resolveReference(node.attributes.src!, candidate.preview.manifest.entrypoint)))
+            invalid("The PPT candidate introduces an image outside its frozen resources.");
+    }
     if (request.context.scope.kind === "global")
         return;
     const existing = new Set(state.snapshot.metadata.presentation!.slides.map(s => s.slideId)), allowed = new Set(request.context.scope.slideIds);

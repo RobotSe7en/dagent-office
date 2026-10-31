@@ -42,3 +42,9 @@ test("layout replacement preserves unmatched text, copied definitions get new na
   commit(s,[{op:"insertPresentationDefinition",kind:"layout",copyFromId:"layout-body",name:"副本"}]);const copy=p(s).layouts.at(-1)!;expect(s.getNode(copy.rootNodeId)!.childNodeIds).toHaveLength(2);expect(s.getNode(copy.rootNodeId)!.childNodeIds.some(id=>["layout-title","layout-body"].includes(id))).toBe(false);
   const checkpoint=s.snapshot();expect(()=>commit(s,[{op:"setPresentationSlideLayout",slideId:slide.slideId,layoutId:"guessed"}])).toThrow();expect(()=>commit(s,[{op:"setPresentationTheme",themeId:"theme-default",properties:{"--office-theme-accent1":"red;color:blue"}}])).toThrow();expect(s.snapshot()).toEqual(checkpoint);
 });
+
+
+test("review: repeated theme changes replace declarations instead of accumulating stylesheet rules",()=>{
+  const s=blank();commit(s,[{op:"setPresentationTheme",themeId:"theme-default",properties:{"--office-theme-accent1":"#123456"}}]);const length=s.snapshot().styles.map(s=>s.css).join("").length;
+  for(let i=0;i<20;i++)commit(s,[{op:"setPresentationTheme",themeId:"theme-default",properties:{"--office-theme-accent1":i%2?"#123456":"#abcdef"}}]);expect(s.snapshot().styles.map(s=>s.css).join("").length).toBe(length);expect(commit(s,[{op:"setPresentationTheme",themeId:"theme-default",properties:{"--office-theme-accent1":"#123456"}}]).changed).toBe(false);expect(openDocument(s.serialize()).snapshot()).toEqual(s.snapshot());
+});
