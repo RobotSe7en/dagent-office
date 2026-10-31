@@ -24,4 +24,5 @@ export type {
   DocumentModel, DocumentNode, DocumentReadLimits, DocumentSnapshot, InteractionRequestInput,
   OpenDocumentOptions, TextOffsetMapping, TransactionReceipt, DocumentEditingSession,
   DocumentNodeChange, DocumentSessionLimits, DocumentSessionOptions, DocumentHistoryState,
+  TransactionPrepareOptions,
 } from "./runtime.js";

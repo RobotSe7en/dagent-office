@@ -1,7 +1,7 @@
 import type { Annotation } from "./contracts/annotations.js";
 import type { DocumentMetadata } from "./contracts/document.js";
 import type { DocumentEvent } from "./contracts/events.js";
-import type { DocumentOperation, DocumentTransaction } from "./contracts/operations.js";
+import type { AnnotationOperation, DocumentTransaction } from "./contracts/operations.js";
 import type { CandidateChange, DocumentSession, DocumentEventListener, DocumentModel, DocumentSessionOptions, TextOffsetMapping, TransactionReceipt } from "./runtime.js";
 import { DocumentError } from "./errors.js";
 import { parseContract } from "./schema-registry.js";
@@ -18,6 +18,10 @@ import { annotationNodes, mapAnnotations } from "./session/anchors.js";
 import { buildInteractionRequest, validateProposal } from "./session/interaction.js";
 import type { DocumentInteractionRequest, EditProposal } from "./contracts/interaction.js";
 import type { InteractionRequestInput } from "./runtime.js";
+import type { TransactionPrepareOptions } from "./runtime.js";
+import { checkResourceUse, stageResources } from "./session/resources.js";
+import { affectedPresentationSlides, guardPresentationContent, removeDeletedCommentBodies, updatePresentationMetadata, updatePresentationRecovery } from "./session/presentation.js";
+import { applyPresentationGeometry, updatePresentationConnectors } from "./session/presentation-geometry.js";
 export { DEFAULT_INTERACTION_LIMITS } from "./session/interaction.js";
 
 export { DEFAULT_DOCUMENT_SESSION_LIMITS } from "./session/limits.js";
@@ -66,7 +70,6 @@ export function createDocumentSession(document: DocumentModel, options: Document
   const limits = readLimits(options.limits);
   const budgets = sessionLimits(options.sessionLimits);
   let current: DocumentState | undefined = buildDocumentState(copyPackage(document.serialize(), limits), limits);
-  if (current.snapshot.metadata.presentation !== undefined) throw new DocumentError("UnsupportedFeature", "Presentation editing is not implemented yet.");
   let undo: HistoryEntry[] = [];
   let redo: HistoryEntry[] = [];
   const activeCandidates = new Map<CandidateChange, DocumentState>();
@@ -121,7 +124,7 @@ export function createDocumentSession(document: DocumentModel, options: Document
   function emptyReceipt(): TransactionReceipt {
     const base = state();
     return freeze({ documentId: base.snapshot.manifest.documentId, revision: base.snapshot.manifest.revision, changed: false,
-      affectedNodeIds: [], mapping: compareStates(base, base).mapping });
+      affectedNodeIds: [], ...(base.snapshot.metadata.presentation ? { affectedSlideIds: [] } : {}), mapping: compareStates(base, base).mapping });
   }
   function publish(next: DocumentState, textEdits: readonly TextOffsetMapping[]): TransactionReceipt {
     const previous = state();
@@ -130,8 +133,8 @@ export function createDocumentSession(document: DocumentModel, options: Document
     activeCandidates.clear();
     const identity = { protocolVersion: 1 as const, documentId: next.snapshot.manifest.documentId, revision: next.snapshot.manifest.revision };
     const receipt: TransactionReceipt = freeze({ documentId: identity.documentId, revision: identity.revision, changed: true,
-      affectedNodeIds: diff.affectedNodeIds, mapping: diff.mapping });
-    emit({ ...identity, type: "documentChanged", affectedNodeIds: [...diff.affectedNodeIds] });
+      affectedNodeIds: diff.affectedNodeIds, ...(diff.affectedSlideIds ? { affectedSlideIds: diff.affectedSlideIds } : {}), mapping: diff.mapping });
+    emit({ ...identity, type: "documentChanged", affectedNodeIds: [...diff.affectedNodeIds], ...(diff.affectedSlideIds ? { affectedSlideIds: [...diff.affectedSlideIds] } : {}) });
     if (diff.changedAnnotationIds.length) emit({ ...identity, type: "annotationChanged", annotationIds: [...diff.changedAnnotationIds] });
     return receipt;
   }
@@ -140,7 +143,7 @@ export function createDocumentSession(document: DocumentModel, options: Document
     if (revision >= Number.MAX_SAFE_INTEGER) throw new DocumentError("ResourceLimitExceeded", "The document revision is exhausted.");
     return revision + 1;
   }
-  function applyAnnotation(operation: Exclude<DocumentOperation, { nodeId: string }>, annotations: Annotation[], explicit: Set<string>): void {
+  function applyAnnotation(operation: AnnotationOperation, annotations: Annotation[], explicit: Set<string>): void {
     const base = state().snapshot.manifest;
     if (operation.op === "addAnnotation") {
       const annotation = operation.annotation;
@@ -164,7 +167,7 @@ export function createDocumentSession(document: DocumentModel, options: Document
     }
   }
 
-  function prepareTransaction(input: DocumentTransaction, resolvedIds?: readonly string[]): CandidateChange {
+  function prepareTransaction(input: DocumentTransaction, resolvedIds?: readonly string[], options?: TransactionPrepareOptions): CandidateChange {
     if (input && Array.isArray(input.operations)) {
       let count = input.operations.length;
       for (const operation of input.operations) {
@@ -183,13 +186,19 @@ export function createDocumentSession(document: DocumentModel, options: Document
     for (const operation of transaction.operations) {
       if ("nodeId" in operation && !base.html.hasNode(operation.nodeId)) invalid("An operation targets a node outside the base snapshot.");
     }
-    const edit = new DocumentEdit(base, limits, allocate);
+    const resources = stageResources(base, options, limits);
+    const edit = new DocumentEdit(resources.state, limits, allocate);
     let annotations = parseContract("annotations", base.snapshot.annotations);
-    const metadata = parseContract("document-metadata", base.snapshot.metadata);
+    const metadata: DocumentMetadata = parseContract("document-metadata", base.snapshot.metadata);
     const explicit = new Set<string>();
     const unresolved = new Set(base.snapshot.annotations.filter((item) => item.status === "needs_reanchor").map((item) => item.annotationId));
     for (const operation of transaction.operations) {
-      if ("nodeId" in operation) edit.apply(operation);
+      if (operation.op === "setPresentationGeometry" || operation.op === "setPresentationSize") {
+        if (!metadata.presentation) invalid("Presentation operations cannot target a Word document.");
+        if (operation.op === "setPresentationSize") metadata.presentation.size = operation.size;
+        else applyPresentationGeometry(operation, metadata.presentation, edit, base.html);
+      }
+      else if ("nodeId" in operation) { guardPresentationContent(base, operation); edit.apply(operation); }
       else applyAnnotation(operation, annotations, explicit);
     }
     for (const annotation of annotations) {
@@ -199,11 +208,24 @@ export function createDocumentSession(document: DocumentModel, options: Document
       if (explicit.has(annotation.annotationId) && annotation.status !== "needs_reanchor"
         && annotationNodes(annotation).some((id) => !base.html.hasNode(id))) invalid("Annotation targets must belong to the base snapshot.");
     }
-    const files = new Map(base.files);
-    const source = edit.html();
-    files.set(base.snapshot.manifest.entrypoint, encode(source));
-    const parsed = parseHtml(source, parseContract("document-manifest", base.snapshot.manifest), files, limits, { nodes: 0 });
-    mapAnnotations(annotations, base.html, parsed, edit, explicit);
+    removeDeletedCommentBodies(base, annotations, edit);
+    const files = new Map(resources.state.files);
+    const parseEdited = (): ParsedHtml => parseHtml(edit.html(), resources.state.snapshot.manifest, files, limits, { nodes: 0 });
+    let parsed = parseEdited();
+    updatePresentationMetadata(metadata, base, parsed, annotations);
+    if (metadata.presentation) { updatePresentationConnectors(metadata.presentation, base.html, parsed, edit); parsed = parseEdited(); }
+    files.set(base.snapshot.manifest.entrypoint, encode(parsed.html));
+    checkResourceUse(resources.added, parsed, base.snapshot.manifest.entrypoint);
+    const impacted = metadata.presentation ? new Set(affectedPresentationSlides(base, { html: parsed, snapshot: { ...resources.state.snapshot, metadata } })) : undefined;
+    const affectedSurfaces = impacted ? new Set([...(base.snapshot.metadata.presentation?.slides ?? []), ...(metadata.presentation?.slides ?? [])].filter(s => impacted.has(s.slideId)).map(s => s.rootNodeId)) : undefined;
+    const slideSurfaces = new Set(metadata.presentation?.slides.map(s => s.rootNodeId));
+    const regionChanged = affectedSurfaces ? (surfaceId: string): boolean => {
+      for (let id: string | null = surfaceId; id !== null; id = parsed.peekNode(id)?.parentNodeId ?? null) if (slideSurfaces.has(id)) return affectedSurfaces.has(id);
+      // Old generic regions outside slide surfaces retain the conservative layout rule.
+      return base.snapshot.html !== parsed.html || impacted!.size > 0;
+    } : undefined;
+    mapAnnotations(annotations, base.html, parsed, edit, explicit, regionChanged);
+    updatePresentationRecovery(metadata, base, annotations);
     updateWordMetadata(metadata, base, parsed);
     if (resolvedIds) {
       const resolved = new Set(resolvedIds);
@@ -230,14 +252,16 @@ export function createDocumentSession(document: DocumentModel, options: Document
     getNode: (id: string) => state().html.getNode(id),
     getAnnotations: () => state().snapshot.annotations,
     serialize: () => new Map([...state().files].map(([path, bytes]) => [path, new Uint8Array(bytes)])),
-    prepare: (input: DocumentTransaction): CandidateChange => execute(() => prepareTransaction(input)),
+    prepare: (input: DocumentTransaction, options?: TransactionPrepareOptions): CandidateChange => execute(() => prepareTransaction(input, undefined, options)),
     buildInteractionRequest: (input: InteractionRequestInput): DocumentInteractionRequest => execute(() => {
+      if (state().snapshot.metadata.presentation) throw new DocumentError("UnsupportedFeature", "Presentation requests are implemented in R2-13.");
       checkTransactionSize(input, budgets.maxTransactionBytes, limits.maxDepth);
       const request = buildInteractionRequest(state(), input);
       checkLimit(encode(JSON.stringify(request)).byteLength, limits.maxPackageBytes);
       return request;
     }),
     prepareProposal: (requestInput: DocumentInteractionRequest, proposalInput: EditProposal): CandidateChange => execute(() => {
+      if (state().snapshot.metadata.presentation) throw new DocumentError("UnsupportedFeature", "Presentation proposals are implemented in R2-13.");
       checkTransactionSize(requestInput, limits.maxPackageBytes * 8, limits.maxDepth + 16);
       checkLimit(encode(JSON.stringify(requestInput)).byteLength, limits.maxPackageBytes);
       checkTransactionSize(proposalInput, budgets.maxTransactionBytes, limits.maxDepth);

@@ -5,7 +5,7 @@ import type { Page } from "@playwright/test";
 import { build } from "vite";
 import { importPptx, readDocumentZip } from "@dagent-office/office";
 import { writeOpcZip } from "../../packages/office/src/document-zip.js";
-import { createPresentation, openDocument } from "@dagent-office/core";
+import { createPresentation, openDocument, readPresentationGeometry } from "@dagent-office/core";
 import type { DocumentPackage } from "@dagent-office/core";
 import type { DocumentPreviewOptions } from "@dagent-office/render";
 import type { PresentationHost } from "./fixtures/presentation-host.js";
@@ -30,6 +30,26 @@ test("new decks render fixed pages without an editing session or changes to the 
   await expect(page.frameLocator("iframe").locator("script,input,textarea,[contenteditable=true]")).toHaveCount(0);
   const projected = await page.evaluate(() => window.presentationHost.projected());
   expect(projected).not.toMatch(/svg|data-sdk|sdk-ppt|position:|transform:/);
+});
+
+test("Word UI adapters reject PPT without retaining a partial mount", async ({ page }) => {
+  await mount(page, createPresentation({ documentId: "format-gate" }));
+  expect(await page.evaluate(() => window.presentationHost.wordAdapterGates())).toEqual(Array.from({ length: 3 }, () => ({ code: "UnsupportedFeature", children: 0 })));
+});
+
+test("PPT core edits update the same preview and source with one undo/redo revision", async ({ page }) => {
+  const files = fixture("01-rich-text"), model = openDocument(files), p = model.snapshot().metadata.presentation!, slide = model.getNode(p.slides[0]!.rootNodeId)!, object = p.objects.find(o => o.kind === "text" && slide.childNodeIds.includes(o.nodeId))!, node = model.getNode(object.nodeId)!, geometry = readPresentationGeometry(node.attributes)!;
+  const paragraph = model.getNode(node.childNodeIds[0]!)!, text = paragraph.text;
+  await mount(page, files);
+  const box = page.frameLocator("iframe").locator('[data-node-id="' + object.nodeId + '"]'), before = await box.boundingBox();
+  await page.evaluate(async args => window.presentationHost.edit([{ op: "setPresentationGeometry", nodeId: args.id, geometry: args.geometry }, { op: "replaceText", nodeId: args.paragraph, from: 0, to: 0, expectedText: "", text: "新增𠀀😀" }]), { id: object.nodeId, geometry: { ...geometry, x: geometry.x + 27 }, paragraph: paragraph.nodeId });
+  expect((await box.boundingBox())!.x - before!.x).toBeCloseTo(36, 1);
+  await expect(box).toContainText("新增𠀀😀" + text);
+  expect(await page.evaluate(() => window.presentationHost.model!.snapshot().manifest.revision)).toBe(1);
+  expect(await page.evaluate(() => window.presentationHost.projected())).not.toMatch(/data-sdk-|sdk-ppt|<svg|blob:/);
+  await page.evaluate(() => window.presentationHost.history("undo")); expect((await box.boundingBox())!.x).toBeCloseTo(before!.x, 1); await expect(box.locator('[data-node-id="' + paragraph.nodeId + '"]')).toHaveText(text);
+  await page.evaluate(() => window.presentationHost.history("redo")); expect((await box.boundingBox())!.x - before!.x).toBeCloseTo(36, 1);
+  expect(await page.evaluate(() => window.presentationHost.model!.snapshot().manifest.revision)).toBe(3);
 });
 for (const producer of [false, true]) for (const file of readdirSync("examples/pptx").filter(name => name.endsWith(".pptx"))) {
   test(`${producer ? "producer" : "source"} ${file} retains its package while composing the complete declared read-only view`, async ({ page }, testInfo) => {

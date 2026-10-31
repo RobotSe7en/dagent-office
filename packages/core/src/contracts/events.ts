@@ -33,6 +33,7 @@ export const DocumentEventSchema = z.discriminatedUnion("type", [
     ...eventIdentity,
     type: z.literal("documentChanged"),
     affectedNodeIds: z.array(IdentifierSchema),
+    affectedSlideIds: z.array(IdentifierSchema).optional(),
   }),
   z.strictObject({
     ...eventIdentity,

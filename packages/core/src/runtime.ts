@@ -80,6 +80,8 @@ export interface CandidateChange {
   readonly baseRevision: number;
   readonly preview: DocumentSnapshot;
   readonly affectedNodeIds: readonly string[];
+  /** Stable slide identities whose rendered content or dependencies changed. PPT only. */
+  readonly affectedSlideIds?: readonly string[];
   readonly changes: readonly DocumentNodeChange[];
   readonly changedAnnotationIds: readonly string[];
   readonly mapping: ChangeMapping;
@@ -126,16 +128,22 @@ export interface TransactionReceipt {
   readonly revision: number;
   readonly changed: boolean;
   readonly affectedNodeIds: readonly string[];
+  readonly affectedSlideIds?: readonly string[];
   readonly mapping: ChangeMapping;
 }
 
 export type DocumentEventListener = (event: DeepReadonly<DocumentEvent>) => void;
 export type AnnotationSubmissionHandler = (request: DeepReadonly<DocumentInteractionRequest>) => void | Promise<void>;
 
+/** Host-authorized immutable resources staged with the same isolated candidate. */
+export interface TransactionPrepareOptions {
+  readonly assets?: readonly { readonly descriptor: AssetDescriptor; readonly bytes: Uint8Array }[];
+}
+
 /** Shared transaction and history boundary for editing views. */
 export interface DocumentEditingSession extends DocumentModel {
   getAnnotations(): readonly DeepReadonly<Annotation>[];
-  prepare(transaction: DocumentTransaction): CandidateChange;
+  prepare(transaction: DocumentTransaction, options?: TransactionPrepareOptions): CandidateChange;
   commit(candidate: CandidateChange): TransactionReceipt;
   discard(candidate: CandidateChange): void;
   undo(): TransactionReceipt;

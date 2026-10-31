@@ -210,10 +210,10 @@ describe("Presentation package model", () => {
     expectFailure(() => createPresentation({ documentId: "d", title: "\u0000" }));
   });
 
-  test("does not expose presentation transactions before reading acceptance", () => {
-    expectFailure(() => createDocumentSession(openDocument(initial())), "UnsupportedFeature");
+  test("opens presentation sessions from revalidated serialized source after reading acceptance", () => {
+    expect(createDocumentSession(openDocument(initial())).snapshot().manifest.kind).toBe("presentation");
     const actual = openDocument(initial());
     const fake = { ...actual, snapshot: () => ({ ...actual.snapshot(), metadata: { pageSetup: { unit: "pt" as const, width: 10, height: 10, margins: { top: 0, right: 0, bottom: 0, left: 0 } }, sections: [{ sectionId: "fake", rootNodeId: "fake" }] } }) };
-    expectFailure(() => createDocumentSession(fake), "UnsupportedFeature");
+    expect(createDocumentSession(fake).snapshot().manifest.kind).toBe("presentation");
   });
 });
