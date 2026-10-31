@@ -162,11 +162,14 @@ export function importText(context: Context, body: XmlNode, target: Html, part: 
   target.attrs.class = [target.attrs.class, listStyle].filter(Boolean).join(" ");
   const paragraphs = elements(body, "p", A);
   if (!paragraphs.length) fail(body, "A text body requires at least one paragraph.");
+  const nativeParagraphs: { nodeId: string; start: number; text: string; nativeText: string }[] = [];
+  let nativeOffset = 0;
   for (const source of paragraphs) {
     check(source, ["pPr", "r", "br", "fld", "endParaRPr"], A);
     const pPr = child(source, "pPr", A), level = pPr ? integer(pPr, "lvl", 0) : 0;
     if (level < 0 || level > 8) fail(source, "A paragraph outline level is invalid.");
     const p = context.make("p", { "data-office-level": String(level), class: listStyle + "-level-" + level });
+    let nativeText = "";
     context.style(p, paragraphProperties(pPr));
     const bullet = child(pPr, "buChar", A), numbering = child(pPr, "buAutoNum", A);
     if (bullet && numbering) fail(source, "A paragraph has conflicting list types.");
@@ -180,7 +183,7 @@ export function importText(context: Context, body: XmlNode, target: Html, part: 
     for (const sourceRun of elements(source, undefined, A)) {
       if (sourceRun.name === "pPr") continue;
       if (sourceRun.name === "endParaRPr") { const c = context.id("paragraph-end"); context.rule(c, runProperties(sourceRun)); p.attrs["data-office-end-style"] = c; continue; }
-      if (sourceRun.name === "br") { p.children.push(context.make("br")); continue; }
+      if (sourceRun.name === "br") { p.children.push(context.make("br")); nativeText += "\v"; continue; }
       const field = sourceRun.name === "fld";
       check(sourceRun, field ? ["rPr", "pPr", "t"] : ["rPr", "t"], A);
       const run = context.make("span");
@@ -197,10 +200,16 @@ export function importText(context: Context, body: XmlNode, target: Html, part: 
       const t = child(sourceRun, "t", A);
       if (!t) fail(sourceRun, "A text run is missing its text value.");
       context.content(run, text(t));
+      nativeText += text(t);
       importHyperlink(context, child(rPr, "hlinkClick", A), run, part);
       p.children.push(run);
     }
     target.children.push(p);
+    const plain = (node: Html): string => node.tag === "br" ? "\n" : node.children.map(child => typeof child === "string" ? child : plain(child)).join("");
+    const sourceText = plain(p);
+    nativeParagraphs.push({ nodeId: p.attrs["data-node-id"]!, start: nativeOffset, text: sourceText, nativeText });
+    nativeOffset += sourceText.length + 1; // OfficeArt's paragraph mark is U+000D.
   }
+  context.paragraphs.set(target.attrs["data-node-id"]!, nativeParagraphs);
   return result;
 }

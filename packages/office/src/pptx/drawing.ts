@@ -1,6 +1,6 @@
 import { PresentationPresetSchema } from "@dagent-office/core";
 import type { PresentationObject } from "@dagent-office/core";
-import { A, attr, check, child, elements, fail, MC, P, R, unsupported } from "../ooxml/xml.js";
+import { A, attr, C, check, child, elements, fail, MC, P, R, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import type { Css } from "../ooxml/styles.js";
 import { bool, Context, integer, points, unsigned, value } from "./context.js";
@@ -8,6 +8,7 @@ import type { Html, Surface } from "./context.js";
 import { colorMap, effects, fill, onlyColor, outline, paint } from "./styles.js";
 import { importHyperlink, importText } from "./text.js";
 import { importTable } from "./table.js";
+import { importChart } from "./chart.js";
 
 /** Select markup compatibility by namespace support, never prefix spelling. */
 export function compatible(source: XmlNode): XmlNode[] {
@@ -83,6 +84,8 @@ function objectStyle(context: Context, source: XmlNode | undefined, properties: 
 
 export class Drawings {
   private readonly connections: { object: Extract<PresentationObject, { kind: "connector" }>; start?: string; end?: string; surface: string }[] = [];
+  private readonly objects: Map<string, PresentationObject> = new Map();
+  private readonly placeholders: Map<string, Map<number, PresentationObject[]>> = new Map();
   constructor(readonly context: Context) {}
   surface(surface: Surface): void {
     const { context } = this, source = surface.source;
@@ -119,15 +122,22 @@ export class Drawings {
     let parent = surface.root;
     if (rootTransform && ["rot", "flipH", "flipV"].some(name => value(rootTransform, name) !== undefined && value(rootTransform, name) !== "0") || rootTransform && [child(rootTransform, "off", A), child(rootTransform, "ext", A), child(rootTransform, "chOff", A), child(rootTransform, "chExt", A)].some(n => n && [...n.attrs.values()].some(v => v !== "0"))) {
       const group = context.make("div", { "data-office-kind": "group" }); transform(rootTransform, group, true);
-      context.metadata.objects.push({ kind: "group", nodeId: group.attrs["data-node-id"]!, nativeId }); parent.children.push(group); parent = group;
+      const object: PresentationObject = { kind: "group", nodeId: group.attrs["data-node-id"]!, nativeId };
+      context.metadata.objects.push(object); this.objects.set(object.nodeId, object); parent.children.push(group); parent = group;
       context.nativeNodes.get(surface.id)!.set(nativeId, group.attrs["data-node-id"]!);
     }
     for (const node of compatible(tree)) {
       if (["nvGrpSpPr", "grpSpPr"].includes(node.name) && node.uri === P) continue;
       parent.children.push(this.object(node, surface));
     }
+    const slots = new Map<number, PresentationObject[]>();
+    for (const child of surface.root.children) if (typeof child !== "string") {
+      const object = this.objects.get(child.attrs["data-node-id"]!);
+      if (object?.placeholder) { const list = slots.get(object.placeholder.index) ?? []; list.push(object); slots.set(object.placeholder.index, list); }
+    }
+    this.placeholders.set(surface.id, slots);
   }
-  object(source: XmlNode, surface: Surface): Html {
+  object(source: XmlNode, surface: Surface, topLevel = true): Html {
     const { context } = this;
     if (source.uri !== P || !["sp", "pic", "grpSp", "cxnSp", "graphicFrame"].includes(source.name)) unsupported(source, "This slide object is not supported.");
     const n = source.name;
@@ -155,7 +165,18 @@ export class Drawings {
     const creation = elements(child(native, "extLst", A), "ext", A).flatMap(ext => ext.content.filter((c): c is XmlNode => typeof c !== "string")).find(c => c.name === "creationId" && c.uri === "http://schemas.microsoft.com/office/drawing/2014/main");
     if (creation && value(creation, "id")) base.creationId = value(creation, "id")!;
     const ph = child(child(nv, "nvPr", P), "ph", P);
-    if (ph) base.placeholder = { type: (value(ph, "type") ?? "obj") as NonNullable<PresentationObject["placeholder"]>["type"], index: integer(ph, "idx", 0) };
+    if (ph) {
+      let type = value(ph, "type");
+      const index = value(ph, "idx") === undefined ? 0 : unsigned(ph, "idx");
+      if (topLevel && surface.layoutId && (type === undefined || type === "obj")) {
+        const candidates = this.placeholders.get(surface.layoutId)?.get(index) ?? [];
+        const matching = candidates.filter(o => o.placeholder!.type === (type ?? "obj"));
+        if (matching.length === 1) type = matching[0]!.placeholder!.type;
+        else if (candidates.length === 1) type = candidates[0]!.placeholder!.type;
+        else if (candidates.length > 1) fail(ph, "An inherited native placeholder index is ambiguous.");
+      }
+      base.placeholder = { type: (type ?? "obj") as NonNullable<PresentationObject["placeholder"]>["type"], index };
+    }
     const properties = child(source, n === "grpSp" ? "grpSpPr" : "spPr", P);
     if (properties) check(properties, ["xfrm", "prstGeom", "noFill", "solidFill", "gradFill", "ln", "effectLst", "extLst"], A);
     transform(n === "graphicFrame" ? child(source, "xfrm", P) : child(properties, "xfrm", A), target, n === "grpSp");
@@ -163,7 +184,7 @@ export class Drawings {
     let object: PresentationObject;
     if (n === "grpSp") {
       object = { ...base, kind: "group" };
-      for (const childNode of compatible(source)) if (![nvName, "grpSpPr", "extLst"].includes(childNode.name) || childNode.uri !== P) target.children.push(this.object(childNode, surface));
+      for (const childNode of compatible(source)) if (![nvName, "grpSpPr", "extLst"].includes(childNode.name) || childNode.uri !== P) target.children.push(this.object(childNode, surface, false));
     } else if (n === "sp" || n === "cxnSp") {
       const geometry = child(properties, "prstGeom", A), preset = geometry && value(geometry, "prst");
       if (!geometry || !preset) unsupported(source, "Custom or missing shape geometry is not supported.");
@@ -210,13 +231,19 @@ export class Drawings {
       const graphic = child(source, "graphic", A), data = child(graphic, "graphicData", A);
       if (!data) fail(source, "A graphic frame has no graphic content.");
       check(graphic, ["graphicData"], A);
-      if (!["http://schemas.openxmlformats.org/drawingml/2006/table", "http://purl.oclc.org/ooxml/drawingml/table"].includes(value(data, "uri") ?? "")) unsupported(data, "Charts and this graphic type require the remaining reading stage.");
-      check(data, ["tbl"], A);
-      const table = child(data, "tbl", A);
-      if (!table) fail(data, "A table graphic is missing its native table.");
-      object = { ...base, kind: "table", grid: importTable(context, table, target, source.part) };
+      if (["http://schemas.openxmlformats.org/drawingml/2006/table", "http://purl.oclc.org/ooxml/drawingml/table"].includes(value(data, "uri") ?? "")) {
+        check(data, ["tbl"], A);
+        const table = child(data, "tbl", A);
+        if (!table) fail(data, "A table graphic is missing its native table.");
+        object = { ...base, kind: "table", grid: importTable(context, table, target, source.part) };
+      } else if ([C, "http://purl.oclc.org/ooxml/drawingml/chart"].includes(value(data, "uri") ?? "")) {
+        check(data, ["chart"], C);
+        const chart = child(data, "chart", C);
+        if (!chart) fail(data, "A chart graphic is missing its chart reference.");
+        object = { ...base, kind: "chart", chartId: importChart(context, chart, target) };
+      } else unsupported(data, "This graphic frame type is not supported.");
     }
-    target.attrs["data-office-kind"] = object.kind; context.metadata.objects.push(object);
+    target.attrs["data-office-kind"] = object.kind; context.metadata.objects.push(object); this.objects.set(object.nodeId, object);
     return target;
   }
   finish(): void {

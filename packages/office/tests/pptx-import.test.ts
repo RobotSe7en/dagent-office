@@ -111,13 +111,9 @@ test("maps native merged table cells to one HTML cell per merge origin", () => {
   }
 });
 
-for (const item of expected.negativeCases.filter(c => !/chart|author/.test(c.file))) test("rejects malformed or unsupported native PPTX: " + item.file, () => {
+for (const item of expected.negativeCases) test("rejects malformed or unsupported native PPTX: " + item.file, () => {
   try { importPptx(fixture(item.file), { documentId: "invalid" }); throw new Error("Accepted invalid source"); }
   catch (error) { expect(error).toBeInstanceOf(DocumentError); expect((error as DocumentError).code).toBe(item.error); }
-});
-
-test.each(["09-charts.pptx", "10-notes.pptx", "11-classic-comments.pptx", "12-modern-comments.pptx", "13-multi-slide.pptx"])("keeps the remaining reading gate explicit: %s", name => {
-  expect(() => load(name)).toThrowError(expect.objectContaining({ code: "UnsupportedFeature" }));
 });
 
 test("rejects wrong types, cyclic ownership, unsupported geometry and broken connection targets", () => {

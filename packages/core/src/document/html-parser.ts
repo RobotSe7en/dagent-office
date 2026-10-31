@@ -1,4 +1,4 @@
-import { defaultTreeAdapter, Parser } from "parse5";
+import { defaultTreeAdapter, Parser, serialize, serializeOuter } from "parse5";
 import type { DefaultTreeAdapterMap, DefaultTreeAdapterTypes, Token, TreeAdapter } from "parse5";
 import type { DocumentReadLimits } from "../runtime.js";
 import { checkLimit, invalid, unsupported } from "./validation.js";
@@ -7,8 +7,13 @@ type Node = DefaultTreeAdapterTypes.Node;
 type ParentNode = DefaultTreeAdapterTypes.ParentNode;
 type ChildNode = DefaultTreeAdapterTypes.ChildNode;
 
+/** A literal CR would be normalized on the next HTML parse. Keep explicit
+ * character-reference CRs stable in both saved source and editing fragments. */
+export function serializeHtmlTree(node: ParentNode): string { return serialize(node).replace(/\r/g, "&#13;"); }
+export function serializeHtmlOuter(node: Node): string { return serializeOuter(node).replace(/\r/g, "&#13;"); }
+
 /** Keep parser-specific token and construction checks behind the HTML adapter. */
-function boundedParser(limits: DocumentReadLimits, supportedTags: ReadonlySet<string>) {
+function boundedParser(limits: DocumentReadLimits, supportedTags: ReadonlySet<string>, source: string) {
   const depths = new WeakMap<Node, number>();
   const sourceElements = new Set<number>();
   let count = 0;
@@ -83,18 +88,27 @@ function boundedParser(limits: DocumentReadLimits, supportedTags: ReadonlySet<st
   const options = {
     treeAdapter,
     sourceCodeLocationInfo: true,
-    onParseError: () => invalid("The HTML source is malformed."),
+    onParseError: (error: { code: string; startOffset: number }) => {
+      // HTML flags even a correctly terminated CR reference as a control
+      // reference. This one code unit is required for exact Office text; all
+      // other control references and malformed entities remain errors.
+      if (error.code === "control-character-reference") {
+        const begin = source.lastIndexOf("&#", error.startOffset);
+        if (begin >= 0 && /^&#(?:0*13|x0*d);$/i.test(source.slice(begin, error.startOffset))) return;
+      }
+      invalid("The HTML source is malformed.");
+    },
   };
   return { DocumentParser, options };
 }
 
 export function parseHtmlTree(source: string, limits: DocumentReadLimits, supportedTags: ReadonlySet<string>): DefaultTreeAdapterTypes.Document {
-  const { DocumentParser, options } = boundedParser(limits, supportedTags);
+  const { DocumentParser, options } = boundedParser(limits, supportedTags, source);
   return DocumentParser.parse(source, options);
 }
 
 export function parseHtmlFragment(source: string, context: DefaultTreeAdapterTypes.Element, limits: DocumentReadLimits, supportedTags: ReadonlySet<string>): DefaultTreeAdapterTypes.DocumentFragment {
-  const { DocumentParser, options } = boundedParser(limits, supportedTags);
+  const { DocumentParser, options } = boundedParser(limits, supportedTags, source);
   const parser = DocumentParser.getFragmentParser(context, options);
   parser.tokenizer.write(source, true);
   return parser.getFragment();

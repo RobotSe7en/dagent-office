@@ -1,6 +1,6 @@
-# PPTX 基础读取
+# PPTX 读取
 
-R2-04 提供 `importPptx(bytes, { documentId, limits?, maxZipBytes? })`，将宿主授权的 PPTX 字节映射到同一 HTML/CSS/元数据／资源文档包。它不调用 Office 进程、网络或第三方演示文稿库。当前覆盖基础对象；图表、备注和两类批注在 R2-05 实施，全部读取和只读画面验收属于 R2-06。编辑入口继续关闭。
+R2-04 提供 `importPptx(bytes, { documentId, limits?, maxZipBytes? })`，将宿主授权的 PPTX 字节映射到同一 HTML/CSS/元数据／资源文档包。它不调用 Office 进程、网络或第三方演示文稿库。R2-05 增加三类图表、备注和两类批注；完整读取及只读画面验收属于 R2-06。编辑入口继续关闭。
 
 ```ts
 import { openDocument } from "@dagent-office/core";
@@ -40,3 +40,26 @@ pnpm exec vitest run packages/office/tests/pptx-import.test.ts
 ```
 
 此阶段的重开是 HTML 文档包重开，尚未提供 PPTX 导出；原生可编辑导出和外部编辑后的重新导入在 R2-14 至 R2-16 验收。
+
+
+## R2-05：图表、备注与批注
+
+16 份原始 PPTX 和 16 份 LibreOffice 重存文件分别完成 SDK 导入、输入不变、确定性、HTML 包 ZIP 保存重开验证。原始现代线程保留正文、回复、作者显示信息、原生 GUID、日期、open/resolved/closed 状态及幻灯片／对象／文字锚点；LibreOffice 重存丢失的线程按参考记录计为零，不代替现代线程验收。PowerPoint／WPS 实际应用仍未验证。
+
+图表支持二维簇状柱、简单折线和单系列非负饼图。分类、系列名和数值只进入 `dataSets`；缓存和内嵌 XLSX 的普通行／列范围逐项一致才接受，内嵌表中的单元格公式、外部依赖和不一致缓存明确失败。XLSX 仅作为图表常量表读取，未引用的数据和工作簿排版不进入 SDK，也不是通用 Excel 转换器。共享内嵌表／范围复用一份源数据；独立内嵌表保持独立。无内嵌表的 LibreOffice 缓存常量也可读取，支持其本地数据标记，拒绝可计算表达式及外部范围。PPTX 与内嵌 XLSX 共享 XML 节点预算，并合计展开字节和文件数。
+
+图表标题保存在 HTML，隐藏标题保留内容及 titleVisible 状态；系列、数据点、图例、标签、绘图区、轴及文字样式引用 CSS 类。定义保留图例位置、轴范围与步长、方向、数字格式、空值行为、线条标记、柱间距、重叠及饼图起始角等基础选项。组合图、堆积／平滑／爆炸图、手工绘图区、预设样式 ID、轴标题／对数轴、自定义交叉点和单点标签布局等高级配置明确失败；这些限制不能算作已完成的视觉映射。
+
+备注保存原始 notesSize、备注母版、辅助对象、局部几何和独立正文对象引用 `bodyNodeId`。不会把辅助缩略图、日期或页码混入可编辑备注正文；原有纯富文本备注包仍可读。备注和批注内容域不属于普通幻灯片页面，后续 PDF/PNG 不输出它们的 UI。
+
+经典批注原生位置以 1/8 pt 换成 1 pt 的区域标记，保留实际 x/y；负位置当前不能由公共非负区域表示，明确失败。现代批注保留独立的 callout 位置，锚点通过原生 moniker 定位，不能用位置猜对象。文字范围按 UTF-16 映射，软换行为一个位置，跨段落按原生段落标记转换为源文字范围集合。可选上下文按 [MS-ODRAWXML 1.3.9.1](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-odrawxml/9846e83e-6b3c-4dd3-82fe-244bf1e24e1f)逐代码单元计算 32 位哈希；哈希、长度或目标不一致就失败，不搜索另一个相似范围。最终隐式段落标记之后的范围、混合文字／对象及未实现的 moniker 目前明确失败。
+
+现代原生 `unknownAnchor` 保留为 `needs_reanchor`，原工作流状态单独存于 `recoveryStatus`，避免把“需重定位”和“已解决／关闭”混为一项。`commentAuthors` 只保存格式、原生身份及不授予访问权限的 userId/providerId；显示名字来自批注／回复，不维护第二份名字。引用的作者、回复及显示信息必须一致。Word 仍拒绝回复和 closed 状态，不宣称开放 Word 现代线程。
+
+不支持现代任务、分配和其他未声明的扩展；经典扩展线程未声明读取。现代批注的格式依据 [MS-PPTX](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-pptx/)，锚点依据 [MS-ODRAWXML](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-odrawxml/)。代码和独立样例均自行编写，未复制或翻译其他 Office 编辑器实现。
+
+```bash
+pnpm exec vitest run packages/office/tests/pptx-import.test.ts packages/office/tests/pptx-stories-charts.test.ts
+```
+
+独立审查补齐标签数字格式与轴选项、隐藏标题、未知批注扩展及省略占位符类型的原生索引解析。显式回车以字符引用在公共 HTML 适配器中稳定保存；普通输入事务仍使用 LF。Word 用例覆盖保留既有回车后的编辑、冲突、撤销重做及重开，其他非法控制字符引用继续拒绝。

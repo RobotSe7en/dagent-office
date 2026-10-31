@@ -1,5 +1,6 @@
 import { createAssetDescriptor, DocumentError } from "@dagent-office/core";
-import type { DocumentManifest, PresentationMetadata } from "@dagent-office/core";
+import type { Annotation, DocumentManifest, PresentationMetadata } from "@dagent-office/core";
+import { openOpc } from "../ooxml/package.js";
 import type { OpcPackage } from "../ooxml/package.js";
 import { attr, fail, number, R, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
@@ -7,7 +8,8 @@ import { declarations, escapeHtml } from "../ooxml/styles.js";
 import type { Css } from "../ooxml/styles.js";
 
 export interface Html { tag: string; attrs: Record<string, string>; children: (Html | string)[] }
-export interface Surface { id: string; root: Html; source: XmlNode; themeId: string; masterId?: string }
+export interface Surface { id: string; root: Html; source: XmlNode; themeId: string; masterId?: string; layoutId?: string }
+export interface NativeParagraph { nodeId: string; start: number; text: string; nativeText: string }
 export function serialize(node: Html): string {
   const attrs = Object.entries(node.attrs).map(([name, value]) => " " + name + '="' + escapeHtml(value) + '"').join("");
   return "<" + node.tag + attrs + ">" + (["br", "img"].includes(node.tag) ? "" : node.children.map(item => typeof item === "string" ? escapeHtml(item) : serialize(item)).join("") + "</" + node.tag + ">");
@@ -45,9 +47,24 @@ export class Context {
   readonly surfaces: Map<string, Surface> = new Map();
   readonly nativeNodes: Map<string, Map<string, string>> = new Map();
   readonly slidePaths: Map<string, string> = new Map();
+  readonly annotations: Annotation[] = [];
+  readonly paragraphs: Map<string, NativeParagraph[]> = new Map();
+  readonly workbooks: Map<string, OpcPackage> = new Map();
+  readonly dataSetsByRange: Map<string, string> = new Map();
+  nestedBytes: number;
+  nestedFiles: number;
   readonly metadata: PresentationMetadata = { size: { unit: "pt", width: 960, height: 540 }, commentFormat: "modern",
     slides: [], themes: [], masters: [], layouts: [], notesMasters: [], stories: [], objects: [], charts: [], dataSets: [], comments: [], hyperlinks: [] };
-  constructor(readonly opc: OpcPackage) {}
+  constructor(readonly opc: OpcPackage) { this.nestedBytes = [...opc.files.values()].reduce((n, bytes) => n + bytes.length, 0); this.nestedFiles = opc.files.size; }
+  workbook(path: string): OpcPackage {
+    const cached = this.workbooks.get(path);
+    if (cached) return cached;
+    const limits = { ...this.opc.limits, maxPackageBytes: this.opc.limits.maxPackageBytes - this.nestedBytes, maxFiles: this.opc.limits.maxFiles - this.nestedFiles };
+    if (limits.maxPackageBytes <= 0 || limits.maxFiles <= 0) throw new DocumentError("ResourceLimitExceeded", "Nested chart packages exceed the shared budget.");
+    const book = openOpc(this.opc.files.get(path)!, { limits }, this.opc.xmlBudget);
+    this.nestedBytes += [...book.files.values()].reduce((n, data) => n + data.length, 0); this.nestedFiles += book.files.size;
+    this.workbooks.set(path, book); return book;
+  }
   count(amount = 1): void {
     this.work += amount;
     if (this.work > this.opc.limits.maxNodes) throw new DocumentError("ResourceLimitExceeded", "PPTX mapping exceeds its work budget.");

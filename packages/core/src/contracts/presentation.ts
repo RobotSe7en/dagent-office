@@ -43,13 +43,25 @@ export const PresentationDataSetSchema = z.strictObject({
 export type PresentationDataSet = z.infer<typeof PresentationDataSetSchema>;
 export const PresentationChartSchema = z.strictObject({
   chartId: IdentifierSchema, nodeId: IdentifierSchema, dataSetId: IdentifierSchema, kind: z.enum(["column", "line", "pie"]),
-  titleNodeId: IdentifierSchema.optional(), legend: z.enum(["none", "left", "right", "top", "bottom"]),
+  titleNodeId: IdentifierSchema.optional(), titleVisible: z.boolean().optional(), legend: z.enum(["none", "left", "right", "top", "bottom"]),
   showLabels: z.boolean(), numberFormat: z.string().optional(),
   minimum: z.number().optional(), maximum: z.number().optional(), majorUnit: z.number().positive().optional(),
+  plotCssClass: IdentifierSchema.optional(), legendCssClass: IdentifierSchema.optional(), textCssClass: IdentifierSchema.optional(), labelCssClass: IdentifierSchema.optional(),
+  categoryAxisCssClass: IdentifierSchema.optional(), valueAxisCssClass: IdentifierSchema.optional(), gridCssClass: IdentifierSchema.optional(),
+  showCategoryAxis: z.boolean().optional(), showValueAxis: z.boolean().optional(),
+  blankAs: z.enum(["gap", "zero", "span"]).optional(),
+  reverseCategories: z.boolean().optional(), reverseValues: z.boolean().optional(),
+  gapWidth: z.number().min(0).max(500).optional(), overlap: z.number().min(-100).max(100).optional(), firstSliceAngle: z.number().min(0).max(360).optional(),
+  labelContents: z.array(z.enum(["value", "category", "series", "percent"])).optional(),
+  seriesStyles: z.array(z.strictObject({ seriesId: IdentifierSchema, cssClass: IdentifierSchema,
+    labelCssClass: IdentifierSchema.optional(),
+    marker: z.enum(["none", "circle", "square", "diamond", "triangle", "x", "star", "plus", "dot", "dash"]).optional(), markerSize: z.number().positive().optional() })).optional(),
+  pointStyles: z.array(z.strictObject({ seriesId: IdentifierSchema, index: z.number().int().min(0), cssClass: IdentifierSchema, labelCssClass: IdentifierSchema.optional() })).optional(),
 });
 export type PresentationChart = z.infer<typeof PresentationChartSchema>;
 export const PresentationMetadataSchema = z.strictObject({
   size: PresentationSizeSchema,
+  notesSize: PresentationSizeSchema.optional(),
   commentFormat: z.enum(["classic", "modern"]),
   slides: z.array(z.strictObject({
     slideId: IdentifierSchema, rootNodeId: IdentifierSchema, layoutId: IdentifierSchema,
@@ -60,15 +72,19 @@ export const PresentationMetadataSchema = z.strictObject({
     titleStyle: IdentifierSchema.optional(), bodyStyle: IdentifierSchema.optional(), otherStyle: IdentifierSchema.optional() })).min(1),
   layouts: z.array(z.strictObject({ layoutId: IdentifierSchema, rootNodeId: IdentifierSchema, masterId: IdentifierSchema,
     name: z.string().optional(), showMasterShapes: z.boolean().optional() })).min(1),
-  notesMasters: z.array(z.strictObject({ notesMasterId: IdentifierSchema, rootNodeId: IdentifierSchema, themeId: IdentifierSchema })),
+  notesMasters: z.array(z.strictObject({ notesMasterId: IdentifierSchema, rootNodeId: IdentifierSchema, themeId: IdentifierSchema, textStyle: IdentifierSchema.optional() })),
   stories: z.array(z.discriminatedUnion("kind", [
-    z.strictObject({ storyId: IdentifierSchema, rootNodeId: IdentifierSchema, kind: z.literal("notes"), slideId: IdentifierSchema, notesMasterId: IdentifierSchema.optional() }),
+    z.strictObject({ storyId: IdentifierSchema, rootNodeId: IdentifierSchema, kind: z.literal("notes"), slideId: IdentifierSchema, notesMasterId: IdentifierSchema.optional(), bodyNodeId: IdentifierSchema.optional() }),
     z.strictObject({ storyId: IdentifierSchema, rootNodeId: IdentifierSchema, kind: z.literal("comment"), slideId: IdentifierSchema.optional() }),
   ])),
   objects: z.array(PresentationObjectSchema),
   charts: z.array(PresentationChartSchema),
   dataSets: z.array(PresentationDataSetSchema),
-  comments: z.array(z.strictObject({ annotationId: IdentifierSchema, format: z.enum(["classic", "modern"]) })),
+  commentAuthors: z.array(z.strictObject({ authorId: IdentifierSchema, format: z.enum(["classic", "modern"]), nativeId: IdentifierSchema,
+    userId: z.string().optional(), providerId: z.string().optional() })).optional(),
+  comments: z.array(z.strictObject({ annotationId: IdentifierSchema, format: z.enum(["classic", "modern"]), authorId: IdentifierSchema.optional(),
+    recoveryStatus: z.enum(["open", "resolved", "closed"]).optional(),
+    replyAuthors: z.array(z.strictObject({ replyId: IdentifierSchema, authorId: IdentifierSchema })).optional() })),
   hyperlinks: z.array(z.strictObject({ nodeId: IdentifierSchema, target: z.string().min(1).optional(), slideId: IdentifierSchema.optional() })),
 });
 export type PresentationMetadata = z.infer<typeof PresentationMetadataSchema>;
