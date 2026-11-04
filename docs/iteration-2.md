@@ -1,6 +1,6 @@
 # 第二轮实施细则：PPT 编辑与独立文件闭环
 
-**状态：R2-01 至 R2-13 已完成并合并；R2-14 至 R2-16 的原生导出、PDF/PNG、Playground 和独立打包闭环已实现并通过本地验收；交付合并须通过最终提交的全部 CI。** 实现范围和结果见 [Presentation 模型](presentation-model.md)、[独立样例](../examples/pptx/README.md)、[编辑闭环](presentation-editing.md)及 [PPTX 导出与验收](pptx-export.md)。PowerPoint/WPS 尚未实机验证。 R1-14 [独立 Word 闭环](word-closure.md)已完成，按用户决定延后 R1-15 达智接入，保留原任务编号及 R1-16 尚未完成的宿主验收项。当前进入第二轮 PPT；达智验证恢复时间另行安排，不作为第二轮启动条件。
+**状态：R2-01 至 R2-16 独立 PPT 闭环已完成并合并。** R2-14 至 R2-16 经 [PR #22](https://github.com/RobotSe7en/dagent-office/pull/22) 合并，合并提交为 `329835c`，最终 head `06634d5` 的[全部 CI](https://github.com/RobotSe7en/dagent-office/actions/runs/41252174219) 已通过。 实现范围和结果见 [Presentation 模型](presentation-model.md)、[独立样例](../examples/pptx/README.md)、[编辑闭环](presentation-editing.md)及 [PPTX 导出与验收](pptx-export.md)。PowerPoint/WPS 尚未实机验证。 R1-14 [独立 Word 闭环](word-closure.md)已完成，按用户决定延后 R1-15 达智接入，保留原任务编号及 R1-16 尚未完成的宿主验收项。当前进入[第三轮 Excel](iteration-3.md)；达智验证恢复时间另行安排。
 
 本细则记录已定决策、能力范围、依赖和验收门槛，具体实现及验收结果随交付更新。[总体架构](architecture.md)定义包职责，[三格式模型](data-model.md)定义唯一来源，[文档格式](document-format.md)和[交互协议](editing-protocol.md)定义文档与事务边界；第一轮历史任务见[第一轮细则](iteration-1.md)，五轮路线见[整体计划](implementation-plan.md)。
 
@@ -246,11 +246,11 @@ R2-14～R2-16 的实现与可复验入口见 [PPTX 原生导出与闭环](pptx-e
 
 外部 Office 验收固定到官方归档与 SHA-256 校验的 LibreOffice 25.8.1.1。CI 原有 24.2 在未使用布局重存时产生重复原生身份，已隔离复现并保留严格拒绝；没有通过放宽读取或跳过实际编辑门槛规避，详见[开发环境](development.md#依赖与状态)。
 
-上述结果是第二轮独立 PPT 的验收，PowerPoint/WPS 明确未实机验证。R1-15 达智接入仍延期，R1-16 的宿主验收仍未完成。阶段合并仍要求最终提交的全部 CI 通过。
+上述结果是第二轮独立 PPT 的验收，PowerPoint/WPS 明确未实机验证。R1-15 达智接入仍延期，R1-16 的宿主验收仍未完成。本阶段已通过 PR #22 合并；后续阶段继续要求最终提交的全部 CI 通过。
 
 ## 阶段交付流程
 
-用户已授权逐阶段完成第二轮、提交推送、独立审查修复复核、创建 PR 并在 CI 全绿后自动合并。阶段 A 与 R2-07 已合并；余下按“R2-08 至 R2-13 编辑闭环”和“R2-14 至 R2-16 导出与验收”两个 PR 交付。每份交付写明实际通过的门槛，不能以单项检查代替整个阶段的验收。
+用户已授权逐阶段完成第二轮、提交推送、独立审查修复复核、创建 PR 并在 CI 全绿后自动合并。第二轮阶段均已合并；“R2-08 至 R2-13 编辑闭环”和“R2-14 至 R2-16 导出与验收”分别通过 PR #21 和 #22 交付。每份交付写明实际通过的门槛，不能以单项检查代替整个阶段的验收。
 
 每项实现完成后运行相应检查；按上述两个交付批次在工作分支统一提交推送，再单独对基准差异做审查，修复并复核后创建 PR。确认 PR 当前提交对应的全部 CI 检查通过后合并，再基于最新主分支继续后续任务。现有阶段依赖和 R2-06 门槛持续生效，不直接向 main 提交或发布 npm 包。
 
