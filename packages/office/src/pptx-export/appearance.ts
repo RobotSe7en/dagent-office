@@ -41,7 +41,7 @@ export function fillXml(css: Css, prefix = "--office-fill", raw: Css = {}, place
         result += "<a:gs" + attributes({ pos: integer(amount(css, stop + "-position", 0), 100000, 0, 100000) }) + ">" + colorXml(css, stop, raw, placeholder) + "</a:gs>";
     }
     const angle = amount(css, prefix + "-angle", 0);
-    return result + "</a:gsLst>" + empty("a:lin", { ang: integer(((angle % 360) + 360) % 360, 60000, 0, 21600000), scaled: css[prefix + "-scaled"] === "false" ? 0 : 1 }) + "</a:gradFill>";
+    return result + "</a:gsLst>" + empty("a:lin", { ang: integer(((angle % 360) + 360) % 360, 60000, 0, 21600000), scaled: css[prefix + "-scaled"] === "true" ? 1 : 0 }) + "</a:gradFill>";
 }
 export function lineXml(css: Css, prefix = "--office-line", raw: Css = {}, placeholder = false, fallback = "none", tag = "a:ln"): string {
     const width = points(css[prefix + "-width"], css, 1), kind = css[prefix + "-kind"], color = css[prefix + "-color"];

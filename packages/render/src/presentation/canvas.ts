@@ -6,7 +6,7 @@ import { hideFromViewSelection, markViewNode, measureViewContent, ownViewAttribu
 import { numeric, property, resolvedColor, svgFill } from "./appearance.js";
 import { renderChart } from "./chart.js";
 import { PresentationInheritance } from "./inheritance.js";
-import { svgElement, svgPath } from "./svg.js";
+import { svgElement } from "./svg.js";
 import { decorateLists, textTransform } from "./text.js";
 import { resolveConnector } from "./connectors.js";
 import { officeFontSegments } from "../font-scripts.js";
@@ -111,9 +111,14 @@ export function composePresentation(document: Document, model: ContentDocumentMo
           resize(width, height) {
             if (width > 1_000_000 || height > 1_000_000) throw new DocumentError("ResourceLimitExceeded", "Text auto-fit exceeds its geometry budget.");
             const resolved = evaluatePresentationPreset(preset, width, height, adjustments), rect = resolved.textRect;
+            const previousNodes = svg.querySelectorAll("*").length + 1;
+            const replacement = createDrawingGeometryView(document, computed, { preset, geometry: resolved, widthPt: width, heightPt: height, id,
+              fillFallback: boxPaint ?? (definition.kind === "geometry" && preset !== "line" ? "#4472c4" : "none"),
+              strokeFallback: definition.kind === "connector" || preset === "line" ? "#000000" : "none", maxNodes: limits.maxNodes - count + previousNodes });
+            account(replacement.querySelectorAll("*").length + 1 - previousNodes);
             styleView(node, { width: width + "pt", height: height + "pt" });
             svg.setAttribute("viewBox", `0 0 ${Math.max(width, 0.001)} ${Math.max(height, 0.001)}`); svg.style.width = width + "pt"; svg.style.height = height + "pt";
-            const paths = [...svg.querySelectorAll<SVGPathElement>(":scope > path")]; resolved.paths.forEach((path, index) => paths[index]!.setAttribute("d", svgPath(path)));
+            svg.replaceChildren(...replacement.childNodes);
             if (rect) {
               const geometryStyle = document.createElement("div").style; geometryStyle.cssText = textTransform(node, rect);
               for (const name of geometryStyle) content.style.setProperty(name, geometryStyle.getPropertyValue(name));
@@ -166,7 +171,7 @@ export function composePresentation(document: Document, model: ContentDocumentMo
     if (fill === "solid") styleView(slide, { "background-color": resolvedColor(document, s, "--office-fill") });
     else if (fill === "linear") {
       const background = markViewNode(svgElement(document, "svg", { width: "100%", height: "100%", viewBox: `0 0 ${size.width} ${size.height}` })); background.style.cssText = "position:absolute;inset:0;pointer-events:none";
-      background.append(svgElement(document, "rect", { width: size.width, height: size.height, fill: svgFill(document, s, background, "slide-bg-" + index) })); slide.prepend(background);
+      background.append(svgElement(document, "rect", { width: size.width, height: size.height, fill: svgFill(document, s, background, "slide-bg-" + index, { x: 0, y: 0, width: size.width, height: size.height }) })); slide.prepend(background);
     }
     const instanceIds = new Set<string>(); instancesBySlide.set(slide.dataset.nodeId!, instanceIds);
     const inherited: HTMLElement[] = [];

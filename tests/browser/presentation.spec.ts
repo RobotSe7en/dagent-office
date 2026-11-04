@@ -149,13 +149,16 @@ test("normal and shape auto-fit remain derived and print retains resolved inheri
   const metadata = JSON.parse(decoder.decode(files.get("metadata.json"))) as { presentation: { objects: { kind: string; text?: { autoFit: string; wrap: boolean } }[] } };
   const object = metadata.presentation.objects.find(o => o.kind === "text")!; object.text = { autoFit: "normal", wrap: true };
   files.set("metadata.json", encoder.encode(JSON.stringify(metadata)));
-  files.set("content.html", encoder.encode(decoder.decode(files.get("content.html")).replace('data-office-height="360"', 'data-office-height="70"').replace(/data-office-height="[\d.]+"/, 'data-office-height="70"')));
+  files.set("content.html", encoder.encode(decoder.decode(files.get("content.html")).replace('data-office-height="360"', 'data-office-height="70"').replace(/data-office-height="[\d.]+"/, 'data-office-height="70"').replace('--office-fill-kind:none', '--office-fill-kind:linear')));
+  files.set("styles.css", encoder.encode(decoder.decode(files.get("styles.css")) + '\n[data-office-kind="text"]{--office-fill-kind:linear;--office-fill-angle:90;--office-fill-stop-count:2;--office-fill-stop-0-position:0;--office-fill-stop-0-color:#ff0000;--office-fill-stop-1-position:1;--office-fill-stop-1-color:#0000ff}'));
   await mount(page, files);
   const normal = await page.frameLocator("iframe").locator('section[data-office-kind="slide"] .sdk-ppt-text').evaluate(node => ({ height: node.clientHeight, scroll: node.scrollHeight, font: parseFloat(getComputedStyle(node.querySelector("[data-office-script]")!).fontSize) }));
   expect(normal.scroll).toBeLessThanOrEqual(normal.height + 1); expect(normal.font).toBeLessThan(32);
   object.text.autoFit = "shape"; files.set("metadata.json", encoder.encode(JSON.stringify(metadata))); await mount(page, files);
   const shape = await page.frameLocator("iframe").locator('section[data-office-kind="slide"] .sdk-ppt-text').evaluate(node => ({ height: node.clientHeight, scroll: node.scrollHeight, font: parseFloat(getComputedStyle(node.querySelector("[data-office-script]")!).fontSize) }));
   expect(shape.height).toBeGreaterThan(100); expect(shape.scroll).toBeLessThanOrEqual(shape.height + 1); expect(shape.font).toBeCloseTo(32, 1);
+  const gradient = await page.frameLocator("iframe").locator('section[data-office-kind="slide"] [data-office-kind="text"] > svg').first().evaluate(node => ({ height: (node as SVGSVGElement).viewBox.baseVal.height, y1: Number(node.querySelector('linearGradient')!.getAttribute('y1')), y2: Number(node.querySelector('linearGradient')!.getAttribute('y2')) }));
+  expect(gradient.height).toBeGreaterThan(70); expect(gradient.y1).toBeCloseTo(0, 8); expect(gradient.y2).toBeCloseTo(gradient.height, 8);
   expect(await page.evaluate(() => window.presentationHost.model!.snapshot().html)).toContain('data-office-height="70"');
   await mount(page, fixture("02-theme-placeholders"));
   const print = await page.evaluate(() => {

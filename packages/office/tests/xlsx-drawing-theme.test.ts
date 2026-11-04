@@ -34,6 +34,12 @@ describe("workbook drawing theme definitions", () => {
     expect(css).toContain("--office-fill-stop-0-lum-mod:0.8"); expect(css).toContain("--office-fill-stop-0-alpha:0.5");
     expect(css).toContain("--office-shadow-blur:2pt"); expect(css).toContain("--office-shadow-distance:3pt");
     expect(css).toContain("--office-shadow-color:var(--office-theme-accent2)");
+    expect(css).toContain("--office-fill-scaled:true"); expect(css).toContain("--office-fill-rotate-with-shape:false");
+  });
+  it("keeps omitted native gradient attributes available for theme/style inheritance", () => {
+    const source = styles(xml => xml.replace(solid, '<a:gradFill><a:gsLst><a:gs pos="0"><a:srgbClr val="FF0000"/></a:gs><a:gs pos="100000"><a:srgbClr val="0000FF"/></a:gs></a:gsLst><a:lin/></a:gradFill>'));
+    const css = source.stylesheet(); expect(css).toContain('--office-fill-kind:linear');
+    for (const field of ['--office-fill-angle:', '--office-fill-scaled:', '--office-fill-rotate-with-shape:']) expect(css).not.toContain(field);
   });
   it("rejects unknown, repeated, unrepresentable or dangling native style definitions", () => {
     const edits = [

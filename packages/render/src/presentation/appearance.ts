@@ -1,5 +1,7 @@
 import { DocumentError } from "@dagent-office/core";
 import { svgElement } from "./svg.js";
+import { drawingGradientLine } from "../drawing-gradient.js";
+import type { DrawingGradientBounds } from "../drawing-gradient.js";
 
 export const property = (style: CSSStyleDeclaration, name: string, fallback = ""): string => style.getPropertyValue(name).trim() || fallback;
 export function cssStringValue(value: string): string {
@@ -37,17 +39,25 @@ export function resolvedColor(document: Document, style: CSSStyleDeclaration, pr
   const alpha = Math.max(0, Math.min(1, nativeAlpha * numeric(style, prefix + "-alpha", 1)));
   return `rgba(${values.join(",")},${alpha})`;
 }
-export function svgFill(document: Document, style: CSSStyleDeclaration, svg: SVGSVGElement, id: string, prefix = "--office-fill", fallback = "none", account?: (amount: number) => void): string {
+export function svgFill(document: Document, style: CSSStyleDeclaration, svg: SVGSVGElement, id: string, bounds: DrawingGradientBounds, prefix = "--office-fill", fallback = "none", account?: (amount: number) => void): string {
   const kind = property(style, prefix + "-kind");
   if (kind === "none") return "none";
   if (kind !== "linear") return kind === "solid" || property(style, prefix + "-color") ? resolvedColor(document, style, prefix) : fallback === "none" ? "none" : resolvedColor(document,style,prefix,fallback);
   const count = numeric(style, prefix + "-stop-count", 0);
   if (!Number.isSafeInteger(count) || count < 2 || count > 1024) throw new DocumentError("ResourceLimitExceeded", "A presentation gradient exceeds its stop budget.");
   account?.(count + 2);
-  const angle = numeric(style, prefix + "-angle", 0) * Math.PI / 180;
-  const dx = Math.cos(angle), dy = Math.sin(angle), extent = Math.abs(dx) + Math.abs(dy);
-  const gradient = svgElement(document, "linearGradient", { id, x1: (1 - dx / extent) / 2, y1: (1 - dy / extent) / 2, x2: (1 + dx / extent) / 2, y2: (1 + dy / extent) / 2 });
-  for (let n = 0; n < count; n++) gradient.append(svgElement(document, "stop", { offset: property(style, prefix + "-stop-" + n + "-position", "0"), "stop-color": resolvedColor(document, style, prefix + "-stop-" + n) }));
+  const scaled = property(style, prefix + "-scaled", "false");
+  if (scaled !== "true" && scaled !== "false") throw new DocumentError("InvalidDocument", "A drawing gradient scale flag must be a boolean.");
+  const angle = property(style, prefix + "-angle", "0");
+  if (!/^-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(angle)) throw new DocumentError("InvalidDocument", "A drawing gradient angle must be a source number.");
+  const line = drawingGradientLine(bounds, Number(angle), scaled === "true");
+  const gradient = svgElement(document, "linearGradient", { id, gradientUnits: "userSpaceOnUse", "color-interpolation": "sRGB", ...line });
+  let previous = -1;
+  for (let n = 0; n < count; n++) {
+    const raw = property(style, prefix + "-stop-" + n + "-position"), position = Number(raw);
+    if (!raw || !Number.isFinite(position) || position < 0 || position > 1 || position < previous) throw new DocumentError("InvalidDocument", "Drawing gradient stops require ordered positions in [0,1].");
+    previous = position; gradient.append(svgElement(document, "stop", { offset: position, "stop-color": resolvedColor(document, style, prefix + "-stop-" + n) }));
+  }
   const defs = svgElement(document, "defs"); defs.append(gradient); svg.append(defs); return `url(#${id})`;
 }
 export function strokeAttributes(document: Document, style: CSSStyleDeclaration, prefix = "--office-line", fallback = "none"): Record<string, string | number> {

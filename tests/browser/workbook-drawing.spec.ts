@@ -8,8 +8,9 @@ import { projectXlsxRecords } from '../../packages/office/tests/helpers/xlsx-rec
 import type { measureContentSource, rejectContentSource } from './fixtures/workbook-content-source.js';
 import type { measureImageView, disposeImageView } from './fixtures/workbook-image-view.js';
 import type { measureObjectGeometry } from './fixtures/workbook-object-geometry.js';
+import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
 
-declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView; measureObjectGeometry: typeof measureObjectGeometry } } }
+declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView; measureObjectGeometry: typeof measureObjectGeometry; measureDrawingGradients: typeof measureDrawingGradients } } }
 const inputs: { name: string; snapshot: WorkbookSnapshot; text: Record<string, string>; resources: Record<string, string> }[] = [];
 let code = '';
 test.beforeAll(async () => {
@@ -45,6 +46,23 @@ for (const rtl of [false, true]) test(`cropped worksheet pictures retain full ro
   }
 });
 test.beforeEach(async ({ page }) => { await page.goto('/'); await page.addScriptTag({ content: code }); });
+
+test('physical DrawingML gradients preserve diagonal stop coverage and the scaled flag in browser pixels', async ({ page }) => {
+  const result = await page.evaluate(() => window.workbookContentHost.measureDrawingGradients());
+  expect(result.errors).toEqual(Array(4).fill('InvalidDocument'));
+  for (const entry of result.cases) {
+    expect(entry.units).toBe('userSpaceOnUse');
+    const expected = entry.scaled ? [0, 0, 200, 100] : [25, -25, 175, 125];
+    entry.coordinates.forEach((value, index) => expect(value).toBeCloseTo(expected[index]!, 8));
+    // Expected physical projection at pixel centers, independent of the SVG implementation.
+    const coordinates = [[.5, .5], [199.5, .5], [.5, 99.5], [199.5, 99.5], [99.5, 49.5]];
+    entry.pixels.forEach((pixel, index) => {
+      const [x, y] = coordinates[index]!, t = entry.scaled ? (2 * x! + y!) / 500 : (x! + y!) / 300;
+      const expectedPixel = [255 * (1 - t), 0, 255 * t, 255];
+      pixel.forEach((channel, index) => expect(Math.abs(channel - expectedPixel[index]!)).toBeLessThanOrEqual(2));
+    });
+  }
+});
 
 test('workbook geometry shares preset paths, native colors and bounded gradient/arrow primitives', async ({ page }) => {
   for (const input of inputs.filter(input => input.name.endsWith('08-images-shapes'))) {

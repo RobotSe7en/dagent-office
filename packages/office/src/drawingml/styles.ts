@@ -55,9 +55,12 @@ export function fill(source: XmlNode | undefined, prefix = "--office-fill"): Css
     if (!linear || !stops) unsupported(item, "Only explicit linear gradients are supported.");
     const list = elements(stops, "gs", A);
     if (list.length < 2) fail(stops, "A gradient requires at least two stops.");
-    css[prefix + "-kind"] = "linear"; css[prefix + "-angle"] = String(integer(linear, "ang", 0) / 60000);
-    css[prefix + "-scaled"] = String(bool(linear, "scaled", true));
-    css[prefix + "-rotate-with-shape"] = String(bool(item, "rotWithShape", true));
+    css[prefix + "-kind"] = "linear";
+    // Optional gradient attributes may inherit from a referenced theme/style.
+    // The final native defaults are angle=0, scaled=false, rotWithShape=true.
+    if (value(linear, "ang") !== undefined) css[prefix + "-angle"] = String(integer(linear, "ang", 0) / 60000);
+    if (value(linear, "scaled") !== undefined) css[prefix + "-scaled"] = String(bool(linear, "scaled", false));
+    if (value(item, "rotWithShape") !== undefined) css[prefix + "-rotate-with-shape"] = String(bool(item, "rotWithShape", true));
     css[prefix + "-stop-count"] = String(list.length);
     let previous = -1;
     list.forEach((stop, index) => {

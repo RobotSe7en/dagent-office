@@ -19,7 +19,7 @@ export function createDrawingGeometryView(document: Document, style: CSSStyleDec
   account(1);
   const svg = markViewNode(svgElement(document, "svg", { width: "100%", height: "100%", viewBox: `0 0 ${Math.max(widthPt, .001)} ${Math.max(heightPt, .001)}`, "aria-hidden": "true", "data-sdk-preset": input.preset }));
   svg.style.cssText = `position:absolute;left:0;top:0;width:${Math.max(widthPt, .001)}pt;height:${Math.max(heightPt, .001)}pt;overflow:visible;pointer-events:none`;
-  const fill = svgFill(document, style, svg, id + "-fill", "--office-fill", input.fillFallback ?? "none", account);
+  const fill = svgFill(document, style, svg, id + "-fill", { x: 0, y: 0, width: widthPt, height: heightPt }, "--office-fill", input.fillFallback ?? "none", account);
   for (const [index, path] of input.geometry.paths.entries()) {
     account(1);
     const drawing = svgElement(document, "path", { d: svgPath(path), fill: path.fill ? fill : "none", ...strokeAttributes(document, style, "--office-line", input.strokeFallback ?? "none") });

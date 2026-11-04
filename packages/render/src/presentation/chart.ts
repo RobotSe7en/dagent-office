@@ -3,6 +3,7 @@ import type { DeepReadonly, PresentationChart, PresentationDataSet } from "@dage
 import { markViewNode, ownViewAttribute } from "../view-nodes.js";
 import { cssStringValue, numeric, property, resolvedColor, strokeAttributes, svgFill } from "./appearance.js";
 import { svgElement as createSvgElement } from "./svg.js";
+import type { DrawingGradientBounds } from "../drawing-gradient.js";
 
 const palette = ["#4472c4", "#ed7d31", "#a5a5a5", "#ffc000", "#5b9bd5", "#70ad47"];
 export function formatChartNumber(value: number, format = "General"): string {
@@ -53,13 +54,13 @@ export function renderChart(node: HTMLElement, chart: DeepReadonly<PresentationC
   const top = titleHeight + (chart.kind === "pie" ? 15 : 18) + (chart.legend === "top" ? legendBand : 0) + (categoryTop ? 16 : 0);
   const right = width - (chart.kind === "pie" ? 12 : valueRight ? 28 : 16) - (chart.legend === "right" ? legendBand : 0), bottom = height - (chart.kind === "pie" ? 8 : categoryTop ? 12 : 26) - (chart.legend === "bottom" ? legendBand : 0);
   const w = Math.max(1, right - left), h = Math.max(1, bottom - top);
-  svg.append(svgElement(document, "rect", { x: left, y: top, width: w, height: h, fill: svgFill(document, plotStyle, svg, serial + "-plot", "--office-fill", "none", account), ...strokeAttributes(document, plotStyle) }));
+  svg.append(svgElement(document, "rect", { x: left, y: top, width: w, height: h, fill: svgFill(document, plotStyle, svg, serial + "-plot", { x: left, y: top, width: w, height: h }, "--office-fill", "none", account), ...strokeAttributes(document, plotStyle) }));
   const seriesStyle = new Map(data.series.map(series => [series.seriesId, style(chart.seriesStyles?.find(s => s.seriesId === series.seriesId)?.cssClass)]));
   const pointStyle = (seriesId: string, index: number): CSSStyleDeclaration => {
     const series = chart.seriesStyles?.find(s => s.seriesId === seriesId), point = chart.pointStyles?.find(p => p.seriesId === seriesId && p.index === index);
     return point ? style([series?.cssClass, point.cssClass].filter(Boolean).join(" ")) : seriesStyle.get(seriesId)!;
   };
-  const fill = (seriesId: string, index: number, s: CSSStyleDeclaration): string => svgFill(document, s, svg, serial + "-paint-" + ++paintSerial, "--office-fill", palette[(chart.kind === "pie" ? index : data.series.findIndex(d => d.seriesId === seriesId)) % palette.length]!, account);
+  const fill = (seriesId: string, index: number, s: CSSStyleDeclaration, bounds: DrawingGradientBounds): string => svgFill(document, s, svg, serial + "-paint-" + ++paintSerial, bounds, "--office-fill", palette[(chart.kind === "pie" ? index : data.series.findIndex(d => d.seriesId === seriesId)) % palette.length]!, account);
   const label = (series: DeepReadonly<PresentationDataSet>["series"][number], index: number, value: number, x: number, y: number, percent?: number, baseline?: number): void => {
     if (!chart.showLabels) return;
     const seriesDefinition = chart.seriesStyles?.find(s => s.seriesId === series.seriesId), point = chart.pointStyles?.find(p => p.seriesId === series.seriesId && p.index === index);
@@ -86,7 +87,11 @@ export function renderChart(node: HTMLElement, chart: DeepReadonly<PresentationC
     series.values.forEach((value, index) => {
       if (value === null || value <= 0 || !sum) return;
       const fraction = value / normalizer / sum, sweep = fraction * Math.PI * 2, end = angle + sweep, middle = angle + sweep / 2;
-      const s = pointStyle(series.seriesId, index), appearance = { fill: fill(series.seriesId, index, s), ...strokeAttributes(document, s) };
+      const points = [[cx, cy], [cx + radius * Math.cos(angle), cy + radius * Math.sin(angle)], [cx + radius * Math.cos(end), cy + radius * Math.sin(end)]];
+      for (let quadrant = Math.ceil(angle / (Math.PI / 2)); quadrant * Math.PI / 2 <= end; quadrant++) points.push([cx + radius * Math.cos(quadrant * Math.PI / 2), cy + radius * Math.sin(quadrant * Math.PI / 2)]);
+      const xs = points.map(point => point[0]!), ys = points.map(point => point[1]!);
+      const bounds = { x: Math.min(...xs), y: Math.min(...ys), width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys) };
+      const s = pointStyle(series.seriesId, index), appearance = { fill: fill(series.seriesId, index, s, bounds), ...strokeAttributes(document, s) };
       if (sweep >= Math.PI * 2 - 1e-9) svg.append(svgElement(document, "circle", { cx, cy, r: radius, ...appearance }));
       else svg.append(svgElement(document, "path", { d: `M${cx} ${cy}L${cx + radius * Math.cos(angle)} ${cy + radius * Math.sin(angle)}A${radius} ${radius} 0 ${sweep > Math.PI ? 1 : 0} 1 ${cx + radius * Math.cos(end)} ${cy + radius * Math.sin(end)}Z`, ...appearance }));
       label(series, index, value, cx + radius * 0.65 * Math.cos(middle), cy + radius * 0.65 * Math.sin(middle), fraction); angle = end;
@@ -140,12 +145,16 @@ export function renderChart(node: HTMLElement, chart: DeepReadonly<PresentationC
         const value = raw ?? (chart.blankAs === "zero" ? 0 : null);
         if (value === null) { if (chart.blankAs !== "span") connected = false; return; }
         const px = x(index), py = y(value), point = pointStyle(series.seriesId, index);
-        if (chart.kind === "column") svg.append(svgElement(document, "rect", { x: px - total / 2 + seriesIndex * bar * (1 - overlap), y: Math.min(py, baseline), width: bar, height: Math.abs(py - baseline), fill: fill(series.seriesId, index, point), ...strokeAttributes(document, point) }));
+        if (chart.kind === "column") {
+          const bounds = { x: px - total / 2 + seriesIndex * bar * (1 - overlap), y: Math.min(py, baseline), width: bar, height: Math.abs(py - baseline) };
+          svg.append(svgElement(document, "rect", { ...bounds, fill: fill(series.seriesId, index, point, bounds), ...strokeAttributes(document, point) }));
+        }
         else {
           segments.push((connected ? "L" : "M") + px + " " + py); connected = true;
           const definition = chart.seriesStyles?.find(d => d.seriesId === series.seriesId), marker = definition?.marker ?? "none", radius = (definition?.markerSize ?? 5) / 2;
           if (marker !== "none") {
-            const color = fill(series.seriesId, index, point);
+            const extent = marker === "dot" ? 1 : radius;
+            const color = fill(series.seriesId, index, point, { x: px - extent, y: py - extent, width: extent * 2, height: extent * 2 });
             if (marker === "circle" || marker === "dot") svg.append(svgElement(document, "circle", { cx: px, cy: py, r: marker === "dot" ? 1 : radius, fill: color }));
             else if (marker === "square") svg.append(svgElement(document, "rect", { x: px - radius, y: py - radius, width: radius * 2, height: radius * 2, fill: color }));
             else {
@@ -169,7 +178,7 @@ export function renderChart(node: HTMLElement, chart: DeepReadonly<PresentationC
       const y = horizontal ? chart.legend === "top" ? top - 14 : height - 14 : top + h / 2 + (index - (entries.length - 1) / 2) * slot;
       const s = entry.index >= 0 ? pointStyle(entry.series.seriesId, entry.index) : seriesStyle.get(entry.series.seriesId)!;
       if (chart.kind === "line") svg.append(svgElement(document, "line", { x1: x, y1: y, x2: x + keyWidth, y2: y, ...strokeAttributes(document, s, "--office-line", palette[index % palette.length]!) }));
-      else svg.append(svgElement(document, "rect", { x, y: y - 3, width: keyWidth, height: 7, fill: fill(entry.series.seriesId, Math.max(0, entry.index), s) }));
+      else svg.append(svgElement(document, "rect", { x, y: y - 3, width: keyWidth, height: 7, fill: fill(entry.series.seriesId, Math.max(0, entry.index), s, { x, y: y - 3, width: keyWidth, height: 7 }) }));
       text(entry.name, x + keyWidth + 3, y + 1, legendStyle, "start");
     });
   }

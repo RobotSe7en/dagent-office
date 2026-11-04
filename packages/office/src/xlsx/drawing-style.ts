@@ -47,7 +47,7 @@ export function validateDrawingFill(node: XmlNode): void {
   const values = elements(stops, "gs", A);
   if (values.length < 2 || values.length > 1024) fail(stops, "A drawing gradient requires between 2 and 1024 stops.");
   for (const stop of values) { attributes(stop, ["pos"]); integer(stop, "pos", 0, 100000); validateDrawingColorContainer(stop); }
-  empty(linear, ["ang", "scaled"]); integer(linear, "ang", 0, 21600000 - 1, 0); boolean(linear, "scaled", true);
+  empty(linear, ["ang", "scaled"]); integer(linear, "ang", 0, 21600000 - 1, 0); boolean(linear, "scaled", false);
   if (tile) { empty(tile, ["l", "r", "t", "b"]); for (const side of ["l", "r", "t", "b"]) if (integer(tile, side, -2147483648, 2147483647, 0)) unsupported(tile, "Offset gradient tiles are not supported."); }
 }
 export function validateDrawingLine(node: XmlNode): void {
