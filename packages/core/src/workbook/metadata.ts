@@ -1,3 +1,4 @@
+import { validateWorkbookHyperlink } from "./hyperlinks.js";
 import type { WorkbookMetadata, WorkbookPrint } from "../contracts/workbook.js";
 import { checkLimit, invalid } from "../document/validation.js";
 import { checkRange, checkNonOverlappingRanges } from "./ranges.js";
@@ -30,14 +31,7 @@ export function validateWorkbookMetadata(workbook: WorkbookMetadata, classes: Re
     checkNonOverlappingRanges(sheet.merges);
     // Overlapping links would make a cell's navigation target ambiguous.
     checkNonOverlappingRanges((sheet.hyperlinks ?? []).map(link => link.range));
-    for (const link of sheet.hyperlinks ?? []) {
-      if (!link.url && !link.location) invalid("A workbook hyperlink requires a target.");
-      if (link.url !== undefined && (!/^(https?:\/\/|mailto:)/i.test(link.url) || /[\u0000-\u0020\u007f]/.test(link.url))) invalid("A workbook hyperlink has an unsupported target.");
-      if (link.location !== undefined) {
-        const target = parseFormula("=" + link.location, { row: 0, column: 0 });
-        if (!["name", "cell", "range"].includes(target.kind)) invalid("A workbook internal hyperlink must reference a name or cell range.");
-      }
-    }
+    for (const link of sheet.hyperlinks ?? []) validateWorkbookHyperlink(link);
     items += sheet.hyperlinks?.length ?? 0;
     if (sheet.print) items += validatePrint(sheet.print, classExists);
     items += validateWorkbookRules(sheet, ruleIds, classExists, formatExists, maxItems);

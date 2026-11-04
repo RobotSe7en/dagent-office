@@ -54,4 +54,13 @@ describe("workbook auxiliary drawing source", () => {
     expect(openDocument(files, { kind: "workbook" }).snapshot().metadata.workbook.objects?.[0]?.anchor).toMatchObject({ widthPt: 0, heightPt: 0 });
     expect(() => openDocument(files, { limits: { maxNodes: 4 } })).toThrowError(expect.objectContaining({ code: "ResourceLimitExceeded" }));
   });
+  it("binds safe object hyperlinks to their owned source and validates paragraph end styles", () => {
+    const files = seeded((_, metadata) => { metadata.workbook.objectHyperlinks = [{ nodeId: "run", location: "'Sheet 1'!A1", tooltip: "说明" }, { nodeId: "image", url: "https://example.test/source" }]; });
+    expect(openDocument(files, { kind: "workbook" }).snapshot().metadata.workbook.objectHyperlinks).toHaveLength(2);
+    for (const link of [{ nodeId: "content", url: "https://example.test" }, { nodeId: "missing", location: "A1" }, { nodeId: "run", url: "javascript:run()" }, { nodeId: "run", location: "SUM(A1:A3)" }]) {
+      expect(() => openDocument(seeded((_, metadata) => { metadata.workbook.objectHyperlinks = [link]; }))).toThrow();
+    }
+    expect(() => openDocument(seeded((_, metadata) => { metadata.workbook.objectHyperlinks = [{ nodeId: "run", location: "A1" }, { nodeId: "run", location: "A2" }]; }))).toThrow();
+    expect(() => openDocument(seeded(undefined, source => source.replace('<p data-node-id="paragraph">', '<p data-node-id="paragraph" data-office-end-style="missing">')))).toThrow();
+  });
 });

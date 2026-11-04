@@ -1,6 +1,9 @@
 import { A, check, elements, fail, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import { attributes, boolean, integer, one, value } from "./values.js";
+import type { Css } from "../ooxml/styles.js";
+import { effects, fill, onlyColor, outline, paint } from "../drawingml/styles.js";
+import type { XlsxStyles } from "./styles.js";
 
 function empty(node: XmlNode, names: readonly string[] = []): void { attributes(node, names); check(node, [], A); }
 function enumeration(node: XmlNode, name: string, values: readonly string[]): void {
@@ -71,4 +74,42 @@ export function validateDrawingEffects(node: XmlNode): void {
   for (const name of ["blurRad", "dist"]) integer(shadow, name, 0, 27273042316900, 0);
   enumeration(shadow, "algn", ["tl", "t", "tr", "l", "ctr", "r", "bl", "b", "br"]);
   boolean(shadow, "rotWithShape", true);
+}
+
+export function drawingAppearance(source: XmlNode | undefined, properties: XmlNode, styles: XlsxStyles): string {
+  const classes: string[] = [], line = one(properties, "ln", A), effect = one(properties, "effectLst", A);
+  const fills = elements(properties, undefined, A).filter(node => ["noFill", "solidFill", "gradFill"].includes(node.name));
+  if (fills.length > 1) fail(properties, "An object fill is repeated.");
+  fills.forEach(validateDrawingFill); if (line) validateDrawingLine(line); if (effect) validateDrawingEffects(effect);
+  const css: Css = { ...fill(properties), ...outline(line), ...effects(effect) };
+  if (source) {
+    attributes(source, []); check(source, ["lnRef", "fillRef", "effectRef", "fontRef"], A);
+    for (const [tag, kind] of [["lnRef", "line"], ["fillRef", "fill"], ["effectRef", "effect"]] as const) {
+      const reference = one(source, tag, A); if (!reference) fail(source, "A native shape style reference is incomplete.");
+      attributes(reference, ["idx"]); validateDrawingColorContainer(reference, true);
+      const index = integer(reference, "idx"), background = kind === "fill" && index >= 1000, list = background ? "background" : kind;
+      if (index === 0 || background && index === 1000) { if (kind !== "effect") css[`--office-${kind}-kind`] ??= "none"; }
+      else {
+        const name = styles.drawingTheme[list][index - (background ? 1001 : 1)];
+        if (!name) fail(reference, "A drawing references an undefined theme style."); classes.push(name);
+      }
+      if (elements(reference, undefined, A).length) {
+        const color = onlyColor(reference); if (color.css.includes("--office-placeholder-color")) fail(reference, "A shape style color cannot refer to itself.");
+        paint(css, `--office-${list}-reference`, color);
+      }
+    }
+    const font = one(source, "fontRef", A); if (!font) fail(source, "A shape style font reference is missing.");
+    attributes(font, ["idx"]); validateDrawingColorContainer(font, true);
+    const role = value(font, "idx"); if (!role || !["none", "major", "minor"].includes(role)) fail(font, "A shape font reference is invalid.");
+    if (role !== "none") {
+      for (const script of ["ascii", "h-ansi", "east-asia", "complex-script"]) css[`--office-font-${script}`] = `var(--office-${role}-${script})`;
+      css["font-family"] = "var(--office-font-ascii),var(--office-font-east-asia)";
+    }
+    if (elements(font, undefined, A).length) {
+      const color = onlyColor(font); if (color.css.includes("--office-placeholder-color")) fail(font, "A shape font color cannot refer to itself.");
+      paint(css, "--office-text", color); css.color = color.css;
+    }
+  }
+  const direct = styles.objectStyle(css); if (direct) classes.push(direct);
+  return classes.join(" ");
 }

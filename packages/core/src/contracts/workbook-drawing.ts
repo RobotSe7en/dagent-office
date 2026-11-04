@@ -20,16 +20,22 @@ export const WorkbookDrawingAnchorSchema = z.discriminatedUnion("kind", [
 export type WorkbookDrawingAnchor = z.infer<typeof WorkbookDrawingAnchorSchema>;
 
 export const WorkbookPresetSchema = DrawingPresetSchema;
+export const WorkbookDrawingLocksSchema = z.strictObject({
+  noGrp: z.boolean().optional(), noSelect: z.boolean().optional(), noRot: z.boolean().optional(), noChangeAspect: z.boolean().optional(),
+  noMove: z.boolean().optional(), noResize: z.boolean().optional(), noEditPoints: z.boolean().optional(), noAdjustHandles: z.boolean().optional(),
+  noChangeArrowheads: z.boolean().optional(), noChangeShapeType: z.boolean().optional(), noTextEdit: z.boolean().optional(), noCrop: z.boolean().optional(),
+});
 const object = {
   nodeId: IdentifierSchema, sheetId: IdentifierSchema, anchor: WorkbookDrawingAnchorSchema,
   name: z.string().max(32767).optional(), nativeId: IdentifierSchema.optional(),
   locked: z.boolean(), printable: z.boolean(),
+  locks: WorkbookDrawingLocksSchema.optional(),
 };
 /** Anchor behavior lives in metadata; appearance, rotation/flips, crop and rich
  * text remain in the referenced HTML/CSS source, as for presentation objects. */
 export const WorkbookObjectSchema = z.discriminatedUnion("kind", [
   z.strictObject({ ...object, kind: z.literal("text"), text: DrawingTextPropertiesSchema.optional() }),
   z.strictObject({ ...object, kind: z.literal("geometry"), preset: DrawingPresetSchema, text: DrawingTextPropertiesSchema.optional() }),
-  z.strictObject({ ...object, kind: z.literal("image") }),
+  z.strictObject({ ...object, kind: z.literal("image"), preferRelativeResize: z.boolean().optional() }),
 ]);
 export type WorkbookObject = z.infer<typeof WorkbookObjectSchema>;

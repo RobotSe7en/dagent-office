@@ -141,6 +141,7 @@ export class XlsxStyles implements SheetStyles, RichTextStyles {
     return { cssClass: format.cssClass, numberFormatId: format.numberFormatId };
   }
   objectStyle(css: Css): string | undefined { return this.sharedRule(css); }
+  drawingRule(name: string, css: Css): void { this.addRule(name, css); }
   run(node: XmlNode): string | undefined { return this.sharedRule(fontDeclarations(node, this.colors, false)); }
   tabStyle(node: XmlNode): string { return this.sharedRule(colorDeclarations("--office-tab", this.colors.read(node)))!; }
   scaleColor(node: XmlNode): string { return this.sharedRule(colorDeclarations("--office-scale", this.colors.read(node)))!; }

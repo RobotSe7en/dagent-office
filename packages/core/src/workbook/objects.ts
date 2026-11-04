@@ -2,6 +2,7 @@ import type { WorkbookMetadata, WorkbookObject } from "../contracts/workbook.js"
 import type { ParsedHtml } from "../document/html.js";
 import { invalid } from "../document/validation.js";
 import { evaluatePresentationPreset } from "../presentation-geometry.js";
+import { validateWorkbookHyperlink } from "./hyperlinks.js";
 
 const numeric = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i;
 function number(value: string): number {
@@ -38,10 +39,18 @@ export function workbookObjects(workbook: WorkbookMetadata, html: ParsedHtml | u
       const crop = (side: string): number => Number(node.attributes[`data-office-crop-${side}`] ?? 0);
       if (crop("left") + crop("right") >= 1 || crop("top") + crop("bottom") >= 1) invalid("An image crop must retain a visible area.");
     } else {
-      if (node.childNodeIds.some(id => html!.peekNode(id)?.tagName !== "p") || (object.kind === "text" || object.text !== undefined) && !node.childNodeIds.length) invalid("A drawing text body requires source paragraphs.");
+      if (node.childNodeIds.some(id => html!.peekNode(id)?.tagName !== "p") || object.text !== undefined && !node.childNodeIds.length) invalid("A drawing text body requires source paragraphs.");
       evaluatePresentationPreset(object.kind === "geometry" ? object.preset : "rect", 100, 100, adjustments);
     }
     objects.set(object.nodeId, object);
+  }
+  const hyperlinks = new Set<string>();
+  for (const link of workbook.objectHyperlinks ?? []) {
+    let node = html?.peekNode(link.nodeId);
+    if (!node || hyperlinks.has(link.nodeId)) invalid("An object hyperlink requires one existing source node.");
+    while (node && !objects.has(node.nodeId)) node = node.parentNodeId ? html?.peekNode(node.parentNodeId) : undefined;
+    if (!node) invalid("An object hyperlink must belong to a declared drawing.");
+    validateWorkbookHyperlink(link); hyperlinks.add(link.nodeId);
   }
   return objects;
 }

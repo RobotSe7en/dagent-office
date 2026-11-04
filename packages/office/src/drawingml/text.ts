@@ -192,7 +192,12 @@ export function importText(context: DrawingTextContext, body: XmlNode, target: H
     for (const sourceRun of elements(source, undefined, A)) {
       if (sourceRun.name === "pPr") continue;
       if (sourceRun.name === "endParaRPr") { const c = context.id("paragraph-end"); context.rule(c, runProperties(sourceRun)); p.attrs["data-office-end-style"] = c; continue; }
-      if (sourceRun.name === "br") { p.children.push(context.make("br")); nativeText += "\v"; continue; }
+      if (sourceRun.name === "br") {
+        check(sourceRun, ["rPr"], A);
+        const lineBreak = context.make("br"), properties = child(sourceRun, "rPr", A);
+        if (properties) { context.style(lineBreak, runProperties(properties)); context.hyperlink(child(properties, "hlinkClick", A), lineBreak, part); }
+        p.children.push(lineBreak); nativeText += "\v"; continue;
+      }
       const field = sourceRun.name === "fld";
       check(sourceRun, field ? ["rPr", "pPr", "t"] : ["rPr", "t"], A);
       const run = context.make("span");

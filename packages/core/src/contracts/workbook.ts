@@ -31,6 +31,8 @@ export const WorkbookHyperlinkSchema = z.strictObject({
   tooltip: z.string().max(32767).optional(), display: z.string().max(32767).optional(),
 });
 export type WorkbookHyperlink = z.infer<typeof WorkbookHyperlinkSchema>;
+export const WorkbookObjectHyperlinkSchema = WorkbookHyperlinkSchema.omit({ range: true, display: true }).extend({ nodeId: IdentifierSchema });
+export type WorkbookObjectHyperlink = z.infer<typeof WorkbookObjectHyperlinkSchema>;
 export const WorkbookPrintRunSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("text"), text: z.string().max(32767), cssClass: IdentifierSchema.optional() }),
   z.strictObject({ kind: z.literal("field"), field: z.enum(["page", "pages", "sheet", "file", "path", "date", "time"]), cssClass: IdentifierSchema.optional() }),
@@ -119,6 +121,7 @@ export const WorkbookMetadataSchema = z.strictObject({
   commentAuthors: z.array(WorkbookCommentAuthorSchema).optional(),
   comments: z.array(WorkbookCommentSchema).optional(),
   objects: z.array(WorkbookObjectSchema).optional(),
+  objectHyperlinks: z.array(WorkbookObjectHyperlinkSchema).optional(),
   stories: z.array(z.strictObject({ storyId: IdentifierSchema, rootNodeId: IdentifierSchema, kind: z.literal("comment"), sheetId: IdentifierSchema })).optional(),
 });
 export type WorkbookMetadata = z.infer<typeof WorkbookMetadataSchema>;

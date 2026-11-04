@@ -5,7 +5,7 @@ import { attributes, boolean, one, value } from "./values.js";
 
 export const XDR = "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing";
 const minCoordinate = -27273042329600, maxCoordinate = 27273042316900;
-function coordinate(source: string | undefined, node: XmlNode, isExtent = false): number {
+export function drawingCoordinate(source: string | undefined, node: XmlNode, isExtent = false): number {
   const units = source === undefined || isExtent ? null : /^(-?\d+(?:\.\d+)?)(mm|cm|in|pt|pc|pi)$/.exec(source.trim());
   if (units) {
     const factors: Record<string, number> = { mm: 72 / 25.4, cm: 72 / 2.54, in: 72, pt: 1, pc: 12, pi: 12 };
@@ -30,12 +30,12 @@ export function drawingMarker(node: XmlNode): WorkbookDrawingMarker {
     if (!/^[+]?\d+$/.test(raw) || !Number.isSafeInteger(Number(raw)) || Number(raw) > maximum) fail(field, "A drawing cell marker exceeds worksheet bounds.");
     return Number(raw);
   };
-  return { row: index(row, 1048575), column: index(column, 16383), offsetXPt: coordinate(text(x), x), offsetYPt: coordinate(text(y), y) };
+  return { row: index(row, 1048575), column: index(column, 16383), offsetXPt: drawingCoordinate(text(x), x), offsetYPt: drawingCoordinate(text(y), y) };
 }
 function extent(node: XmlNode | undefined, parent: XmlNode): { widthPt: number; heightPt: number } {
   if (!node) fail(parent, "A drawing anchor is missing its extent.");
   attributes(node, ["cx", "cy"]); check(node, [], XDR);
-  return { widthPt: coordinate(value(node, "cx"), node, true), heightPt: coordinate(value(node, "cy"), node, true) };
+  return { widthPt: drawingCoordinate(value(node, "cx"), node, true), heightPt: drawingCoordinate(value(node, "cy"), node, true) };
 }
 export interface NativeDrawingAnchor {
   readonly anchor: WorkbookDrawingAnchor;
@@ -59,7 +59,7 @@ export function readDrawingAnchor(node: XmlNode): NativeDrawingAnchor {
   if (node.name === "absoluteAnchor") {
     const position = one(node, "pos", XDR); if (!position) fail(node, "An absolute drawing anchor has no position.");
     attributes(position, ["x", "y"]); check(position, [], XDR);
-    anchor = { kind: "absolute", xPt: coordinate(value(position, "x"), position), yPt: coordinate(value(position, "y"), position), ...extent(one(node, "ext", XDR), node) };
+    anchor = { kind: "absolute", xPt: drawingCoordinate(value(position, "x"), position), yPt: drawingCoordinate(value(position, "y"), position), ...extent(one(node, "ext", XDR), node) };
   } else {
     const from = one(node, "from", XDR); if (!from) fail(node, "A worksheet drawing anchor has no starting marker.");
     if (node.name === "oneCellAnchor") anchor = { kind: "one-cell", from: drawingMarker(from), ...extent(one(node, "ext", XDR), node) };
