@@ -129,7 +129,7 @@ export async function measureNativeDrawingText(snapshot: WorkbookSnapshot) {
   } finally { sources.dispose(); dispose(); }
 }
 
-export async function measureDrawingTextFallback(snapshot: WorkbookSnapshot) {
+export async function measureDrawingTextFallback(snapshot: WorkbookSnapshot, invalidCanvasShorthand = false) {
   await document.fonts.ready;
   const { scope, dispose } = surface(snapshot), sources = new WorkbookContentSources(document, snapshot);
   const object = snapshot.metadata.workbook.objects!.find(object => object.kind === 'text')!;
@@ -137,8 +137,12 @@ export async function measureDrawingTextFallback(snapshot: WorkbookSnapshot) {
   const descriptors = ['fontBoundingBoxAscent', 'fontBoundingBoxDescent'].map(name => [name, Object.getOwnPropertyDescriptor(TextMetrics.prototype, name)] as const);
   try {
     source.innerHTML = '<p data-node-id="fallback-p1" style="font-family:Liberation Sans;font-size:14pt">Alpha<br data-node-id="fallback-br" style="font-size:14pt"></p><p data-node-id="fallback-p2" style="font-family:Liberation Sans;font-size:14pt">Beta</p><p data-node-id="fallback-empty" style="font-family:Liberation Sans;font-size:14pt"></p>';
+    if (invalidCanvasShorthand) {
+      source.style.fontVariant = 'all-small-caps';
+      for (const paragraph of source.querySelectorAll('p')) paragraph.style.fontVariant = 'all-small-caps';
+    }
     const before = source.outerHTML, text = createWorkbookDrawingText(source, object);
-    for (const [name] of descriptors) Object.defineProperty(TextMetrics.prototype, name, { configurable: true, get: () => undefined });
+    if (!invalidCanvasShorthand) for (const [name] of descriptors) Object.defineProperty(TextMetrics.prototype, name, { configurable: true, get: () => undefined });
     const failed = createWorkbookDrawingText(source, object); let error = 'accepted';
     try { layoutWorkbookDrawingTexts(scope, [{ source, object, text: failed, widthPt: 120, heightPt: 90 }], { maxNodes: failed.nodes + 2 }); } catch (e) { error = (e as { code: string }).code; }
     const result = layoutWorkbookDrawingTexts(scope, [{ source, object, text, widthPt: 120, heightPt: 90 }], { maxNodes: text.nodes + 4 }), item = result.objects[0]!;
@@ -149,7 +153,7 @@ export async function measureDrawingTextFallback(snapshot: WorkbookSnapshot) {
       sourceText: text.projections.map(piece => piece.node.data).join(''), placeholders: text.element.querySelectorAll('[data-office-view="workbook-drawing-empty-line"]').length,
       cleaned: !failed.element.parentNode && !scope.querySelector('[data-office-view="workbook-drawing-text-measurement"]') };
   } finally {
-    for (const [name, descriptor] of descriptors) { if (descriptor) Object.defineProperty(TextMetrics.prototype, name, descriptor); else Reflect.deleteProperty(TextMetrics.prototype, name); }
+    if (!invalidCanvasShorthand) for (const [name, descriptor] of descriptors) { if (descriptor) Object.defineProperty(TextMetrics.prototype, name, descriptor); else Reflect.deleteProperty(TextMetrics.prototype, name); }
     sources.dispose(); dispose();
   }
 }

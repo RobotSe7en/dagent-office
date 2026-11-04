@@ -217,8 +217,8 @@ test('explicit native drawing text follows independent fixed-font line advances 
   }
 });
 
-test('drawing text fallback accounts for transient probes and empty lines without inventing source offsets', async ({ page }) => {
-  const result = await page.evaluate(snapshot => window.workbookContentHost.measureDrawingTextFallback(snapshot), inputs.find(input => input.name === '08-images-shapes')!.snapshot);
+for (const invalidCanvasShorthand of [false, true]) test(`drawing text fallback accounts for transient probes and empty lines with ${invalidCanvasShorthand ? 'valid CSS outside Canvas shorthand' : 'missing Canvas font bounds'}`, async ({ page }) => {
+  const result = await page.evaluate(({ snapshot, invalidCanvasShorthand }) => window.workbookContentHost.measureDrawingTextFallback(snapshot, invalidCanvasShorthand), { snapshot: inputs.find(input => input.name === '08-images-shapes')!.snapshot, invalidCanvasShorthand });
   expect(result).toMatchObject({ error: 'ResourceLimitExceeded', fallback: true, unchanged: true, sourceText: 'Alpha\nBeta', placeholders: 2, cleaned: true });
   expect(result.nodes).toBe(result.declared);
   expect(result.paragraphs[1]).toBeGreaterThan(0);

@@ -76,8 +76,17 @@ export function layoutWorkbookDrawingTexts(scope: HTMLElement, inputs: readonly 
       // Measure scalable font bounds at a fixed large size: browser pixel
       // rounding at the actual 14–18pt size otherwise adds a full pixel to
       // every line in some engines. No large canvas bitmap is allocated.
-      if (lineContext) lineContext.font = `${computed.fontStyle} ${computed.fontVariant} ${computed.fontWeight} 1024px ${computed.fontFamily}`;
-      const metrics = lineContext?.measureText("M"), height = metrics ? (metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent) * parseFloat(computed.fontSize) / 1024 : NaN;
+      let acceptedFont = false;
+      if (lineContext) {
+        // Invalid Canvas font shorthand is silently ignored. CSS font-variant
+        // supports values (for example all-small-caps) outside that shorthand;
+        // never measure the previous run's font when this assignment fails.
+        lineContext.font = "1px monospace";
+        const sentinel = lineContext.font;
+        lineContext.font = `${computed.fontStyle} ${computed.fontVariant} ${computed.fontWeight} 1024px ${computed.fontFamily}`;
+        acceptedFont = lineContext.font !== sentinel;
+      }
+      const metrics = acceptedFont ? lineContext!.measureText("M") : undefined, height = metrics ? (metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent) * parseFloat(computed.fontSize) / 1024 : NaN;
       if (Number.isFinite(height) && height > 0) { normalLines.set(key, height); return height; }
       // Legacy engines do not expose font bounds. Keep a measured DOM fallback
       // and report its use; do not silently claim native normal-leading parity.
