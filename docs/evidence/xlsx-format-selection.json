@@ -1,0 +1,248 @@
+{
+  "scope": "Selected native Calc sign, section and text results. No SDK General fitting, date display, Excel/WPS or complete custom-format acceptance claim.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "sourceSha256": "1b4dc3fce5765bfc79bcb2038e9ec523d796dd71cbd4691fcba436dcb9d898b9",
+  "localeEnvironment": {
+    "LC_ALL": "C.UTF-8",
+    "LANG": "C.UTF-8",
+    "TZ": "UTC"
+  },
+  "samples": [
+    {
+      "value": -1,
+      "code": "0.00",
+      "text": "-1.00"
+    },
+    {
+      "value": 0,
+      "code": "0.00",
+      "text": "0.00"
+    },
+    {
+      "value": 5,
+      "code": "0.00",
+      "text": "5.00"
+    },
+    {
+      "value": 20,
+      "code": "0.00",
+      "text": "20.00"
+    },
+    {
+      "value": "001😀",
+      "code": "0.00",
+      "text": "001😀"
+    },
+    {
+      "value": -1,
+      "code": "0.00;(0.00);\"zero\"",
+      "text": "(1.00)"
+    },
+    {
+      "value": 0,
+      "code": "0.00;(0.00);\"zero\"",
+      "text": "zero"
+    },
+    {
+      "value": 5,
+      "code": "0.00;(0.00);\"zero\"",
+      "text": "5.00"
+    },
+    {
+      "value": 20,
+      "code": "0.00;(0.00);\"zero\"",
+      "text": "20.00"
+    },
+    {
+      "value": "001😀",
+      "code": "0.00;(0.00);\"zero\"",
+      "text": "001😀"
+    },
+    {
+      "value": -1,
+      "code": "[>10]\"A\"0;[<0]\"B\"0;\"C\"0",
+      "text": "B1"
+    },
+    {
+      "value": 0,
+      "code": "[>10]\"A\"0;[<0]\"B\"0;\"C\"0",
+      "text": "C0"
+    },
+    {
+      "value": 5,
+      "code": "[>10]\"A\"0;[<0]\"B\"0;\"C\"0",
+      "text": "C5"
+    },
+    {
+      "value": 20,
+      "code": "[>10]\"A\"0;[<0]\"B\"0;\"C\"0",
+      "text": "A20"
+    },
+    {
+      "value": "001😀",
+      "code": "[>10]\"A\"0;[<0]\"B\"0;\"C\"0",
+      "text": "001😀"
+    },
+    {
+      "value": -1,
+      "code": "[>10]\"A\"0;\"B\"0",
+      "text": "B1"
+    },
+    {
+      "value": 0,
+      "code": "[>10]\"A\"0;\"B\"0",
+      "text": "B0"
+    },
+    {
+      "value": 5,
+      "code": "[>10]\"A\"0;\"B\"0",
+      "text": "B5"
+    },
+    {
+      "value": 20,
+      "code": "[>10]\"A\"0;\"B\"0",
+      "text": "A20"
+    },
+    {
+      "value": "001😀",
+      "code": "[>10]\"A\"0;\"B\"0",
+      "text": "001😀"
+    },
+    {
+      "value": -1,
+      "code": "0;@",
+      "text": "-1"
+    },
+    {
+      "value": 0,
+      "code": "0;@",
+      "text": "0"
+    },
+    {
+      "value": 5,
+      "code": "0;@",
+      "text": "5"
+    },
+    {
+      "value": 20,
+      "code": "0;@",
+      "text": "20"
+    },
+    {
+      "value": "001😀",
+      "code": "0;@",
+      "text": "001😀"
+    },
+    {
+      "value": -1,
+      "code": "0;\"neg\"0;@",
+      "text": "neg1"
+    },
+    {
+      "value": 0,
+      "code": "0;\"neg\"0;@",
+      "text": "0"
+    },
+    {
+      "value": 5,
+      "code": "0;\"neg\"0;@",
+      "text": "5"
+    },
+    {
+      "value": 20,
+      "code": "0;\"neg\"0;@",
+      "text": "20"
+    },
+    {
+      "value": "001😀",
+      "code": "0;\"neg\"0;@",
+      "text": "001😀"
+    },
+    {
+      "value": -1,
+      "code": "0;0;\"zero\";\"ID \"@",
+      "text": "1"
+    },
+    {
+      "value": 0,
+      "code": "0;0;\"zero\";\"ID \"@",
+      "text": "zero"
+    },
+    {
+      "value": 5,
+      "code": "0;0;\"zero\";\"ID \"@",
+      "text": "5"
+    },
+    {
+      "value": 20,
+      "code": "0;0;\"zero\";\"ID \"@",
+      "text": "20"
+    },
+    {
+      "value": "001😀",
+      "code": "0;0;\"zero\";\"ID \"@",
+      "text": "ID 001😀"
+    },
+    {
+      "value": -1,
+      "code": "@",
+      "text": "-1"
+    },
+    {
+      "value": 0,
+      "code": "@",
+      "text": "0"
+    },
+    {
+      "value": 5,
+      "code": "@",
+      "text": "5"
+    },
+    {
+      "value": 20,
+      "code": "@",
+      "text": "20"
+    },
+    {
+      "value": "001😀",
+      "code": "@",
+      "text": "001😀"
+    },
+    {
+      "value": -1,
+      "code": "\"constant\"",
+      "text": "constant"
+    },
+    {
+      "value": 0,
+      "code": "\"constant\"",
+      "text": "constant"
+    },
+    {
+      "value": 5,
+      "code": "\"constant\"",
+      "text": "constant"
+    },
+    {
+      "value": 20,
+      "code": "\"constant\"",
+      "text": "constant"
+    },
+    {
+      "value": "001😀",
+      "code": "\"constant\"",
+      "text": "001😀"
+    },
+    {
+      "value": -0.001,
+      "code": "0.00",
+      "text": "0.00"
+    },
+    {
+      "value": -0.001,
+      "code": "0.00;(0.00)",
+      "text": "(0.00)"
+    }
+  ]
+}
