@@ -81,7 +81,7 @@ export function readTables(root: XmlNode, opc: OpcPackage, styles: XlsxStyles, t
       if (value(column, "uniqueName") !== undefined || value(column, "queryTableFieldId") !== undefined) unsupported(column, "External table column identities are not implemented.");
       const id = integer(column, "id", 1, 4294967294), columnName = spreadsheetText(value(column, "name") ?? "", column, 255), totalFunction = value(column, "totalsRowFunction") ?? "none";
       if (!["none", "sum", "min", "max", "average", "count", "countNums", "stdDev", "var", "custom"].includes(totalFunction)) fail(column, "An unknown table totals function was declared.");
-      const calculatedFormula = tableFormula(one(column, "calculatedColumnFormula"), Math.min(area.from.row + Number(header), 1_048_575), area.from.column + index);
+      const calculatedFormula = tableFormula(one(column, "calculatedColumnFormula"), area.from.row + Number(header), area.from.column + index);
       const totalFormula = tableFormula(one(column, "totalsRowFormula"), area.to.row, area.from.column + index);
       return { columnId: `column-${id}`, name: columnName, totalFunction: totalFunction as WorkbookTable["columns"][number]["totalFunction"], ...regionStyles(column, styles),
         ...(calculatedFormula ? { calculatedFormula } : {}), ...(totalFormula ? { totalFormula } : {}),

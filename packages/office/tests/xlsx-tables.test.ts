@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createWorkbook, openDocument } from "@dagent-office/core";
+import { createWorkbook, DEFAULT_DOCUMENT_READ_LIMITS, openDocument } from "@dagent-office/core";
 import type { WorkbookTable, WorkbookMetadata } from "@dagent-office/core";
 import { openOpc, openOpcFiles } from "../src/ooxml/package.js";
 import type { OpcPackage } from "../src/ooxml/package.js";
@@ -8,6 +8,11 @@ import { S, xml } from "../src/ooxml/xml.js";
 import { readTables, readTableStyles } from "../src/xlsx/tables.js";
 import { readAutoFilter } from "../src/xlsx/filter.js";
 import { XlsxStyles } from "../src/xlsx/styles.js";
+import { WorkbookChunks } from "../src/xlsx/chunks.js";
+import { textHtml } from "../src/xlsx/values.js";
+import { writeOpcZip } from "../src/document-zip.js";
+import { readXlsxRecords } from "../src/xlsx/read.js";
+import { projectXlsxRecords } from "./helpers/xlsx-record-model.js";
 
 const encoder = new TextEncoder(), decoder = new TextDecoder();
 const source = (producer = false) => openOpc(readFileSync(`examples/xlsx/${producer ? "producer/" : ""}05-native-table.xlsx`), {});
@@ -23,6 +28,10 @@ function packageWithTables(input: ReturnType<typeof parsed>) {
   const files = new Map(createWorkbook({ documentId: "tables" })), metadata = JSON.parse(decoder.decode(files.get("metadata.json")!));
   metadata.workbook.sheets[0].tables = input.tables; metadata.workbook.tableStyles = input.tableStyles.definitions;
   metadata.workbook.defaultTableStyle = input.tableStyles.defaultStyle; metadata.workbook.numberFormats.push(...input.styles.numberFormats());
+  const chunks = new WorkbookChunks(DEFAULT_DOCUMENT_READ_LIMITS); chunks.startSheet('sheet-1');
+  for (const table of input.tables) if (table.header) for (const [index, column] of table.columns.entries()) chunks.append({ row: table.range.from.row, column: table.range.from.column + index }, `<td data-column="${table.range.from.column + index}" data-value-type="text">${textHtml(column.name)}</td>`);
+  chunks.finish(); for (const [path, bytes] of chunks.files) files.set(path, bytes);
+  const manifest = JSON.parse(decoder.decode(files.get('manifest.json')!)); manifest.chunks = chunks.descriptors; files.set('manifest.json', encoder.encode(JSON.stringify(manifest)));
   files.set("metadata.json", encoder.encode(JSON.stringify(metadata))); files.set("styles.css", encoder.encode(decoder.decode(files.get("styles.css")!) + "\n" + input.styles.stylesheet())); return files;
 }
 function filter(sourceText: string) { const opc = source(); return readAutoFilter(xml(encoder.encode(`<autoFilter xmlns="${S}" ref="A1:C20">${sourceText}</autoFilter>`), "filter.xml", opc.limits, { nodes: 0 }))!; }
@@ -65,6 +74,7 @@ describe("native tables and auto-filters", () => {
       (s: string) => s.replace('<table ', '<table connectionId="1" '),
       (s: string) => s.replace('<calculatedColumnFormula>', '<calculatedColumnFormula array="1">'),
       (s: string) => s.replace('name="TableStyleMedium2"', 'name="MissingStyle"'),
+      (s: string) => s.replace('ref="A1:D6"', 'ref="A1048576:D1048576"'),
     ]) expect(() => parsed(variant({ "xl/tables/table1.xml": edit }))).toThrow();
     for (const invalid of [
       '<filterColumn colId="3"/>', '<filterColumn colId="0"><colorFilter dxfId="0"/></filterColumn>',
@@ -79,6 +89,7 @@ describe("native tables and auto-filters", () => {
       table => { table.columns[1]!.name = table.columns[0]!.name; },
       table => { table.range.to.column = 4; },
       table => { table.name = "SalesTable "; },
+      table => { table.columns[0]!.name = "Different header"; },
       table => { table.columns[0]!.totalFunction = "custom"; },
       table => { table.style = { kind: "custom", styleId: "missing" }; },
       table => { table.autoFilter!.columns = [{ column: 99, hiddenButton: false, showButton: true }]; },
@@ -91,5 +102,10 @@ describe("native tables and auto-filters", () => {
       change(metadata.workbook.sheets[0]!.tables![0]!, metadata.workbook); files.set("metadata.json", encoder.encode(JSON.stringify(metadata)));
       expect(() => openDocument(files)).toThrowError(expect.objectContaining({ code: "InvalidDocument" }));
     }
+  });
+  it("rejects native column names that disagree with the actual table header cells", async () => {
+    const opc = variant({ 'xl/tables/table1.xml': xml => xml.replace('name="产品"', 'name="另一个名称"') });
+    const records = await readXlsxRecords(writeOpcZip(opc.files));
+    expect(() => projectXlsxRecords(records)).toThrowError(expect.objectContaining({ code: 'InvalidDocument', message: 'A table column name must match its constant text header cell.' }));
   });
 });

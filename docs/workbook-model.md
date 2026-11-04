@@ -60,7 +60,7 @@ DrawingML 主题的填充、背景填充、线条和效果列表也已映射为�
 
 原生规则验证依据 [SpreadsheetML 条件格式说明](https://learn.microsoft.com/en-us/office/open-xml/spreadsheet/working-with-conditional-formatting)及[数据验证契约](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.datavalidation?view=openxml-2.8.1)，并单独保存[固定 Calc 的探针结果](evidence/xlsx-rule-semantics.json)：传统 `showDropDown="1"` 隐藏列表；多区域公式原点取最左列中最靠上的实际区域起点，不取列表首项或外包矩形角。后者在跨行列样例中分别为 B5/E9，并经外部 ODS 中的引用重定位核对。这是固定 Calc 的独立观测，不冒充 Excel/WPS 实机结论。运行 `python3 scripts/check-xlsx-rule-semantics.py` 重复核对；只有显式 `--record` 更新记录。
 
-原生智能表保留为 `tables` 定义：表身份和公式名称、区域、表头/汇总行、列身份、计算列、汇总函数/公式/标签、筛选、排序状态和表样式关联。按照 [SpreadsheetML 表定义](https://learn.microsoft.com/en-us/office/open-xml/spreadsheet/working-with-tables)，公式使用的原生 `displayName` 映射为 `name`；不同的对象模型名称另存 `objectName`。工作簿名称与表名不能冲突；列名/身份、区域宽高及表/合并/普通筛选的重叠均校验。普通筛选保存值/日期选择、标量比较、前后 N 项/百分比和相对日期/平均值条件；导入不重新应用筛选或排序。原生已过滤行的隐藏状态仍由行维度保留。
+原生智能表保留为 `tables` 定义：表身份和公式名称、区域、表头/汇总行、列身份、计算列、汇总函数/公式/标签、筛选、排序状态和表样式关联。按照 [SpreadsheetML 表定义](https://learn.microsoft.com/en-us/office/open-xml/spreadsheet/working-with-tables)，公式使用的原生 `displayName` 映射为 `name`；不同的对象模型名称另存 `objectName`。工作簿名称与表名不能冲突；列名/身份、区域宽高及表/合并/普通筛选的重叠均校验。显示表头时，列名称必须与实际单元格的常量文字一致；不猜测两者谁覆盖谁。计算列模板使用真实首行原点，不把越过工作表边界的原点截回末行。普通筛选保存值/日期选择、标量比较、前后 N 项/百分比和相对日期/平均值条件；导入不重新应用筛选或排序。原生已过滤行的隐藏状态仍由行维度保留。
 
 内建表样式使用原生名称引用，自定义 `tableStyles` 通过差异 CSS 定义区域和条带，不把表样式铺平成逐格格式。条带采用 Office 声明的 [1–9 范围](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/d91a5d31-0bf4-4801-9139-f6c13a690505)，普通前后 N 项筛选采用 [1–500 范围](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/2961ac37-0f8e-47a8-89f9-981403e619b6)，百分比另限 100。源文件和 Calc 重存文件都通过表格读取与保存重开；计算列执行、筛选重算、表格编辑和准确样式渲染仍属后续验收。原生命名单元格样式在表区域上的关联也仍待对应取舍落地。
 

@@ -82,7 +82,7 @@ export function validateWorkbookTables(workbook: WorkbookMetadata, classExists: 
         columnIds.add(column.columnId); columnNames.add(column.name.toUpperCase());
         if (column.totalFunction === "custom" && !column.totalFormula || column.totalFormula && column.totalFunction !== "custom") invalid("A custom table total requires exactly one custom formula source.");
         if (column.totalFormula && column.totalLabel !== undefined) invalid("A table total cell cannot contain both a formula and a label.");
-        if (column.calculatedFormula) parseFormula(column.calculatedFormula, { row: Math.min(table.range.from.row + Number(table.header), 1_048_575), column: table.range.from.column + index });
+        if (column.calculatedFormula) parseFormula(column.calculatedFormula, { row: table.range.from.row + Number(table.header), column: table.range.from.column + index });
         if (column.totalFormula) parseFormula(column.totalFormula, { row: table.range.to.row, column: table.range.from.column + index });
         for (const key of ["headerStyle", "dataStyle", "totalStyle"] as const) differential(column[key]);
       }

@@ -47,6 +47,12 @@ export function openWorkbookModel(files: Map<string, Uint8Array>, manifest: Work
     checkLimit(cellCount, limits.maxCells); checkLimit(formulaCount, limits.maxFormulas);
     sheet.set(key, index); chunks.push({ path: chunk.path, index }); files.delete(chunk.path);
   }
+  for (const sheet of metadata.workbook.sheets) for (const table of sheet.tables ?? []) if (table.header) {
+    for (const [index, column] of table.columns.entries()) {
+      const cell = readWindow({ sheetId: sheet.sheetId, row: table.range.from.row, column: table.range.from.column + index, rows: 1, columns: 1 })[0];
+      if (cell?.formula || cell?.value.type !== "text" || cell.value.value !== column.name) invalid("A table column name must match its constant text header cell.");
+    }
+  }
   const snapshot: WorkbookSnapshot = freeze({ manifest, metadata, annotations, styles, ...(content ? { content: { path: manifest.content!, html: content.html } } : {}) });
   if (content) files.set(manifest.content!, encode(content.html));
   files.set("manifest.json", encode(JSON.stringify(manifest)));
