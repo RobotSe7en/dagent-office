@@ -29,6 +29,7 @@ const aliases: Readonly<Record<string, string>> = {
   "http://purl.oclc.org/ooxml/drawingml/wordprocessingDrawing": WP,
   "http://purl.oclc.org/ooxml/drawingml/picture": PIC,
 };
+export const normalizeXmlNamespace = (uri: string): string => aliases[uri] ?? uri;
 export interface XmlNode {
   readonly name: string;
   readonly uri: string;
