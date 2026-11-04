@@ -48,7 +48,7 @@ def generate(axis=None, rtl=False):
                 sheet.add(address, style=edge(kind, side, color))
     else:
         for row, kind in enumerate(KINDS, 1):
-            sheet.add("A" + str(row), kind, style=edge(kind, "bottom", "FF0000")); sheet.row_props[row] = {"ht": 30, "customHeight": 1}
+            sheet.add("A" + str(row), kind, style=edge(kind, "bottom", f"{row:02X}0000")); sheet.row_props[row] = {"ht": 30, "customHeight": 1}
     borders.set("count", str(len(borders))); cells.set("count", str(len(cells)))
     book.parts["xl/styles.xml"] = ET.tostring(styles, encoding="unicode")
     return native.fixture.zipped(book.finish())
@@ -86,6 +86,28 @@ def observe_edges(pdf, work):
     return pages, leading_x, [sorted(value) for value in owners]
 
 
+def observe_strokes(pdf, work):
+    """Read actual device-independent PDF strokes, including page transforms."""
+    svg = work / "kinds.svg"; native.shared.run(["pdftocairo", "-f", "1", "-l", "1", "-svg", str(pdf), str(svg)])
+    result = {kind: [] for kind in KINDS}
+    for path in ET.fromstring(svg.read_bytes()).iter("{http://www.w3.org/2000/svg}path"):
+        color = re.fullmatch(r"rgb\(([\d.]+)%, 0%, 0%\)", path.get("stroke", ""))
+        if not color: continue
+        row = int(float(color[1]) * 2.55 + .5); assert 1 <= row <= len(KINDS)
+        transform = [float(value) for value in re.fullmatch(r"matrix\(([^)]+)\)", path.get("transform"))[1].split(",")]
+        a, b, c, d, e, f = transform; assert b == c == 0 and abs(abs(a) - abs(d)) < .000001
+        points = re.fullmatch(r"M ([\d.-]+) ([\d.-]+) L ([\d.-]+) ([\d.-]+)\s*", path.get("d")); assert points
+        x1, y1, x2, y2 = map(float, points.groups()); assert y1 == y2 and x2 > x1
+        result[KINDS[row - 1]].append({"from": [round(x1 * a + e, 6), round(y1 * d + f, 6)], "to": [round(x2 * a + e, 6), round(y2 * d + f, 6)],
+            "widthPt": round(float(path.get("stroke-width")) * abs(a), 6), "dashPt": [round(float(value) * abs(a), 6) for value in path.get("stroke-dasharray", "").split()],
+            "cap": path.get("stroke-linecap")})
+    assert len(result["none"]) == 0 and len(result["double"]) == 2
+    assert all(len(result[kind]) == 1 for kind in KINDS if kind not in ["none", "double", "slantDashDot"])
+    # Calc can duplicate its substituted slantDashDot stroke; retain that fact.
+    assert result["slantDashDot"] and all(value == result["slantDashDot"][0] for value in result["slantDashDot"])
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__); parser.add_argument("--record", action="store_true"); args = parser.parse_args()
     assert sha256((ROOT / ".cache/LibreOffice_25.8.1.1_Linux_x86-64_deb.tar.gz").read_bytes()).hexdigest() == native.ARCHIVE_HASH
@@ -97,7 +119,8 @@ def main():
     with TemporaryDirectory(dir=ROOT / ".cache") as temporary:
         work = Path(temporary); profile = "-env:UserInstallation=" + (work / "profile").as_uri(); source = work / "kinds.xlsx"; source.write_bytes(generate())
         native.shared.run(["libreoffice", profile, "--headless", "--convert-to", "ods", "--outdir", str(work), str(source)])
-        kinds = {"sourceSha256": sha256(source.read_bytes()).hexdigest(), "samples": observe_styles(source.with_suffix(".ods"))}; cases = []
+        native.shared.run(["libreoffice", profile, "--headless", "--convert-to", "pdf:calc_pdf_Export", "--outdir", str(work), str(source)])
+        kinds = {"sourceSha256": sha256(source.read_bytes()).hexdigest(), "samples": observe_styles(source.with_suffix(".ods")), "pdfStrokes": observe_strokes(source.with_suffix(".pdf"), work)}; cases = []
         for axis, rtl in [("row", False), ("column", False), ("column", True)]:
             source = work / f"{axis}-{'rtl' if rtl else 'ltr'}.xlsx"; source.write_bytes(generate(axis, rtl))
             native.shared.run(["libreoffice", profile, "--headless", "--convert-to", "pdf:calc_pdf_Export", "--outdir", str(work), str(source)])

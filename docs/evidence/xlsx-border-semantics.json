@@ -15,7 +15,7 @@
     "TZ": "UTC"
   },
   "kinds": {
-    "sourceSha256": "06aab08278bedb6a63fc46aad26fbb7819a19c0e3e659f7278e112586501c1ca",
+    "sourceSha256": "fc525b3e8c9852a41bbaa0186247641dd7684aa3472fd3a13742d513b2af1ae0",
     "samples": [
       {
         "kind": "none",
@@ -24,70 +24,333 @@
       },
       {
         "kind": "thin",
-        "nativeOdsBorder": "0.74pt solid #ff0000",
+        "nativeOdsBorder": "0.74pt solid #020000",
         "nativeDoubleWidths": null
       },
       {
         "kind": "medium",
-        "nativeOdsBorder": "1.76pt solid #ff0000",
+        "nativeOdsBorder": "1.76pt solid #030000",
         "nativeDoubleWidths": null
       },
       {
         "kind": "dashed",
-        "nativeOdsBorder": "0.74pt fine-dashed #ff0000",
+        "nativeOdsBorder": "0.74pt fine-dashed #040000",
         "nativeDoubleWidths": null
       },
       {
         "kind": "dotted",
-        "nativeOdsBorder": "0.74pt dotted #ff0000",
+        "nativeOdsBorder": "0.74pt dotted #050000",
         "nativeDoubleWidths": null
       },
       {
         "kind": "thick",
-        "nativeOdsBorder": "2.49pt solid #ff0000",
+        "nativeOdsBorder": "2.49pt solid #060000",
         "nativeDoubleWidths": null
       },
       {
         "kind": "double",
-        "nativeOdsBorder": "1.76pt double-thin #ff0000",
+        "nativeOdsBorder": "1.76pt double-thin #070000",
         "nativeDoubleWidths": "0.0071in 0.0102in 0.0071in"
       },
       {
         "kind": "hair",
-        "nativeOdsBorder": "0.06pt solid #ff0000",
+        "nativeOdsBorder": "0.06pt solid #080000",
         "nativeDoubleWidths": null
       },
       {
         "kind": "mediumDashed",
-        "nativeOdsBorder": "1.76pt dashed #ff0000",
+        "nativeOdsBorder": "1.76pt dashed #090000",
         "nativeDoubleWidths": null
       },
       {
         "kind": "dashDot",
-        "nativeOdsBorder": "0.74pt dash-dot #ff0000",
+        "nativeOdsBorder": "0.74pt dash-dot #0a0000",
         "nativeDoubleWidths": null
       },
       {
         "kind": "mediumDashDot",
-        "nativeOdsBorder": "1.76pt dash-dot #ff0000",
+        "nativeOdsBorder": "1.76pt dash-dot #0b0000",
         "nativeDoubleWidths": null
       },
       {
         "kind": "dashDotDot",
-        "nativeOdsBorder": "0.74pt dash-dot-dot #ff0000",
+        "nativeOdsBorder": "0.74pt dash-dot-dot #0c0000",
         "nativeDoubleWidths": null
       },
       {
         "kind": "mediumDashDotDot",
-        "nativeOdsBorder": "1.76pt dash-dot-dot #ff0000",
+        "nativeOdsBorder": "1.76pt dash-dot-dot #0d0000",
         "nativeDoubleWidths": null
       },
       {
         "kind": "slantDashDot",
-        "nativeOdsBorder": "1.76pt fine-dashed #ff0000",
+        "nativeOdsBorder": "1.76pt fine-dashed #0e0000",
         "nativeDoubleWidths": null
       }
-    ]
+    ],
+    "pdfStrokes": {
+      "none": [],
+      "thin": [
+        {
+          "from": [
+            35.929684,
+            96.277424
+          ],
+          "to": [
+            109.035144,
+            96.277424
+          ],
+          "widthPt": 0.749154,
+          "dashPt": [],
+          "cap": "butt"
+        }
+      ],
+      "medium": [
+        {
+          "from": [
+            35.929684,
+            126.234453
+          ],
+          "to": [
+            109.035144,
+            126.234453
+          ],
+          "widthPt": 1.748036,
+          "dashPt": [],
+          "cap": "butt"
+        }
+      ],
+      "dashed": [
+        {
+          "from": [
+            35.929684,
+            156.187574
+          ],
+          "to": [
+            109.035144,
+            156.187574
+          ],
+          "widthPt": 0.736129,
+          "dashPt": [
+            2.996446,
+            0.998812
+          ],
+          "cap": "butt"
+        }
+      ],
+      "dotted": [
+        {
+          "from": [
+            35.929684,
+            186.144603
+          ],
+          "to": [
+            109.035144,
+            186.144603
+          ],
+          "widthPt": 0.736129,
+          "dashPt": [
+            0.499406,
+            0.998812
+          ],
+          "cap": "butt"
+        }
+      ],
+      "thick": [
+        {
+          "from": [
+            35.929684,
+            216.10163
+          ],
+          "to": [
+            109.035144,
+            216.10163
+          ],
+          "widthPt": 2.49691,
+          "dashPt": [],
+          "cap": "butt"
+        }
+      ],
+      "double": [
+        {
+          "from": [
+            35.929684,
+            245.433658
+          ],
+          "to": [
+            109.035144,
+            245.433658
+          ],
+          "widthPt": 0.499436,
+          "dashPt": [],
+          "cap": "butt"
+        },
+        {
+          "from": [
+            35.929684,
+            246.679752
+          ],
+          "to": [
+            109.035144,
+            246.679752
+          ],
+          "widthPt": 0.499436,
+          "dashPt": [],
+          "cap": "butt"
+        }
+      ],
+      "hair": [
+        {
+          "from": [
+            35.929684,
+            276.01178
+          ],
+          "to": [
+            109.035144,
+            276.01178
+          ],
+          "widthPt": 0.099873,
+          "dashPt": [],
+          "cap": "butt"
+        }
+      ],
+      "mediumDashed": [
+        {
+          "from": [
+            35.929684,
+            305.968808
+          ],
+          "to": [
+            109.035144,
+            305.968808
+          ],
+          "widthPt": 1.755397,
+          "dashPt": [
+            7.990526,
+            2.49703
+          ],
+          "cap": "butt"
+        }
+      ],
+      "dashDot": [
+        {
+          "from": [
+            35.929684,
+            335.92193
+          ],
+          "to": [
+            109.035144,
+            335.92193
+          ],
+          "widthPt": 0.736129,
+          "dashPt": [
+            7.990526,
+            2.49703,
+            2.49703,
+            2.49703
+          ],
+          "cap": "butt"
+        }
+      ],
+      "mediumDashDot": [
+        {
+          "from": [
+            35.929684,
+            365.878958
+          ],
+          "to": [
+            109.035144,
+            365.878958
+          ],
+          "widthPt": 1.755397,
+          "dashPt": [
+            7.990526,
+            2.49703,
+            2.49703,
+            2.49703
+          ],
+          "cap": "butt"
+        }
+      ],
+      "dashDotDot": [
+        {
+          "from": [
+            35.929684,
+            395.832079
+          ],
+          "to": [
+            109.035144,
+            395.832079
+          ],
+          "widthPt": 0.736129,
+          "dashPt": [
+            7.990526,
+            2.49703,
+            2.49703,
+            2.49703,
+            2.49703,
+            2.49703
+          ],
+          "cap": "butt"
+        }
+      ],
+      "mediumDashDotDot": [
+        {
+          "from": [
+            35.929684,
+            425.789108
+          ],
+          "to": [
+            109.035144,
+            425.789108
+          ],
+          "widthPt": 1.755397,
+          "dashPt": [
+            7.990526,
+            2.49703,
+            2.49703,
+            2.49703,
+            2.49703,
+            2.49703
+          ],
+          "cap": "butt"
+        }
+      ],
+      "slantDashDot": [
+        {
+          "from": [
+            35.929684,
+            455.742229
+          ],
+          "to": [
+            109.035144,
+            455.742229
+          ],
+          "widthPt": 1.755397,
+          "dashPt": [
+            2.996446,
+            0.998812
+          ],
+          "cap": "butt"
+        },
+        {
+          "from": [
+            35.929684,
+            455.742229
+          ],
+          "to": [
+            109.035144,
+            455.742229
+          ],
+          "widthPt": 1.755397,
+          "dashPt": [
+            2.996446,
+            0.998812
+          ],
+          "cap": "butt"
+        }
+      ]
+    }
   },
   "cases": [
     {

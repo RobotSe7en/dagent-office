@@ -3,6 +3,8 @@ import { build } from "vite";
 import { fileURLToPath } from "node:url";
 import type { WorkbookViewport } from "../../packages/render/src/workbook/viewport.js";
 import type { WorkbookTextFontRun } from "../../packages/render/src/workbook/text-fonts.js";
+import type { WorkbookBorderEdge } from "../../packages/render/src/workbook/border-view.js";
+import borderReference from "../../docs/evidence/xlsx-border-semantics.json" with { type: "json" };
 
 interface GridHost {
   render(viewport: WorkbookViewport, rtl?: boolean): Promise<boolean>;
@@ -10,10 +12,14 @@ interface GridHost {
   failedPaint(): boolean; dispose(): void;
   numericMeasurement(): Promise<{ rounded: { kind: string; text?: string }; scientific: { kind: string; text?: string }; actual: number; predicted: number; overflow: boolean; fill?: { kind: string; text?: string } }>;
   columnFontMeasurement(): Promise<{ measured: { cssClass: string; maximumDigitWidthPx: number; fonts: { requestedFamily: string; substituted: boolean }[] }; fallback: { cssClass: string; maximumDigitWidthPx: number }; actual: number; unrelatedUnchanged: boolean; retainedProbes: number }>;
-  colorMeasurement(): { values: (string | undefined)[]; errors: string[]; unchanged: boolean };
+  colorMeasurement(): { values: (string | undefined)[]; errors: string[]; fills: string[]; fillErrors: string[]; unchanged: boolean };
   sourceStyleMeasurement(): Promise<{ text: string | null; font: string; size: string; italic: string; background: string; bold: string; foreground: string; plain: string; blockRow?: string; row?: string; bound: boolean; before: string; disposed: boolean; noPartial: boolean; retained: number; rejected: string[] }>;
   textFontMeasurement(): Promise<{ runs: readonly WorkbookTextFontRun[]; rich: readonly WorkbookTextFontRun[]; withBreak: readonly WorkbookTextFontRun[]; limited: boolean; unchanged: boolean; frozen: boolean }>;
+  textViewMeasurement(): Promise<{ rich: TextRunView[]; mixed: TextRunView[]; decorated: TextRunView[]; decoration: { strike: string; strikeStyle: string; underline: string; underlineStyle: string; plain: string }; text: string | null; failures: string[]; unchanged: boolean; frozen: boolean }>;
+  borderViewMeasurement(edges: readonly WorkbookBorderEdge[]): Promise<{ strokes: { from: number[]; to: number[]; width: number; dash: number[]; cap: string | null }[]; difference: number; maskDifference: number; painted: number; doubleRows: number[]; failures: string[]; rasterImages: string[]; rasterSizes: number[][] }>;
+  textDirectionMeasurement(): { values: string[]; explicit: string[]; wholeStringDirection: string; retainedText: string | null; failures: string[]; remaining: number; ownerDirection: string };
 }
+interface TextRunView { text: string; from: number; to: number; family: string; weight: string; color: string; x: number; y: number; width: number; height: number }
 declare global { interface Window { workbookGridHost: GridHost } }
 let code = '';
 test.beforeAll(async () => {
@@ -73,6 +79,7 @@ test('worksheet colors resolve theme variables and luminance without treating na
   const result = await page.evaluate(() => window.workbookGridHost.colorMeasurement());
   expect(result.values).toEqual(['rgba(143,170,220,1)', 'rgba(51,90,161,1)', 'rgba(20,40,60,1)', 'rgba(255,0,0,1)', 'rgba(20,40,60,0.5)', 'rgba(0,255,0,1)', undefined]);
   expect(result.errors).toEqual(['InvalidDocument', 'InvalidDocument', 'InvalidDocument']); expect(result.unchanged).toBe(true);
+  expect(result.fills).toEqual(['rgb(1, 2, 3)', 'transparent', 'rgba(143,170,220,1)']); expect(result.fillErrors).toEqual(['InvalidDocument', 'UnsupportedFeature']);
 });
 
 test('bounded cell style projection retains source chunk selectors, rich runs and lifecycle isolation', async ({ page }) => {
@@ -97,4 +104,50 @@ test('cell font roles retain UTF-16 and variation selectors across source spans 
   for (const run of result.rich) { expect(run.font.style).toBe('italic'); expect(run.font.family).toContain('Liberation Serif'); expect(run.font.sizePx).toBeCloseTo(13 / .75, 1); }
   expect(result.withBreak.map(run => run.text).join('')).toBe('合并😀禰󠄀\nA');
   expect(result.withBreak.at(-1)).toMatchObject({ text: 'A', from: 8, to: 9, role: 'ascii' });
+});
+
+test('rich text display preserves source offsets, local style and independent native decorations', async ({ page }, testInfo) => {
+  const result = await page.evaluate(() => window.workbookGridHost.textViewMeasurement());
+  expect(result).toMatchObject({ text: 'A\nB', unchanged: true, frozen: true,
+    decoration: { strike: 'line-through', strikeStyle: 'solid', underline: 'underline', underlineStyle: 'double', plain: 'none' },
+    failures: ['ResourceLimitExceeded', 'UnsupportedFeature', 'InvalidDocument'] });
+  expect(result.rich.map(run => [run.text, run.from, run.to, run.weight, run.color])).toEqual([['一万', 0, 2, '700', 'rgb(153, 51, 85)'], ['行', 2, 3, '400', 'rgb(0, 0, 0)']]);
+  expect(result.rich[0]!.x + result.rich[0]!.width).toBeCloseTo(result.rich[1]!.x, 0);
+  expect(result.mixed.map(run => [run.text, run.from, run.to])).toEqual([['合并', 0, 2], ['😀', 2, 4], ['禰', 4, 5], ['󠄀', 5, 7]]);
+  for (const run of result.mixed.filter(run => run.text !== '😀')) expect(run.family).toContain('Noto Sans CJK SC');
+  expect(result.decorated.map(run => [run.text, run.from, run.to, run.color])).toEqual([['A', 0, 1, 'rgb(143, 170, 220)'], ['\n', 1, 2, 'rgb(143, 170, 220)'], ['B', 2, 3, 'rgb(143, 170, 220)']]);
+  expect(result.decorated[2]!.y).toBeGreaterThan(result.decorated[0]!.y + result.decorated[0]!.height * .8);
+  const screenshot = testInfo.outputPath('workbook-rich-text.png'); await page.locator('#workbook-text-view-probe').screenshot({ path: screenshot });
+  await testInfo.attach('workbook-rich-text', { path: screenshot, contentType: 'image/png' });
+});
+
+test('border strokes match native point geometry and keep dash phase across clipped panes', async ({ page }, testInfo) => {
+  const native = Object.entries(borderReference.kinds.pdfStrokes).filter(([kind]) => kind !== 'none' && kind !== 'slantDashDot');
+  const edges = native.map(([kind, strokes]) => ({ kind: kind as WorkbookBorderEdge['kind'], color: 'rgba(255,0,0,1)',
+    from: { x: strokes[0]!.from[0]!, y: strokes.reduce((sum, stroke) => sum + stroke.from[1]!, 0) / strokes.length },
+    to: { x: strokes[0]!.to[0]!, y: strokes.reduce((sum, stroke) => sum + stroke.to[1]!, 0) / strokes.length } }));
+  const report = await page.evaluate(edges => window.workbookGridHost.borderViewMeasurement(edges), edges);
+  expect(report.strokes).toHaveLength(native.flatMap(([, strokes]) => strokes).length);
+  let index = 0;
+  for (const [, strokes] of native) for (const expected of [...strokes].sort((a, b) => a.from[1]! - b.from[1]!)) {
+    const actual = report.strokes[index++]!;
+    expect(Math.abs(actual.width - expected.widthPt)).toBeLessThan(.02); expect(actual.cap).toBe(expected.cap);
+    expect(actual.dash).toHaveLength(expected.dashPt.length);
+    for (let n = 0; n < actual.dash.length; n++) expect(Math.abs(actual.dash[n]! - expected.dashPt[n]!)).toBeLessThan(.02);
+    for (const point of ['from', 'to'] as const) for (let axis = 0; axis < 2; axis++) expect(Math.abs(actual[point][axis]! - expected[point][axis]!)).toBeLessThan(.01);
+  }
+  for (let i = 0; i < report.rasterImages.length; i++) await testInfo.attach(`border-raster-${i}`, { body: Buffer.from(report.rasterImages[i]!.split(',')[1]!, 'base64'), contentType: 'image/png' });
+  expect(report.rasterSizes).toEqual([[160, 80], [160, 80], [160, 80]]);
+  expect(report.maskDifference).toBe(0); expect(report.difference).toBeLessThanOrEqual(1); expect(report.painted).toBeGreaterThan(70); expect(report.painted).toBeLessThan(110);
+  expect(report.doubleRows.length).toBeGreaterThanOrEqual(2);
+  expect(report.doubleRows.some((row, index) => index && row - report.doubleRows[index - 1]! >= 3)).toBe(true);
+  expect(report.failures).toEqual(['UnsupportedFeature', 'InvalidDocument', 'InvalidDocument', 'ResourceLimitExceeded']);
+  const screenshot = testInfo.outputPath('workbook-border-strokes.png'); await page.locator('#workbook-border-view-probe').screenshot({ path: screenshot });
+  await testInfo.attach('native-calibrated-border-strokes', { path: screenshot, contentType: 'image/png' });
+});
+
+test('worksheet context reading order uses its first non-whitespace scalar with isolated Unicode direction', async ({ page }) => {
+  const report = await page.evaluate(() => window.workbookGridHost.textDirectionMeasurement());
+  expect(report).toEqual({ values: ['ltr', 'rtl', 'ltr', 'ltr', 'rtl', 'ltr', 'ltr', 'rtl', 'rtl', 'ltr', 'rtl'], explicit: ['ltr', 'rtl'], wholeStringDirection: 'rtl',
+    retainedText: '', failures: ['InvalidDocument', 'InvalidOperation', 'InvalidOperation'], remaining: 0, ownerDirection: 'rtl' });
 });
