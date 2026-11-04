@@ -4,7 +4,7 @@ import { expect, it } from "vitest";
 import { readDocumentZip } from "../src/document-zip.js";
 import { ImportControl } from "../src/import-control.js";
 import { streamXml } from "../src/ooxml/xml-stream.js";
-import { elements, S, text } from "../src/ooxml/xml.js";
+import { elements, S, text, xml } from "../src/ooxml/xml.js";
 import type { XmlNode } from "../src/ooxml/xml.js";
 
 const limits = { ...DEFAULT_DOCUMENT_READ_LIMITS, maxFileBytes: 32 * 1024 * 1024, maxNodes: 2_000_000 };
@@ -54,4 +54,11 @@ it("cancels between XML slices and does not deliver the unfinished root", async 
     complete(node) { if (node.name === "root") rootSeen = true; return node.name !== "item"; },
   })).rejects.toMatchObject({ code: "OperationCancelled" });
   expect(rootSeen).toBe(false);
+});
+
+
+it("counts retained text records in metadata part limits as well as the shared XML budget", () => {
+  const bytes = encode("<root><item>text</item></root>");
+  expect(() => xml(bytes, "metadata.xml", limits, { nodes: 0 }, 2)).toThrowError(expect.objectContaining({ code: "ResourceLimitExceeded" }));
+  expect(text(xml(bytes, "metadata.xml", limits, { nodes: 0 }, 3))).toBe("text");
 });

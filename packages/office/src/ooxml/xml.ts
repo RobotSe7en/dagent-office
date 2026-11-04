@@ -213,7 +213,7 @@ export function xml(
   });
   const addText = (value: string): void => {
     if (stack.length) {
-      if (++budget.nodes > limits.maxNodes)
+      if (++budget.nodes > limits.maxNodes || ++partNodes > maxPartNodes)
         throw new DocumentError(
           "ResourceLimitExceeded",
           "XML exceeds the configured node budget.",
