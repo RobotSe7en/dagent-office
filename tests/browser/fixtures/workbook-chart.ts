@@ -46,7 +46,17 @@ export async function measureWorkbookCharts(snapshot: WorkbookSnapshot, plots: r
         try { createWorkbookChartView(source, chart, { ...data, series: data.series.map(series => ({ ...series, values: [-2, ...series.values.slice(1)] })) }, 360, 220, 'negative-pie', options()); negativePie = 'accepted'; }
         catch (error) { negativePie = (error as { code: string }).code; }
       }
-      results.push({ kind: chart.kind, nodes, reported: result.nodes, peak: result.peakNodes, exact: exact.nodes === nodes, unchanged: unchanged(), errors, negativePie, titleProjection, titleText: richSource.textContent,
+      const smallScales = [], zeroScales = [];
+      if (chart.kind === 'column') for (const sign of [1, -1, 0, null]) {
+        const appearance = { ...chart }; delete appearance.minimum; delete appearance.maximum; delete appearance.majorUnit;
+        const values = { ...data, series: data.series.map(series => ({ ...series, values: series.values.map(value => value === null || sign === null ? null : Math.abs(value) * sign / 128) })) };
+        const graphics = createWorkbookChartView(source, appearance, values, 360, 220, 'small-' + sign, options());
+        const rects = [...graphics.element.querySelectorAll('svg > rect')], plot = rects[0]!;
+        const bars = rects.filter(node => Number(node.getAttribute('width')) > 20 && Number(node.getAttribute('width')) < 100);
+        const fraction = Math.max(0, ...bars.map(node => Number(node.getAttribute('height')))) / Number(plot.getAttribute('height'));
+        if (sign) smallScales.push(fraction); else zeroScales.push(fraction);
+      }
+      results.push({ kind: chart.kind, nodes, reported: result.nodes, peak: result.peakNodes, exact: exact.nodes === nodes, unchanged: unchanged(), errors, negativePie, smallScales, zeroScales, titleProjection, titleText: richSource.textContent,
         sourceClasses: result.element.querySelectorAll('[class],[data-node-id]').length,
         svgSize: [svg.clientWidth, svg.clientHeight], text: text.map(node => node.textContent),
         fonts: text.map(node => surface.document.defaultView!.getComputedStyle(node).fontSize), colors: text.map(node => surface.document.defaultView!.getComputedStyle(node).fill),

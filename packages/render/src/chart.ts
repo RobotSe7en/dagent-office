@@ -106,8 +106,9 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
       label(series, index, value, cx + radius * 0.65 * Math.cos(middle), cy + radius * 0.65 * Math.sin(middle), fraction); angle = end;
     });
   } else {
-    let low = 0, high = 1;
+    let low = 0, high = 0;
     for (const series of data.series) for (const value of series.values) if (value !== null) { low = Math.min(low, value); high = Math.max(high, value); }
+    if (low === 0 && high === 0) high = 1;
     const minimum = chart.minimum ?? low, largest = chart.maximum ?? high;
     const rough = (largest - minimum) / 8 || 1, power = 10 ** Math.floor(Math.log10(rough)), factor = rough / power, unit = chart.majorUnit ?? (factor <= 1 ? 1 : factor <= 2 ? 2 : factor <= 5 ? 5 : 10) * power;
     const maximum = chart.maximum ?? (Math.floor(largest / unit) + 1) * unit;
