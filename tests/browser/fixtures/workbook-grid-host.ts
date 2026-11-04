@@ -6,6 +6,8 @@ import { modelWindowSource } from "../../../packages/render/src/workbook/window-
 import { replaceWorkbookWindow } from "../../../packages/render/src/workbook/window-dom.js";
 import { hitWorkbookCell, WorkbookMergeIndex } from "../../../packages/render/src/workbook/projection.js";
 import type { WorkbookViewport } from "../../../packages/render/src/workbook/viewport.js";
+import { measureNumberDisplay } from "../../../packages/render/src/workbook/number-layout.js";
+import { formatGeneralNumber } from "../../../packages/core/src/workbook/format-general.js";
 
 const encode = (text: string) => new TextEncoder().encode(text);
 async function main() {
@@ -52,6 +54,23 @@ async function main() {
       const previous = container.firstChild; let failed = false;
       try { replaceWorkbookWindow(container, loader.frame!, () => { throw new Error('paint failed'); }, rightToLeft); } catch { failed = true; }
       return failed && previous === container.firstChild;
+    },
+    async numericMeasurement() {
+      await document.fonts.ready;
+      const canvas = document.createElement('canvas'), context = canvas.getContext('2d')!, font = '24px "Liberation Serif"'; context.font = font;
+      const measure = (text: string) => context.measureText(text).width;
+      const rounded = formatGeneralNumber(25.76, '.', measure('26') + .25, measure), scientific = formatGeneralNumber(123456789012, '.', 1000, measure);
+      const source = [{ kind: 'text' as const, text: '$' }, { kind: 'fill' as const, character: 'f' }, { kind: 'text' as const, text: '12.5' }, { kind: 'space' as const, character: ')' }];
+      const fitted = measureNumberDisplay(source, 140, measure), box = document.createElement('div');
+      box.style.cssText = 'position:absolute;left:0;top:0;white-space:pre;display:flex;width:max-content'; box.style.font = font;
+      for (const part of fitted.parts) {
+        const span = document.createElement('span'); span.style.flex = 'none';
+        if (part.kind === 'text') span.textContent = part.text; else span.style.width = part.width + 'px';
+        box.append(span);
+      }
+      container.append(box);
+      const actual = box.getBoundingClientRect().width; box.remove();
+      return { rounded, scientific, actual, predicted: fitted.width, overflow: fitted.overflow, fill: fitted.parts[1] };
     },
     dispose() { loader.dispose(); container.remove(); },
   };

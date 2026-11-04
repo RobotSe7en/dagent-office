@@ -20,6 +20,7 @@ export type { CreatePresentationOptions } from "./presentation.js";
 export { createWorkbook } from "./workbook.js";
 export type { CreateWorkbookOptions } from "./workbook.js";
 export { DEFAULT_WORKBOOK_READ_LIMITS } from "./workbook/model.js";
+export type { NumberDisplayPart as WorkbookNumberDisplayPart } from "./workbook/format-numeric.js";
 export { parseFormula as parseWorkbookFormula } from "./workbook/formula.js";
 export type { FormulaExpression as WorkbookFormulaExpression, FormulaOrigin as WorkbookFormulaOrigin } from "./workbook/formula.js";
 export { printFormula as printWorkbookFormula } from "./workbook/formula-print.js";

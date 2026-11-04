@@ -7,6 +7,7 @@ interface GridHost {
   render(viewport: WorkbookViewport, rtl?: boolean): Promise<boolean>;
   inspect(): { cellCount: number; accessibleCells: number; rows: number[]; sourceUnchanged: boolean; merges: { pane?: string; text: string | null; clip: { x: number; y: number; width: number; height: number }; body: { x: number; y: number; width: number; height: number }; hit?: { row: number; column: number } }[] };
   failedPaint(): boolean; dispose(): void;
+  numericMeasurement(): Promise<{ rounded: { kind: string; text?: string }; scientific: { kind: string; text?: string }; actual: number; predicted: number; overflow: boolean; fill?: { kind: string; text?: string } }>;
 }
 declare global { interface Window { workbookGridHost: GridHost } }
 let code = '';
@@ -44,4 +45,12 @@ test('viewport DOM stays bounded at row 10,000 and the far worksheet corner', as
   for (const report of [first, middle, last]) { expect(report.cellCount).toBeLessThanOrEqual(5000); expect(report.sourceUnchanged).toBe(true); }
   expect(last.cellCount).toBeLessThanOrEqual(48 * 60); expect(middle.cellCount).toBeLessThanOrEqual(48 * 60);
   await page.evaluate(() => window.workbookGridHost.dispose()); await expect(page.locator('#workbook-grid-probe')).toHaveCount(0);
+});
+
+test('General fitting and numeric fill agree with independently laid out fixed-font text', async ({ page }) => {
+  const result = await page.evaluate(() => window.workbookGridHost.numericMeasurement());
+  expect(result.rounded).toMatchObject({ kind: 'text', text: '26' });
+  expect(result.scientific).toMatchObject({ kind: 'text', text: '1.23457E+11' });
+  expect(result.overflow).toBe(false); expect(result.fill?.text).toMatch(/^f+$/);
+  expect(result.actual).toBeLessThanOrEqual(140.25); expect(Math.abs(result.actual - result.predicted)).toBeLessThan(.25);
 });
