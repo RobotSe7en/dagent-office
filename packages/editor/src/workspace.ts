@@ -76,6 +76,12 @@ export function createAnnotationPopover(
   function close(): void { dialog.hidden = true; }
   function cancel(): void { close(); options.cancel(); }
   closeButton.addEventListener("click", cancel, { signal: controller.signal });
+  // Firefox can retain the selection iframe's focus after a native click in a
+  // nested shadow tree. Transfer it only on the user's explicit input gesture.
+  dialog.addEventListener("pointerdown", event => {
+    const target = event.target;
+    if (target instanceof window.HTMLElement && target.matches("textarea,input,select")) target.focus({ preventScroll: true });
+  }, { signal: controller.signal });
   dialog.addEventListener("keydown", event => {
     if (event.isComposing) return;
     if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); cancel(); }
