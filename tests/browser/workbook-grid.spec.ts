@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { build } from "vite";
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
 import type { WorkbookViewport } from "../../packages/render/src/workbook/viewport.js";
 import type { WorkbookTextFontRun } from "../../packages/render/src/workbook/text-fonts.js";
 import type { WorkbookBorderEdge } from "../../packages/render/src/workbook/border-view.js";
@@ -9,8 +10,10 @@ import borderReference from "../../docs/evidence/xlsx-border-semantics.json" wit
 import alignmentReference from "../../docs/evidence/xlsx-alignment-semantics.json" with { type: "json" };
 import type { TextLayoutCase, textLayoutMeasurement } from "./fixtures/workbook-text-layout.js";
 import type { borderSourceMeasurement } from "./fixtures/workbook-border-source.js";
+import type { assetMeasurement } from "./fixtures/workbook-assets.js";
 
 interface GridHost {
+  assetMeasurement(base64: string): ReturnType<typeof assetMeasurement>;
   borderSourceMeasurement(): ReturnType<typeof borderSourceMeasurement>;
   textLayoutMeasurement(cases: readonly TextLayoutCase[]): ReturnType<typeof textLayoutMeasurement>;
   render(viewport: WorkbookViewport, rtl?: boolean): Promise<boolean>;
@@ -233,4 +236,12 @@ test('source border resolution keeps native logical sides and physical CSS strok
     ['1', null, 'butt'], ['1', null, 'butt'], ['1.5', '4.5 1.5', 'butt'], ['0.75', '0 1.5', 'round'], ['0.5', null, 'butt'], ['0.5', null, 'butt'],
   ]);
   await page.locator('#workbook-css-border-probe').screenshot({ path: testInfo.outputPath('workbook-css-borders.png') });
+});
+
+test('workbook asset leases decode authorized images and isolate URL lifetimes without copying cell chunks', async ({ page }) => {
+  const bytes = readFileSync('examples/presentation/assets/sample.png');
+  const result = await page.evaluate(base64 => window.workbookGridHost.assetMeasurement(base64), bytes.toString('base64'));
+  expect(result).toEqual({ count: 1, byteLength: bytes.length, distinct: true,
+    dimensions: Array(2).fill([bytes.readUInt32BE(16), bytes.readUInt32BE(20)]), revoked: true, isolated: true, failure: 'OperationCancelled' });
+  await expect(page.locator('#workbook-grid-probe img')).toHaveCount(0);
 });

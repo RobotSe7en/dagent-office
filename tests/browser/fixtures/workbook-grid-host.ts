@@ -25,6 +25,7 @@ import type { WorkbookTextLayoutInput } from "../../../packages/render/src/workb
 import { borderSourceMeasurement } from "./workbook-border-source.js";
 import { projectWorkbookBorders } from "../../../packages/render/src/workbook/border-projection.js";
 import { workbookCellBorders } from "../../../packages/render/src/workbook/cell-borders.js";
+import { assetMeasurement } from "./workbook-assets.js";
 
 const encode = (text: string) => new TextEncoder().encode(text);
 async function main() {
@@ -51,6 +52,7 @@ async function main() {
   const style = document.createElement('style'); style.textContent = model.snapshot().styles.map(style => style.css).join('\n'); document.head.append(style);
   let rightToLeft = false;
   const host = {
+    assetMeasurement(base64: string) { return assetMeasurement(container, base64); },
     borderSourceMeasurement() { return borderSourceMeasurement(container); },
     textLayoutMeasurement(cases: readonly TextLayoutCase[]) { return textLayoutMeasurement(container, cases); },
     async render(viewport: WorkbookViewport, rtl = false) {

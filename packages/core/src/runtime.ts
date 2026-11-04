@@ -92,6 +92,9 @@ export interface WorkbookModel {
   getNode(nodeId: string): DocumentNode | undefined;
   getCell(sheetId: string, row: number, column: number): WorkbookCell | undefined;
   readWindow(window: WorkbookWindow): readonly WorkbookCell[];
+  /** Copy one manifest-declared asset without serializing cell chunks. The
+   * optional byte budget is checked before allocating the returned copy. */
+  getAsset(path: string, maxBytes?: number): Uint8Array | undefined;
   /** Resolve source ranges without evaluating formulas or expanding cells. */
   resolveReference(expression: string, origin: WorkbookReferenceLocation): WorkbookReferenceResult;
   serialize(): DocumentPackage;

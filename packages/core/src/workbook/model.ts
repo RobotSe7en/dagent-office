@@ -55,6 +55,7 @@ export function openWorkbookModel(files: Map<string, Uint8Array>, manifest: Work
     }
   }
   const snapshot: WorkbookSnapshot = freeze({ manifest, metadata, annotations, styles, ...(content ? { content: { path: manifest.content!, html: content.html } } : {}) });
+  const assetPaths = new Set(manifest.assets.map(asset => asset.path));
   const references = new WorkbookReferences(snapshot.metadata.workbook);
   if (content) files.set(manifest.content!, encode(content.html));
   files.set("manifest.json", encode(JSON.stringify(manifest)));
@@ -83,6 +84,11 @@ export function openWorkbookModel(files: Map<string, Uint8Array>, manifest: Work
   return Object.freeze({
     kind: "workbook", snapshot: () => snapshot, getNode: (nodeId: string) => content?.getNode(nodeId),
     readWindow,
+    getAsset(path: string, maxBytes = documentLimits.maxFileBytes): Uint8Array | undefined {
+      if (!Number.isSafeInteger(maxBytes) || maxBytes < 1) invalid("Workbook asset byte limits must be positive safe integers.");
+      if (!assetPaths.has(path)) return undefined;
+      const bytes = files.get(path)!; checkLimit(bytes.byteLength, maxBytes); return new Uint8Array(bytes);
+    },
     resolveReference: references.resolve.bind(references),
     getCell: (sheetId: string, row: number, column: number) => readWindow({ sheetId, row, column, rows: 1, columns: 1 })[0],
     serialize: () => new Map([...Array.from(files, ([path, bytes]) => [path, new Uint8Array(bytes)] as const), ...chunks.map(chunk => [chunk.path, chunk.index.serialize()] as const)]),

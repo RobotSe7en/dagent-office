@@ -25,6 +25,17 @@ describe("workbook auxiliary drawing source", () => {
     expect(Object.isFrozen(snapshot.metadata.workbook.objects?.[0]?.anchor)).toBe(true);
     expect(openDocument(model.serialize(), { kind: "workbook" }).snapshot()).toEqual(snapshot);
   });
+  it("reads only declared assets with a byte budget and isolated copies, without serializing the workbook", () => {
+    const files = seeded(), model = openDocument(files, { kind: "workbook" }), path = 'assets/sample.png', expected = files.get(path)!;
+    const first = model.getAsset(path, expected.length)!, second = model.getAsset(path)!;
+    expect(first).toEqual(expected); expect(first).not.toBe(second); first.fill(0);
+    expect(model.getAsset(path)).toEqual(expected); expect(model.serialize().get(path)).toEqual(expected);
+    expect(() => model.getAsset(path, expected.length - 1)).toThrowError(expect.objectContaining({ code: 'ResourceLimitExceeded' }));
+    for (const limit of [0, -1, NaN, 1.5, Infinity]) expect(() => model.getAsset(path, limit)).toThrowError(expect.objectContaining({ code: 'InvalidDocument' }));
+    for (const other of ['manifest.json', 'metadata.json', 'content.html', 'styles.css', '../assets/sample.png', './assets/sample.png', 'assets/%73ample.png', 'https://example.test/private.png', 'missing']) expect(model.getAsset(other)).toBeUndefined();
+    expect(openDocument(createWorkbook({ documentId: 'separate' }), { kind: 'workbook' }).getAsset(path)).toBeUndefined();
+    expected.fill(0); expect(model.getAsset(path)).toEqual(second);
+  });
   it("rejects foreign sheets, duplicate ownership, dangling sources and duplicate native identities", () => {
     const edits: Parameters<typeof seeded>[0][] = [
       object => { object.sheetId = "missing"; }, object => { object.nodeId = "missing"; },
