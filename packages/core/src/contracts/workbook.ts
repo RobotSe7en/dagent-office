@@ -117,6 +117,9 @@ export const WorkbookMetadataSchema = z.strictObject({
   activeSheetId: IdentifierSchema,
   sheets: z.array(WorkbookSheetSchema).min(1),
   numberFormats: z.array(WorkbookNumberFormatSchema),
+  /** CSS font used to interpret character-based column widths (native Normal).
+   * Older packages without this reference use the worksheet default font. */
+  columnWidthFontCssClass: IdentifierSchema.optional(),
   themeCssClass: IdentifierSchema.optional(),
   names: z.array(WorkbookDefinedNameSchema).optional(),
   tableStyles: z.array(WorkbookTableStyleSchema).optional(),

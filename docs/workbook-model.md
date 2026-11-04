@@ -46,6 +46,7 @@ R3-06 接入原生读取时增加了以下可选契约，旧工作簿包无需�
 - `names` 保存不透明身份、名称、可选工作表作用域、表达式及明确的引用原点。名称在各自作用域内不区分大小写，不能与单元格地址或保留名称冲突；普通表达式的解析不代表已支持求值。
 - 表及行列维度可引用 `numberFormatId`，避免格式化的空行列丢失数字格式。`defaultColumnWidthUnit` 区分原生列宽与不含边距的基础字符宽；缺省沿用原有字符宽语义。`defaultRowsHidden` 表示隐式行的隐藏默认值。
 - 数字格式定义为自定义 `code` 或 `builtinId` 二选一，保留内建日期格式随语言变化的语义，不在导入时固定成某个地区的格式串。`themeCssClass` 与 `tabCssClass` 引用 CSS 中的主题和工作表标签外观；既有 `tabColor` 继续可读，但不能与 `tabCssClass` 同时定义。
+- `columnWidthFontCssClass` 单独引用字符列宽的计量字体；原生源按 `cellStyle builtinId=0 → cellStyleXfs → font` 找到 Normal 字体，不以字体记录零或 `cellXfs` 零代替。依据 [Microsoft Open Specifications 的说明](https://learn.microsoft.com/en-us/answers/questions/1110580/where-is-the-normal-style-font-defined-in-an-xlsx)，本地化名称和修改过的 Normal 样式仍通过内建身份识别。原生 Normal 定义有歧义或缺失时不猜测列宽字体；老 HTML 包没有此可选引用时沿用表的默认字体。这个必要的布局引用不替代尚待决策的完整命名单元格样式保留。
 - `hyperlinks` 保存单元格区域及 HTTP(S)/邮件目标或内部名称/地址，可保留原生说明文字。读取不访问目标，重叠链接及可执行协议失败。
 - `print` 保存区域、重复标题、纸张度量、方向、页边距、适配或百分比缩放、分页及类型化页眉页脚文字/字段。未指定的纸张及页边距保持未指定，未提前猜测打印机设置。该契约可保存重开，实际工作簿分页/PDF 在 R3-18 验收。
 

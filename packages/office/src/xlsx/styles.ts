@@ -60,6 +60,7 @@ export class XlsxStyles implements SheetStyles, RichTextStyles {
   private readonly dxfCache = new Map<number, DifferentialStyleReference>();
   private ruleUnits = 0;
   private readonly fallbackNode: XmlNode;
+  private readonly normalFontCssClass: string | undefined;
   constructor(opc: OpcPackage, workbookPart: string, private readonly maxCssCodeUnits: number) {
     this.theme = readWorkbookTheme(opc, workbookPart);
     const part = opc.related(workbookPart, "styles"), root = part ? opc.read(part) : undefined;
@@ -112,6 +113,9 @@ export class XlsxStyles implements SheetStyles, RichTextStyles {
       return { name, format: integer(node, "xfId", 0, named.length - 1), hidden: boolean(node, "hidden"), customBuiltin: boolean(node, "customBuiltin"),
         ...(value(node, "builtinId") === undefined ? {} : { builtinId: integer(node, "builtinId", 0, 255) }) };
     });
+    const normal = this.namedStyles.filter(style => style.builtinId === 0);
+    if (normal.length > 1) fail(root!, "A workbook must not declare competing built-in Normal styles.");
+    this.normalFontCssClass = normal[0] ? this.styleFormats[normal[0].format]!.cssClass : root ? undefined : this.cellFormats[0]!.cssClass;
     this.differentials = root ? table(root, "dxfs", "dxf") ?? [] : [];
     this.tableStyles = one(root, "tableStyles");
   }
@@ -139,6 +143,10 @@ export class XlsxStyles implements SheetStyles, RichTextStyles {
   cell(index: number, node: XmlNode): CellStyleReference {
     const format = this.cellFormats[index]; if (!Number.isSafeInteger(index) || index < 0 || !format) fail(node, "A cell references an unknown format.");
     return { cssClass: format.cssClass, numberFormatId: format.numberFormatId };
+  }
+  columnWidthFontCssClass(): string {
+    if (!this.normalFontCssClass) unsupported(this.fallbackNode, "Native column widths require an unambiguous declared Normal style font.");
+    return this.normalFontCssClass;
   }
   objectStyle(css: Css): string | undefined { return this.sharedRule(css); }
   drawingRule(name: string, css: Css): void { this.addRule(name, css); }

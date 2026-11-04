@@ -17,6 +17,7 @@ const range = { from: { row: 0, column: 0 }, to: { row: 2, column: 2 } };
 describe("workbook semantic metadata validation", () => {
   it("preserves scoped names, dimension number formats, links and typed print fields through reopening", () => {
     const source = model(book => {
+      book.columnWidthFontCssClass = 'cell-default';
       book.names = [
         { nameId: "global", name: "Rate", origin: { row: 0, column: 0 }, expression: "=0.2" },
         { nameId: "local", name: "rate", sheetId: "sheet-1", origin: { row: 1, column: 1 }, expression: "=Sheet1!C3", hidden: true },
@@ -31,6 +32,7 @@ describe("workbook semantic metadata validation", () => {
     expect(() => model(book => { book.names = [{ nameId: "n", name, origin: { row: 0, column: 0 }, expression: "=1" }]; })).toThrow();
   });
   it.each([
+    (book: WorkbookMetadata) => { book.columnWidthFontCssClass = 'missing'; },
     (book: WorkbookMetadata) => { book.sheets[0]!.defaultNumberFormatId = "missing"; },
     (book: WorkbookMetadata) => { book.sheets[0]!.rowDimensions = [{ from: 0, to: 5, numberFormatId: "missing" }]; },
     (book: WorkbookMetadata) => { book.names = [{ nameId: "n", name: "Value", sheetId: "missing", origin: { row: 0, column: 0 }, expression: "=1" }]; },

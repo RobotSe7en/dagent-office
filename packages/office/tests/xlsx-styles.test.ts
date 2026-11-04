@@ -18,6 +18,7 @@ describe("native workbook style tables", () => {
       const styles = new XlsxStyles(openOpc(readFileSync(`${directory}/${filename}`), options), "xl/workbook.xml", 4 * 1024 * 1024);
       const files = new Map(createWorkbook({ documentId: "style-tables" })), metadata = JSON.parse(decoder.decode(files.get("metadata.json")!));
       metadata.workbook.themeCssClass = "xlsx-theme"; metadata.workbook.numberFormats = styles.numberFormats();
+      metadata.workbook.columnWidthFontCssClass = styles.columnWidthFontCssClass();
       metadata.workbook.sheets[0].defaultCssClass = styles.cell(0, dummy).cssClass; metadata.workbook.sheets[0].defaultNumberFormatId = styles.cell(0, dummy).numberFormatId;
       files.set("metadata.json", encoder.encode(JSON.stringify(metadata))); files.set("styles.css", encoder.encode(styles.stylesheet()));
       const model = openDocument(files, { kind: "workbook" }); expect(openDocument(model.serialize(), { kind: "workbook" }).snapshot()).toEqual(model.snapshot()); checked++;
@@ -38,6 +39,17 @@ describe("native workbook style tables", () => {
     const differential = styles.differential(0, dummy); expect(differential.numberFormatId).toBeUndefined();
     const css = styles.stylesheet().split(`.${differential.cssClass}{`)[1]!.split("}")[0]!;
     expect(css).toContain("#9c0006"); expect(css).toContain("#ffc7ce"); expect(css).not.toContain("font-weight");
+  });
+  it("binds column metrics to the built-in Normal style's font, independently of font zero and cell format zero", () => {
+    const styles = new XlsxStyles(variant(source => source
+      .replace(/<cellStyleXfs[\s\S]*?<\/cellStyleXfs>/, '<cellStyleXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0"/></cellStyleXfs>')
+      .replace('name="Normal" xfId="0" builtinId="0"', 'name="常规" xfId="1" builtinId="0" customBuiltin="1"')), "xl/workbook.xml", 1_000_000);
+    expect(styles.columnWidthFontCssClass()).toBe('xlsx-named-1'); expect(styles.cell(0, dummy).cssClass).toBe('xlsx-cell-0');
+    const normal = styles.stylesheet().split('.xlsx-named-1{')[1]!.split('}')[0]!, cell = styles.stylesheet().split('.xlsx-cell-0{')[1]!.split('}')[0]!;
+    expect(normal).toContain('font-size:12pt'); expect(normal).toContain('--office-font-source-name:"Noto Sans CJK SC"'); expect(cell).toContain('font-size:11pt');
+    const missing = new XlsxStyles(variant(source => source.replace(/<cellStyles[\s\S]*?<\/cellStyles>/, '')), 'xl/workbook.xml', 1_000_000);
+    expect(() => missing.columnWidthFontCssClass()).toThrowError(expect.objectContaining({ code: 'UnsupportedFeature' }));
+    expect(() => new XlsxStyles(variant(source => source.replace('<cellStyles count="1">', '<cellStyles count="2"><cellStyle name="Other" xfId="0" builtinId="0"/>')), 'xl/workbook.xml', 1_000_000)).toThrowError(expect.objectContaining({ code: 'InvalidDocument' }));
   });
   it("rejects broken component IDs, duplicate definitions, active unsupported formats and style source over-budget", () => {
     const edits = [

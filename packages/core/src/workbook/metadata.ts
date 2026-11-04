@@ -10,6 +10,7 @@ export function validateWorkbookMetadata(workbook: WorkbookMetadata, classes: Re
   const ids = new Set<string>(), names = new Set<string>(); let visible = 0, items = 0;
   const classExists = (name: string): void => { if (/[\t\n\f\r ]/.test(name) || !classes.has(name)) invalid("A workbook dimension style is not defined."); };
   if (workbook.themeCssClass !== undefined) classExists(workbook.themeCssClass);
+  if (workbook.columnWidthFontCssClass !== undefined) classExists(workbook.columnWidthFontCssClass);
   const formats = new Set<string>(), ruleIds = new Set<string>();
   for (const format of workbook.numberFormats) { if (formats.has(format.formatId)) invalid("Number format identities must be unique."); formats.add(format.formatId); }
   const formatExists = (id: string | undefined): void => { if (id !== undefined && !formats.has(id)) invalid("A workbook number format is not defined."); };

@@ -21,6 +21,7 @@ export function projectXlsxRecords(records: XlsxRecords) {
   files.set("annotations.json", encoder.encode(JSON.stringify(comments.annotations)));
   const metadata = { ...records.properties, workbook: { dateSystem: records.native.dateSystem, calculationMode: records.native.calculationMode, activeSheetId: records.native.activeSheetId,
     sheets: records.sheets.map(sheet => sheet.metadata), names: records.native.names, themeCssClass: "xlsx-theme", numberFormats: records.styles.numberFormats(),
+    columnWidthFontCssClass: records.styles.columnWidthFontCssClass(),
     stories: content.stories, comments: comments.comments, commentAuthors: comments.authors,
     objects: drawings.objects, objectHyperlinks: drawings.hyperlinks, charts: drawings.charts.definitions,
     tableStyles: records.tableStyles.definitions, ...(records.tableStyles.defaultStyle ? { defaultTableStyle: records.tableStyles.defaultStyle } : {}) } };
