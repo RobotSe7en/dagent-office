@@ -41,14 +41,24 @@ export function validateWorkbookCharts(workbook: WorkbookMetadata, objects: Read
       if (item.values.valueType !== "number") invalid("A chart series requires numeric source values.");
       reference(item.values); if (item.name?.kind === "reference") reference(item.name.reference);
     }
-    if (chart.titleReference) reference(chart.titleReference);
-    if (chart.titleReference && chart.titleNodeId) invalid("A chart title cannot have competing rich-text and cell-reference sources.");
-    if (chart.titleNodeId) {
-      const title = html?.peekNode(chart.titleNodeId);
-      if (!title || title.tagName !== "div" || title.parentNodeId !== chart.nodeId || html!.directText(chart.titleNodeId)?.trim() || title.childNodeIds.some(id => html!.peekNode(id)?.tagName !== "p")) invalid("A rich chart title requires its own paragraph container inside its chart.");
+    const titleIds = new Set<string>();
+    const titles = [{ nodeId: chart.titleNodeId, reference: chart.titleReference, cssClass: chart.titleCssClass, text: chart.titleText }, chart.categoryAxisTitle, chart.valueAxisTitle];
+    if (chart.kind === "pie" && (chart.categoryAxisTitle || chart.valueAxisTitle)) invalid("A pie chart has no axis titles.");
+    for (const title of titles) {
+      if (!title) continue;
+      if (title.reference) reference(title.reference);
+      if (title.reference && title.nodeId) invalid("A chart title cannot have competing rich-text and cell-reference sources.");
+      if (title.text && !title.nodeId) invalid("Chart title text-body properties require a rich source title.");
+      if (title !== titles[0] && !title.reference && !title.nodeId) invalid("An axis title requires a text or reference source.");
+      style(title.cssClass);
+      if (title.nodeId) {
+        const body = html?.peekNode(title.nodeId);
+        if (titleIds.has(title.nodeId) || !body || body.tagName !== "div" || body.parentNodeId !== chart.nodeId || html!.directText(title.nodeId)?.trim() || body.childNodeIds.some(id => html!.peekNode(id)?.tagName !== "p")) invalid("A rich chart title requires its own paragraph container inside its chart.");
+        titleIds.add(title.nodeId);
+      }
     }
-    if (node.childNodeIds.length !== Number(chart.titleNodeId !== undefined) || chart.titleNodeId && node.childNodeIds[0] !== chart.titleNodeId) invalid("A chart drawing may contain only its registered source title.");
-    for (const key of ["plotCssClass", "legendCssClass", "textCssClass", "labelCssClass", "categoryAxisCssClass", "valueAxisCssClass", "gridCssClass"] as const) style(chart[key]);
+    if (node.childNodeIds.length !== titleIds.size || node.childNodeIds.some(id => !titleIds.has(id))) invalid("A chart drawing may contain only its registered source titles.");
+    for (const key of ["plotCssClass", "legendCssClass", "textCssClass", "labelCssClass", "categoryAxisCssClass", "valueAxisCssClass", "gridCssClass", "categoryGridCssClass", "titleCssClass"] as const) style(chart[key]);
     const seriesStyles = new Set<string>(), points = new Set<string>();
     for (const entry of chart.seriesStyles ?? []) {
       if (!series.has(entry.seriesId) || seriesStyles.has(entry.seriesId)) invalid("Chart series styles require unique existing series."); seriesStyles.add(entry.seriesId); style(entry.cssClass); style(entry.labelCssClass); items++;

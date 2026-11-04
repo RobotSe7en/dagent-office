@@ -13,7 +13,7 @@ import { validateWorkbookCharts } from "./charts.js";
 export function validateWorkbookContent(workbook: WorkbookMetadata, manifest: WorkbookManifest, annotations: readonly Annotation[], html: ParsedHtml | undefined, classes: ReadonlySet<string>, maxItems: number, priorItems = 0): void {
   const sheets = new Set(workbook.sheets.map(sheet => sheet.sheetId)), stories = new Map<string, string>(), storyIds = new Set<string>();
   const objects = workbookObjects(workbook, html);
-  const titles = new Set((workbook.charts ?? []).flatMap(chart => chart.titleNodeId ? [chart.titleNodeId] : []));
+  const titles = new Set((workbook.charts ?? []).flatMap(chart => [chart.titleNodeId, chart.categoryAxisTitle?.nodeId, chart.valueAxisTitle?.nodeId].filter((id): id is string => id !== undefined)));
   let items = priorItems + objects.size + (workbook.objectHyperlinks?.length ?? 0) + validateWorkbookCharts(workbook, objects, html, classes, maxItems);
   for (const story of workbook.stories ?? []) {
     if (storyIds.has(story.storyId) || stories.has(story.rootNodeId)) invalid("Workbook stories require unique identities.");

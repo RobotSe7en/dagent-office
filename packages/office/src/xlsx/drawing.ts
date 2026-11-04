@@ -1,7 +1,7 @@
 import { createAssetDescriptor, DocumentError, WorkbookPresetSchema } from "@dagent-office/core";
 import type { WorkbookManifest, WorkbookObject, WorkbookObjectHyperlink } from "@dagent-office/core";
 import type { OpcPackage } from "../ooxml/package.js";
-import { A, attr, check, elements, fail, R, unsupported } from "../ooxml/xml.js";
+import { A, attr, C, check, elements, fail, R, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import type { Html } from "../drawingml/html.js";
 import { attributes, boolean, integer, one, value } from "./values.js";
@@ -10,6 +10,7 @@ import { drawingAppearance } from "./drawing-style.js";
 import { readDrawingText } from "./drawing-text.js";
 import type { XlsxStyles } from "./styles.js";
 import type { WorkbookContent } from "./content.js";
+import { WorkbookCharts } from "./chart.js";
 
 function transform(node: XmlNode | undefined, target: Html): void {
   if (!node) return;
@@ -41,9 +42,9 @@ function preset(properties: XmlNode, target: Html, picture = false): string {
   return kind;
 }
 const shapeLocks = ["noGrp", "noSelect", "noRot", "noChangeAspect", "noMove", "noResize", "noEditPoints", "noAdjustHandles", "noChangeArrowheads", "noChangeShapeType", "noTextEdit"] as const;
-function locks(source: XmlNode | undefined, picture: boolean): WorkbookObject["locks"] {
+function locks(source: XmlNode | undefined, kind: "shape" | "image" | "chart"): WorkbookObject["locks"] {
   if (!source) return undefined;
-  const allowed = picture ? [...shapeLocks.filter(name => name !== "noTextEdit"), "noCrop"] : shapeLocks;
+  const allowed = kind === "chart" ? ["noGrp", "noDrilldown", "noSelect", "noChangeAspect", "noMove", "noResize"] : kind === "image" ? [...shapeLocks.filter(name => name !== "noTextEdit"), "noCrop"] : shapeLocks;
   attributes(source, allowed); check(source, [], A);
   return Object.fromEntries(allowed.filter(name => value(source, name) !== undefined).map(name => [name, boolean(source, name)]));
 }
@@ -53,10 +54,11 @@ export class WorkbookDrawings {
   readonly assets: WorkbookManifest["assets"] = [];
   readonly files: Map<string, Uint8Array> = new Map();
   readonly parts: Set<string> = new Set();
+  readonly charts: WorkbookCharts;
   private readonly sheets = new Set<string>();
   private readonly nativeIds = new Map<string, Set<string>>();
   private assetBytes = 0;
-  constructor(readonly opc: OpcPackage, readonly styles: XlsxStyles, readonly content: WorkbookContent) {}
+  constructor(readonly opc: OpcPackage, readonly styles: XlsxStyles, readonly content: WorkbookContent) { this.charts = new WorkbookCharts(opc, styles, content); }
   private hyperlink = (node: XmlNode | undefined, target: Html, part: string): void => {
     if (!node) return;
     for (const key of node.attrs.keys()) if (!key.startsWith("http://www.w3.org/2000/xmlns/ ") && ![R + " id", " tooltip", " history", " highlightClick", " endSnd", " action", " invalidUrl", " tgtFrame"].includes(key)) unsupported(node);
@@ -110,14 +112,14 @@ export class WorkbookDrawings {
     for (const anchor of elements(drawing, undefined, XDR)) this.object(sheetId, anchor);
   }
   private object(sheetId: string, anchorNode: XmlNode): void {
-    const native = readDrawingAnchor(anchorNode), source = native.object, picture = source.name === "pic";
-    if (!["pic", "sp"].includes(source.name)) unsupported(source, "This worksheet drawing object is not yet mapped.");
-    attributes(source, picture ? ["macro", "fPublished"] : ["macro", "textlink", "fLocksText", "fPublished"]);
+    const native = readDrawingAnchor(anchorNode), source = native.object, picture = source.name === "pic", frame = source.name === "graphicFrame";
+    if (!["pic", "sp", "graphicFrame"].includes(source.name)) unsupported(source, "This worksheet drawing object is not yet mapped.");
+    attributes(source, picture || frame ? ["macro", "fPublished"] : ["macro", "textlink", "fLocksText", "fPublished"]);
     if (value(source, "macro") || value(source, "textlink")) unsupported(source, "Macros and linked shape text are not supported.");
-    boolean(source, "fPublished"); if (!picture && !boolean(source, "fLocksText", true)) unsupported(source, "An unlocked native text-attachment flag is not supported.");
-    const nvName = picture ? "nvPicPr" : "nvSpPr", propName = picture ? "cNvPicPr" : "cNvSpPr";
-    check(source, [nvName, "spPr", "style", picture ? "blipFill" : "txBody"], XDR);
-    const nonvisual = one(source, nvName, XDR), identity = one(nonvisual, "cNvPr", XDR), app = one(nonvisual, propName, XDR), properties = one(source, "spPr", XDR);
+    boolean(source, "fPublished"); if (!picture && !frame && !boolean(source, "fLocksText", true)) unsupported(source, "An unlocked native text-attachment flag is not supported.");
+    const nvName = frame ? "nvGraphicFramePr" : picture ? "nvPicPr" : "nvSpPr", propName = frame ? "cNvGraphicFramePr" : picture ? "cNvPicPr" : "cNvSpPr";
+    check(frame ? { ...source, content: source.content.filter(node => typeof node === "string" || node.uri !== A || node.name !== "graphic") } : source, frame ? [nvName, "xfrm"] : [nvName, "spPr", "style", picture ? "blipFill" : "txBody"], XDR);
+    const nonvisual = one(source, nvName, XDR), identity = one(nonvisual, "cNvPr", XDR), app = one(nonvisual, propName, XDR), properties = one(source, frame ? "xfrm" : "spPr", XDR);
     if (!nonvisual || !identity || !app || !properties) fail(source, "A worksheet drawing identity or properties are missing.");
     attributes(nonvisual, []); check(nonvisual, ["cNvPr", propName], XDR);
     attributes(identity, ["id", "name", "descr", "hidden", "title"]); check(identity, ["hlinkClick"], A);
@@ -125,18 +127,28 @@ export class WorkbookDrawings {
     if (ids.has(id)) fail(identity, "Native drawing identities repeat within a worksheet."); ids.add(id); this.nativeIds.set(sheetId, ids);
     const name = value(identity, "name"); if (name === undefined) fail(identity, "A drawing name is missing.");
     for (const property of ["name", "descr", "title"]) if ((value(identity, property)?.length ?? 0) > 32767) throw new DocumentError("ResourceLimitExceeded", "A drawing description exceeds its text budget.");
-    attributes(app, picture ? ["preferRelativeResize"] : ["txBox"]); check(app, [picture ? "picLocks" : "spLocks"], A);
-    const lock = locks(one(app, picture ? "picLocks" : "spLocks", A), picture), description = value(identity, "descr") ?? "";
+    const lockName = frame ? "graphicFrameLocks" : picture ? "picLocks" : "spLocks";
+    attributes(app, frame ? [] : picture ? ["preferRelativeResize"] : ["txBox"]); check(app, [lockName], A);
+    const lock = locks(one(app, lockName, A), frame ? "chart" : picture ? "image" : "shape"), description = value(identity, "descr") ?? "";
     const target = this.content.make("div", { ...(description ? { "data-office-alt": description } : {}), ...(value(identity, "title") === undefined ? {} : { title: value(identity, "title")! }) });
     if (value(identity, "hidden") !== undefined) target.attrs["data-office-hidden"] = String(boolean(identity, "hidden"));
-    attributes(properties, ["bwMode"]); check(properties, ["xfrm", "prstGeom", "noFill", "solidFill", "gradFill", "ln", "effectLst"], A);
-    if (value(properties, "bwMode") && value(properties, "bwMode") !== "auto") unsupported(properties, "Explicit drawing black-and-white modes are not supported.");
-    transform(one(properties, "xfrm", A), target);
-    const classes = drawingAppearance(one(source, "style", XDR), properties, this.styles); if (classes) target.attrs.class = classes;
+    if (frame) transform(properties, target);
+    else {
+      attributes(properties, ["bwMode"]); check(properties, ["xfrm", "prstGeom", "noFill", "solidFill", "gradFill", "ln", "effectLst"], A);
+      if (value(properties, "bwMode") && value(properties, "bwMode") !== "auto") unsupported(properties, "Explicit drawing black-and-white modes are not supported.");
+      transform(one(properties, "xfrm", A), target);
+      const classes = drawingAppearance(one(source, "style", XDR), properties, this.styles); if (classes) target.attrs.class = classes;
+    }
     this.hyperlink(one(identity, "hlinkClick", A), target, source.part);
     const base = { nodeId: target.attrs["data-node-id"]!, sheetId, anchor: native.anchor, nativeId: id, name, locked: native.locked, printable: native.printable, ...(lock ? { locks: lock } : {}) };
     let object: WorkbookObject;
-    if (picture) {
+    if (frame) {
+      const graphic = one(source, "graphic", A), data = one(graphic, "graphicData", A);
+      if (!graphic || !data) fail(source, "A chart frame is missing graphic data."); attributes(graphic, []); check(graphic, ["graphicData"], A); attributes(data, ["uri"]);
+      if (value(data, "uri") !== C) unsupported(data, "Only native basic chart frames are supported."); check(data, ["chart"], C);
+      const reference = one(data, "chart", C); if (!reference) fail(data, "A chart frame has no chart reference.");
+      object = { ...base, kind: "chart", chartId: this.charts.read(reference, target, this.hyperlink) };
+    } else if (picture) {
       preset(properties, target, true); this.image(source, target, description);
       object = { ...base, kind: "image", ...(value(app, "preferRelativeResize") === undefined ? {} : { preferRelativeResize: boolean(app, "preferRelativeResize") }) };
     } else {

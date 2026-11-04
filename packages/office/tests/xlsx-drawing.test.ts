@@ -1,24 +1,14 @@
+import { projectXlsxRecords } from "./helpers/xlsx-record-model.js";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createWorkbook, openDocument } from "@dagent-office/core";
+import { openDocument } from "@dagent-office/core";
 import { writeOpcZip, readDocumentZip } from "../src/document-zip.js";
 import { readXlsxRecords } from "../src/xlsx/read.js";
 import { WorkbookDrawings } from "../src/xlsx/drawing.js";
 import { WorkbookContent } from "../src/xlsx/content.js";
 
 const encoder = new TextEncoder(), decoder = new TextDecoder();
-async function read(bytes: Uint8Array) {
-  const records = await readXlsxRecords(bytes), content = new WorkbookContent(records.limits.source), drawings = new WorkbookDrawings(records.opc, records.styles, content);
-  for (const sheet of records.sheets) drawings.sheet(sheet.source.sheetId, sheet.root);
-  const files = new Map([...createWorkbook({ documentId: "drawings" }), ...records.chunks.files, ...drawings.files]);
-  const manifest = JSON.parse(decoder.decode(files.get("manifest.json")!)); manifest.chunks = records.chunks.descriptors; manifest.assets = drawings.assets; manifest.content = "content.html";
-  const metadata = { workbook: { dateSystem: records.native.dateSystem, calculationMode: records.native.calculationMode, activeSheetId: records.native.activeSheetId,
-    sheets: records.sheets.map(sheet => sheet.metadata), names: records.native.names, themeCssClass: "xlsx-theme", numberFormats: records.styles.numberFormats(),
-    objects: drawings.objects, objectHyperlinks: drawings.hyperlinks } };
-  files.set("manifest.json", encoder.encode(JSON.stringify(manifest))); files.set("metadata.json", encoder.encode(JSON.stringify(metadata)));
-  files.set("content.html", encoder.encode(content.html()!)); files.set("styles.css", encoder.encode(records.styles.stylesheet()));
-  return { model: openDocument(files, { kind: "workbook" }), drawings };
-}
+async function read(bytes: Uint8Array) { return projectXlsxRecords(await readXlsxRecords(bytes)); }
 const source = () => readFileSync("examples/xlsx/08-images-shapes.xlsx");
 function variant(edit: (xml: string) => string, relationships?: string): Uint8Array {
   const files = new Map(readDocumentZip(source())), part = "xl/drawings/drawing1.xml", original = decoder.decode(files.get(part)!);

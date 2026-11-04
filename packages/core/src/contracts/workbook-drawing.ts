@@ -24,6 +24,7 @@ export const WorkbookDrawingLocksSchema = z.strictObject({
   noGrp: z.boolean().optional(), noSelect: z.boolean().optional(), noRot: z.boolean().optional(), noChangeAspect: z.boolean().optional(),
   noMove: z.boolean().optional(), noResize: z.boolean().optional(), noEditPoints: z.boolean().optional(), noAdjustHandles: z.boolean().optional(),
   noChangeArrowheads: z.boolean().optional(), noChangeShapeType: z.boolean().optional(), noTextEdit: z.boolean().optional(), noCrop: z.boolean().optional(),
+  noDrilldown: z.boolean().optional(),
 });
 const object = {
   nodeId: IdentifierSchema, sheetId: IdentifierSchema, anchor: WorkbookDrawingAnchorSchema,

@@ -19,6 +19,7 @@ const allowed: Readonly<Record<string, readonly string[]>> = {
   workbook: ["worksheet", "styles", "sharedStrings", "theme", "calcChain"].map(name => R + "/" + name).concat("http://schemas.microsoft.com/office/2017/10/relationships/person"),
   worksheet: ["drawing", "vmlDrawing", "comments", "table", "hyperlink"].map(name => R + "/" + name).concat("http://schemas.microsoft.com/office/2017/10/relationships/threadedComment"),
   drawing: [R + "/image", R + "/chart", R + "/hyperlink"],
+  chart: [R + "/hyperlink"],
 };
 function relationshipSource(path: string): string | undefined {
   if (path === "_rels/.rels") return "";

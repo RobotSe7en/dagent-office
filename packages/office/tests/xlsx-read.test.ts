@@ -1,30 +1,14 @@
+import { projectXlsxRecords } from "./helpers/xlsx-record-model.js";
 import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createWorkbook, openDocument } from "@dagent-office/core";
 import { readDocumentZip, writeOpcZip } from "../src/document-zip.js";
 import { readXlsxRecords } from "../src/xlsx/read.js";
 import type { XlsxRecords } from "../src/xlsx/read.js";
-import { WorkbookContent } from "../src/xlsx/content.js";
-import { mapWorkbookComments } from "../src/xlsx/comment-mapping.js";
 import type { XlsxReadOptions } from "../src/xlsx/options.js";
 
 const encoder = new TextEncoder(), decoder = new TextDecoder();
 const source = (name: string) => readFileSync(`examples/xlsx/${name}.xlsx`);
-// This test-only projection exercises the completed R3-06 cell records. It is
-// deliberately not a public importer for remaining R3-07 features.
-function model(records: XlsxRecords) {
-  const files = new Map([...createWorkbook({ documentId: "native-records" }), ...records.chunks.files]);
-  const manifest = JSON.parse(decoder.decode(files.get("manifest.json")!)); manifest.chunks = records.chunks.descriptors;
-  const content = new WorkbookContent(records.limits.source), comments = mapWorkbookComments(records.threads, records.threads.threads, records.notes, records.noteBoxes, content, "native-records");
-  if (content.html()) { manifest.content = "content.html"; files.set("content.html", encoder.encode(content.html()!)); }
-  files.set("annotations.json", encoder.encode(JSON.stringify(comments.annotations)));
-  const metadata = { workbook: { dateSystem: records.native.dateSystem, calculationMode: records.native.calculationMode, activeSheetId: records.native.activeSheetId,
-    sheets: records.sheets.map(sheet => sheet.metadata), names: records.native.names, themeCssClass: "xlsx-theme", numberFormats: records.styles.numberFormats(),
-    stories: content.stories, comments: comments.comments, commentAuthors: comments.authors,
-    tableStyles: records.tableStyles.definitions, ...(records.tableStyles.defaultStyle ? { defaultTableStyle: records.tableStyles.defaultStyle } : {}) } };
-  files.set("manifest.json", encoder.encode(JSON.stringify(manifest))); files.set("metadata.json", encoder.encode(JSON.stringify(metadata)));
-  files.set("styles.css", encoder.encode(records.styles.stylesheet())); return openDocument(files, { kind: "workbook", limits: records.limits.source, workbookLimits: records.limits.workbook });
-}
+const model = (records: XlsxRecords) => projectXlsxRecords(records).model;
 describe("asynchronous native workbook record pipeline", () => {
   it("maps all 32 independent and producer cell streams while retaining unconsumed feature headers", async () => {
     const expected = JSON.parse(readFileSync("examples/xlsx/expected.json", "utf8")).cases as { file: string; cellCount: number; formulaCount: number }[];

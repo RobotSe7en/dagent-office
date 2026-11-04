@@ -52,7 +52,7 @@ export function labels(node: XmlNode | undefined, defaults: NonNullable<ChartApp
   }
   return result;
 }
-function cssString(value: string): string { return '"' + value.replace(/["\\\u0000-\u001f\u007f]/g, c => c === '"' || c === "\\" ? "\\" + c : "\\" + c.charCodeAt(0).toString(16) + " ") + '"'; }
+export function cssString(value: string): string { return '"' + value.replace(/["\\\u0000-\u001f\u007f]/g, c => c === '"' || c === "\\" ? "\\" + c : "\\" + c.charCodeAt(0).toString(16) + " ") + '"'; }
 export function labelStyle(context: ChartStyleContext, source: XmlNode | undefined): string | undefined {
   if (!source) return undefined;
   const css: Css = {}, format = child(source, "numFmt", C), separator = child(source, "separator", C), position = val(source, "dLblPos");
