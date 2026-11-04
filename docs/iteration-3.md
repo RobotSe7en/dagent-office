@@ -112,7 +112,7 @@ Word/PPT 单入口包继续可读；工作簿使用明确的 chunks 分支。工
 | R3-01 | 已完成（设计） | 细则、支持矩阵、预算、接口职责与路线同步 | 已定决策落盘；链接、示例及状态检查 |
 | R3-02 | 已完成（技术原型） | [分块扫描、紧凑索引、公式模板及 Worker 传输](workbook-storage.md) | 20 万实际单元格、2 万公式、Node 内存及三引擎实测；不代表 XLSX、完整计算或编辑能力 |
 | R3-03 | 已完成 | [严格契约、新建、分块模型、类型样式和窗口查询](workbook-model.md) | 包/ZIP 保存重开、独立打包及 Word/PPT 模型回归 |
-| R3-04 | 待实施 | 独立 XLSX 源、预期、Calc 重存、固定字体与负例 | R3-01；样例独立于本项目导出器 |
+| R3-04 | 已完成（独立测试来源） | [独立 XLSX 源、预期、Calc 重存、固定字体与负例](../examples/xlsx/README.md) | 16 个正例、17 个负例、20 页参考及结构报告；不代表 SDK 导入已通过 |
 | R3-05 | 待实施 | 公式解析、引用模型、重写、共享公式与结构化引用 | R3-03/04；各结构操作的独立预期 |
 | R3-06 | 待实施 | 基础 XLSX 读取与样式映射 | R3-03/04/05；完整包校验及保存重开 |
 | R3-07 | 待实施 | 智能表、规则、打印、绘图、图表、两类批注读取 | R3-06；全部声明范围可表达 |
@@ -164,7 +164,7 @@ Word/PPT 单入口包继续可读；工作簿使用明确的 chunks 分支。工
 
 验证严格契约和同源 Schema、跨块引用及安全输入、公式类型和错误语义、原子事务和映射、真实 IME、三引擎和旧 Chromium/Safari、两类批注、提案作用域、打印、Worker/资源/子进程释放及独立打包。范围限额和性能目标分别验证。
 
-计划新增 `fixtures:xlsx`、`check:xlsx-fixtures`、`check:xlsx-reference`、`check:workbook-calculation`、`check:workbook-performance`、`check:xlsx-export`、`check:workbook-closure`。这些命令尚未实现，落地后才记录结果。普通检查不改参考基线，记录命令单独提供。
+已提供 `fixtures:xlsx`、`check:xlsx-fixtures`、`check:xlsx-reference` 和单独的 `record:xlsx-reference`。计划新增 `check:workbook-calculation`、`check:workbook-performance`、`check:xlsx-export`、`check:workbook-closure`；后四项尚未实现，落地后才记录结果。普通检查不改参考基线。
 
 原生链路必须包含独立来源导入、当前源修改、导出、结构检查、Calc 实际修改值/公式/表格/图表/备注后重存、SDK 重新导入。独立打包在工作区外安装五个 tarball，普通 JS 不安装 React，不使用源码私有路径。每阶段保留 Word/PPT 回归。
 

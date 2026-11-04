@@ -56,6 +56,7 @@ pnpm dev
 | [第一轮实施细则](docs/iteration-1.md) | Word 支持范围、任务依赖、独立闭环及延期的宿主验收 |
 | [第二轮实施细则](docs/iteration-2.md) | PPT 已定范围、自研路线、任务依赖及读取／编辑／导出验收门槛 |
 | [第三轮实施细则](docs/iteration-3.md) | Excel、自研公式、一万行目标、智能表、绘图、批注与分阶段验收 |
+| [独立 XLSX 样例](examples/xlsx/README.md) | 16 个正例、17 个负例、固定 Calc 重存、20 页打印参考与外部差异 |
 | [本地开发](docs/development.md) | 环境、启动、构建、类型检查、工程测试及本地打包 |
 | [达智集成](docs/dagent-integration.md) | 平台接入、身份隔离、工作区及运行边界 |
 | [技术选型](docs/technology-selection.md) | 候选依赖、复用范围及参考工程 |

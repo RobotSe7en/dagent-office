@@ -1,0 +1,507 @@
+{
+  "format": "dagent-office-xlsx-fixtures",
+  "version": 1,
+  "generator": "Independent Python ZIP/XML, no SDK exporter or spreadsheet library.",
+  "cases": [
+    {
+      "file": "01-values-text.xlsx",
+      "sha256": "305d3984c9de3150d26ad24775d6ab651195b240f1625e811991d357309b97b5",
+      "sheets": [
+        "Data"
+      ],
+      "referenceText": [
+        "类型与中文"
+      ],
+      "cellCount": 15,
+      "formulaCount": 0,
+      "text": [
+        "类型与中文😀禰󠄀",
+        "001234567890123456789",
+        "共享字符串 & 保留空格 "
+      ],
+      "values": {
+        "Data!A3": 12.5,
+        "Data!C3": true,
+        "Data!C4": "#DIV/0!"
+      }
+    },
+    {
+      "file": "02-styles-dates.xlsx",
+      "sha256": "a7ffd0b493e9ab94fb473013a84f45a4d500b04b338a05c511b9a6bf80d07c2c",
+      "sheets": [
+        "格式"
+      ],
+      "referenceText": [
+        "日期"
+      ],
+      "cellCount": 19,
+      "formulaCount": 0,
+      "text": [
+        "日期",
+        "分段格式"
+      ],
+      "dateSystem": "1900",
+      "values": {
+        "格式!B2": 46000,
+        "格式!B7": 60
+      }
+    },
+    {
+      "file": "03-structure.xlsx",
+      "sha256": "795ab81826ff1d923379ae95bf9bac8458ee5b3165f8e6208363453c39b5485d",
+      "sheets": [
+        "结构"
+      ],
+      "referenceText": [
+        "冻结、隐藏与跨块合并"
+      ],
+      "cellCount": 6,
+      "formulaCount": 0,
+      "text": [
+        "冻结、隐藏与跨块合并",
+        "跨分块合并"
+      ],
+      "merges": [
+        "B2:D2",
+        "A256:A258"
+      ],
+      "frozen": {
+        "rows": 2,
+        "columns": 1
+      }
+    },
+    {
+      "file": "04-formulas-names.xlsx",
+      "sha256": "b2ff0bf1de3187e3d720e8c781c57fa4d07fb2d6723f84db5004d61b3d94bf9d",
+      "sheets": [
+        "Data",
+        "基础 2"
+      ],
+      "referenceText": [
+        "名称与跨表"
+      ],
+      "cellCount": 20,
+      "formulaCount": 12,
+      "text": [
+        "名称与跨表",
+        "通过"
+      ],
+      "values": {
+        "Data!D1": 14,
+        "Data!D2": 7,
+        "Data!F2": 114
+      },
+      "sharedFormulas": 4,
+      "names": [
+        "BaseRate",
+        "LocalNumbers"
+      ]
+    },
+    {
+      "file": "05-native-table.xlsx",
+      "sha256": "54e8874468f2de1ce03fde8686f8af55b21768c444249a4fbda8bde7ab529c31",
+      "sheets": [
+        "Sales"
+      ],
+      "referenceText": [
+        "产品"
+      ],
+      "cellCount": 22,
+      "formulaCount": 5,
+      "text": [
+        "产品",
+        "金额",
+        "合计"
+      ],
+      "tables": [
+        "SalesTable"
+      ],
+      "values": {
+        "Sales!D6": 240
+      }
+    },
+    {
+      "file": "06-rules-validation.xlsx",
+      "sha256": "254402f42113d0ee7da083c4afaa0f44a45fa89f78d9d3658dc404555ec59be0",
+      "sheets": [
+        "Rules"
+      ],
+      "referenceText": [
+        "比较"
+      ],
+      "cellCount": 32,
+      "formulaCount": 0,
+      "text": [
+        "比较",
+        "三色",
+        "短文"
+      ],
+      "conditionalFormats": 4,
+      "validations": 7,
+      "importedViolations": [
+        "Rules!E3"
+      ]
+    },
+    {
+      "file": "07-three-charts.xlsx",
+      "sha256": "395c89fea4af3914620f4238d30eba086de4c4605aae13abcd40d15dd4a1516b",
+      "sheets": [
+        "Data"
+      ],
+      "referenceText": [
+        "第一季度"
+      ],
+      "cellCount": 12,
+      "formulaCount": 0,
+      "text": [
+        "第一季度",
+        "交付",
+        "计划"
+      ],
+      "charts": [
+        "column",
+        "line",
+        "pie"
+      ],
+      "drawings": 3
+    },
+    {
+      "file": "08-images-shapes.xlsx",
+      "sha256": "a0fa81e6b17e4362b57a7d116c4f821b10ea5eb12e7ab64b07e0660dc7d2ad7a",
+      "sheets": [
+        "绘图"
+      ],
+      "referenceText": [
+        "图片、形状与文本框"
+      ],
+      "cellCount": 1,
+      "formulaCount": 0,
+      "text": [
+        "图片、形状与文本框",
+        "随单元格移动缩放",
+        "绝对位置文本框 ABC 中文😀"
+      ],
+      "drawings": 3,
+      "images": 1,
+      "shapes": 2,
+      "anchors": [
+        "oneCellAnchor",
+        "twoCellAnchor",
+        "absoluteAnchor"
+      ]
+    },
+    {
+      "file": "09-classic-notes.xlsx",
+      "sha256": "4e916b0f4883d663e1058ddd622305059823ab54c9ffdb4a8d1edc08e26ba09d",
+      "sheets": [
+        "备注"
+      ],
+      "referenceText": [
+        "经典备注"
+      ],
+      "cellCount": 2,
+      "formulaCount": 0,
+      "text": [
+        "经典备注",
+        "请确认：预算😀禰󠄀"
+      ],
+      "classicNotes": 1,
+      "commentAnchors": [
+        "B2"
+      ]
+    },
+    {
+      "file": "10-modern-threads.xlsx",
+      "sha256": "cf7f6a4b981cdc2e291bda3597f46b79aedcf7e7578c556f7d3d7d9250571623",
+      "sheets": [
+        "线程"
+      ],
+      "referenceText": [
+        "现代线程"
+      ],
+      "cellCount": 3,
+      "formulaCount": 0,
+      "text": [
+        "请复核预算😀禰󠄀",
+        "已复核并补充。",
+        "待确认。"
+      ],
+      "threads": 2,
+      "replies": 1,
+      "resolvedThreads": 1,
+      "commentAnchors": [
+        "B2",
+        "C3"
+      ]
+    },
+    {
+      "file": "11-print-layout.xlsx",
+      "sha256": "09045c014dbb545c6f1e1aec661422d2eff59adb66e749cb359bbc83e21f1473",
+      "sheets": [
+        "打印"
+      ],
+      "referenceText": [
+        "独立打印"
+      ],
+      "cellCount": 90,
+      "formulaCount": 0,
+      "text": [
+        "标题",
+        "记录 45",
+        "独立打印"
+      ],
+      "printTitles": true,
+      "manualRowBreaks": [
+        23
+      ],
+      "orientation": "landscape"
+    },
+    {
+      "file": "12-multi-sheet-filter.xlsx",
+      "sha256": "047b9a43c7137bf621615c5bcd82eaf0618524d4b20ee001ab59e2c6e8925f00",
+      "sheets": [
+        "Overview",
+        "Input",
+        "Hidden"
+      ],
+      "referenceText": [
+        "多表组合"
+      ],
+      "cellCount": 9,
+      "formulaCount": 1,
+      "text": [
+        "多表组合",
+        "保留隐藏表"
+      ],
+      "hiddenSheets": [
+        "Hidden"
+      ],
+      "autoFilters": 1,
+      "values": {
+        "Overview!B2": 30
+      }
+    },
+    {
+      "file": "13-date-1904.xlsx",
+      "sha256": "8e68e9f6d72397418763404f79fd517dd85651ad42b86e8abba735ffa9e05a78",
+      "sheets": [
+        "日期1904"
+      ],
+      "referenceText": [
+        "1904 日期系统"
+      ],
+      "cellCount": 6,
+      "formulaCount": 0,
+      "text": [
+        "1904 日期系统"
+      ],
+      "dateSystem": "1904",
+      "values": {
+        "日期1904!A2": 0,
+        "日期1904!A6": 1462
+      }
+    },
+    {
+      "file": "14-preserved-formulas.xlsx",
+      "sha256": "61318e2049c912a4ee5496ed4973c47259baa424617be88a5b085141f55bc02e",
+      "sheets": [
+        "Data"
+      ],
+      "referenceText": [
+        "安全保留未实现函数"
+      ],
+      "cellCount": 5,
+      "formulaCount": 3,
+      "text": [
+        "安全保留未实现函数"
+      ],
+      "calculationMode": "manual",
+      "cachedUnsupported": [
+        "Data!B2"
+      ],
+      "unavailableCache": [
+        "Data!B3"
+      ],
+      "values": {
+        "Data!B2": 24,
+        "Data!C2": 25
+      }
+    },
+    {
+      "file": "15-ten-thousand-rows.xlsx",
+      "sha256": "3a28e0f501ee0c482ae5025ed8747cf76f72fcef0ab8528df12c49ad0e6fdd96",
+      "sheets": [
+        "Baseline"
+      ],
+      "referenceText": [
+        "客户 0"
+      ],
+      "cellCount": 200000,
+      "formulaCount": 20000,
+      "text": [
+        "客户 0 😀禰󠄀",
+        "客户 9999 😀禰󠄀"
+      ],
+      "rows": 10000,
+      "columns": 20,
+      "values": {
+        "Baseline!S10000": 3200152,
+        "Baseline!T10000": 3400152
+      }
+    },
+    {
+      "file": "16-sparse-far-cell.xlsx",
+      "sha256": "4bc4d3c999c674607064391fd9cca083f9f773e6838a85f4417434cc5b2650c6",
+      "sheets": [
+        "Sparse"
+      ],
+      "referenceText": [
+        "稀疏远端坐标"
+      ],
+      "cellCount": 3,
+      "formulaCount": 1,
+      "text": [
+        "稀疏远端坐标"
+      ],
+      "values": {
+        "Sparse!XFD1048576": 42,
+        "Sparse!B2": 42
+      }
+    }
+  ],
+  "negativeCases": [
+    {
+      "file": "invalid/duplicate-cell.xlsx",
+      "sha256": "38d69f14c823065802c88ddd3d425a61155b1e75eb31e87f3ff2c2d637b65140",
+      "error": "InvalidDocument",
+      "reason": "Duplicate coordinates cannot overwrite an earlier source cell.",
+      "part": "xl/worksheets/sheet1.xml",
+      "marker": "<c r=\"A2\">"
+    },
+    {
+      "file": "invalid/cell-out-of-bounds.xlsx",
+      "sha256": "3dfd607c3de93e9148892ca6bb51624efe7d7725bb8b620457eee5d52f506220",
+      "error": "InvalidDocument",
+      "reason": "Coordinates exceed native worksheet bounds.",
+      "part": "xl/worksheets/sheet1.xml",
+      "marker": "<c r=\"XFE1048577\">"
+    },
+    {
+      "file": "invalid/invalid-shared-string.xlsx",
+      "sha256": "6aad9501e538b4b5fd4cd3f3d5c2bb21d94c4f13a2a820a3076070faa43e80d5",
+      "error": "InvalidDocument",
+      "reason": "Shared string index is unresolved.",
+      "part": "xl/worksheets/sheet1.xml",
+      "marker": "<c r=\"B6\" t=\"s\"><v>99</v>"
+    },
+    {
+      "file": "invalid/invalid-style.xlsx",
+      "sha256": "54b05fa9fbfddb690fc766e169382127956c6c80caceb77229af0d3ca62c293a",
+      "error": "InvalidDocument",
+      "reason": "Cell style index is unresolved.",
+      "part": "xl/worksheets/sheet1.xml",
+      "marker": "s=\"99\""
+    },
+    {
+      "file": "invalid/doctype.xlsx",
+      "sha256": "43172aab43f8d10f4442265d0bf08f883beebfbcf0b36ef20fa31f024353c692",
+      "error": "InvalidDocument",
+      "reason": "Document types and external entities are prohibited.",
+      "part": "xl/worksheets/sheet1.xml",
+      "marker": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><!DOCTYPE worksheet [<!ENTITY secret SYSTEM \"file:///not-authorized\">]>"
+    },
+    {
+      "file": "invalid/array-formula.xlsx",
+      "sha256": "c6761a8bf7dc0955d0713c0411ff183aeabaeb7da29b7457071a2acd22d6e5c1",
+      "error": "UnsupportedFeature",
+      "reason": "Array formulas are outside the declared scope.",
+      "part": "xl/worksheets/sheet1.xml",
+      "marker": "<f t=\"array\" ref=\"D1:D2\">SUM(A2:A5)</f>"
+    },
+    {
+      "file": "invalid/orphan-shared-formula.xlsx",
+      "sha256": "bf2a46a49097ce104d8c8e6989d4aae93ad0b75f22825bf4014440032879c5e7",
+      "error": "InvalidDocument",
+      "reason": "A shared follower must have an unambiguous origin.",
+      "part": "xl/worksheets/sheet1.xml",
+      "marker": "<f t=\"shared\" si=\"99\"/>"
+    },
+    {
+      "file": "invalid/external-formula.xlsx",
+      "sha256": "f1eea6d61b9eae0a019e11690bfaac6988a6eabc32c53b4f6bf44a55784a59b5",
+      "error": "UnsupportedFeature",
+      "reason": "External workbook dependencies cannot be safely preserved.",
+      "part": "xl/worksheets/sheet1.xml",
+      "marker": "<f>SUM([External.xlsx]Data!A1:A5)</f>"
+    },
+    {
+      "file": "invalid/overlapping-merges.xlsx",
+      "sha256": "767cce47727525f81fa236a7a06f91711785f510a5c328a382d12a8147e8acae",
+      "error": "InvalidDocument",
+      "reason": "Merged rectangles overlap.",
+      "part": "xl/worksheets/sheet1.xml",
+      "marker": "ref=\"C2:E3\""
+    },
+    {
+      "file": "invalid/protected-sheet.xlsx",
+      "sha256": "181530c78fefbee393bae4fafb95bc8abc1604eb761fb97e04f44f064efd3e09",
+      "error": "UnsupportedFeature",
+      "reason": "Protection is not a supported editing or import contract.",
+      "part": "xl/worksheets/sheet1.xml",
+      "marker": "</sheetData><sheetProtection sheet=\"1\" password=\"FFFF\"/>"
+    },
+    {
+      "file": "invalid/unknown-comment-author.xlsx",
+      "sha256": "ba894e06514a3d571795e319884777e2381b192f577bf0d6d47470d4638e2f87",
+      "error": "InvalidDocument",
+      "reason": "A threaded comment references an undefined author.",
+      "part": "xl/threadedComments/threadedComment1.xml",
+      "marker": "personId=\"{99999999-9999-4999-8999-999999999999}\""
+    },
+    {
+      "file": "invalid/thread-parent-cycle.xlsx",
+      "sha256": "31aa26933a0839215a46428115a80a4c249830ebb11d1b99a2b93d796d85cebc",
+      "error": "InvalidDocument",
+      "reason": "Thread parent links contain a cycle.",
+      "part": "xl/threadedComments/threadedComment1.xml",
+      "marker": "done=\"1\" parentId=\"{44444444-4444-4444-8444-444444444444}\""
+    },
+    {
+      "file": "invalid/unsupported-conditional-format.xlsx",
+      "sha256": "76aaa8549a22d14db8c3b24750ec03497af01e50b4390114017003b5a248cadf",
+      "error": "UnsupportedFeature",
+      "reason": "Data bars cannot be silently dropped.",
+      "part": "xl/worksheets/sheet1.xml",
+      "marker": "<cfRule type=\"dataBar\" priority=\"1\"><dataBar><cfvo type=\"min\"/><cfvo type=\"max\"/><color rgb=\"FF4472C4\"/></dataBar></cfRule>"
+    },
+    {
+      "file": "invalid/external-image.xlsx",
+      "sha256": "3333187ba5d1fa1247e4fddf687464376dc476ad7c72e2c4fa1c4dd04cd05fa8",
+      "error": "UnsupportedFeature",
+      "reason": "An image relationship cannot grant network access.",
+      "part": "xl/drawings/_rels/drawing1.xml.rels",
+      "marker": "Target=\"https://example.com/unauthorized.png\" TargetMode=\"External\""
+    },
+    {
+      "file": "invalid/unsupported-chart.xlsx",
+      "sha256": "c433350fc1190eda23c98a9db85161ff3c4ffccbbb876659637c526392801421",
+      "error": "UnsupportedFeature",
+      "reason": "Three-dimensional charts are not in scope.",
+      "part": "xl/charts/chart3.xml",
+      "marker": "<c:pie3DChart>"
+    },
+    {
+      "file": "invalid/missing-worksheet.xlsx",
+      "sha256": "be42c6722106caf8b4bef990af75d79c0c0d839b616b53c44597eb1ce8c75e2e",
+      "error": "InvalidDocument",
+      "reason": "Internal relationship target is missing.",
+      "missingPart": "xl/worksheets/sheet1.xml"
+    },
+    {
+      "file": "invalid/truncated-zip.xlsx",
+      "sha256": "3097cb2c75bb371158990a5fecd5c2d3ae16b69e1063fbe4e3f6c9fafa68a23f",
+      "error": "InvalidDocument",
+      "reason": "ZIP directory is missing."
+    }
+  ]
+}
