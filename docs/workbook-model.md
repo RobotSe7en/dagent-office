@@ -70,6 +70,8 @@ General 的内部宽度适配已按 [Excel General 说明](https://support.micro
 
 内部颜色显示已按 [SpreadsheetML 的 HLS 亮度规则](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.foregroundcolor?view=openxml-3.0.1)处理正负 tint，区别于 DrawingML 的 RGB tint/shade。浏览器解析源 CSS 中的主题/索引变量及当前文字颜色，保留源引用；原生 ARGB 高字节不作为单元格透明度。无效颜色或明暗参数明确失败。[108 个固定 Calc 颜色观测](evidence/xlsx-color-tint-semantics.json)与连续 HLS 转换的差别最多为一个 8 位通道单位，记录了舍入边界，不声称逐字节颜色一致；运行 `python3 scripts/check-xlsx-color-tints.py` 可复核。三浏览器另核对变量、颜色语法、透明度和无效值处理。
 
+普通共享边框的内部选择器已对照[固定 Calc 的 14 类边框记录及 588 个 PDF 边界颜色结果](evidence/xlsx-border-semantics.json)：线宽等级优先，双线排在中等与粗线之间，同等级取物理下方/右方，因此 RTL 列轴会反转源顺序中的平局选择。两侧均无边框时不产生描边，不套用浏览器 CSS 表格的冲突规则。可运行 `python3 scripts/check-xlsx-borders.py` 重核；字体清单摘要、Office 归档及 PDF 工具环境随记录保存。条件格式、合并周界和最终描边仍未接入。Calc 将 `slantDashDot` 变为细虚线，这是外部生产者差异，不能把该输出作为斜线保真的证明；Excel/WPS 仍未实机核对。
+
 DrawingML 主题的填充、背景填充、线条和效果列表也已映射为共享 CSS 定义，保留占位颜色与对象引用颜色的关系。复用 PPT 的颜色、填充和轮廓原语，Excel 边界额外检查属性、重复选择、颜色变换顺序及累计样式预算。非空对象默认定义、附加配色及未知扩展目前明确拒绝；本项验证覆盖全部 32 份样式来源，尚不代表绘图对象和预览已完成。
 
 `cellXfs` 的 `apply*` 标记控制后续命名样式修改是否覆盖单元格，而不是简单地关闭该格当前格式；实现据 [Microsoft 的 XF 说明](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/68362a4b-5589-4504-b566-e8154dce1de3)保留当前值与更新标记。索引色采用[标准映射](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.indexedcolors?view=openxml-2.8.1)，工作簿明暗参数保留 [HLS 亮度语义](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.foregroundcolor?view=openxml-3.0.1)。
