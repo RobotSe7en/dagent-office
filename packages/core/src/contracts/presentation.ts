@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { IdentifierSchema } from "./primitives.js";
+import { DrawingPresetSchema, DrawingTextPropertiesSchema } from "./drawing.js";
 
 export const PresentationSizeSchema = z.strictObject({ unit: z.literal("pt"), width: z.number().positive(), height: z.number().positive() });
 export type PresentationSize = z.infer<typeof PresentationSizeSchema>;
@@ -8,10 +9,7 @@ export const PresentationGeometrySchema = z.strictObject({
   rotation: z.number(), flipH: z.boolean(), flipV: z.boolean(),
 });
 export type PresentationGeometry = z.infer<typeof PresentationGeometrySchema>;
-export const PresentationPresetSchema = z.enum([
-  "rect", "roundRect", "ellipse", "triangle", "diamond", "parallelogram", "trapezoid", "pentagon", "hexagon",
-  "rightArrow", "leftArrow", "upArrow", "downArrow", "leftRightArrow", "chevron", "line",
-]);
+export const PresentationPresetSchema = DrawingPresetSchema;
 const placeholder = z.strictObject({
   type: z.enum(["title", "body", "ctrTitle", "subTitle", "dt", "sldNum", "ftr", "hdr", "obj", "chart", "tbl", "clipArt", "dgm", "media", "sldImg", "pic"]),
   index: z.number().int().min(0),
@@ -20,10 +18,7 @@ const objectBase = {
   nodeId: IdentifierSchema, name: z.string().optional(), nativeId: IdentifierSchema.optional(), creationId: IdentifierSchema.optional(),
   placeholder: placeholder.optional(),
 };
-const textProperties = z.strictObject({
-  autoFit: z.enum(["none", "normal", "shape"]).optional(), wrap: z.boolean().optional(),
-  fontScale: z.number().positive().max(1).optional(), lineSpacingReduction: z.number().min(0).max(1).optional(),
-});
+const textProperties = DrawingTextPropertiesSchema;
 export const PresentationObjectSchema = z.discriminatedUnion("kind", [
   z.strictObject({ ...objectBase, kind: z.literal("text"), text: textProperties.optional() }),
   z.strictObject({ ...objectBase, kind: z.literal("image") }),

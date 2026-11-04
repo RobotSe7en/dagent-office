@@ -106,6 +106,8 @@ pnpm probe:workbook-model
 
 经典备注的内部记录也已读取作者、单元格、富文本和兼容线程标记，保留待处理的原生几何属性。独立来源的加粗中文与 Calc 重存的普通字重分别按实际来源保存，不互相补造。VML 几何与基础外观现已接入内部管线；[固定 Calc 探针](evidence/xlsx-note-semantics.json)验证其单元格锚点优先于 VML 位置数值，验证脚本为 `python scripts/check-xlsx-note-semantics.py`，仅 `--record` 更新证据。固定 Office 归档和字体清单均检查摘要；此探针不代表 Excel/WPS 或 SDK 视觉验收。
 
-绘图锚点基础契约区分绝对坐标、单端单元格加尺寸和双端单元格锚点。统一使用文档点单位，保留负偏移、超过一行的偏移以及移动/缩放标志；DrawingML EMU/通用长度和 VML 像素在适配边界转换。三类图表、图片、形状及文本框的 12 个独立源/Calc 锚点已通过定向解析检查，零尺寸保留原值；这些仅是锚点基础，不代表对象、图表或备注框已经完整映射。VML 像素解释依据 [Anchor](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.vml.spreadsheet.anchor?view=openxml-3.0.1)；坐标结构和数值界限按仓库固定的官方 Transitional XSD 检查。
+绘图锚点基础契约区分绝对坐标、单端单元格加尺寸和双端单元格锚点。统一使用文档点单位，保留负偏移、超过一行的偏移以及移动/缩放标志；DrawingML EMU/通用长度和 VML 像素在适配边界转换。三类图表、图片、形状及文本框的 12 个独立源/Calc 锚点已通过定向解析检查，零尺寸保留原值；对象与图表原生映射和预览仍在实施。VML 像素解释依据 [Anchor](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.vml.spreadsheet.anchor?view=openxml-3.0.1)；坐标结构和数值界限按仓库固定的官方 Transitional XSD 检查。
+
+工作簿 `objects` 已支持图片、16 个共享预设和文本框的严格源契约。元数据保存工作表、锚点、原生身份和打印/锁定标志，独立 HTML/CSS 保存正文、资源、外观、旋转翻转和裁剪；不重复保存一份由行列推导的位置。对象根必须是辅助内容的独立子节点，正文属于对象内的段落；校验跨表身份、预设调整、裁剪可见区域、资源摘要及累计预算。锁定标志是文件属性，不授予或取消宿主权限。
 
 经典备注框将单元格锚点、显示/打印和随行列变化标志保存在 `comments[].box`，实体填充、描边、箭头样式、单层阴影、内边距及对齐映射到受校验的 CSS 类。原生 VML 不复制进 HTML。普通 `commentPr` 坐标亦可单独读取；同时存在两套几何的情况明确拒绝，等待可靠的优先关系映射。未知控件、宏字段、非备注形状、重复定位、孤立形状和矛盾的显示状态明确失败。后者的 Calc 行为另有固定探针记录，不推断 Excel/WPS 相同。两类批注共用累计输出字节核算，源包重开会复核作者、正文、回复和备注框样式引用。32 份内部记录与包投影检查已包含这些基础映射，仍不代替公开导入及只读网格验收。
