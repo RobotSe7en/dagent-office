@@ -1,5 +1,6 @@
-import { AnchorSchema } from "@dagent-office/core";
+import { AnchorSchema, DocumentError } from "@dagent-office/core";
 import type { DocumentEditingSession, DocumentOperation, DocumentSelection } from "@dagent-office/core";
+import { createAnnotationPopover } from "../workspace.js";
 export interface CommentControlsHost {
     readonly session: DocumentEditingSession;
     selection(): DocumentSelection | undefined;
@@ -11,17 +12,21 @@ export interface CommentControlsHost {
 }
 export interface CommentControls {
     refresh(): void;
+    selectionChanged(): void;
+    clearSelection(): void;
     dispose(): void;
 }
 const escape = (text: string): string => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
-export function createCommentControls(document: Document, parent: HTMLElement, host: CommentControlsHost): CommentControls {
+export function createCommentControls(document: Document, parent: HTMLElement, host: CommentControlsHost, floating?: { root: ShadowRoot; rect(selection: DocumentSelection): DOMRect | undefined; bounds(): DOMRect; toolbar: HTMLElement }): CommentControls {
     const pane = document.createElement("fieldset"), legend = document.createElement("legend"), list = document.createElement("div"), controls = new AbortController();
     let listControls = new AbortController();
     legend.textContent = "批注与回复";
     pane.append(legend);
     parent.append(pane);
     const field = (label: string): HTMLInputElement => { const wrap = document.createElement("label"), node = document.createElement("input"); node.type = "text"; node.setAttribute("aria-label", label); wrap.append(label, node); pane.append(wrap); return node; };
-    const author = field("批注显示署名"), draft = field("新批注正文"), format = document.createElement("select");
+    const author = field("批注显示署名"), draft = floating ? document.createElement("textarea") : field("新批注正文"), format = document.createElement("select");
+    draft.setAttribute("aria-label", "新批注正文");
+    if (floating) { draft.placeholder = "写下批注或希望修改的内容…"; pane.append(draft); }
     format.setAttribute("aria-label", "新批注格式");
     for (const [value, label] of [["modern", "现代批注"], ["classic", "经典批注"]]) {
         const option = document.createElement("option");
@@ -31,9 +36,38 @@ export function createCommentControls(document: Document, parent: HTMLElement, h
     }
     pane.append(format);
     const button = (label: string, action: () => void, parent: HTMLElement = pane, signal = controls.signal): void => { const node = document.createElement("button"); node.type = "button"; node.textContent = label; node.addEventListener("click", () => host.attempt(action), { signal }); parent.append(node); };
-    button("添加批注", () => { const before = new Set(host.session.getAnnotations().map(a => a.annotationId)), anchor = host.selection()?.anchor ?? { kind: "node" as const, nodeId: host.slideRoot() }; host.perform([{ op: "addPresentationComment", anchor: AnchorSchema.parse(anchor), html: "<p>" + escape(draft.value) + "</p>", format: format.value as "classic" | "modern", ...(author.value ? { author: { name: author.value } } : {}) }]); draft.value = ""; host.edit(host.session.getAnnotations().find(a => !before.has(a.annotationId))!.annotationId); });
+    let chosen: DocumentSelection | undefined;
+    const composer = floating ? document.createElement("div") : pane;
+    if (floating) { composer.className = "composer"; pane.append(composer); }
+    const add = (): void => {
+        const identity = host.session.snapshot().manifest;
+        if (floating && (!chosen || chosen.documentId !== identity.documentId || chosen.baseRevision !== identity.revision)) throw new DocumentError("RevisionConflict", "选择已过期，请重新选择要批注的内容。");
+        if (floating && !draft.value.trim()) throw new DocumentError("InvalidOperation", "请填写批注内容。");
+        const before = new Set(host.session.getAnnotations().map(a => a.annotationId)), anchor = (floating ? chosen : host.selection())?.anchor ?? { kind: "node" as const, nodeId: host.slideRoot() };
+        host.perform([{ op: "addPresentationComment", anchor: AnchorSchema.parse(anchor), html: "<p>" + escape(draft.value) + "</p>", format: format.value as "classic" | "modern", ...(author.value ? { author: { name: author.value } } : {}) }]);
+        draft.value = ""; popover?.close(); chosen = undefined;
+        if (!floating) host.edit(host.session.getAnnotations().find(a => !before.has(a.annotationId))!.annotationId);
+    };
+    button("添加批注", add, composer);
+    const popover = floating ? createAnnotationPopover(floating.root, draft as HTMLTextAreaElement, [author.parentElement!, format, draft, composer], {
+        bounds: floating.bounds,
+        rect: () => chosen ? floating.rect(chosen) : undefined,
+        quote: () => {
+            const anchor = chosen?.anchor;
+            if (!anchor) return "";
+            if (anchor.kind === "text") return anchor.quote;
+            if (anchor.kind === "text-set") return anchor.ranges.map(range => range.quote).join(" … ");
+            if (anchor.kind === "node") return host.session.getNode(anchor.nodeId)?.text || "所选对象";
+            return anchor.kind === "region" ? "所选幻灯片区域" : "所选幻灯片对象";
+        },
+        submit: () => host.attempt(add), cancel: () => { draft.value = ""; chosen = undefined; },
+    }) : undefined;
+    const clearSelection = (): void => { chosen = undefined; draft.value = ""; popover?.close(); };
+    const show = (): void => { const next = host.selection(); if (!next) { clearSelection(); return; } if (JSON.stringify(chosen) !== JSON.stringify(next)) draft.value = ""; chosen = next; popover?.open(); };
+    if (floating) { button("新建批注", () => { if (!host.selection()) throw new DocumentError("InvalidOperation", "请先选择幻灯片内容。"); show(); draft.focus(); }, floating.toolbar); button("取消", () => { popover?.close(); chosen = undefined; draft.value = ""; }, composer); }
     pane.append(list);
-    return { refresh() {
+    return { selectionChanged: show, clearSelection, refresh() {
+            if (chosen && chosen.baseRevision !== host.session.snapshot().manifest.revision) { chosen = undefined; draft.value = ""; popover?.close(); }
             listControls.abort();
             listControls = new AbortController();
             list.replaceChildren();
@@ -63,5 +97,5 @@ export function createCommentControls(document: Document, parent: HTMLElement, h
                     button("删除回复", () => host.perform([{ op: "removePresentationCommentReply", annotationId: annotation.annotationId, replyId: entry.replyId }]), section, listControls.signal);
                 }
             }
-        }, dispose() { controls.abort(); listControls.abort(); pane.remove(); } };
+        }, dispose() { controls.abort(); listControls.abort(); popover?.dispose(); pane.remove(); } };
 }

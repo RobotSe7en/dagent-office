@@ -11,7 +11,7 @@ export interface InteractionHost {
   selections: (DocumentSelection | undefined)[];
   errors: string[];
   nodeReads: string[];
-  mount(files: [string, number[]][], readOnly?: boolean): Promise<void>;
+  mount(files: [string, number[]][], readOnly?: boolean, appearance?: "default" | "workspace"): Promise<void>;
   settle(): Promise<void>;
 }
 declare global { interface Window { interactionHost: InteractionHost } }
@@ -20,7 +20,7 @@ container.style.cssText = "width:1000px;margin:20px";
 document.body.replaceChildren(container);
 window.interactionHost = {
   session: undefined, view: undefined, preview: undefined, selections: [], errors: [], nodeReads: [],
-  async mount(files, readOnly = false) {
+  async mount(files, readOnly = false, appearance = "default") {
     this.view?.dispose();
     this.view = undefined;
     this.preview?.dispose();
@@ -30,6 +30,7 @@ window.interactionHost = {
     this.session = { ...session, getNode: (id) => { this.nodeReads.push(id); return session.getNode(id); } };
     if (readOnly) this.preview = mountDocumentPreview(container, this.session);
     else this.view = mountDocumentInteraction(container, this.session, {
+      appearance,
       onSelectionChange: (selection) => this.selections.push(selection), onError: (error) => this.errors.push(error.message),
     });
     await this.settle();

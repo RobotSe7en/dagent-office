@@ -12,6 +12,7 @@ import type { DocumentTextEditor } from "./rich-text.js";
 import { mountPresentationWorkbench } from "./presentation-workbench.js";
 import type { PresentationWorkbenchOptions,PresentationWorkbenchView } from "./presentation-workbench.js";
 import { createLayoutFieldTransaction } from "@dagent-office/render";
+import { workspaceControls } from "./workspace.js";
 
 function immutable<Value>(value: Value): Value {
   if (value && typeof value === "object") {
@@ -53,6 +54,20 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
   const document = container.ownerDocument, element = document.createElement("div"), shadow = element.attachShadow({ mode: "open" });
   const style = document.createElement("style");
   style.textContent = ":host{display:block;font:14px system-ui;color:#20252b}button,input{font:inherit}button{padding:6px 10px;cursor:pointer}button:disabled{cursor:default}section{margin:16px 0;padding:12px;border:1px solid #d5dbe2}h2{font-size:16px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}label{display:block;margin:8px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto}li{margin:12px 0}.error{color:#a00000}.candidate{max-height:60vh;overflow:auto}button:focus-visible,input:focus-visible{outline:2px solid #245aa5;outline-offset:2px}";
+  const workspace = options.appearance === "workspace";
+  if (workspace) style.textContent += workspaceControls + `
+    :host{background:#f2f5f1}.editing-controls{display:flex;gap:6px;padding:10px 20px 0;background:#fcfdfb}
+    section{margin:0;padding:10px 20px;border:0;border-bottom:1px solid #e1e8df;background:#fcfdfb}
+    section[aria-label="请求与提案"]{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px}
+    h2{font-size:11px;font-weight:550;margin:0;color:#91a187}.actions{gap:5px;margin:0;flex-wrap:wrap}
+    button{font-size:11px}.actions>button:nth-child(2){background:#eaf2e6;color:#4c7850;border-color:#d8e5ce}
+    label{margin:0;font-size:10px;color:#90a084}.proposal-import{position:relative}.proposal-import input{position:absolute;width:1px;height:1px;opacity:0;clip-path:inset(50%)}
+    details{font-size:10px;color:#8b9c7f}details summary{cursor:pointer}details>div{position:absolute;z-index:20;max-width:350px;max-height:200px;overflow:auto;padding:12px;background:white;border:1px solid #dfe7da;border-radius:6px;box-shadow:0 5px 20px #23432112}details label{display:flex;align-items:flex-start;gap:6px;margin:8px 0;line-height:1.7}
+    p[aria-label="协作状态"]:empty{display:none}p[aria-label="协作状态"]{font-size:10px;color:#809774;margin:0}
+    section[aria-label="提案差异"]{width:100%;max-height:65vh;overflow:auto;border:1px solid #d7e4d0;border-radius:6px;background:#f5f8f2;margin:8px 0;padding:15px}
+    section[aria-label="提案差异"] h2{font-size:13px;color:#547846}.candidate{background:#eef2eb}.error{width:100%;margin:0}
+    @media(max-width:680px){.editing-controls{padding:9px 12px 0}section{padding:9px 12px}.actions{gap:4px}.actions button{font-size:10px;padding:5px 6px}}
+  `;
   const interactionHost = document.createElement("div"), collaboration = document.createElement("section");
   collaboration.setAttribute("aria-label", "请求与提案");
   const heading = document.createElement("h2"); heading.textContent = "协作修改";
@@ -61,15 +76,20 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
   const status = document.createElement("p"); status.setAttribute("aria-live", "polite"); status.setAttribute("aria-label", "协作状态");
   const error = document.createElement("p"); error.className = "error"; error.setAttribute("role", "alert"); error.hidden = true;
   const diff = document.createElement("section"); diff.setAttribute("aria-label", "提案差异"); diff.hidden = true;
-  collaboration.append(heading, choices, actions, status, error, diff);
+  if (workspace) { const details = document.createElement("details"), summary = document.createElement("summary"); summary.textContent = "选择提交的批注"; details.append(summary, choices); collaboration.append(heading, actions, details, status, error, diff); }
+  else collaboration.append(heading, choices, actions, status, error, diff);
   const editingControls = document.createElement("div"), editingHost = document.createElement("div"); editingHost.hidden = true;
-  shadow.append(style, editingControls, editingHost, interactionHost, collaboration); container.append(element);
+  editingControls.className = "editing-controls";
+  if (workspace) shadow.append(style, editingControls, collaboration, editingHost, interactionHost);
+  else shadow.append(style, editingControls, editingHost, interactionHost, collaboration);
+  container.append(element);
   const controller = new AbortController();
   let choiceController = new AbortController(), disposed = false, pending = false, generation = 0, importSequence = 0;
   let activeRequest: DocumentInteractionRequest | undefined, deliveredRequest: DocumentInteractionRequest | undefined, candidate: CandidateChange | undefined;
   let candidatePreview: DocumentPreview | undefined, candidateReady: Promise<void> = Promise.resolve();
   let textEditor: DocumentTextEditor | undefined;
   const selected = new Map<string, boolean>();
+  let importControl: HTMLButtonElement | undefined;
 
   function ensureActive(): void { if (disposed) throw new DocumentError("InvalidOperation", "The workbench has been disposed."); }
   function notify(event: DocumentWorkbenchEvent): void {
@@ -94,6 +114,7 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
   const interaction = mountDocumentInteraction(interactionHost, session, {
     ...(options.layout ? { layout: options.layout } : {}), ...(options.limits ? { limits: options.limits } : {}),
     ...(options.title ? { title: options.title } : {}),
+    ...(options.appearance ? { appearance: options.appearance } : {}),
     onSelectionChange: (selection) => { options.onSelectionChange?.(selection); notify({ type: "selectionChanged", selection }); },
     onError: report,
   });
@@ -102,7 +123,7 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
       if (textEditor) {
         textEditor.dispose(); textEditor = undefined; editingHost.hidden = true; interactionHost.hidden = false; edit.textContent = "编辑正文";
       } else {
-        textEditor = mountDocumentTextEditor(editingHost, session, { ...(options.layout ? { layout: options.layout } : {}), ...(options.limits ? { limits: options.limits } : {}), onError: report });
+        textEditor = mountDocumentTextEditor(editingHost, session, { ...(options.layout ? { layout: options.layout } : {}), ...(options.limits ? { limits: options.limits } : {}), ...(options.appearance ? { appearance: options.appearance } : {}), onError: report });
         editingHost.hidden = false; interactionHost.hidden = true; edit.textContent = "返回预览与批注";
         void textEditor.ready.catch(report);
       }
@@ -136,6 +157,7 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
     generate.disabled = !hasSelection || pending || Boolean(candidate); submit.disabled = !hasSelection || pending || Boolean(candidate) || !options.onSubmitAnnotations;
     download.disabled = !activeRequest;
     input.disabled = !activeRequest || Boolean(candidate);
+    if (importControl) importControl.disabled = input.disabled;
     apply.disabled = !candidate || candidate.baseRevision !== session.snapshot().manifest.revision;
     reject.disabled = !candidate;
   }
@@ -227,7 +249,7 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
   const generate = button("生成请求", () => { buildRequest(); });
   const submit = button("统一提交批注", () => { void submitAnnotations().catch(report); });
   const download = button("下载请求 JSON", downloadRequest);
-  const importLabel = document.createElement("label"); importLabel.textContent = "导入提案 JSON";
+  const importLabel = document.createElement(workspace ? "div" : "label"); importLabel.textContent = "导入提案 JSON";
   const input = document.createElement("input"); input.type = "file"; input.accept = ".json,application/json"; input.setAttribute("aria-label", "导入提案 JSON");
   input.addEventListener("change", () => {
     const file = input.files?.[0], request = activeRequest, current = ++importSequence;
@@ -239,6 +261,7 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
       attempt(() => { loadProposal(request, parseContract("edit-proposal", JSON.parse(text))); });
     }).catch(report);
   }, { signal: controller.signal });
+  if (workspace) { importLabel.textContent = ""; importLabel.className = "proposal-import"; input.hidden = true; importControl = button("导入提案 JSON", () => input.click(), importLabel); }
   importLabel.append(input); actions.append(importLabel);
   const apply = button("整批应用提案", () => { applyProposal(); }, diff), reject = button("拒绝提案", rejectProposal, diff);
   const unsubscribe = session.subscribe((event) => { if (event.type !== "error") update(); });

@@ -5,6 +5,7 @@ import type { DocumentPreview } from "@dagent-office/render";
 import { mountPresentationEditor } from "./presentation-editor.js";
 import type { PresentationEditorOptions, PresentationEditorView } from "./presentation-editor.js";
 import type { DocumentInteractionView } from "./interaction.js";
+import { workspaceControls } from "./workspace.js";
 function immutable<T>(value: T): T { if (value && typeof value === "object") {
     for (const child of Object.values(value))
         immutable(child);
@@ -44,6 +45,14 @@ export function mountPresentationWorkbench(container: HTMLElement, session: Docu
     const document = container.ownerDocument, element = document.createElement("div"), shadow = element.attachShadow({ mode: "open" }), controls = new AbortController(), editorHost = document.createElement("div"), panel = document.createElement("section"), choices = document.createElement("div"), actions = document.createElement("div"), status = document.createElement("p"), error = document.createElement("p"), diff = document.createElement("section"), candidateHost = document.createElement("div");
     const style = document.createElement("style");
     style.textContent = ":host{display:block;font:14px system-ui;color:#20252b}button,input,select{font:inherit}button,select{padding:6px 10px}button{cursor:pointer}section{padding:12px;margin:12px 0;border:1px solid #ccd3dc}label{display:inline-flex;gap:5px;margin:5px}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #245aa5;outline-offset:2px}p{white-space:pre-wrap}.actions{display:flex;flex-wrap:wrap;gap:6px}.candidate{max-height:70vh;overflow:auto}table{border-collapse:collapse}td,th{padding:4px 8px;border:1px solid #ccd3dc}.error{color:#a00000}[hidden]{display:none!important}";
+    const workspace = options.appearance === "workspace";
+    if (workspace) style.textContent += workspaceControls + `
+      section{margin:0;padding:10px 18px;border:0;border-bottom:1px solid #dfe7da;background:#fcfdfb}section[aria-label="PPT 请求与提案"]{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap}
+      h2{font-size:11px;font-weight:550;margin:0;color:#91a187}.actions{gap:5px}.actions button,.actions select{font-size:10px;padding:5px 7px}.actions>button:nth-of-type(2){background:#eaf2e6;color:#4c7850;border-color:#d8e5ce}
+      div[aria-label="选择提交的批注"]{width:100%;font-size:10px;color:#91a181}label{margin:0 15px 0 0;font-size:10px;line-height:1.8}input[type=checkbox]{accent-color:#558151}
+      p[aria-label="协作状态"]{font-size:10px;color:#809774;margin:0}p[aria-label="协作状态"]:empty{display:none}.error{margin:0;width:100%}
+      section[aria-label="提案差异"]{width:100%;max-height:40vh;overflow:auto;background:#f4f8f0;border:1px solid #dbe7d2;border-radius:6px}.candidate:not(:empty){width:100%;max-height:50vh;overflow:auto}
+    `;
     panel.setAttribute("aria-label", "PPT 请求与提案");
     choices.setAttribute("aria-label", "选择提交的批注");
     status.setAttribute("aria-label", "协作状态");
@@ -58,7 +67,8 @@ export function mountPresentationWorkbench(container: HTMLElement, session: Docu
     const heading = document.createElement("h2");
     heading.textContent = "协作修改";
     panel.append(heading, choices, actions, status, error, diff, candidateHost);
-    shadow.append(style, editorHost, panel);
+    if (workspace) shadow.append(style, panel, editorHost);
+    else shadow.append(style, editorHost, panel);
     let disposed = false, pending = false, renderingCandidate = false, generation = 0, request: PresentationInteractionRequest | undefined, candidate: CandidateChange | undefined, candidateView: DocumentPreview | undefined, candidateReady: Promise<void> = Promise.resolve(), choiceControls = new AbortController();
     const checked = new Set<string>();
     const ensure = (): void => { if (disposed)
