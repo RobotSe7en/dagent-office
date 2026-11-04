@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { build } from "vite";
 import { fileURLToPath } from "node:url";
 import type { WorkbookViewport } from "../../packages/render/src/workbook/viewport.js";
+import type { WorkbookTextFontRun } from "../../packages/render/src/workbook/text-fonts.js";
 
 interface GridHost {
   render(viewport: WorkbookViewport, rtl?: boolean): Promise<boolean>;
@@ -11,6 +12,7 @@ interface GridHost {
   columnFontMeasurement(): Promise<{ measured: { cssClass: string; maximumDigitWidthPx: number; fonts: { requestedFamily: string; substituted: boolean }[] }; fallback: { cssClass: string; maximumDigitWidthPx: number }; actual: number; unrelatedUnchanged: boolean; retainedProbes: number }>;
   colorMeasurement(): { values: (string | undefined)[]; errors: string[]; unchanged: boolean };
   sourceStyleMeasurement(): Promise<{ text: string | null; font: string; size: string; italic: string; background: string; bold: string; foreground: string; plain: string; blockRow?: string; row?: string; bound: boolean; before: string; disposed: boolean; noPartial: boolean; retained: number; rejected: string[] }>;
+  textFontMeasurement(): Promise<{ runs: readonly WorkbookTextFontRun[]; rich: readonly WorkbookTextFontRun[]; withBreak: readonly WorkbookTextFontRun[]; limited: boolean; unchanged: boolean; frozen: boolean }>;
 }
 declare global { interface Window { workbookGridHost: GridHost } }
 let code = '';
@@ -81,4 +83,18 @@ test('bounded cell style projection retains source chunk selectors, rich runs an
   expect(report.before).toContain('<span class="rich-style">一万</span>行');
   expect(report.rejected).toEqual(Array(5).fill('InvalidDocument')); expect(requests).toEqual([]);
   expect(await page.evaluate(() => (window as unknown as Record<string, unknown>).workbookInjected)).toBeUndefined();
+});
+
+test('cell font roles retain UTF-16 and variation selectors across source spans without changing CSS ancestry', async ({ page }) => {
+  const result = await page.evaluate(() => window.workbookGridHost.textFontMeasurement());
+  expect(result).toMatchObject({ limited: true, unchanged: true, frozen: true });
+  expect(result.runs.map(({ text, from, to, role }) => ({ text, from, to, role }))).toEqual([
+    { text: '合并', from: 0, to: 2, role: 'east-asia' }, { text: '😀', from: 2, to: 4, role: 'h-ansi' },
+    { text: '禰', from: 4, to: 5, role: 'east-asia' }, { text: '󠄀', from: 5, to: 7, role: 'east-asia' },
+  ]);
+  for (const run of result.runs.filter(run => run.role === 'east-asia')) expect(run.font.family).toContain('Noto Sans CJK SC');
+  expect(result.rich.map(run => run.font.weight)).toEqual(['700', '400']);
+  for (const run of result.rich) { expect(run.font.style).toBe('italic'); expect(run.font.family).toContain('Liberation Serif'); expect(run.font.sizePx).toBeCloseTo(13 / .75, 1); }
+  expect(result.withBreak.map(run => run.text).join('')).toBe('合并😀禰󠄀\nA');
+  expect(result.withBreak.at(-1)).toMatchObject({ text: 'A', from: 8, to: 9, role: 'ascii' });
 });

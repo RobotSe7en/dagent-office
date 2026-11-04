@@ -9,6 +9,7 @@ import { PresentationInheritance } from "./inheritance.js";
 import { svgElement, svgPath } from "./svg.js";
 import { decorateLists, textTransform } from "./text.js";
 import { resolveConnector } from "./connectors.js";
+import { officeFontSegments } from "../font-scripts.js";
 
 type ObjectDefinition = DeepReadonly<PresentationObject>;
 const attributes = (node: Element): Record<string, string> => Object.fromEntries([...node.attributes].map(a => [a.name, a.value]));
@@ -257,16 +258,11 @@ export function composePresentation(document: Document, model: ContentDocumentMo
   for (let n = walker.nextNode(); n; n = walker.nextNode()) if (!n.parentElement?.closest("svg,.sdk-field-display")) texts.push(n as Text);
   for (const text of texts) {
     const parent = text.parentElement!; if (!text.textContent) continue;
-    let previous = "ascii"; const chunks: { role: string; value: string }[] = [];
-    for (const char of text.data) {
-      const code = char.codePointAt(0)!;
-      const role = /\p{Mark}/u.test(char) || code >= 0xfe00 && code <= 0xfe0f || code >= 0xe0100 && code <= 0xe01ef ? previous : /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\u3000-\u303f\uff00-\uffef]/u.test(char) ? "east-asia" : code < 128 ? "ascii" : /[\p{Script=Arabic}\p{Script=Hebrew}]/u.test(char) ? "complex-script" : "h-ansi";
-      previous = role; if (chunks.at(-1)?.role === role) chunks.at(-1)!.value += char; else chunks.push({ role, value: char });
-    }
+    const chunks = officeFontSegments(text.data);
     account(chunks.length); const fragment = document.createDocumentFragment();
     for (const chunk of chunks) {
       const span = markViewNode(document.createElement("span"), "unwrap"); span.dataset.officeScript = chunk.role; span.style.fontFamily = `var(--office-font-${chunk.role},var(--office-minor-${chunk.role},${document.defaultView!.getComputedStyle(parent).fontFamily}))`;
-      span.textContent = chunk.value; fragment.append(span);
+      span.textContent = chunk.text; fragment.append(span);
     }
     text.replaceWith(fragment);
   }

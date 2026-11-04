@@ -11,6 +11,7 @@ import { formatGeneralNumber } from "../../../packages/core/src/workbook/format-
 import { measureWorkbookColumnFont } from "../../../packages/render/src/workbook/column-font.js";
 import { resolvedWorkbookColor } from "../../../packages/render/src/workbook/color.js";
 import { WorkbookCellSources } from "../../../packages/render/src/workbook/cell-source.js";
+import { workbookTextFonts } from "../../../packages/render/src/workbook/text-fonts.js";
 
 const encode = (text: string) => new TextEncoder().encode(text);
 async function main() {
@@ -24,7 +25,7 @@ async function main() {
   sheet.frozen = { rows: 2, columns: 1 }; sheet.merges = [{ from: { row: 0, column: 0 }, to: { row: 6, column: 6 } }];
   for (const [row, column, text] of [[0, 0, '合并😀禰󠄀'], [9999, 9, '一万行'], [1_048_575, 16_383, '末格']] as const) {
     const blockRow = Math.floor(row / 256) * 256, blockColumn = Math.floor(column / 32) * 32, path = `sheets/sheet-1/${blockRow}-${blockColumn}.html`;
-    const bytes = encode(`<!doctype html><html><head></head><body><table data-sheet-id="sheet-1" data-row="${blockRow}" data-column="${blockColumn}"><tbody><tr data-row="${row}"><td data-column="${column}" data-value-type="text"${row === 9999 ? ' class="cell-highlight"' : ''}>${row === 9999 ? '<span class="rich-style">一万</span>行' : text}</td></tr></tbody></table></body></html>`);
+    const bytes = encode(`<!doctype html><html><head></head><body><table data-sheet-id="sheet-1" data-row="${blockRow}" data-column="${blockColumn}"><tbody><tr data-row="${row}"><td data-column="${column}" data-value-type="text"${row === 9999 ? ' class="cell-highlight"' : ''}>${row === 9999 ? '<span class="rich-style">一万</span>行' : row === 0 ? '合并😀<span>禰</span><span>󠄀</span>' : text}</td></tr></tbody></table></body></html>`);
     const digest = await crypto.subtle.digest('SHA-256', bytes);
     manifest.chunks.push({ sheetId: 'sheet-1', row: blockRow, column: blockColumn, path, sha256: [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('') });
     files.set(path, bytes);
@@ -126,6 +127,17 @@ async function main() {
       }
       result.retained = container.querySelectorAll('[data-office-view="workbook-source-measurement"]').length;
       return result;
+    },
+    async textFontMeasurement() {
+      await loader.load('sheet-1', dimensions, { widthPt: 240, heightPt: 80, scrollLeftPt: 0, scrollTopPt: 99_970 });
+      const source = new WorkbookCellSources(container, model.snapshot(), loader.frame!);
+      try {
+        const merged = source.get(0, 0)!, before = merged.element.outerHTML, runs = workbookTextFonts(merged), rich = workbookTextFonts(source.get(9999, 9)!);
+        const copy = merged.element.cloneNode(true) as HTMLTableCellElement; copy.append(document.createElement('br'), document.createTextNode('A')); merged.element.parentElement!.append(copy);
+        const withBreak = workbookTextFonts({ ...merged, element: copy }); copy.remove();
+        let limited = false; try { workbookTextFonts(merged, 1); } catch (error) { limited = (error as { code: string }).code === 'ResourceLimitExceeded'; }
+        return { runs, rich, withBreak, limited, unchanged: before === merged.element.outerHTML, frozen: Object.isFrozen(runs) && Object.isFrozen(runs[0]!.font) };
+      } finally { source.dispose(); }
     },
     dispose() { loader.dispose(); container.remove(); style.remove(); },
   };
