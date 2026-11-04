@@ -1,0 +1,53 @@
+{
+  "scope": "Classic note VML anchor precedence only; Excel/WPS and SDK visual acceptance are unverified.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "fontManifest": {
+    "source": "examples/xlsx/reference.json#environment.fonts",
+    "sha256": "bda037c50b31e342e0e460755840725d14dd8bfaeccca8de54269277342a5119"
+  },
+  "cases": [
+    {
+      "case": "base",
+      "sourceSha256": "0fda22a223661a75b98d5d6e607f43230fe6a04a12157ba7dcd854eab6d6400e",
+      "observed": {
+        "geometryPt": {
+          "margin-left": 153.9,
+          "margin-top": 20.9,
+          "width": 227.05,
+          "height": 61.45
+        },
+        "anchor": "2, 10, 1, 2, 5, 20, 5, 4",
+        "visibility": "hidden"
+      }
+    },
+    {
+      "case": "different-css",
+      "sourceSha256": "10ae9643411b61c18173b23df98b94187a65e0f0b4ba7353d8f30c8a6de88dab",
+      "observed": {
+        "geometryPt": {
+          "margin-left": 153.9,
+          "margin-top": 20.9,
+          "width": 227.05,
+          "height": 61.45
+        },
+        "anchor": "2, 10, 1, 2, 5, 20, 5, 4",
+        "visibility": "hidden"
+      }
+    },
+    {
+      "case": "different-anchor",
+      "sourceSha256": "0022dae04bddaad6f3e598e2ecbae4071ea58091ec4c32279f289bb014f1427c",
+      "observed": {
+        "geometryPt": {
+          "margin-left": 103.2,
+          "margin-top": 49.4,
+          "width": 249.5,
+          "height": 104.9
+        },
+        "anchor": "1, 40, 2, 20, 4, 80, 9, 20",
+        "visibility": "hidden"
+      }
+    }
+  ]
+}

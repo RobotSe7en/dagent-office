@@ -21,7 +21,7 @@ export function spreadsheetStringText(node: XmlNode): string {
   if (node.content.some(item => typeof item !== "string")) fail(node, "Native text must not contain child elements.");
   return spreadsheetText(text(node), node);
 }
-export function richString(node: XmlNode, styles: RichTextStyles): RichString {
+export function richString(node: XmlNode, styles: RichTextStyles, nodeId?: () => string): RichString {
   attributes(node, []); check(node, ["t", "r"], S);
   const simple = one(node, "t"), runs = elements(node, "r", S);
   if (simple && runs.length) fail(node, "A native string mixes plain and rich text containers.");
@@ -33,7 +33,7 @@ export function richString(node: XmlNode, styles: RichTextStyles): RichString {
     const decoded = spreadsheetStringText(source), properties = one(run, "rPr"); codeUnits += decoded.length;
     if (codeUnits > 32767) throw new DocumentError("ResourceLimitExceeded", "A rich string exceeds its UTF-16 budget.");
     const cssClass = properties ? styles.run(properties) : undefined;
-    html += cssClass ? `<span class="${textHtml(cssClass)}">${textHtml(decoded)}</span>` : textHtml(decoded);
+    html += cssClass ? `<span${nodeId ? ` data-node-id="${textHtml(nodeId())}"` : ""} class="${textHtml(cssClass)}">${textHtml(decoded)}</span>` : textHtml(decoded);
   }
   return { html, codeUnits };
 }

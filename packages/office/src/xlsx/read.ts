@@ -21,6 +21,8 @@ import { readConditionalRules, readDataValidations } from "./rules.js";
 import { auditXlsxPackage } from "./package.js";
 import { readTables, readTableStyles } from "./tables.js";
 import type { NativeTableStyles } from "./tables.js";
+import { readClassicComments } from "./classic-comments.js";
+import type { NativeClassicNotes } from "./classic-comments.js";
 import { readThreadedComments } from "./threaded-comments.js";
 import type { NativeThreads } from "./threaded-comments.js";
 import { readAutoFilter } from "./filter.js";
@@ -47,6 +49,7 @@ export interface XlsxRecords {
   readonly chunks: WorkbookChunks;
   readonly sheets: readonly NativeSheetRecords[];
   readonly threads: NativeThreads;
+  readonly notes: NativeClassicNotes;
   readonly counts: { readonly cells: number; readonly formulas: number };
 }
 
@@ -101,6 +104,7 @@ export async function readXlsxRecords(bytes: Uint8Array, options: XlsxReadOption
     await control.checkpoint({ phase: "worksheet", completed: sheetBytes.length * 2, total: sheetBytes.length * 2, sheetId: source.sheetId });
   }
   chunks.finish(); strings.validateReferences();
+  const notes = readClassicComments(opc, native.sheets, styles, limits.source.maxNodes, limits.source.maxFileBytes);
   const threads = readThreadedComments(opc, native.part, native.sheets, limits.source.maxNodes);
-  return { opc, control, limits, native, styles, tableStyles, chunks, sheets, threads, counts: { cells, formulas } };
+  return { opc, control, limits, native, styles, tableStyles, chunks, sheets, threads, notes, counts: { cells, formulas } };
 }

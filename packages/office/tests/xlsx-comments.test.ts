@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { createWorkbook, DEFAULT_DOCUMENT_READ_LIMITS, openDocument } from "@dagent-office/core";
 import { openOpc, openOpcFiles } from "../src/ooxml/package.js";
 import type { OpcPackage } from "../src/ooxml/package.js";
+import { readClassicComments } from "../src/xlsx/classic-comments.js";
+import { XlsxStyles } from "../src/xlsx/styles.js";
 import { readWorkbook } from "../src/xlsx/workbook.js";
 import { readThreadedComments } from "../src/xlsx/threaded-comments.js";
 import { WorkbookContent } from "../src/xlsx/content.js";
@@ -93,6 +95,52 @@ describe("native spreadsheet threaded comments", () => {
       const data = mapped(); edit(data.mapped); const metadata = JSON.parse(decoder.decode(data.files.get("metadata.json")!));
       metadata.workbook.commentAuthors = data.mapped.authors; metadata.workbook.comments = data.mapped.comments;
       data.files.set("metadata.json", encoder.encode(JSON.stringify(metadata))); expect(() => openDocument(data.files)).toThrow();
+    }
+  });
+});
+
+
+describe("classic spreadsheet note records", () => {
+  function classic(opc: OpcPackage) {
+    const workbook = readWorkbook(opc), styles = new XlsxStyles(opc, workbook.part, 1_000_000);
+    return { ...readClassicComments(opc, workbook.sheets, styles, 1000, 1_000_000), styles };
+  }
+  it("preserves independent and Calc rich note bodies with stable HTML identities", () => {
+    for (const name of ["09-classic-notes", "producer/09-classic-notes"]) {
+      const native = classic(source(name)); expect(native.notes).toHaveLength(1); expect(native.authors[0]?.name).toBe("独立备注作者");
+      const note = native.notes[0]!, content = new WorkbookContent(DEFAULT_DOCUMENT_READ_LIMITS), bodyNodeId = content.comment(note.sheetId, note.html);
+      expect(note.cell).toEqual({ row: 1, column: 1 }); expect(note.html).toContain('data-node-id="xlsx-note-run-1"');
+      const files = new Map(createWorkbook({ documentId: "notes" })), manifest = JSON.parse(decoder.decode(files.get("manifest.json")!)), metadata = JSON.parse(decoder.decode(files.get("metadata.json")!));
+      manifest.content = "content.html"; metadata.workbook.stories = content.stories; metadata.workbook.commentAuthors = native.authors;
+      metadata.workbook.comments = [{ annotationId: "note", format: "classic", authorId: note.authorId }];
+      const annotations = [{ annotationId: "note", documentId: "notes", baseRevision: 0, status: "open", author: { name: native.authors[0]!.name }, bodyNodeId,
+        anchor: { kind: "cells", sheetId: note.sheetId, ranges: [{ from: note.cell, to: note.cell }] } }];
+      for (const [path, value] of [["manifest.json", manifest], ["metadata.json", metadata], ["annotations.json", annotations]] as const) files.set(path, encoder.encode(JSON.stringify(value)));
+      files.set("content.html", encoder.encode(content.html()!)); files.set("styles.css", encoder.encode(decoder.decode(files.get("styles.css")!) + native.styles.stylesheet()));
+      const model = openDocument(files, { kind: "workbook" }); expect(model.getNode(bodyNodeId)?.text).toBe("请确认：预算😀禰󠄀");
+      expect(openDocument(model.serialize()).snapshot()).toEqual(model.snapshot());
+      if (!name.startsWith("producer/")) expect(native.styles.stylesheet()).toContain(".xlsx-style-0{font-weight:bold");
+    }
+  });
+  it("identifies a compatibility placeholder by its author marker and retains pending native geometry", () => {
+    const files = new Map(source("09-classic-notes").files), part = "xl/comments/comment1.xml";
+    files.set(part, encoder.encode(decoder.decode(files.get(part)!).replace("独立备注作者", `Threaded tc=${rootId}`).replace('authorId="0"', `authorId="0" guid="${rootId}" shapeId="1025"`).replace('</text></comment>', '</text><commentPr><anchor/></commentPr></comment>')));
+    const native = classic(openOpcFiles(files, {}));
+    expect(native.notes[0]).toMatchObject({ placeholderId: rootId, guid: rootId, shapeId: 1025, properties: { name: "commentPr" } });
+    // This record stage intentionally leaves geometry for the note adapter;
+    // it cannot be exposed as a successful full workbook import yet.
+  });
+  it("rejects missing authors, duplicate note cells, missing text and unknown note content", () => {
+    expect(() => parsed(source("invalid/unknown-comment-author"))).toThrowError(expect.objectContaining({ code: "InvalidDocument" }));
+    for (const edit of [
+      (s: string) => s.replace('authorId="0"', 'authorId="999"'),
+      (s: string) => s.replace('<comment ref="B2" authorId="0">', '<comment ref="B2" authorId="0"><text/></comment><comment ref="B2" authorId="0">'),
+      (s: string) => s.replace(/<text>[\s\S]*?<\/text>/, ''),
+      (s: string) => s.replace('ref="B2"', 'ref="XFE2"'),
+      (s: string) => s.replace('</comment>', '<unsupported/></comment>'),
+    ]) {
+      const files = new Map(source("09-classic-notes").files), part = "xl/comments/comment1.xml";
+      files.set(part, encoder.encode(edit(decoder.decode(files.get(part)!)))); expect(() => classic(openOpcFiles(files, {}))).toThrow();
     }
   });
 });
