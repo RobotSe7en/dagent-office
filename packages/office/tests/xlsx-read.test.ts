@@ -10,6 +10,20 @@ const encoder = new TextEncoder(), decoder = new TextDecoder();
 const source = (name: string) => readFileSync(`examples/xlsx/${name}.xlsx`);
 const model = (records: XlsxRecords) => projectXlsxRecords(records).model;
 describe("asynchronous native workbook record pipeline", () => {
+  it("keeps Normal, explicit format zero and row/column defaults distinct in the independent style fixture", async () => {
+    const records = await readXlsxRecords(readFileSync("packages/office/tests/fixtures/xlsx-cell-style-precedence.xlsx"));
+    const book = model(records), sheet = book.snapshot().metadata.workbook.sheets[0]!;
+    expect(sheet).toMatchObject({ defaultCssClass: "xlsx-named-0", defaultNumberFormatId: "num-164",
+      rowDimensions: [{ from: 1, to: 1, cssClass: "xlsx-cell-2", numberFormatId: "num-167" }, { from: 4, to: 5, cssClass: "xlsx-cell-0", numberFormatId: "num-165" }],
+      columnDimensions: [{ from: 1, to: 7, cssClass: "xlsx-cell-1", numberFormatId: "num-166" }] });
+    for (let row = 0; row < 6; row++) {
+      expect(book.getCell(sheet.sheetId, row, 1)?.cssClass).toBeUndefined();
+      expect(book.getCell(sheet.sheetId, row, 2)).toMatchObject({ cssClass: "xlsx-cell-0", formatId: "num-165" });
+      expect(book.getCell(sheet.sheetId, row, 4)?.value).toEqual({ type: "blank" });
+      expect(book.getCell(sheet.sheetId, row, 5)).toBeUndefined();
+      expect(book.getCell(sheet.sheetId, row, 6)).toMatchObject({ cssClass: "xlsx-cell-0", formatId: "num-165", value: { type: "blank" } });
+    }
+  });
   it("maps all 32 independent and producer cell streams while retaining unconsumed feature headers", async () => {
     const expected = JSON.parse(readFileSync("examples/xlsx/expected.json", "utf8")).cases as { file: string; cellCount: number; formulaCount: number }[];
     let checked = 0;

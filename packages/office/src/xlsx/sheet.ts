@@ -9,6 +9,7 @@ import type { NativeSheet } from "./workbook.js";
 export interface CellStyleReference { readonly cssClass: string; readonly numberFormatId: string }
 export interface SheetStyles {
   cell(index: number, node: XmlNode): CellStyleReference;
+  defaultCell(): CellStyleReference;
   tabStyle(node: XmlNode): string;
 }
 
@@ -23,10 +24,10 @@ export function rowDimension(node: XmlNode, row: number, styles: SheetStyles): W
     const height = number(node, "ht"); if (height < 0 || height > 409) fail(node, "A worksheet row height is invalid.");
     if (boolean(node, "customHeight")) result.heightPt = height;
   } else if (boolean(node, "customHeight")) fail(node, "A custom row height is missing.");
-  if (value(node, "s") !== undefined) {
-    const style = styles.cell(integer(node, "s"), node);
+  if (value(node, "s") !== undefined || boolean(node, "customFormat")) {
+    const style = styles.cell(integer(node, "s", 0, 0xffff_ffff, 0), node);
     if (boolean(node, "customFormat")) Object.assign(result, style);
-  } else if (boolean(node, "customFormat")) fail(node, "A custom row style is missing.");
+  }
   return Object.keys(result).length === 2 ? undefined : result;
 }
 
@@ -115,7 +116,7 @@ export function readSheet(root: XmlNode, source: NativeSheet, rows: WorkbookShee
     for (const merge of elements(mergeCells, "mergeCell", S)) { attributes(merge, ["ref"]); check(merge, [], S); merges.push(range(value(merge, "ref") ?? "", merge)); }
     if (value(mergeCells, "count") !== undefined && integer(mergeCells, "count") !== merges.length) fail(mergeCells, "The merge count is inconsistent.");
   }
-  const tab = one(properties, "tabColor"), defaultStyle = styles.cell(0, root), nativeWidth = value(format, "defaultColWidth");
+  const tab = one(properties, "tabColor"), defaultStyle = styles.defaultCell(), nativeWidth = value(format, "defaultColWidth");
   return {
     sheetId: source.sheetId, name: source.name, visibility: source.visibility,
     defaultRowHeightPt: format ? number(format, "defaultRowHeight") : 15,

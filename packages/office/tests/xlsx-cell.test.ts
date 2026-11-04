@@ -11,7 +11,7 @@ import { scanWorksheet } from "../src/xlsx/scan.js";
 import { cellFormula, readCell } from "../src/xlsx/cell.js";
 
 const encoder = new TextEncoder(), limits = { ...DEFAULT_DOCUMENT_READ_LIMITS, maxNodes: 2_000_000 };
-const styles = { run: () => "rich-run", cell: (index: number) => ({ cssClass: `cell-${index}`, numberFormatId: "general" }), tabStyle: () => "cell-0" };
+const styles = { defaultCell: () => ({ cssClass: "cell-default", numberFormatId: "general" }), run: () => "rich-run", cell: (index: number) => ({ cssClass: `cell-${index}`, numberFormatId: "general" }), tabStyle: () => "cell-0" };
 const control = new ImportControl(), stringsOptions = () => ({ limits, budget: { nodes: 0 }, maxRetainedNodes: 1000, maxStrings: 10000, maxCodeUnits: 1_000_000, control });
 const document = (source: string) => xml(encoder.encode(source), "cell.xml", limits, { nodes: 0 });
 async function source(filename: string) {

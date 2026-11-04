@@ -19,7 +19,7 @@ describe("native workbook style tables", () => {
       const files = new Map(createWorkbook({ documentId: "style-tables" })), metadata = JSON.parse(decoder.decode(files.get("metadata.json")!));
       metadata.workbook.themeCssClass = "xlsx-theme"; metadata.workbook.numberFormats = styles.numberFormats();
       metadata.workbook.columnWidthFontCssClass = styles.columnWidthFontCssClass();
-      metadata.workbook.sheets[0].defaultCssClass = styles.cell(0, dummy).cssClass; metadata.workbook.sheets[0].defaultNumberFormatId = styles.cell(0, dummy).numberFormatId;
+      metadata.workbook.sheets[0].defaultCssClass = styles.defaultCell().cssClass; metadata.workbook.sheets[0].defaultNumberFormatId = styles.defaultCell().numberFormatId;
       files.set("metadata.json", encoder.encode(JSON.stringify(metadata))); files.set("styles.css", encoder.encode(styles.stylesheet()));
       const model = openDocument(files, { kind: "workbook" }); expect(openDocument(model.serialize(), { kind: "workbook" }).snapshot()).toEqual(model.snapshot()); checked++;
     }
@@ -44,6 +44,7 @@ describe("native workbook style tables", () => {
     const styles = new XlsxStyles(variant(source => source
       .replace(/<cellStyleXfs[\s\S]*?<\/cellStyleXfs>/, '<cellStyleXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0"/></cellStyleXfs>')
       .replace('name="Normal" xfId="0" builtinId="0"', 'name="常规" xfId="1" builtinId="0" customBuiltin="1"')), "xl/workbook.xml", 1_000_000);
+    expect(styles.defaultCell()).toEqual({ cssClass: 'xlsx-named-1', numberFormatId: 'num-0' });
     expect(styles.columnWidthFontCssClass()).toBe('xlsx-named-1'); expect(styles.cell(0, dummy).cssClass).toBe('xlsx-cell-0');
     const normal = styles.stylesheet().split('.xlsx-named-1{')[1]!.split('}')[0]!, cell = styles.stylesheet().split('.xlsx-cell-0{')[1]!.split('}')[0]!;
     expect(normal).toContain('font-size:12pt'); expect(normal).toContain('--office-font-source-name:"Noto Sans CJK SC"'); expect(cell).toContain('font-size:11pt');

@@ -60,7 +60,7 @@ export class XlsxStyles implements SheetStyles, RichTextStyles {
   private readonly dxfCache = new Map<number, DifferentialStyleReference>();
   private ruleUnits = 0;
   private readonly fallbackNode: XmlNode;
-  private readonly normalFontCssClass: string | undefined;
+  private readonly normalFormat: CellStyleReference | undefined;
   constructor(opc: OpcPackage, workbookPart: string, private readonly maxCssCodeUnits: number) {
     this.theme = readWorkbookTheme(opc, workbookPart);
     const part = opc.related(workbookPart, "styles"), root = part ? opc.read(part) : undefined;
@@ -115,7 +115,7 @@ export class XlsxStyles implements SheetStyles, RichTextStyles {
     });
     const normal = this.namedStyles.filter(style => style.builtinId === 0);
     if (normal.length > 1) fail(root!, "A workbook must not declare competing built-in Normal styles.");
-    this.normalFontCssClass = normal[0] ? this.styleFormats[normal[0].format]!.cssClass : root ? undefined : this.cellFormats[0]!.cssClass;
+    this.normalFormat = normal[0] ? this.styleFormats[normal[0].format]! : root ? undefined : this.cellFormats[0]!;
     this.differentials = root ? table(root, "dxfs", "dxf") ?? [] : [];
     this.tableStyles = one(root, "tableStyles");
   }
@@ -145,8 +145,11 @@ export class XlsxStyles implements SheetStyles, RichTextStyles {
     return { cssClass: format.cssClass, numberFormatId: format.numberFormatId };
   }
   columnWidthFontCssClass(): string {
-    if (!this.normalFontCssClass) unsupported(this.fallbackNode, "Native column widths require an unambiguous declared Normal style font.");
-    return this.normalFontCssClass;
+    return this.defaultCell().cssClass;
+  }
+  defaultCell(): CellStyleReference {
+    if (!this.normalFormat) unsupported(this.fallbackNode, "Native worksheet defaults require an unambiguous declared Normal style.");
+    return { cssClass: this.normalFormat.cssClass, numberFormatId: this.normalFormat.numberFormatId };
   }
   objectStyle(css: Css): string | undefined { return this.sharedRule(css); }
   drawingRule(name: string, css: Css): void { this.addRule(name, css); }

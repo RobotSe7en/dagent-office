@@ -27,7 +27,7 @@ describe("bounded native cell-to-chunk assembly", () => {
   it("maps all 200,000 actual native cell records to 40 chunks and reopens typed formula caches", async () => {
     const nativeLimits = { ...DEFAULT_DOCUMENT_READ_LIMITS, maxFileBytes: 32 * 1024 * 1024, maxNodes: 2_000_000 }, control = new ImportControl();
     const opc = openOpc(readFileSync("examples/xlsx/15-ten-thousand-rows.xlsx"), { limits: nativeLimits }), part = "xl/worksheets/sheet1.xml", shared = createSharedWorkbookFormulas();
-    const styles = { run: () => undefined, cell: () => ({ cssClass: "cell-default", numberFormatId: "general" }), tabStyle: () => "cell-default" };
+    const styles = { defaultCell: () => ({ cssClass: "cell-default", numberFormatId: "general" }), run: () => undefined, cell: () => ({ cssClass: "cell-default", numberFormatId: "general" }), tabStyle: () => "cell-default" };
     const strings = await readSharedStrings(undefined, "missing.xml", styles, { limits: nativeLimits, budget: opc.xmlBudget, maxRetainedNodes: 1000, maxStrings: 250000, maxCodeUnits: 16 * 1024 * 1024, control });
     const chunks = new WorkbookChunks(DEFAULT_DOCUMENT_READ_LIMITS); chunks.startSheet("sheet-1"); let cells = 0, formulas = 0;
     const scan = { limits: nativeLimits, budget: opc.xmlBudget, maxRetainedNodes: 1000, control, sheetId: "sheet-1" };
