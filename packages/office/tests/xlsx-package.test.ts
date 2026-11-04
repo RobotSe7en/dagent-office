@@ -29,6 +29,17 @@ describe("complete native workbook container audit", () => {
       expect(() => auditXlsxPackage(openOpcFiles(files, {}))).toThrow();
     }
   });
+  it("audits attributes and child content on individual native relationship and content-type entries", () => {
+    for (const [path, edit] of [
+      ["[Content_Types].xml", (s: string) => s.replace('<Default ', '<Default surprise="1" ')],
+      ["[Content_Types].xml", (s: string) => s.replace(/(<Default [^>]*?)\/>/, '$1>unexpected</Default>')],
+      ["xl/_rels/workbook.xml.rels", (s: string) => s.replace('<Relationship ', '<Relationship surprise="1" ')],
+      ["xl/_rels/workbook.xml.rels", (s: string) => s.replace(/(<Relationship [^>]*?)\/>/, '$1>unexpected</Relationship>')],
+    ] as const) {
+      const files = source(); update(files, path, edit);
+      expect(() => auditXlsxPackage(openOpcFiles(files, {}))).toThrow();
+    }
+  });
   it("audits hidden content-type children and allows the declared external hyperlink without fetching it", () => {
     auditXlsxPackage(openOpcFiles(source(), {}));
     const files = source(); update(files, "[Content_Types].xml", s => s.replace("</Types>", '<other xmlns="urn:unhandled"/></Types>'));

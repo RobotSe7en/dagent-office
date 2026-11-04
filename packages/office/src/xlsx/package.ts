@@ -31,7 +31,7 @@ function relationshipSource(path: string): string | undefined {
 export function auditXlsxPackage(opc: OpcPackage): void {
   const CT = "http://schemas.openxmlformats.org/package/2006/content-types", types = opc.read("[Content_Types].xml");
   attributes(types, []); check(types, ["Default", "Override"], CT);
-  for (const node of elements(types)) { attributes(node, node.name === "Default" ? ["Extension", "ContentType"] : ["PartName", "ContentType"]); check(node, [], CT); }
+  for (const node of elements(types, undefined, CT)) { attributes(node, node.name === "Default" ? ["Extension", "ContentType"] : ["PartName", "ContentType"]); check(node, [], CT); }
   const fileRoles = new Map<string, string>(), relationshipFiles = new Set<string>();
   for (const path of opc.files.keys()) {
     if (path === "[Content_Types].xml") continue;
@@ -49,7 +49,7 @@ export function auditXlsxPackage(opc: OpcPackage): void {
   for (const path of relationshipFiles) {
     const source = relationshipSource(path)!, root = opc.read(path);
     attributes(root, []); check(root, ["Relationship"], PKG);
-    for (const node of elements(root)) { attributes(node, ["Id", "Type", "Target", "TargetMode"]); check(node, [], PKG); }
+    for (const node of elements(root, undefined, PKG)) { attributes(node, ["Id", "Type", "Target", "TargetMode"]); check(node, [], PKG); }
     const role = source ? fileRoles.get(source) : "root", permitted = allowed[role ?? ""] ?? [], edges: string[] = [];
     for (const relation of opc.relationships(source).values()) {
       if (!permitted.includes(relation.type)) throw new DocumentError("UnsupportedFeature", "A workbook relationship is not supported for its owning part.");
