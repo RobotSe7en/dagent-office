@@ -18,6 +18,7 @@ export function createWorkbookTextView(source: WorkbookSourceCell, maxNodes = 50
   let nodes = 1, offset = 0, runIndex = 0;
   const account = (amount: number): void => { nodes += amount; if (nodes > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Workbook text display exceeds its node budget."); };
   const copyStyle = (original: HTMLElement, target: HTMLElement): CSSStyleDeclaration => {
+    target.dataset.officeTextStyle = "true";
     const computed = view.getComputedStyle(original);
     for (const property of ["font-family", "font-size", "font-weight", "font-style", "font-variant", "line-height", "letter-spacing", "word-spacing", "text-decoration-line", "text-decoration-style", "text-decoration-color", "text-transform", "vertical-align"])
       target.style.setProperty(property, computed.getPropertyValue(property));
@@ -48,7 +49,7 @@ export function createWorkbookTextView(source: WorkbookSourceCell, maxNodes = 50
           const run = runs[runIndex++];
           if (!run || run.from !== offset || run.to > end) throw new DocumentError("InvalidDocument", "Worksheet font runs do not match their source text.");
           account(2); const span = document.createElement("span"), node = document.createTextNode(run.text);
-          span.style.fontFamily = run.font.family; decorate(computed, span).append(node); target.append(span);
+          span.dataset.officeScript = run.role; span.style.fontFamily = run.font.family; decorate(computed, span).append(node); target.append(span);
           projections.push(Object.freeze({ node, from: run.from, to: run.to })); offset = run.to;
         }
       } else if (child.nodeType === 1 && (child as Element).localName === "br") {

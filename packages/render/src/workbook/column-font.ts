@@ -8,6 +8,8 @@ export interface WorkbookColumnFont {
   readonly font: string;
   /** Maximum individual digit advance in CSS pixels at the source font size. */
   readonly maximumDigitWidthPx: number;
+  /** Normal-style space advance, also used by native cell indentation. */
+  readonly spaceWidthPx: number;
   readonly fonts: readonly FontResolution[];
 }
 
@@ -29,7 +31,8 @@ export function measureWorkbookColumnFont(scope: HTMLElement, workbook: DeepRead
     const font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
     context.font = font;
     const maximumDigitWidthPx = Math.max(...[..."0123456789"].map(digit => context.measureText(digit).width));
-    if (!Number.isFinite(maximumDigitWidthPx) || maximumDigitWidthPx <= 0) throw new DocumentError("InvalidOperation", "The resolved workbook column font has no positive digit advance.");
-    return Object.freeze({ cssClass, font, maximumDigitWidthPx, fonts });
+    const spaceWidthPx = context.measureText(" ").width;
+    if (!Number.isFinite(maximumDigitWidthPx) || maximumDigitWidthPx <= 0 || !Number.isFinite(spaceWidthPx) || spaceWidthPx < 0) throw new DocumentError("InvalidOperation", "The resolved workbook column font has invalid character advances.");
+    return Object.freeze({ cssClass, font, maximumDigitWidthPx, spaceWidthPx, fonts });
   } finally { wrapper.remove(); }
 }

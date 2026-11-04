@@ -17,6 +17,10 @@ import { workbookCellFill } from "../../../packages/render/src/workbook/cell-fil
 import { createWorkbookBorderView } from "../../../packages/render/src/workbook/border-view.js";
 import type { WorkbookBorderEdge } from "../../../packages/render/src/workbook/border-view.js";
 import { WorkbookTextDirection } from "../../../packages/render/src/workbook/text-direction.js";
+import { textLayoutMeasurement } from "./workbook-text-layout.js";
+import type { TextLayoutCase } from "./workbook-text-layout.js";
+import { layoutWorkbookTexts } from "../../../packages/render/src/workbook/text-layout.js";
+import type { WorkbookTextLayoutInput } from "../../../packages/render/src/workbook/text-layout.js";
 
 const encode = (text: string) => new TextEncoder().encode(text);
 async function main() {
@@ -42,16 +46,27 @@ async function main() {
   const style = document.createElement('style'); style.textContent = model.snapshot().styles.map(style => style.css).join('\n'); document.head.append(style);
   let rightToLeft = false;
   const host = {
+    textLayoutMeasurement(cases: readonly TextLayoutCase[]) { return textLayoutMeasurement(container, cases); },
     async render(viewport: WorkbookViewport, rtl = false) {
       const current = await loader.load('sheet-1', dimensions, viewport);
       if (current) {
         rightToLeft = rtl; const sources = new WorkbookCellSources(container, model.snapshot(), loader.frame!);
         try {
+          await document.fonts.ready;
           let remainingNodes = 50_000;
+          const textInputs: WorkbookTextLayoutInput[] = [], texts = new Map();
+          for (const projection of loader.frame!.projections) {
+            const cell = loader.frame!.getCell(projection.row, projection.column);
+            if (cell?.value.type !== 'text') continue;
+            const source = sources.get(projection.row, projection.column)!, text = createWorkbookTextView(source, remainingNodes); remainingNodes -= text.nodes;
+            texts.set(projection, textInputs.length); textInputs.push({ source, text, valueType: cell.value.type, widthPt: projection.rect.width, heightPt: projection.rect.height });
+          }
+          const normal = measureWorkbookColumnFont(container, model.snapshot().metadata.workbook, 'sheet-1');
+          const laidOut = layoutWorkbookTexts(container, textInputs, normal.spaceWidthPx);
           replaceWorkbookWindow(container, loader.frame!, (body, cell, projection) => {
             const source = sources.get(projection.row, projection.column)!;
             body.style.backgroundColor = workbookCellFill(document, getComputedStyle(source.element));
-            if (cell?.value.type === 'text') { const text = createWorkbookTextView(source, remainingNodes); remainingNodes -= text.nodes; body.append(text.element); }
+            if (cell?.value.type === 'text') body.append(laidOut.cells[texts.get(projection)]!.element);
           }, rtl);
         } finally { sources.dispose(); }
       }

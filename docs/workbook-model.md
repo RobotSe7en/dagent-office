@@ -72,7 +72,11 @@ General 的内部宽度适配已按 [Excel General 说明](https://support.micro
 
 原生样式适配已将 32 份样例的有效单元格字体、主题/索引颜色、纯色填充、边框、对齐及数字格式映射到可校验的 CSS/格式定义。主题引用、字体角色、原字体名及明暗参数保留为来源；色阶应用、精确边框和特殊对齐需要 R3-08 渲染器解析。原生命名样式定义及更新标记目前只在导入中间态保留，最终持久化取舍仍待产品决策，不能称为完整样式保真已通过。
 
-对齐缩进的原生读取范围为 0–255，251–255 不被截断或误拒绝，负数、小数及 256 明确失败；依据为 [MS-OI29500 v20260818 §2.1.693](https://officeprotocoldocs-f5hpbjgea6b8gneq.b02.azurefd.net/files/MS-OI29500/%5BMS-OI29500%5D.pdf#page=295)。实际缩进宽度仍需使用 Normal 字体的空格度量，在完整单元格布局中处理。
+对齐缩进的原生读取范围为 0–255，251–255 不被截断或误拒绝，负数、小数及 256 明确失败；依据为 [MS-OI29500 v20260818 §2.1.693](https://officeprotocoldocs-f5hpbjgea6b8gneq.b02.azurefd.net/files/MS-OI29500/%5BMS-OI29500%5D.pdf#page=295)。实际缩进使用单独测量的 Normal 字体空格宽度，不随该单元格的字体改变。
+
+内部文字布局已接入 General／左中右、上中下、Normal 空格缩进、换行和单行缩小适应，并在同窗口批量解析本地字体后测量。富文本装饰和 UTF-16 投影保留；测量成功后才交给完整单元格的裁剪容器，失败和释放不残留测量文字，也不修改源。它返回未裁剪的内容高度，尚未组成自动行高流程。窗口测试已使用这条布局路径；跨空白格溢出、特殊对齐、完整数字／日期显示和最终只读预览仍待实现。
+
+[94 项独立原生 PDF 记录](evidence/xlsx-alignment-semantics.json)可用 `python3 scripts/check-xlsx-alignment.py` 重核，覆盖固定的三种字体、General 类型、显式方向、缩进及横纵对齐。三浏览器对照字宽和物理位置，并检查换行、缩小、字体替代与失败清理；使用关闭字偶距的原生文字度量，WebKit 同时需要显式关闭 OpenType `kern`。这些局部校准不等同于完整页面视觉验收。Calc 的布尔／错误值右对齐与 [OOXML General 居中规则](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.numberingformat?view=openxml-2.8.1)不同，SDK 遵循后者；Calc 的显式 LTR 希伯来文字和 RTL PDF 边框相对文字位置也单独记录，不能当作 Excel 实测。数值负号和错误值标点按类型显示方向保持顺序，普通文本仍遵循显式阅读方向。日期和默认地区语义没有由此推定。
 
 内部颜色显示已按 [SpreadsheetML 的 HLS 亮度规则](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.foregroundcolor?view=openxml-3.0.1)处理正负 tint，区别于 DrawingML 的 RGB tint/shade。浏览器解析源 CSS 中的主题/索引变量及当前文字颜色，保留源引用；原生 ARGB 高字节不作为单元格透明度。无效颜色或明暗参数明确失败。[108 个固定 Calc 颜色观测](evidence/xlsx-color-tint-semantics.json)与连续 HLS 转换的差别最多为一个 8 位通道单位，记录了舍入边界，不声称逐字节颜色一致；运行 `python3 scripts/check-xlsx-color-tints.py` 可复核。三浏览器另核对变量、颜色语法、透明度和无效值处理。
 

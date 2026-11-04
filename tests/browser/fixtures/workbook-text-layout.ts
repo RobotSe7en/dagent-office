@@ -1,0 +1,65 @@
+import type { WorkbookValue } from "@dagent-office/core";
+import { createWorkbookTextView } from "../../../packages/render/src/workbook/text-view.js";
+import { layoutWorkbookTexts } from "../../../packages/render/src/workbook/text-layout.js";
+
+export interface TextLayoutCase {
+  text: string; type: WorkbookValue["type"]; family: string; sizePt: number; widthPt: number; heightPt: number;
+  horizontal: string; vertical: string; readingOrder: string; indent: number; rightToLeft: boolean;
+  wrap?: boolean; shrink?: boolean;
+}
+export async function textLayoutMeasurement(scope: HTMLElement, cases: readonly TextLayoutCase[]) {
+  await document.fonts.ready;
+  const sources = document.createElement('div'); sources.style.cssText = 'position:absolute;visibility:hidden;width:0;height:0;overflow:hidden'; scope.append(sources);
+  const gallery = document.createElement('div'); gallery.id = 'workbook-text-layout-probe';
+  gallery.style.cssText = 'position:absolute;left:0;top:0;display:flex;flex-wrap:wrap;align-items:flex-start;width:850px;gap:4px;background:white;color:black';
+  const inputs = cases.map(item => {
+    const table = document.createElement('table'), cell = table.insertRow().insertCell(); cell.textContent = item.text; cell.dir = item.rightToLeft ? 'rtl' : 'ltr';
+    cell.style.fontFamily = item.family; cell.style.fontSize = `${item.sizePt}pt`; cell.style.fontWeight = 'normal'; cell.style.fontStyle = 'normal'; cell.style.lineHeight = 'normal';
+    cell.style.setProperty('--office-cell-horizontal', item.horizontal); cell.style.setProperty('--office-cell-vertical', item.vertical);
+    cell.style.setProperty('--office-cell-reading-order', item.readingOrder); cell.style.setProperty('--office-cell-indent', String(item.indent));
+    cell.style.setProperty('--office-cell-wrap', String(item.wrap ?? false)); cell.style.setProperty('--office-cell-shrink-to-fit', String(item.shrink ?? false));
+    sources.append(table); const source = { element: cell, format: { cssClass: '' } };
+    return { source, text: createWorkbookTextView(source), valueType: item.type, widthPt: item.widthPt, heightPt: item.heightPt };
+  });
+  const original = sources.innerHTML, canvas = document.createElement('canvas'), context = canvas.getContext('2d')!; context.font = '11pt "Liberation Sans"';
+  const space = context.measureText(' ').width;
+  try {
+    const layouts = layoutWorkbookTexts(scope, inputs, space);
+    for (const item of layouts.cells) { item.element.style.outline = '0.5px solid red'; gallery.append(item.element); }
+    scope.append(gallery);
+    const measurements = layouts.cells.map(item => {
+      const cell = item.element.getBoundingClientRect(), range = document.createRange(); range.selectNodeContents(item.text.element); const text = range.getBoundingClientRect();
+      const first = item.text.projections[0]?.node, last = item.text.projections.at(-1)?.node;
+      const characterX = (node: Text | undefined, end: boolean) => {
+        if (!node?.length) return 0;
+        const range = document.createRange(), offset = end ? node.length - 1 : 0; range.setStart(node, offset); range.setEnd(node, offset + 1); return (range.getBoundingClientRect().x - cell.x) * .75;
+      };
+      return { scale: item.scale, requiredHeightPt: item.requiredHeightPt, horizontal: item.text.element.style.textAlign, direction: item.text.element.style.direction,
+        firstX: characterX(first, false), lastX: characterX(last, true),
+        gapsPt: [(text.left - cell.left) * .75, (text.top - cell.top) * .75, (cell.right - text.right) * .75, (cell.bottom - text.bottom) * .75],
+        widthPt: text.width * .75, heightPt: text.height * .75, text: item.text.projections.map(projection => projection.node.textContent).join(''),
+        offsets: item.text.projections.map(projection => [projection.from, projection.to]), font: getComputedStyle(item.text.projections[0]?.node.parentElement ?? item.text.element).fontFamily };
+    });
+    const failures: string[] = [], source = inputs[0]!.source;
+    for (const [name, value] of [['horizontal', 'fill'], ['vertical', 'distributed'], ['indent', '256'], ['wrap', 'yes'], ['reading-order', 'wrong']]) {
+      const property = `--office-cell-${name}`, before = source.element.style.getPropertyValue(property); source.element.style.setProperty(property, value!);
+      try { layoutWorkbookTexts(scope, [{ ...inputs[0]!, text: createWorkbookTextView(source) }], space); }
+      catch (error) { failures.push((error as { code: string }).code); }
+      finally { source.element.style.setProperty(property, before); }
+    }
+    for (const input of [{ ...inputs[0]!, widthPt: 0 }, { ...inputs[0]!, heightPt: Infinity }]) {
+      try { layoutWorkbookTexts(scope, [{ ...input, text: createWorkbookTextView(source) }], space); } catch (error) { failures.push((error as { code: string }).code); }
+    }
+    try { layoutWorkbookTexts(scope, [{ ...inputs[0]!, text: createWorkbookTextView(source) }], space, 1); } catch (error) { failures.push((error as { code: string }).code); }
+    // A later invalid item must clean up earlier private views without moving
+    // the accepted gallery or retaining any source text in measurement DOM.
+    const valid = { ...inputs[0]!, text: createWorkbookTextView(source) }, badSource = inputs.at(-1)!.source;
+    const old = badSource.element.style.getPropertyValue('--office-cell-horizontal'); badSource.element.style.setProperty('--office-cell-horizontal', 'bad');
+    try { layoutWorkbookTexts(scope, [valid, { ...inputs.at(-1)!, text: createWorkbookTextView(badSource) }], space); }
+    catch (error) { failures.push((error as { code: string }).code); }
+    finally { badSource.element.style.setProperty('--office-cell-horizontal', old); }
+    return { measurements, spacePt: space * .75, fonts: layouts.fonts, unchanged: original === sources.innerHTML,
+      retained: scope.querySelectorAll('[data-office-view="workbook-text-measurement"],[data-office-view="workbook-direction-measurement"]').length,
+      failures, atomic: gallery.isConnected && !valid.text.element.parentNode, frozen: Object.isFrozen(layouts) && Object.isFrozen(layouts.cells) };
+  } finally { sources.remove(); }
+}

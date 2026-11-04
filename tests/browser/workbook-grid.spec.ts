@@ -5,8 +5,11 @@ import type { WorkbookViewport } from "../../packages/render/src/workbook/viewpo
 import type { WorkbookTextFontRun } from "../../packages/render/src/workbook/text-fonts.js";
 import type { WorkbookBorderEdge } from "../../packages/render/src/workbook/border-view.js";
 import borderReference from "../../docs/evidence/xlsx-border-semantics.json" with { type: "json" };
+import alignmentReference from "../../docs/evidence/xlsx-alignment-semantics.json" with { type: "json" };
+import type { TextLayoutCase, textLayoutMeasurement } from "./fixtures/workbook-text-layout.js";
 
 interface GridHost {
+  textLayoutMeasurement(cases: readonly TextLayoutCase[]): ReturnType<typeof textLayoutMeasurement>;
   render(viewport: WorkbookViewport, rtl?: boolean): Promise<boolean>;
   inspect(): { cellCount: number; accessibleCells: number; rows: number[]; sourceUnchanged: boolean; merges: { pane?: string; text: string | null; clip: { x: number; y: number; width: number; height: number }; body: { x: number; y: number; width: number; height: number }; hit?: { row: number; column: number } }[] };
   failedPaint(): boolean; dispose(): void;
@@ -150,4 +153,60 @@ test('worksheet context reading order uses its first non-whitespace scalar with 
   const report = await page.evaluate(() => window.workbookGridHost.textDirectionMeasurement());
   expect(report).toEqual({ values: ['ltr', 'rtl', 'ltr', 'ltr', 'rtl', 'ltr', 'ltr', 'rtl', 'rtl', 'ltr', 'rtl'], explicit: ['ltr', 'rtl'], wholeStringDirection: 'rtl',
     retainedText: '', failures: ['InvalidDocument', 'InvalidOperation', 'InvalidOperation'], remaining: 0, ownerDirection: 'rtl' });
+});
+
+test('worksheet text layout measures native alignment, Normal indentation and local fonts before clipping', async ({ page }, testInfo) => {
+  const cases: TextLayoutCase[] = alignmentReference.cases.map(item => {
+    const font = alignmentReference.fonts[item.font]!;
+    return { text: item.kind === 'b' ? 'TRUE' : String(item.value), type: item.kind === 'n' ? 'number' : item.kind === 'b' ? 'boolean' : item.kind === 'e' ? 'error' : 'text',
+      family: font.family, sizePt: font.sizePt, widthPt: item.cellBoundsPt[2]! - item.cellBoundsPt[0]!, heightPt: item.cellBoundsPt[3]! - item.cellBoundsPt[1]!,
+      horizontal: item.horizontal, vertical: item.vertical, indent: item.indent, readingOrder: ['context', 'ltr', 'rtl'][item.readingOrder]!, rightToLeft: item.rightToLeft };
+  });
+  const result = await page.evaluate(cases => window.workbookGridHost.textLayoutMeasurement(cases), cases);
+  await testInfo.attach('alignment-measurements', { body: JSON.stringify(result, null, 2), contentType: 'application/json' });
+  expect(result).toMatchObject({ unchanged: true, retained: 0, atomic: true, frozen: true,
+    failures: ['UnsupportedFeature', 'UnsupportedFeature', 'InvalidDocument', 'InvalidDocument', 'InvalidDocument', 'InvalidOperation', 'InvalidOperation', 'ResourceLimitExceeded', 'InvalidDocument'] });
+  for (const [index, item] of cases.entries()) {
+    const measured = result.measurements[index]!, native = alignmentReference.cases[index]!;
+    expect(measured.text).toBe(item.text); expect(measured.scale).toBe(1);
+    const direction = item.type === 'text' && (item.readingOrder === 'rtl' || item.readingOrder === 'context' && item.text === 'אבג') ? 'rtl' : 'ltr';
+    expect(measured.direction).toBe(direction);
+    if (item.type === 'error' || item.text.startsWith('-')) expect(measured.firstX).toBeLessThan(measured.lastX);
+    const horizontal = item.horizontal !== 'general' ? item.horizontal : item.type === 'number' ? 'right' : item.type === 'boolean' || item.type === 'error' ? 'center' : direction === 'rtl' ? 'right' : 'left';
+    expect(measured.horizontal).toBe(horizontal);
+    const verticalSide = item.vertical === 'bottom' ? 3 : 1;
+    expect(Math.abs(measured.gapsPt[verticalSide]! - native.textGapsPt[verticalSide]!), `vertical case ${index}`).toBeLessThan(.8);
+    // Explicit placements and Latin General can be compared with this producer.
+    // Its Boolean/error alignment and explicit-LTR Hebrew differ from OOXML.
+    if (item.type === 'boolean' || item.type === 'error' || item.horizontal === 'general' && item.text === 'אבג' && item.readingOrder === 'ltr') continue;
+    const aligned = horizontal === 'right' ? 2 : 0;
+    // Calc's RTL PDF places the same content about .44pt farther right relative
+    // to its red cell border. Record that producer difference separately; the
+    // SDK must keep explicit physical alignment invariant under sheet reversal.
+    if (item.rightToLeft) {
+      const ltr = result.measurements[index - cases.length / 2]!;
+      for (let side = 0; side < 4; side++) expect(measured.gapsPt[side]).toBeCloseTo(ltr.gapsPt[side]!, 1);
+    } else if (horizontal !== 'center') expect(Math.abs(measured.gapsPt[aligned]! - native.textGapsPt[aligned]!), `horizontal case ${index}`).toBeLessThan(.65);
+    else expect(Math.abs(measured.gapsPt[0]! - measured.gapsPt[2]!)).toBeLessThan(.1);
+    expect(Math.abs(measured.widthPt - (native.cellBoundsPt[2]! - native.cellBoundsPt[0]! - native.textGapsPt[0]! - native.textGapsPt[2]!)), `text width case ${index}`).toBeLessThan(.15);
+  }
+  expect(result.fonts.every(font => !font.substituted)).toBe(true);
+  await page.locator('#workbook-text-layout-probe').screenshot({ path: testInfo.outputPath('workbook-text-alignment.png') });
+});
+
+test('worksheet wrapping and shrink preserve text offsets and report missing fonts without changing source', async ({ page }) => {
+  const base: TextLayoutCase = { text: 'Long text 汉字𠮷禰󠄀', type: 'text', family: 'Liberation Sans', sizePt: 11, widthPt: 36, heightPt: 100,
+    horizontal: 'left', vertical: 'top', indent: 0, readingOrder: 'context', rightToLeft: false };
+  const result = await page.evaluate(cases => window.workbookGridHost.textLayoutMeasurement(cases), [
+    base, { ...base, shrink: true }, { ...base, wrap: true, shrink: true }, { ...base, text: 'Long line\nSecond line', shrink: true },
+    { ...base, family: 'Missing Workbook Layout Face', widthPt: 200 }, { ...base, text: 'A', vertical: 'bottom', widthPt: 100 }, { ...base, text: 'Long line', widthPt: 100 },
+  ]);
+  expect(result).toMatchObject({ unchanged: true, retained: 0, atomic: true });
+  const [plain, shrunk, wrapped, multiline] = result.measurements;
+  expect(shrunk!.scale).toBeLessThan(1); expect(shrunk!.widthPt).toBeLessThanOrEqual(36 - 2.25 + .1);
+  expect(wrapped!.scale).toBe(1); expect(wrapped!.requiredHeightPt).toBeGreaterThan(plain!.requiredHeightPt * 2);
+  expect(wrapped!.widthPt).toBeLessThanOrEqual(36 - 2.25 + .1); expect(multiline!.scale).toBe(1);
+  expect(multiline!.requiredHeightPt).toBeCloseTo((result.measurements[6]!.requiredHeightPt - 1.5) * 2 + 1.5, 1);
+  for (const item of [plain!, shrunk!, wrapped!]) { expect(item.text).toBe(base.text); expect(item.offsets.at(-1)![1]).toBe(base.text.length); }
+  expect(result.fonts.find(font => font.requestedFamily === 'Missing Workbook Layout Face')).toMatchObject({ substituted: true });
 });
