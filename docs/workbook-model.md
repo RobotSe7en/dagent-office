@@ -166,6 +166,8 @@ pnpm probe:workbook-model
 
 预设路径的 SVG 生成现由 PPT 与工作簿共用，包含基本填充、描边、渐变和箭头的节点预算；多路径图形的箭头使用不同 SVG 身份。工作簿适配保留自己的锚点和源所有权，不构造伪造的 PPT 模型。原始／Calc 的形状颜色及共享渐变、箭头边界已通过三浏览器测试；PPT 的 16 个预设、组变换、连接线、文字自适应、主题颜色和既有截图回归保持通过。零宽／零高线条有描边外扩时继续参与裁剪。复合线、特殊渐变参数、阴影及工作簿文字的最终绘制仍需单独核对，这次共享不等同于完整 DrawingML 外观验收。
 
+[32 项原生阴影方向探针](evidence/xlsx-drawing-shadow-semantics.json)覆盖零模糊、形状旋转、水平／垂直翻转、两个阴影方向和 `rotWithShape` 两种值；运行 `python3 scripts/check-xlsx-drawing-effects.py` 可按固定 Office 归档和字体重核。该 Calc 版本始终保持阴影的页面方向，重存后写入 `rotWithShape="0"`。[格式定义](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.outershadow?view=openxml-3.0.1)则明确区分是否随形状旋转；因此不能把这一生产者差异作为 SDK 忽略源标志的依据。模糊核、最终阴影画面和 Excel/WPS 仍未核验。
+
 原生图片、预设形状和文本框的内部适配已通过独立第 08 号来源及 Calc 重存的包重开检查：原始图片字节、矩形裁剪、旋转、三类锚点、精确 UTF-16 正文、主题引用、段落/字符样式和换行样式均进入同一来源。对象和文字超链接绑定其 HTML 节点，沿用工作簿的安全外链/内部地址校验。背景填充引用按原生 `fillRef` 的 1001 起始编号解析，依据 [FillReference](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.fillreference?view=openxml-3.0.1)。Calc 把样例文本框改存为普通矩形，读取器保留该来源差异；当前尚未完成公开原生导入及对象视觉验收。
 
 图表的源契约与原生引用读取已接入工作表绘图层。系列数值、分类、系列名称和引用标题保留公式；原生缓存单独标为 `imported`，保存稀疏索引、缺值、错误值及整体/单点数字格式，不转成独立可写数据表。没有缓存时不补零或假定结果有效。缓存声明长度与元数据字节跨图表累计计量。六个独立/Calc 图表来源的 30 条引用、标题正文、图例、轴、系列及基础标签外观均通过包保存重开。轴标题同样支持独立富文本或单元格引用；格式、样式和正文所有权在核心再次校验。
