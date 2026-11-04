@@ -119,7 +119,7 @@ export function mountDocumentInteraction(
 
   let disposed = false, mode: DocumentInteractionMode = "text", zoom = 1;
   let selection: DocumentSelection | undefined, activeAnnotation: string | undefined;
-  let nativeDragging = false;
+  let nativeDragging = false, regionDragging = false;
   let cancelPointerSelection = (): void => { nativeDragging = false; };
   let source: PreviewSource | undefined, layoutKey = "";
   let preview: ReturnType<typeof mountPreview> | undefined;
@@ -134,7 +134,7 @@ export function mountDocumentInteraction(
   let popover: AnnotationPopover | undefined;
   let newComment: HTMLButtonElement | undefined;
 
-  function showComposer(): void { if (selection && !nativeDragging) popover?.open(); }
+  function showComposer(): void { if (selection && !nativeDragging && !regionDragging) popover?.open(); }
 
   function report(reason: unknown): void {
     if (disposed) return;
@@ -442,6 +442,7 @@ export function mountDocumentInteraction(
       event.preventDefault();
       frame.getSelection()?.removeAllRanges();
       drag = { id: event.pointerId, start: source!.point(event.clientX, event.clientY) };
+      regionDragging = true;
       source!.root.setPointerCapture(event.pointerId);
       setSelection(undefined);
     }, { signal });
@@ -456,15 +457,17 @@ export function mountDocumentInteraction(
       if (!drag || event.pointerId !== drag.id) return;
       move(event);
       drag = undefined;
+      regionDragging = false;
       source!.root.releasePointerCapture(event.pointerId);
       showComposer();
     }, { signal });
-    frame.addEventListener("pointercancel", () => { drag = undefined; nativeDragging = false; setSelection(undefined); }, { signal });
+    frame.addEventListener("pointercancel", () => { drag = undefined; regionDragging = false; nativeDragging = false; setSelection(undefined); }, { signal });
     source.root.addEventListener("lostpointercapture", () => {
-      if (drag) { drag = undefined; setSelection(undefined); }
+      if (drag) { drag = undefined; regionDragging = false; setSelection(undefined); }
     }, { signal });
     cancelPointerSelection = () => {
       nativeDragging = false;
+      regionDragging = false;
       const pointer = drag?.id;
       drag = undefined;
       if (pointer !== undefined && source?.root.hasPointerCapture(pointer)) source.root.releasePointerCapture(pointer);

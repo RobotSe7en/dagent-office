@@ -19,6 +19,7 @@ export const annotationPopoverStyles = `
 .annotation-popover .popover-close{border:0;background:none;padding:2px 6px;font-size:18px;color:#93a18f}
 .annotation-popover .popover-quote{margin:0 0 11px;padding:4px 9px;border-left:2px solid #a8c6a3;font-size:11px;color:#8a9986;background:#f6f9f4;max-height:46px;overflow:hidden;overflow-wrap:anywhere}
 .annotation-popover textarea,.annotation-popover input[type=text]{display:block;width:100%;resize:vertical;min-height:80px;padding:10px;border:1px solid #dce5d9;border-radius:6px;background:#fcfdfb;font:inherit;line-height:1.7}
+.annotation-popover input[type=text]{min-height:0;resize:none;padding:6px 8px}
 .annotation-popover .composer{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:7px;margin-top:12px}
 .annotation-popover .composer button{font-size:11px;padding:6px 11px}
 .annotation-popover .composer button:first-child{background:#287454;border-color:#287454;color:white}

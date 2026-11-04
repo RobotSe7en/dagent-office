@@ -76,14 +76,21 @@ test("object and rectangle selections use the same floating composer", async ({ 
   await page.getByRole("button", { name: "对象选择", exact: true }).click();
   await page.frameLocator('iframe[title="文档只读预览"]').locator('[data-node-id="n-title"]').click();
   const dialog = page.getByRole("dialog", { name: "新建批注", exact: true });
-  await expect(dialog).toContainText("对象：项目实施报告"); await dialog.getByLabel("新批注内容").fill("对象批注");
+  await expect(dialog).toContainText("对象：项目实施报告");
+  const input = dialog.getByLabel("新批注内容");
+  await expect(input).not.toBeFocused();
+  // A non-modal composer opens without focus; enter it as a user would. Firefox
+  // keeps the iframe's native text selection until this explicit focus transfer.
+  await input.click(); await expect(input).toBeFocused(); await input.fill("对象批注");
   await dialog.getByRole("button", { name: "添加批注", exact: true }).click();
   await expect(page.getByLabel("会话状态", { exact: true })).toHaveText("修订 1 · 批注 3");
   await page.getByRole("button", { name: "矩形框选", exact: true }).click();
   const paragraph = await page.frameLocator('iframe[title="文档只读预览"]').locator('[data-node-id="n-summary"]').boundingBox();
   await page.mouse.move(paragraph!.x + 1, paragraph!.y + 1); await page.mouse.down();
-  await page.mouse.move(paragraph!.x + 100, paragraph!.y + 20, { steps: 4 }); await page.mouse.up();
-  await expect(dialog).toBeVisible(); await dialog.getByLabel("新批注内容").fill("区域批注");
+  await page.mouse.move(paragraph!.x + 100, paragraph!.y + 20, { steps: 4 });
+  await expect(dialog).toBeHidden();
+  await page.mouse.up();
+  await expect(dialog).toBeVisible(); await input.click(); await input.fill("区域批注");
   await dialog.getByRole("button", { name: "添加批注", exact: true }).click();
   await expect(page.getByLabel("会话状态", { exact: true })).toHaveText("修订 2 · 批注 4");
 });
