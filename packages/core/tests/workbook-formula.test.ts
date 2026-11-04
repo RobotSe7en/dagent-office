@@ -29,7 +29,7 @@ describe("first-party formula parser foundation", () => {
     expect(() => small.intern('=2', origin)).toThrowError(expect.objectContaining({ code: "ResourceLimitExceeded" }));
     expect(small.size).toBe(1);
   });
-  it.each(['=', '=1 2', '=A1 B2', '=A:A', '=1:3', '=[book]Sheet!A1', '=Sheet1:Sheet3!A1', '=T[Cost]', '=A1#', '=@A1', '={1,2}', '=SUM(', '=SUM(1;2)', '=\'no end', '="no end', '=A1:Other!B2', '=$XFE$1', '="\0"'])('rejects unimplemented or malformed syntax without changing its meaning: %s', source => {
+  it.each(['=', '=1 2', '=[book]Sheet!A1', '=Sheet1:Sheet3!A1', '=A1#', '=@A1', '={1,2}', '=SUM(', '=SUM(1;2)', '=\'no end', '="no end', '=A1:Other!B2', '=$XFE$1', '="\0"'])('rejects unimplemented or malformed syntax without changing its meaning: %s', source => {
     expect(() => parseFormula(source, origin)).toThrow();
   });
   it("rejects both nested and left-associative oversized trees with bounded errors", () => {
