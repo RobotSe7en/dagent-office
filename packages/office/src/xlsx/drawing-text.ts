@@ -2,7 +2,8 @@ import type { DrawingTextProperties } from "@dagent-office/core";
 import { A, check, elements, fail, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import type { Html } from "../drawingml/html.js";
-import { importText } from "../drawingml/text.js";
+import { importText, paragraphProperties, runProperties, textBodyProperties } from "../drawingml/text.js";
+import type { Css } from "../ooxml/styles.js";
 import { attributes, boolean, integer, one, value } from "./values.js";
 import { validateDrawingColor, validateDrawingFill, validateDrawingLine } from "./drawing-style.js";
 import type { WorkbookContent } from "./content.js";
@@ -36,7 +37,7 @@ function validateTextTree(body: XmlNode): void {
       if (space !== undefined && !["default", "preserve"].includes(space)) fail(node, "A drawing text whitespace mode is invalid.");
       if (node.content.some(child => typeof child !== "string")) fail(node, "Drawing text must contain only characters."); return;
     }
-    const key = node.name === "endParaRPr" || node.name === "defRPr" ? "rPr" : node.name === "defPPr" || /^lvl[1-9]pPr$/.test(node.name) ? "pPr" : node.name;
+    const key = root ? "txBody" : node.name === "endParaRPr" || node.name === "defRPr" ? "rPr" : node.name === "defPPr" || /^lvl[1-9]pPr$/.test(node.name) ? "pPr" : node.name;
     const allowed = attributesByTag[key]; if (!allowed) unsupported(node, "This drawing text property is not supported."); attributes(node, allowed);
     if (key === "rPr") {
       for (const name of ["dirty", "err", "smtClean", "noProof"]) boolean(node, name);
@@ -52,6 +53,20 @@ function validateTextTree(body: XmlNode): void {
     if (node.content.some(item => typeof item !== "string" && item.uri !== A)) unsupported(node);
   };
   walk(body, true);
+}
+export function drawingTextStyle(source: XmlNode | undefined): Css {
+  if (!source) return {};
+  validateTextTree(source); check(source, ["bodyPr", "lstStyle", "p"], A);
+  const properties = one(source, "bodyPr", A), list = one(source, "lstStyle", A), paragraph = one(source, "p", A);
+  if (!properties || !paragraph) fail(source, "A chart text style requires body and paragraph properties.");
+  if (list && elements(list, undefined, A).length) unsupported(list, "Chart text style lists are not supported.");
+  check(paragraph, ["pPr", "endParaRPr"], A);
+  const body = textBodyProperties(properties), css = { ...body.css, ...paragraphProperties(one(paragraph, "pPr", A)), ...runProperties(one(paragraph, "endParaRPr", A)) };
+  if (body.text.wrap !== undefined) css["--office-text-wrap"] = String(body.text.wrap);
+  if (body.text.autoFit !== undefined) css["--office-text-auto-fit"] = body.text.autoFit;
+  if (body.text.fontScale !== undefined) css["--office-text-font-scale"] = String(body.text.fontScale);
+  if (body.text.lineSpacingReduction !== undefined) css["--office-text-line-spacing-reduction"] = String(body.text.lineSpacingReduction);
+  return css;
 }
 export function readDrawingText(body: XmlNode, target: Html, content: WorkbookContent, styles: XlsxStyles, hyperlink: (source: XmlNode | undefined, target: Html, part: string) => void): DrawingTextProperties {
   validateTextTree(body);

@@ -4,6 +4,7 @@ export * from "./contracts/document.js";
 export * from "./contracts/word.js";
 export * from "./contracts/presentation.js";
 export type { DrawingTextProperties } from "./contracts/drawing.js";
+export type { ChartAppearance } from "./contracts/chart.js";
 export * from "./contracts/workbook.js";
 export * from "./contracts/annotations.js";
 export * from "./contracts/operations.js";

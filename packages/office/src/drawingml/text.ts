@@ -131,10 +131,7 @@ export function importTextStyle(context: Pick<DrawingTextContext, "rule">, sourc
   }
 }
 
-export function importText(context: DrawingTextContext, body: XmlNode, target: Html, part: string): DrawingTextProperties {
-  check(body, ["bodyPr", "lstStyle", "p"], A);
-  const properties = child(body, "bodyPr", A);
-  if (!properties) fail(body, "A DrawingML text body requires body properties.");
+export function textBodyProperties(properties: XmlNode): { text: DrawingTextProperties; css: Css } {
   check(properties, ["noAutofit", "normAutofit", "spAutoFit", "prstTxWarp", "scene3d", "sp3d", "extLst"], A);
   for (const name of ["rot", "numCol", "spcCol"]) if (integer(properties, name, name === "numCol" ? 1 : 0) !== (name === "numCol" ? 1 : 0)) unsupported(properties, "Rotated or multicolumn text bodies are not supported.");
   if (value(properties, "vert") && value(properties, "vert") !== "horz" || bool(properties, "rtlCol")) unsupported(properties, "Only horizontal text is supported.");
@@ -165,6 +162,14 @@ export function importText(context: DrawingTextContext, body: XmlNode, target: H
   if (anchor !== undefined && !["t", "ctr", "b", "just", "dist"].includes(anchor)) unsupported(properties);
   if (anchor !== undefined) css["--office-text-anchor"] = anchor;
   if (value(properties, "anchorCtr") !== undefined) css["--office-text-anchor-center"] = String(bool(properties, "anchorCtr"));
+  return { text: result, css };
+}
+
+export function importText(context: DrawingTextContext, body: XmlNode, target: Html, part: string): DrawingTextProperties {
+  check(body, ["bodyPr", "lstStyle", "p"], A);
+  const properties = child(body, "bodyPr", A);
+  if (!properties) fail(body, "A DrawingML text body requires body properties.");
+  const { text: result, css } = textBodyProperties(properties);
   target.attrs.style = (target.attrs.style ? target.attrs.style + ";" : "") + Object.entries(css).map(([k, v]) => k + ":" + v).join(";");
   const listStyle = context.id("text-style");
   importTextStyle(context, child(body, "lstStyle", A), listStyle);
