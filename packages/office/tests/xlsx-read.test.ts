@@ -14,7 +14,8 @@ function model(records: XlsxRecords) {
   const files = new Map([...createWorkbook({ documentId: "native-records" }), ...records.chunks.files]);
   const manifest = JSON.parse(decoder.decode(files.get("manifest.json")!)); manifest.chunks = records.chunks.descriptors;
   const metadata = { workbook: { dateSystem: records.native.dateSystem, calculationMode: records.native.calculationMode, activeSheetId: records.native.activeSheetId,
-    sheets: records.sheets.map(sheet => sheet.metadata), names: records.native.names, themeCssClass: "xlsx-theme", numberFormats: records.styles.numberFormats() } };
+    sheets: records.sheets.map(sheet => sheet.metadata), names: records.native.names, themeCssClass: "xlsx-theme", numberFormats: records.styles.numberFormats(),
+    tableStyles: records.tableStyles.definitions, ...(records.tableStyles.defaultStyle ? { defaultTableStyle: records.tableStyles.defaultStyle } : {}) } };
   files.set("manifest.json", encoder.encode(JSON.stringify(manifest))); files.set("metadata.json", encoder.encode(JSON.stringify(metadata)));
   files.set("styles.css", encoder.encode(records.styles.stylesheet())); return openDocument(files, { kind: "workbook", limits: records.limits.source, workbookLimits: records.limits.workbook });
 }

@@ -2,6 +2,7 @@ import type { WorkbookMetadata, WorkbookPrint } from "../contracts/workbook.js";
 import { checkLimit, invalid } from "../document/validation.js";
 import { checkRange, checkNonOverlappingRanges } from "./ranges.js";
 import { validateWorkbookRules } from "./rules.js";
+import { validateWorkbookTables } from "./tables.js";
 import { parseFormula } from "./formula.js";
 
 export function validateWorkbookMetadata(workbook: WorkbookMetadata, classes: ReadonlySet<string>, maxItems: number): Set<string> {
@@ -55,6 +56,7 @@ export function validateWorkbookMetadata(workbook: WorkbookMetadata, classes: Re
     parseFormula(name.expression, name.origin);
   }
   items += nameIds.size;
+  items += validateWorkbookTables(workbook, classExists, formatExists, maxItems);
   checkLimit(items + formats.size, maxItems);
   return formats;
 }

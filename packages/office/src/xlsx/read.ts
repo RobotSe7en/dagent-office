@@ -19,6 +19,9 @@ import type { NativeSheet, NativeWorkbook } from "./workbook.js";
 import { one } from "./values.js";
 import { readConditionalRules, readDataValidations } from "./rules.js";
 import { auditXlsxPackage } from "./package.js";
+import { readTables, readTableStyles } from "./tables.js";
+import type { NativeTableStyles } from "./tables.js";
+import { readAutoFilter } from "./filter.js";
 
 type RowDimension = WorkbookSheet["rowDimensions"][number];
 /** Join identical adjacent explicit runs without expanding implicit rows. */
@@ -38,6 +41,7 @@ export interface XlsxRecords {
   readonly limits: ReturnType<typeof xlsxLimits>;
   readonly native: NativeWorkbook;
   readonly styles: XlsxStyles;
+  readonly tableStyles: NativeTableStyles;
   readonly chunks: WorkbookChunks;
   readonly sheets: readonly NativeSheetRecords[];
   readonly counts: { readonly cells: number; readonly formulas: number };
@@ -53,6 +57,7 @@ export async function readXlsxRecords(bytes: Uint8Array, options: XlsxReadOption
   const opc = openOpcFiles(files, { limits: { ...limits.xml, maxFileBytes: limits.native.maxMetadataBytes } }, budget, limits.native.maxRetainedNodes);
   auditXlsxPackage(opc);
   const native = readWorkbook(opc), styles = new XlsxStyles(opc, native.part, limits.native.maxCssCodeUnits), chunks = new WorkbookChunks(limits.source);
+  const tableStyles = readTableStyles(styles);
   const stringPart = opc.related(native.part, "sharedStrings");
   if (stringPart && opc.contentType(stringPart) !== "application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml") fail({ part: stringPart, name: "sst" }, "The shared string content type is invalid.");
   const strings = await readSharedStrings(stringPart ? files.get(stringPart) : undefined, stringPart ?? native.part, styles, {
@@ -78,6 +83,10 @@ export async function readXlsxRecords(bytes: Uint8Array, options: XlsxReadOption
     const metadata = readSheet(root, source, rows, opc, styles);
     metadata.conditionalRules = readConditionalRules(root, source.sheetId, styles);
     Object.assign(metadata, readDataValidations(root, source.sheetId));
+    metadata.tables = readTables(root, opc, styles, tableStyles);
+    const autoFilter = readAutoFilter(one(root, "autoFilter"));
+    if (autoFilter) metadata.autoFilter = autoFilter;
+    if (source.filterName && (!autoFilter || JSON.stringify(source.filterName) !== JSON.stringify(autoFilter.range))) fail(root, "The built-in filter name does not match its worksheet auto-filter.");
     // Calc often writes hidden="false" on every row. Keep overrides only when
     // they differ from the sheet default; formatting/height remains explicit.
     metadata.rowDimensions = [];
@@ -89,5 +98,5 @@ export async function readXlsxRecords(bytes: Uint8Array, options: XlsxReadOption
     await control.checkpoint({ phase: "worksheet", completed: sheetBytes.length * 2, total: sheetBytes.length * 2, sheetId: source.sheetId });
   }
   chunks.finish(); strings.validateReferences();
-  return { opc, control, limits, native, styles, chunks, sheets, counts: { cells, formulas } };
+  return { opc, control, limits, native, styles, tableStyles, chunks, sheets, counts: { cells, formulas } };
 }

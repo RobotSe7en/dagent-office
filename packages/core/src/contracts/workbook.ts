@@ -2,8 +2,10 @@ import { z } from "zod";
 import { IdentifierSchema, PackagePathSchema } from "./primitives.js";
 import { WorkbookColumnSchema, WorkbookCoordinateSchema, WorkbookRangeSchema, WorkbookRowSchema } from "./workbook-coordinates.js";
 import { WorkbookConditionalRuleSchema, WorkbookDataValidationSchema } from "./workbook-rules.js";
+import { WorkbookAutoFilterSchema, WorkbookTableSchema, WorkbookTableStyleReferenceSchema, WorkbookTableStyleSchema } from "./workbook-tables.js";
 export * from "./workbook-coordinates.js";
 export * from "./workbook-rules.js";
+export * from "./workbook-tables.js";
 
 export const WorkbookChunkDescriptorSchema = z.strictObject({
   sheetId: IdentifierSchema,
@@ -96,6 +98,8 @@ export const WorkbookSheetSchema = z.strictObject({
   conditionalRules: z.array(WorkbookConditionalRuleSchema).optional(),
   dataValidations: z.array(WorkbookDataValidationSchema).optional(),
   disableValidationPrompts: z.boolean().optional(),
+  autoFilter: WorkbookAutoFilterSchema.optional(),
+  tables: z.array(WorkbookTableSchema).optional(),
 });
 export type WorkbookSheet = z.infer<typeof WorkbookSheetSchema>;
 export const WorkbookMetadataSchema = z.strictObject({
@@ -106,6 +110,8 @@ export const WorkbookMetadataSchema = z.strictObject({
   numberFormats: z.array(WorkbookNumberFormatSchema),
   themeCssClass: IdentifierSchema.optional(),
   names: z.array(WorkbookDefinedNameSchema).optional(),
+  tableStyles: z.array(WorkbookTableStyleSchema).optional(),
+  defaultTableStyle: WorkbookTableStyleReferenceSchema.optional(),
 });
 export type WorkbookMetadata = z.infer<typeof WorkbookMetadataSchema>;
 export const WorkbookDocumentMetadataSchema = z.strictObject({
