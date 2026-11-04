@@ -13,8 +13,9 @@ import type { measureImageView, disposeImageView } from './fixtures/workbook-ima
 import type { measureObjectGeometry } from './fixtures/workbook-object-geometry.js';
 import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
 import type { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback } from './fixtures/workbook-drawing-text.js';
+import type { measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } from './fixtures/workbook-surface.js';
 
-declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView; measureObjectGeometry: typeof measureObjectGeometry; measureDrawingGradients: typeof measureDrawingGradients; measureDrawingText: typeof measureDrawingText; measureDrawingTextLayout: typeof measureDrawingTextLayout; measureNativeDrawingText: typeof measureNativeDrawingText; measureDrawingTextFallback: typeof measureDrawingTextFallback } } }
+declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView; measureObjectGeometry: typeof measureObjectGeometry; measureDrawingGradients: typeof measureDrawingGradients; measureDrawingText: typeof measureDrawingText; measureDrawingTextLayout: typeof measureDrawingTextLayout; measureNativeDrawingText: typeof measureNativeDrawingText; measureDrawingTextFallback: typeof measureDrawingTextFallback; measureWorkbookSurface: typeof measureWorkbookSurface; mountWorkbookSurfacePixels: typeof mountWorkbookSurfacePixels; disposeWorkbookSurfacePixels: typeof disposeWorkbookSurfacePixels } } }
 const inputs: { name: string; snapshot: WorkbookSnapshot; text: Record<string, string>; resources: Record<string, string> }[] = [];
 let code = '';
 let nativeText: WorkbookSnapshot;
@@ -175,6 +176,37 @@ test('drawing text fallback accounts for transient probes and empty lines withou
   expect(result.paragraphs[1]).toBeGreaterThan(0);
   expect(result.paragraphs[0]).toBeCloseTo(result.paragraphs[1]! * 2, 1);
   expect(result.paragraphs[2]).toBeCloseTo(result.paragraphs[1]!, 1);
+});
+
+test('workbook surfaces isolate source important rules, host styles and concurrent candidate lifecycles', async ({ page }) => {
+  const result = await page.evaluate(snapshot => window.workbookContentHost.measureWorkbookSurface(snapshot), inputs.find(input => input.name === '08-images-shapes')!.snapshot);
+  expect(result).toMatchObject({ errors: ['ResourceLimitExceeded', 'InvalidOperation', 'OperationCancelled', 'OperationCancelled'], kept: true, independent: true, released: true });
+  expect(result.values.map(value => value.sourceColor)).toEqual(['rgb(13, 75, 91)', 'rgb(9, 33, 77)']);
+  for (const value of result.values) {
+    expect(value).toMatchObject({ frame: [400, 200], view: [400, 200], object: [160, 120], geometry: [160, 120], sourceWidth: '1332px', paragraphFont: '0px', border: '0px', hidden: 'hidden', connectedAfterReadyAbort: true, unchanged: true });
+    expect(Math.abs(parseFloat(value.sourceFont) - 14 / .75)).toBeLessThan(.02); expect(value.paragraphWidth).toBeLessThan(160);
+    expect(value.selection).toMatchObject({ text: value.selection.expected, range: true, errors: ['InvalidOperation', 'InvalidOperation'], unchanged: true });
+  }
+});
+
+test('isolated workbook surfaces paint local SVG gradient references in actual page pixels', async ({ page }) => {
+  await page.evaluate(snapshot => window.workbookContentHost.mountWorkbookSurfacePixels(snapshot), inputs.find(input => input.name === '08-images-shapes')!.snapshot);
+  try {
+    const png = await page.locator('#workbook-surface-pixel-probe iframe').screenshot();
+    const pixels = await page.evaluate(async bytes => {
+      const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'image/png' })), image = new Image();
+      try {
+        image.src = url; await image.decode(); const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+        const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
+        return { width: image.width, height: image.height, values: [40, 200, 360].map(x => [...context.getImageData(x, 100, 1, 1).data]) };
+      } finally { image.removeAttribute('src'); URL.revokeObjectURL(url); }
+    }, [...png]);
+    expect(pixels).toMatchObject({ width: 400, height: 200 });
+    for (const [index, x] of [40, 200, 360].entries()) {
+      const expected = [255 * (1 - (x + .5) / 400), 0, 255 * (x + .5) / 400, 255];
+      pixels.values[index]!.forEach((value, channel) => expect(Math.abs(value - expected[channel]!)).toBeLessThan(2));
+    }
+  } finally { await page.evaluate(() => window.workbookContentHost.disposeWorkbookSurfacePixels()); }
 });
 
 test('bounded auxiliary projections preserve native drawing and comment text without activating image paths', async ({ page }) => {

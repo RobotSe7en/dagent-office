@@ -176,7 +176,11 @@ pnpm probe:workbook-model
 
 [27 项独立原生文字探针](evidence/xlsx-drawing-text-semantics.json)记录字号、段落末尾样式、空段落、开头／末尾／连续换行、内边距和默认／级别段落样式；`python3 scripts/check-xlsx-drawing-text.py` 按固定归档、字体及源摘要重核。该 Calc 的无继承字号为 12pt，缺省内边距为 90000／45000 EMU，与上述 Office 缺省值不同。非空段落的末尾字号不改变这些样例的行距，重存时被改为实际文字字号；空段落则保留末尾字号并影响后续文字位置。空行继承相应换行处的字号，末尾空行再由段落末尾样式覆盖；换行字号不撑高前一个有文字的行。Calc 采用 `defPPr`，MS-OI29500 §2.1.1387 则说明 Office 忽略它；该差异仍需在导入和预览门槛中处理。零内边距时字形边界可以略超出图形，证据保留有符号坐标。[段落末尾属性](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.endparagraphrunproperties?view=openxml-3.0.1)的原始状态继续保存在源 CSS 中。
 
-SDK 对其中 22 项明确字号且语义相同的样例执行三浏览器行距及文字边界对照，误差限分别为 0.75pt 和 1.5pt；其余 5 项生产者缺省差异单独保留，不混入保真通过项。默认行距用高精度字体边界测量，避免逐行累积浏览器小字号取整误差；不支持字体边界的引擎使用有界 DOM 测量，并通过 `usedFallbackLineMetrics` 标识回退，不能据此宣称相同原生误差。空行由不参与源投影的视图节点承载，段落默认字号和换行插入字号不额外抬高实际文字行。测试同时检查精确 UTF-16 投影、临时节点预算、源恢复和失败清理。测量测试隔离宿主样式；完整预览的源 CSS／视图隔离、Excel/WPS 和整页绘图文字验收仍未完成。
+SDK 对其中 22 项明确字号且语义相同的样例执行三浏览器行距及文字边界对照，误差限分别为 0.75pt 和 1.5pt；其余 5 项生产者缺省差异单独保留，不混入保真通过项。默认行距用高精度字体边界测量，避免逐行累积浏览器小字号取整误差；不支持字体边界的引擎使用有界 DOM 测量，并通过 `usedFallbackLineMetrics` 标识回退，不能据此宣称相同原生误差。空行由不参与源投影的视图节点承载，段落默认字号和换行插入字号不额外抬高实际文字行。测试同时检查精确 UTF-16 投影、临时节点预算、源恢复和失败清理；固定旧 Chromium 也通过原生对照及强制回退检查。Excel/WPS 和整页绘图文字验收仍未完成。
+
+内部预览表面为每个候选创建独立、无脚本的 iframe。源 CSS 保留 `:root/html/body` 的字体和变量继承；画布外框的尺寸、边距由 SDK 控制，源节点的 CSS 仍按原祖先解析。生成的网格／绘图视图置于单独的 Shadow DOM，源类型选择器和 `!important` 不会重新匹配这些显示节点。表面缺省限制 CSS 为 4 Mi UTF-16 单位，准备阶段保持隐藏并支持取消，加载期限为 30 秒；上层组合器负责整窗成功后的替换。失败与释放清空源测量、显示节点和样式，保留的表面句柄也不会继续持有这些子树。三浏览器及固定旧 Chromium 检查宿主样式、源强制样式、真实文字／形状布局、并存工作簿、取消及释放，并从实际页面截图核对隔离视图内的 SVG 渐变引用。
+
+隔离视图的选区适配使用明确端点设置选择；读取时优先采用支持 Shadow DOM 的 [`getComposedRanges`](https://www.w3.org/TR/selection-api/#dom-selection-getcomposedranges)，旧 Chromium 沿用其真实 DOM 范围。WebKit 的普通 `getRangeAt()` 会返回外层容器，不能直接用于 UTF-16 投影；适配层只接受两个端点都属于当前视图的单一区间，不猜测外层节点或其他视图的对应文字。反向划选、原生选择文字、精确端点、越界失败后原选择不变均有检查。此隔离层及选区适配尚未组成公开工作簿预览入口。
 
 [32 项原生阴影方向探针](evidence/xlsx-drawing-shadow-semantics.json)覆盖零模糊、形状旋转、水平／垂直翻转、两个阴影方向和 `rotWithShape` 两种值；运行 `python3 scripts/check-xlsx-drawing-effects.py` 可按固定 Office 归档和字体重核。该 Calc 版本始终保持阴影的页面方向，重存后写入 `rotWithShape="0"`。[格式定义](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.outershadow?view=openxml-3.0.1)则明确区分是否随形状旋转；因此不能把这一生产者差异作为 SDK 忽略源标志的依据。模糊核、最终阴影画面和 Excel/WPS 仍未核验。
 
