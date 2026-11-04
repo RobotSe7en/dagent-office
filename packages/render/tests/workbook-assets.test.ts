@@ -21,7 +21,7 @@ describe('workbook window display resources', () => {
     const first = await prepareWorkbookAssets(source, ['assets/one.png', 'assets/one.png'], signal());
     const second = await prepareWorkbookAssets(source, ['assets/one.png'], signal());
     try {
-      expect(first.count).toBe(1); expect(first.byteLength).toBe(bytes.length); expect(first.url('unknown')).toBeUndefined();
+      expect(first.count).toBe(1); expect(first.byteLength).toBe(bytes.length); expect(first.pixels).toBe(64); expect(first.url('unknown')).toBeUndefined();
       expect(first.url('assets/one.png')).not.toBe(second.url('assets/one.png')); expect(create).toHaveBeenCalledTimes(2);
       expect(new Uint8Array(await (await fetch(first.url('assets/one.png')!)).arrayBuffer())).toEqual(bytes);
       expect(Object.isFrozen(first)).toBe(true); first.dispose(); first.dispose(); expect(revoke).toHaveBeenCalledTimes(1);
@@ -46,6 +46,15 @@ describe('workbook window display resources', () => {
     await expect(prepareWorkbookAssets({ ...source, readAsset }, ['assets/one.png', 'assets/two.png'], signal(), { maxAssetBytes: bytes.length, maxBytes: bytes.length * 2 - 1 })).rejects.toMatchObject({ code: 'ResourceLimitExceeded' });
     expect(readAsset.mock.calls.map(([request]) => request.maxBytes)).toEqual([bytes.length, bytes.length - 1]);
     expect(create).toHaveBeenCalledTimes(1); expect(revoke).toHaveBeenCalledWith(create.mock.results[0]!.value);
+  });
+  it('checks individual and cumulative pixels before making URLs and releases earlier resources on failure', async () => {
+    const source = seed(), create = vi.spyOn(URL, 'createObjectURL'), revoke = vi.spyOn(URL, 'revokeObjectURL');
+    await expect(prepareWorkbookAssets(source, ['assets/one.png'], signal(), { maxImagePixels: 63 })).rejects.toMatchObject({ code: 'ResourceLimitExceeded' });
+    expect(create).not.toHaveBeenCalled();
+    await expect(prepareWorkbookAssets(source, ['assets/one.png', 'assets/two.png'], signal(), { maxPixels: 127 })).rejects.toMatchObject({ code: 'ResourceLimitExceeded' });
+    expect(create).toHaveBeenCalledTimes(1); expect(revoke).toHaveBeenCalledWith(create.mock.results[0]!.value);
+    const accepted = await prepareWorkbookAssets(source, ['assets/one.png', 'assets/two.png', 'assets/one.png'], signal(), { maxPixels: 128 });
+    try { expect(accepted.pixels).toBe(128); } finally { accepted.dispose(); }
   });
   it('rejects changed identities, paths, bytes and over-budget provider responses before making URLs', async () => {
     const source = seed(), create = vi.spyOn(URL, 'createObjectURL');

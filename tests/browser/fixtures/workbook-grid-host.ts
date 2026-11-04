@@ -52,7 +52,7 @@ async function main() {
   const style = document.createElement('style'); style.textContent = model.snapshot().styles.map(style => style.css).join('\n'); document.head.append(style);
   let rightToLeft = false;
   const host = {
-    assetMeasurement(base64: string) { return assetMeasurement(container, base64); },
+    assetMeasurement(base64: string, mimeType: string) { return assetMeasurement(container, base64, mimeType); },
     borderSourceMeasurement() { return borderSourceMeasurement(container); },
     textLayoutMeasurement(cases: readonly TextLayoutCase[]) { return textLayoutMeasurement(container, cases); },
     async render(viewport: WorkbookViewport, rtl = false) {
