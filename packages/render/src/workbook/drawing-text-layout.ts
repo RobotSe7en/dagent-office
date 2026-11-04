@@ -1,0 +1,113 @@
+import { DocumentError, evaluatePresentationPreset } from "@dagent-office/core";
+import type { DeepReadonly, PresentationPresetGeometry, WorkbookObject } from "@dagent-office/core";
+import type { FontResolution } from "../contracts.js";
+import { resolvePreviewFontsInScope } from "../fonts.js";
+import { markViewNode } from "../view-nodes.js";
+import { property } from "../presentation/appearance.js";
+import { decorateDrawingLists } from "../presentation/text.js";
+import { workbookDrawingOrientation } from "./drawing-view.js";
+import type { WorkbookDrawingTextView } from "./drawing-text.js";
+
+export interface WorkbookDrawingTextLayoutInput {
+  readonly source: HTMLElement; readonly object: DeepReadonly<WorkbookObject>; readonly text: WorkbookDrawingTextView;
+  readonly widthPt: number; readonly heightPt: number;
+}
+export interface WorkbookDrawingTextLayout {
+  readonly element: HTMLElement; readonly text: WorkbookDrawingTextView; readonly widthPt: number; readonly heightPt: number;
+  readonly geometry: PresentationPresetGeometry; readonly scale: number; readonly overflow: boolean;
+  readonly nodes: number;
+}
+export interface WorkbookDrawingTextLimits { readonly maxNodes?: number; readonly maxPasses?: number; readonly maxExtentPt?: number }
+
+/** Resolve local fonts and measure complete, unrotated object rectangles before
+ * their pane projections are created. Text counters its object's reflections;
+ * the outer object still owns rotation, flips, fill/effects and clipping. */
+export function layoutWorkbookDrawingTexts(scope: HTMLElement, inputs: readonly WorkbookDrawingTextLayoutInput[], limits: WorkbookDrawingTextLimits = {}): { readonly objects: readonly WorkbookDrawingTextLayout[]; readonly fonts: readonly FontResolution[] } {
+  const document = scope.ownerDocument, view = document.defaultView, maxNodes = limits.maxNodes ?? 50_000, maxPasses = limits.maxPasses ?? 8, maxExtent = limits.maxExtentPt ?? 1_000_000;
+  if (!scope.isConnected || !view || document.fonts.status === "loading" || !Number.isSafeInteger(maxNodes) || maxNodes < 1 || !Number.isSafeInteger(maxPasses) || maxPasses < 1 || maxPasses > 128 || !Number.isFinite(maxExtent) || maxExtent <= 0) throw new DocumentError("InvalidOperation", "Drawing text layout requires a connected surface, settled fonts and finite layout budgets.");
+  let nodes = 1;
+  const account = (amount: number): void => { nodes += amount; if (nodes > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Drawing text layout exceeds its node budget."); };
+  const seen = new Set<HTMLElement>();
+  for (const input of inputs) {
+    if (input.source.ownerDocument !== document || !input.source.isConnected || input.text.element.ownerDocument !== document || input.text.element.parentNode || seen.has(input.text.element)
+      || input.source.dataset.nodeId !== input.object.nodeId || input.source.dataset.officeKind !== input.object.kind || input.text.element.dataset.sourceNodeId !== input.object.nodeId || input.object.kind !== "text" && input.object.kind !== "geometry"
+      || ![input.widthPt, input.heightPt].every(n => Number.isFinite(n) && n >= 0)) throw new DocumentError("InvalidOperation", "Drawing layout requires its own connected source, distinct detached text and finite object extents.");
+    if (Math.max(input.widthPt, input.heightPt) > maxExtent) throw new DocumentError("ResourceLimitExceeded", "Drawing text layout exceeds its extent budget.");
+    seen.add(input.text.element); account(input.text.nodes + 1);
+  }
+  const root = markViewNode(document.createElement("div")); root.dataset.officeView = "workbook-drawing-text-measurement"; root.setAttribute("aria-hidden", "true");
+  root.style.cssText = "position:absolute;visibility:hidden;pointer-events:none;contain:layout;left:0;top:0;width:0;height:0;overflow:hidden;direction:ltr";
+  let complete = false;
+  try {
+    const prepared = inputs.map(input => {
+      const object = input.object;
+      if (object.kind !== "text" && object.kind !== "geometry") throw new DocumentError("InvalidOperation", "This object has no shape text body.");
+      const orientation = workbookDrawingOrientation(input.source), computed = view.getComputedStyle(input.source), text = input.text.element, element = markViewNode(document.createElement("div"));
+      const adjustments: Record<string, number> = {};
+      for (const attribute of input.source.attributes) if (attribute.name.startsWith("data-office-adjust-")) adjustments[attribute.name.slice(19)] = Number(attribute.value);
+      const preset = object.kind === "geometry" ? object.preset : "rect", anchor = property(computed, "--office-text-anchor", "t"), centered = property(computed, "--office-text-anchor-center", "false");
+      if (!["t", "ctr", "b", "just", "dist"].includes(anchor) || !["false", "true"].includes(centered)) throw new DocumentError("InvalidDocument", "A drawing text anchor is invalid.");
+      if (centered === "true") throw new DocumentError("UnsupportedFeature", "Centered drawing text-block anchoring requires measured line geometry.");
+      element.style.cssText = "position:relative;direction:ltr";
+      Object.assign(text.style, { position: "absolute", display: "flex", flexDirection: "column", boxSizing: "border-box", margin: "0", overflow: "visible", justifyContent: "flex-start",
+        whiteSpace: object.text?.wrap === false ? "pre" : "pre-wrap", overflowWrap: object.text?.wrap === false ? "normal" : "anywhere", transformOrigin: "50% 50%", transform: `scale(${orientation.flipH ? -1 : 1},${orientation.flipV ? -1 : 1})` });
+      for (const side of ["left", "right", "top", "bottom"]) text.style.setProperty("padding-" + side, computed.getPropertyValue("padding-" + side));
+      element.append(text); root.append(element);
+      const state = { input, object, element, text, anchor, nodes: input.text.nodes + 1, width: input.widthPt, height: input.heightPt, geometry: evaluatePresentationPreset(preset, input.widthPt, input.heightPt, adjustments),
+        resize(width: number, height: number) {
+          if (![width, height].every(n => Number.isFinite(n) && n >= 0 && n <= maxExtent)) throw new DocumentError("ResourceLimitExceeded", "Drawing text auto-fit exceeds its extent budget.");
+          this.width = width; this.height = height; this.geometry = evaluatePresentationPreset(preset, width, height, adjustments);
+          element.style.width = width + "pt"; element.style.height = height + "pt";
+          const rect = this.geometry.textRect;
+          Object.assign(text.style, rect ? { display: "flex", left: rect.x + "pt", top: rect.y + "pt", width: rect.width + "pt", height: rect.height + "pt" } : { display: "none" });
+        } };
+      state.resize(state.width, state.height); return state;
+    });
+    scope.append(root);
+    for (const item of prepared) decorateDrawingLists(item.text, amount => { account(amount); item.nodes += amount; });
+    const fonts = resolvePreviewFontsInScope(document, root, "[data-office-text-style],[data-office-script],.sdk-ppt-marker");
+    const normalLines = new Map<string, number>();
+    const lineHeight = (computed: CSSStyleDeclaration, reduced: boolean): number => {
+      const line = parseFloat(computed.lineHeight); if (Number.isFinite(line) || !reduced) return line;
+      const properties = ["font-family", "font-size", "font-weight", "font-style", "font-stretch", "font-variant", "letter-spacing"], key = JSON.stringify(properties.map(name => computed.getPropertyValue(name)));
+      const cached = normalLines.get(key); if (cached !== undefined) return cached;
+      account(2); const probe = document.createElement("span");
+      probe.style.cssText = "position:absolute;display:block;width:max-content;white-space:pre;line-height:normal;margin:0;padding:0;border:0";
+      for (const name of properties) probe.style.setProperty(name, computed.getPropertyValue(name));
+      probe.textContent = "M"; root.append(probe);
+      try {
+        const height = probe.getBoundingClientRect().height;
+        if (!Number.isFinite(height) || height < 0 || height === 0 && parseFloat(computed.fontSize) > 0) throw new DocumentError("UnsupportedFeature", "This browser cannot measure the resolved drawing font's normal leading.");
+        normalLines.set(key, height); return height;
+      } finally { probe.remove(); nodes -= 2; }
+    };
+    const objects = prepared.map(item => {
+      const { text, object } = item, properties = object.text, styles = [text, ...text.querySelectorAll<HTMLElement>("[data-office-text-style],[data-office-script],.sdk-ppt-marker")].map(node => {
+        const computed = view.getComputedStyle(node); return { node, size: parseFloat(computed.fontSize), line: lineHeight(computed, (properties?.lineSpacingReduction ?? 0) > 0) };
+      });
+      const apply = (scale: number): void => { for (const { node, size, line } of styles) { node.style.fontSize = size * scale + "px"; if (Number.isFinite(line)) node.style.lineHeight = line * scale * (1 - (properties?.lineSpacingReduction ?? 0)) + "px"; } };
+      let scale = properties?.fontScale ?? 1;
+      const measured = () => ({ width: Math.max(text.scrollWidth, text.clientWidth), height: Math.max(text.scrollHeight, text.clientHeight),
+        availableWidth: (item.geometry.textRect?.width ?? 0) / .75, availableHeight: (item.geometry.textRect?.height ?? 0) / .75 });
+      // A CSS border box cannot shrink below its padding. Compare against the
+      // declared text rectangle so that oversized insets do not appear to fit.
+      const overflow = (): boolean => { const size = measured(); return !!item.geometry.textRect && (size.height > size.availableHeight + 1 || size.width > size.availableWidth + 1); };
+      apply(scale);
+      if (properties?.autoFit === "normal") for (let pass = 0; pass < maxPasses && overflow(); pass++) {
+        const size = measured(), next = Math.max(.01, scale * Math.min(.95, Math.sqrt(size.availableHeight / Math.max(1, size.height)), size.availableWidth / Math.max(1, size.width)));
+        if (next >= scale) break; scale = next; apply(scale);
+      }
+      if (properties?.autoFit === "shape") for (let pass = 0; pass < maxPasses && overflow(); pass++) {
+        const size = measured(); item.resize(item.width + Math.max(0, size.width - size.availableWidth) * .75, item.height + Math.max(0, size.height - size.availableHeight) * .75);
+      }
+      const exceeded = overflow();
+      text.style.justifyContent = item.anchor === "ctr" ? "center" : item.anchor === "b" ? "flex-end" : item.anchor === "just" ? "space-between" : item.anchor === "dist" ? "space-around" : "flex-start";
+      item.element.remove(); return Object.freeze({ element: item.element, text: item.input.text, widthPt: item.width, heightPt: item.height, geometry: item.geometry, scale, overflow: exceeded, nodes: item.nodes });
+    });
+    complete = true;
+    return Object.freeze({ objects: Object.freeze(objects), fonts });
+  } finally {
+    if (!complete) for (const input of inputs) input.text.element.remove();
+    root.remove(); root.replaceChildren();
+  }
+}

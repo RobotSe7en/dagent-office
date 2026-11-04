@@ -2,6 +2,8 @@ import type { WorkbookSnapshot } from '@dagent-office/core';
 import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';
 import { createWorkbookDrawingText } from '../../../packages/render/src/workbook/drawing-text.js';
 import { resolvePreviewFontsInScope } from '../../../packages/render/src/fonts.js';
+import { layoutWorkbookDrawingTexts } from '../../../packages/render/src/workbook/drawing-text-layout.js';
+import { createWorkbookDrawingFragment, workbookDrawingOrientation } from '../../../packages/render/src/workbook/drawing-view.js';
 
 export function measureDrawingText(snapshot: WorkbookSnapshot) {
   const scope = document.createElement('div'), style = document.createElement('style');
@@ -32,5 +34,68 @@ export function measureDrawingText(snapshot: WorkbookSnapshot) {
     source.lastElementChild!.remove(); const unchanged = source.outerHTML === before; projection.dispose();
     try { createWorkbookDrawingText(source, object); errors.push('accepted'); } catch (error) { errors.push((error as { code: string }).code); }
     return { native, pieces, exact, nodes: text.nodes, unchanged, errors };
+  } finally { sources.dispose(); scope.remove(); style.remove(); }
+}
+
+export async function measureDrawingTextLayout(snapshot: WorkbookSnapshot) {
+  await document.fonts.ready;
+  const scope = document.createElement('div'), style = document.createElement('style');
+  style.textContent = snapshot.styles.map(style => style.css).join('\n'); document.head.append(style); document.body.append(scope);
+  const sources = new WorkbookContentSources(document, snapshot), object = snapshot.metadata.workbook.objects![2]!;
+  if (object.kind !== 'text' && object.kind !== 'geometry') throw Error('Expected a text-bearing fixture object');
+  const projection = sources.project(scope, [object.nodeId]), source = projection.get(object.nodeId)!;
+  try {
+    const native = createWorkbookDrawingText(source, object), nativeResult = layoutWorkbookDrawingTexts(scope, [{ source, object, text: native, widthPt: 200, heightPt: 100 }]);
+    scope.append(nativeResult.objects[0]!.element);
+    const computed = getComputedStyle(native.element), paragraph = native.element.querySelector('p')!;
+    const nativeStyles = { insets: [computed.paddingLeft, computed.paddingRight, computed.paddingTop, computed.paddingBottom].map(Number.parseFloat), margin: getComputedStyle(paragraph).marginTop, fonts: nativeResult.fonts.length, defaultSize: computed.fontSize };
+    nativeResult.objects[0]!.element.remove();
+    source.querySelector('p')!.textContent = '中文与 Latin 123，自动调整文字框。'.repeat(5);
+    source.dataset.officeRotation = '30'; source.dataset.officeFlipH = 'true'; source.dataset.officeFlipV = 'true';
+    const before = source.outerHTML, cases = [];
+    for (const fit of ['none', 'normal', 'shape'] as const) {
+      const definition = { ...object, text: { autoFit: fit, wrap: true } };
+      const text = createWorkbookDrawingText(source, definition), result = layoutWorkbookDrawingTexts(scope, [{ source, object: definition, text, widthPt: 100, heightPt: 36 }]).objects[0]!;
+      const fragment = createWorkbookDrawingFragment(document, object.nodeId, { pane: 'body', rect: { x: 0, y: 0, width: result.widthPt, height: result.heightPt }, clip: { x: 0, y: 0, width: 400, height: 500 } }, 400, workbookDrawingOrientation(source), false, result.element);
+      scope.append(fragment);
+      const body = fragment.querySelector<HTMLElement>('[data-office-view="workbook-drawing-body"]')!, matrix = new DOMMatrix(getComputedStyle(body).transform).multiply(new DOMMatrix(getComputedStyle(text.element).transform));
+      cases.push({ fit, width: result.widthPt, height: result.heightPt, scale: result.scale, overflow: result.overflow, geometryHeight: result.geometry.textRect!.height,
+        matrix: [matrix.a, matrix.b, matrix.c, matrix.d], text: text.projections.map(piece => piece.node.data).join(''), nodes: result.nodes,
+        actualNodes: result.element.querySelectorAll('*').length + text.projections.length + 1 });
+      fragment.remove();
+    }
+    const unchanged = source.outerHTML === before, errors: string[] = [];
+    const text = createWorkbookDrawingText(source, object), input = { source, object, text, widthPt: 100, heightPt: 36 };
+    for (const limits of [{ maxNodes: 1 }, { maxPasses: 0 }, { maxExtentPt: 10 }]) try { layoutWorkbookDrawingTexts(scope, [input], limits); errors.push('accepted'); } catch (error) { errors.push((error as { code: string }).code); }
+    const failing = { ...object, text: { autoFit: 'shape' as const } };
+    const privateText = createWorkbookDrawingText(source, failing), firstText = createWorkbookDrawingText(source, object);
+    try { layoutWorkbookDrawingTexts(scope, [{ ...input, text: firstText }, { ...input, object: failing, text: privateText }], { maxExtentPt: 110 }); errors.push('accepted'); } catch (error) { errors.push((error as { code: string }).code); }
+    const cleaned = !privateText.element.parentNode && !firstText.element.parentNode && !scope.querySelector('[data-office-view="workbook-drawing-text-measurement"]');
+    source.querySelector('p')!.textContent = 'One\nTwo';
+    // Keep this leading-ratio control on one selected font: mixed fonts may
+    // produce different ascender/descender unions after CSS baseline alignment.
+    source.querySelector('p')!.style.fontFamily = '"Liberation Sans"';
+    source.querySelector('p')!.style.setProperty('--office-font-ascii', '"Liberation Sans"');
+    const leading = [];
+    for (const reduced of [false, true]) {
+      const definition = { ...object, text: { autoFit: 'none' as const, ...(reduced ? { fontScale: .5, lineSpacingReduction: .25 } : {}) } }, text = createWorkbookDrawingText(source, definition);
+      const result = layoutWorkbookDrawingTexts(scope, [{ source, object: definition, text, widthPt: 200, heightPt: 100 }]).objects[0]!; scope.append(result.element);
+      const paragraph = text.element.querySelector('p')!;
+      leading.push({ height: paragraph.getBoundingClientRect().height, font: parseFloat(getComputedStyle(paragraph).fontSize) }); result.element.remove();
+    }
+    const p = source.querySelector('p')!; p.textContent = 'One'; p.dataset.officeNumbering = 'arabicPeriod'; p.dataset.officeNumberingStart = '3'; p.style.marginLeft = '20px'; p.style.textIndent = '-10px';
+    const next = p.cloneNode(true) as HTMLElement; next.dataset.nodeId = 'drawing-list-next'; next.textContent = 'Two'; source.append(next);
+    const list = createWorkbookDrawingText(source, object), lists = layoutWorkbookDrawingTexts(scope, [{ source, object, text: list, widthPt: 200, heightPt: 100 }]).objects[0]!;
+    scope.append(lists.element);
+    const walker = document.createTreeWalker(lists.element, NodeFilter.SHOW_ALL); let listNodes = 1; while (walker.nextNode()) listNodes++;
+    const markers = [...list.element.querySelectorAll<HTMLElement>('.sdk-ppt-marker')].map(marker => ({ text: marker.textContent, left: getComputedStyle(marker).left, position: getComputedStyle(marker).position }));
+    const listValues = { nodes: lists.nodes, actualNodes: listNodes, markers, sourceText: list.projections.map(piece => piece.node.data).join('') }; lists.element.remove();
+    const limitedList = createWorkbookDrawingText(source, object);
+    try { layoutWorkbookDrawingTexts(scope, [{ source, object, text: limitedList, widthPt: 200, heightPt: 100 }], { maxNodes: lists.nodes }); errors.push('accepted'); } catch (error) { errors.push((error as { code: string }).code); }
+    next.remove(); p.textContent = 'X'; p.removeAttribute('data-office-numbering'); p.removeAttribute('data-office-numbering-start'); p.style.marginLeft = '0'; p.style.textIndent = '0';
+    const tinyObject = { ...object, text: { autoFit: 'normal' as const } }, tinyText = createWorkbookDrawingText(source, tinyObject);
+    const tiny = layoutWorkbookDrawingTexts(scope, [{ source, object: tinyObject, text: tinyText, widthPt: 1, heightPt: 100 }]).objects[0]!;
+    const insetOverflow = { width: tiny.widthPt, overflow: tiny.overflow }; tiny.element.remove();
+    return { nativeStyles, cases, unchanged, errors, cleaned: cleaned && !limitedList.element.parentNode, leading, listValues, insetOverflow };
   } finally { sources.dispose(); scope.remove(); style.remove(); }
 }

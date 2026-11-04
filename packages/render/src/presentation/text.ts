@@ -33,20 +33,26 @@ function numberLabel(value: number, format: string): string {
   return format.endsWith("ParenBoth") ? "(" + label + ")" : format.endsWith("ParenR") ? label + ")" : format.endsWith("Plain") ? label : label + ".";
 }
 export function decorateLists(root: HTMLElement, account: (n: number) => void): void {
-  const document = root.ownerDocument;
   for (const box of root.querySelectorAll<HTMLElement>(".sdk-ppt-text,.sdk-ppt-rich-story")) {
+    decorateDrawingLists(box, account);
+  }
+}
+
+/** Lists shared by independently anchored DrawingML text bodies. */
+export function decorateDrawingLists(box: HTMLElement, account: (n: number) => void): void {
+    const document = box.ownerDocument;
     const counters = new Map<string, number>();
     for (const paragraph of box.querySelectorAll<HTMLElement>("p")) {
       const s = document.defaultView!.getComputedStyle(paragraph), kind = paragraph.hasAttribute("data-office-list-none") ? "none" : paragraph.dataset.officeBullet ? "bullet" : paragraph.dataset.officeNumbering ? "number" : property(s, "--office-list-kind");
       if (kind !== "bullet" && kind !== "number") { counters.clear(); continue; }
+      account(2); // Marker element and its generated label text.
       const marker = markViewNode(document.createElement("span")); marker.className = "sdk-ppt-marker";
       const character = paragraph.dataset.officeBullet ?? property(s, "--office-list-character", "•").replace(/^"|"$/g, "");
       const format = paragraph.dataset.officeNumbering ?? property(s, "--office-list-numbering", "arabicPeriod"), key = (paragraph.dataset.officeLevel ?? "0") + ":" + format;
       const value = counters.get(key) ?? Number(paragraph.dataset.officeNumberingStart ?? property(s, "--office-list-start", "1")); counters.set(key, value + 1);
       marker.textContent = kind === "bullet" ? character : numberLabel(value, format);
       const indent = parseFloat(s.textIndent) || -24, margin = parseFloat(s.marginLeft) || 24;
-      marker.style.cssText = `left:${indent}px;width:${Math.abs(indent)}px;font-family:${property(s, "--office-bullet-font", s.fontFamily)};font-size:${property(s, "--office-bullet-size", "1em")};color:${resolvedColor(document, s, "--office-bullet", s.color)}`;
-      ownViewStyle(paragraph, "position", "text-indent", "margin-left"); paragraph.style.position = "relative"; paragraph.style.textIndent = "0"; paragraph.style.marginLeft = margin + "px"; paragraph.prepend(marker); account(1);
+      marker.style.cssText = `position:absolute;pointer-events:none;white-space:pre;left:${indent}px;width:${Math.abs(indent)}px;font-family:${property(s, "--office-bullet-font", s.fontFamily)};font-size:${property(s, "--office-bullet-size", "1em")};color:${resolvedColor(document, s, "--office-bullet", s.color)}`;
+      ownViewStyle(paragraph, "position", "text-indent", "margin-left"); paragraph.style.position = "relative"; paragraph.style.textIndent = "0"; paragraph.style.marginLeft = margin + "px"; paragraph.prepend(marker);
     }
-  }
 }

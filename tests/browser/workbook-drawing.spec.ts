@@ -10,9 +10,9 @@ import type { measureContentSource, rejectContentSource } from './fixtures/workb
 import type { measureImageView, disposeImageView } from './fixtures/workbook-image-view.js';
 import type { measureObjectGeometry } from './fixtures/workbook-object-geometry.js';
 import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
-import type { measureDrawingText } from './fixtures/workbook-drawing-text.js';
+import type { measureDrawingText, measureDrawingTextLayout } from './fixtures/workbook-drawing-text.js';
 
-declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView; measureObjectGeometry: typeof measureObjectGeometry; measureDrawingGradients: typeof measureDrawingGradients; measureDrawingText: typeof measureDrawingText } } }
+declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView; measureObjectGeometry: typeof measureObjectGeometry; measureDrawingGradients: typeof measureDrawingGradients; measureDrawingText: typeof measureDrawingText; measureDrawingTextLayout: typeof measureDrawingTextLayout } } }
 const inputs: { name: string; snapshot: WorkbookSnapshot; text: Record<string, string>; resources: Record<string, string> }[] = [];
 let code = '';
 test.beforeAll(async () => {
@@ -106,6 +106,8 @@ test('drawing text keeps native styles and exact UTF-16 projections across parag
       expect(object.text).toBe(input.text[object.nodeId]); expect(object.pieces.map(piece => piece.text).join('')).toBe(object.text);
       expect(object).toMatchObject({ unchanged: true, detachedSource: true, inheritedIds: 0 }); expect(object.nodes).toBe(object.actualNodes);
       expect(object.fonts.length).toBeGreaterThan(0);
+      // Firefox quantizes the used font size to its subpixel layout grid.
+      for (const piece of object.pieces) expect(Math.abs(parseFloat(piece.size) - 14 / .75)).toBeLessThan(.02);
       expect(object.pieces.filter(piece => piece.role === 'east-asia').every(piece => piece.family.includes('Noto Sans CJK SC'))).toBe(true);
     }
     expect(result.pieces.map(piece => piece.text).join('')).toBe('A中󠄀\né😀Tail');
@@ -115,6 +117,29 @@ test('drawing text keeps native styles and exact UTF-16 projections across parag
     expect(result.pieces.find(piece => piece.text === 'Tail')).toMatchObject({ from: 11, to: 15, sourceNodeId: 'drawing-p2' });
     expect(result.unchanged).toBe(true); expect(result.exact).toBe(result.nodes);
     expect(result.errors).toEqual(['InvalidOperation', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'InvalidDocument', 'InvalidOperation']);
+  }
+});
+
+test('drawing text layout uses native insets, bounded auto-fit and readable glyphs inside reflected objects', async ({ page }) => {
+  for (const input of inputs.filter(input => input.name.endsWith('08-images-shapes'))) {
+    const result = await page.evaluate(snapshot => window.workbookContentHost.measureDrawingTextLayout(snapshot), input.snapshot);
+    const inset = input.name.startsWith('producer/') ? 90000 / 12700 / .75 : 9.6;
+    result.nativeStyles.insets.forEach((value, index) => expect(value).toBeCloseTo(index < 2 ? inset : inset / 2, 3));
+    expect(result.nativeStyles.margin).toBe('0px'); expect(result.nativeStyles.fonts).toBeGreaterThan(0); expect(result.nativeStyles.defaultSize).toBe('24px');
+    const [none, normal, shape] = result.cases;
+    expect(none).toMatchObject({ width: 100, height: 36, scale: 1, overflow: true });
+    expect(normal).toMatchObject({ width: 100, height: 36, overflow: false }); expect(normal!.scale).toBeLessThan(1);
+    expect(shape!.height).toBeGreaterThan(36); expect(shape!.geometryHeight).toBeCloseTo(shape!.height, 5); expect(shape!.overflow).toBe(false);
+    for (const entry of result.cases) {
+      [Math.sqrt(3) / 2, .5, -.5, Math.sqrt(3) / 2].forEach((value, index) => expect(entry.matrix[index]).toBeCloseTo(value, 5));
+      expect(entry.text).toBe('中文与 Latin 123，自动调整文字框。'.repeat(5)); expect(entry.nodes).toBe(entry.actualNodes);
+    }
+    expect(result.leading[1]!.font).toBeCloseTo(result.leading[0]!.font * .5, 3);
+    expect(result.leading[1]!.height).toBeCloseTo(result.leading[0]!.height * .375, 0);
+    expect(result.listValues.markers).toEqual([{ text: '3.', left: '-10px', position: 'absolute' }, { text: '4.', left: '-10px', position: 'absolute' }]);
+    expect(result.listValues.sourceText).toBe('OneTwo'); expect(result.listValues.nodes).toBe(result.listValues.actualNodes);
+    expect(result.insetOverflow).toEqual({ width: 1, overflow: true });
+    expect(result).toMatchObject({ unchanged: true, cleaned: true, errors: ['ResourceLimitExceeded', 'InvalidOperation', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded'] });
   }
 });
 

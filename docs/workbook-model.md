@@ -170,7 +170,9 @@ pnpm probe:workbook-model
 
 同一原生继承规则也用于描边：`ln/@w` 缺省时不覆盖主题线宽，完全无继承值时使用 0.75pt；显式零宽保持为零。工作簿主题继承及零宽通过三浏览器检查，共享 PPT 导入、原生导出重开与形状／分组／连接线／图表回归通过。已保存包中的显式线宽保持原值。
 
-形状／文本框已有独立的有界富文本投影：在源祖先仍连接时读取样式，生成不携带源 CSS 类和 DOM 身份的显示节点；共享单元格的字体角色分段，保留跨 span 的组合字符／变体选择符及带样式换行。每个可见文本片段记录原节点身份和对象内 UTF-16 区间，段落之间不额外插入字符；源结构空白占用的偏移仍保留。原始／Calc 两份绘图来源、局部字体诊断、精确节点预算及失败后源不变已通过三浏览器检查。段落排版、自适应、翻转后的文字方向和完整原生页面对照仍待完成。
+形状／文本框已有独立的有界富文本投影：在源祖先仍连接时读取样式，生成不携带源 CSS 类和 DOM 身份的显示节点；共享单元格的字体角色分段，保留跨 span 的组合字符／变体选择符及带样式换行。每个可见文本片段记录原节点身份和对象内 UTF-16 区间，段落之间不额外插入字符；源结构空白占用的偏移仍保留。原始／Calc 两份绘图来源、局部字体诊断、精确节点预算及失败后源不变已通过三浏览器检查。
+
+内部批量排版已接入预设文字矩形、换行、列表、局部字体解析、字号缩小、框体扩展和行距缩减；文字抵消对象翻转，外层继续负责对象旋转。默认限制 50,000 个节点、8 次排版和 1,000,000pt 对象边长；测量临时节点也计入预算，后续对象失败会释放前面候选的附着关系。原生缺省内边距为左右 7.2pt、上下 3.6pt，缺省字号为 18pt；共享源类早于局部声明，显式零边距和字号继续覆盖。依据为 [left inset](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.bodyproperties.leftinset?view=openxml-3.0.1)、[top inset](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.bodyproperties.topinset?view=openxml-3.0.1)及 MS-OI29500 §2.1.1399。Calc 样例将内边距重存为 90000／45000 EMU，按该来源保留。三浏览器检查覆盖自适应、翻转、行距、列表、过大内边距及失败清理；PPT 富文本、自适应和预算回归通过。`anchorCtr=true` 当前明确拒绝；空段落末尾样式、精确原生行盒、文字溢出裁剪和完整页面对照仍待完成，不能据此宣称绘图文字已通过读取门槛。
 
 [32 项原生阴影方向探针](evidence/xlsx-drawing-shadow-semantics.json)覆盖零模糊、形状旋转、水平／垂直翻转、两个阴影方向和 `rotWithShape` 两种值；运行 `python3 scripts/check-xlsx-drawing-effects.py` 可按固定 Office 归档和字体重核。该 Calc 版本始终保持阴影的页面方向，重存后写入 `rotWithShape="0"`。[格式定义](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.outershadow?view=openxml-3.0.1)则明确区分是否随形状旋转；因此不能把这一生产者差异作为 SDK 忽略源标志的依据。模糊核、最终阴影画面和 Excel/WPS 仍未核验。
 

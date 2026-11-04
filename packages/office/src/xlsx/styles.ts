@@ -72,6 +72,12 @@ export class XlsxStyles implements SheetStyles, RichTextStyles {
     this.colors = new SpreadsheetColors(one(root, "colors"), this.theme.colors);
     this.addRule("xlsx-theme", { ...this.theme.css, ...this.colors.css });
     this.drawingTheme = readDrawingTheme(this.theme.source, (name, css) => this.addRule(name, css));
+    // Native text defaults precede local object/list/run declarations. Keeping
+    // them in shared source classes avoids browser paragraph margins and still
+    // lets explicit zero insets, theme styles and local typography win.
+    this.addRule("xlsx-drawing-text", { "font-size": "18pt", "line-height": "normal", color: "var(--office-theme-tx1,#000000)",
+      "padding-left": "7.2pt", "padding-right": "7.2pt", "padding-top": "3.6pt", "padding-bottom": "3.6pt" });
+    this.addRule("xlsx-drawing-paragraph", { margin: "0" });
     for (const node of root ? table(root, "numFmts", "numFmt") ?? [] : []) {
       attributes(node, ["numFmtId", "formatCode"]); check(node, [], S);
       const id = integer(node, "numFmtId"), code = spreadsheetText(value(node, "formatCode") ?? "", node, 2048);

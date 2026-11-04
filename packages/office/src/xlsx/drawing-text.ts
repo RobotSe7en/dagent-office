@@ -70,6 +70,7 @@ export function drawingTextStyle(source: XmlNode | undefined): Css {
 }
 export function readDrawingText(body: XmlNode, target: Html, content: WorkbookContent, styles: XlsxStyles, hyperlink: (source: XmlNode | undefined, target: Html, part: string) => void): DrawingTextProperties {
   validateTextTree(body);
+  target.attrs.class = ["xlsx-drawing-text", target.attrs.class].filter(Boolean).join(" ");
   return importText({
     id(prefix) {
       const id = content.id();
@@ -77,7 +78,7 @@ export function readDrawingText(body: XmlNode, target: Html, content: WorkbookCo
       if (prefix === "text-style") { styles.drawingRule(id, {}); for (let level = 0; level < 9; level++) styles.drawingRule(`${id}-level-${level}`, {}); }
       return id;
     },
-    make: (tag, attrs) => content.make(tag, attrs), bytes: amount => content.reserve(amount),
+    make: (tag, attrs) => content.make(tag, tag === "p" ? { ...attrs, class: ["xlsx-drawing-paragraph", attrs?.class].filter(Boolean).join(" ") } : attrs), bytes: amount => content.reserve(amount),
     rule: (name, css) => styles.drawingRule(name, css),
     style(node, css) { const name = styles.objectStyle(css); if (name) node.attrs.class = [node.attrs.class, name].filter(Boolean).join(" "); },
     content(node, text) { content.reserve(text.length * 6); node.children.push(text); },
