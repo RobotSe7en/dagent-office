@@ -14,6 +14,7 @@
     "build:packages": "tsc --build tsconfig.json && node scripts/generate-schemas.mjs && node scripts/build-render-browser.mjs",
     "build": "pnpm build:packages && pnpm --filter @dagent-office/playground build",
     "typecheck": "pnpm build:packages && tsc --project apps/playground/tsconfig.json && tsc --project tsconfig.tools.json",
+    "probe:workbook-storage": "pnpm build:packages && node scripts/workbook-baseline.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "test": "pnpm build:packages && vitest run",
     "test:watch": "pnpm build:packages && vitest",

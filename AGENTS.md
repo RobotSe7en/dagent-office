@@ -12,7 +12,7 @@
 
 ## Current implementation order
 
-- Follow [iteration 3](docs/iteration-3.md): R3-01 design is recorded; R3-02 through R3-20 remain outstanding. Complete the full declared XLSX reading gate R3-08 before official editing. Formula parsing, reference rewriting, dependency calculation, grid input and OOXML are first-party implementations; do not introduce Univer or another formula engine.
+- Follow [iteration 3](docs/iteration-3.md): R3-01 design and the R3-02 private storage/Worker prototype are recorded; R3-03 through R3-20 remain outstanding. Complete the full declared XLSX reading gate R3-08 before official editing. Formula parsing, reference rewriting, dependency calculation, grid input and OOXML are first-party implementations; do not introduce Univer or another formula engine.
 - R3 includes native tables, basic rules, charts, pictures, basic shapes/text boxes, classic and modern comments, PDF/PNG and the 10,000-row actual-data target. Do not reduce scope or performance gates without asking the user.
 - The user has authorized all five planned stage PRs to be committed, pushed, independently reviewed, fixed, rechecked and merged after all CI checks pass on the final head. This supersedes the earlier manual-merge choice. Do not commit directly to main, publish npm packages, or use sub-agents.
 - The complete V1 model design (R1-05A) and independent Word closure (R1-14) are complete. Defer R1-15 without renumbering it or claiming all R1-16 acceptance has passed; the current work is iteration 3 Excel.

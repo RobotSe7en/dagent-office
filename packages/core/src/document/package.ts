@@ -40,6 +40,10 @@ export function copyPackage(input: DocumentPackage, limits: DocumentReadLimits):
 export function readText(files: DocumentPackage, path: string): string {
   const bytes = files.get(path);
   if (!bytes) invalid("A referenced document file is missing.");
+  return decodeText(bytes);
+}
+
+export function decodeText(bytes: Uint8Array): string {
   try {
     return new codecs.TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
