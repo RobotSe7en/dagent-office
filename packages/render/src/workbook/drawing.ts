@@ -23,7 +23,7 @@ export interface WorkbookDrawingProjection { readonly pane: WorkbookPane["kind"]
 export function projectWorkbookDrawing(rect: WorkbookRect, rotationDegrees: number, layout: WorkbookViewportLayout, outsetPt = 0): readonly WorkbookDrawingProjection[] {
   if (![rect.x, rect.y, rect.width, rect.height, rotationDegrees, outsetPt].every(Number.isFinite) || rect.width < 0 || rect.height < 0 || outsetPt < 0)
     throw new DocumentError("InvalidOperation", "Workbook drawing geometry must be finite with nonnegative extents.");
-  if (!rect.width || !rect.height) return [];
+  if ((!rect.width || !rect.height) && !outsetPt) return [];
   const radians = (rotationDegrees % 360) * Math.PI / 180, cos = Math.abs(Math.cos(radians)), sin = Math.abs(Math.sin(radians));
   // Outlines and effects can extend beyond the anchor. Keep a conservative
   // local outset so a visible stroke/shadow is neither culled nor clipped away.

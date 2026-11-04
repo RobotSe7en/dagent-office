@@ -3,13 +3,14 @@ import type { DeepReadonly, ContentDocumentModel, PresentationGeometry, Presenta
 import type { DocumentRenderReport, LayoutDiagnostic, LayoutFieldResult, RenderedPage, RenderLimits } from "../contracts.js";
 import { PreviewSource } from "../source-index.js";
 import { hideFromViewSelection, markViewNode, measureViewContent, ownViewAttribute, ownViewStyle } from "../view-nodes.js";
-import { addArrows, numeric, property, resolvedColor, strokeAttributes, svgFill } from "./appearance.js";
+import { numeric, property, resolvedColor, svgFill } from "./appearance.js";
 import { renderChart } from "./chart.js";
 import { PresentationInheritance } from "./inheritance.js";
 import { svgElement, svgPath } from "./svg.js";
 import { decorateLists, textTransform } from "./text.js";
 import { resolveConnector } from "./connectors.js";
 import { officeFontSegments } from "../font-scripts.js";
+import { createDrawingGeometryView } from "../drawing-geometry.js";
 
 type ObjectDefinition = DeepReadonly<PresentationObject>;
 const attributes = (node: Element): Record<string, string> => Object.fromEntries([...node.attributes].map(a => [a.name, a.value]));
@@ -82,16 +83,11 @@ export function composePresentation(document: Document, model: ContentDocumentMo
       for (const prototype of chain) for (const attr of prototype.attributes) if (attr.name.startsWith("data-office-adjust-")) adjustments[attr.name.slice(19)] = Number(attr.value);
       const preset = definition.kind === "geometry" ? definition.preset : definition.kind === "connector" ? node.dataset.officeConnectorPreset ?? (definition.routing === "straight" ? "straightConnector1" : "bentConnector3") : "rect";
       const evaluated = evaluatePresentationPreset(preset, g.width, g.height, adjustments);
-      const svg = markViewNode(svgElement(document, "svg", { width: "100%", height: "100%", viewBox: `0 0 ${Math.max(g.width, 0.001)} ${Math.max(g.height, 0.001)}`, "aria-hidden": "true", "data-sdk-preset": preset }));
-      svg.style.cssText = `position:absolute;left:0;top:0;width:${Math.max(g.width, 0.001)}pt;height:${Math.max(g.height, 0.001)}pt;overflow:visible;pointer-events:none`;
       const boxColor=computed.backgroundColor,boxPaint=definition.kind!=="connector"&&preset!=="line"&&boxColor!=="transparent"&&!/rgba\([^)]*,\s*0\)$/.test(boxColor)?boxColor:undefined;
-      const fill = svgFill(document, computed, svg, id + "-fill", "--office-fill", boxPaint??(definition.kind === "geometry" && preset !== "line" ? "#4472c4" : "none"));
+      const svg = createDrawingGeometryView(document, computed, { preset, geometry: evaluated, widthPt: g.width, heightPt: g.height, id,
+        fillFallback: boxPaint ?? (definition.kind === "geometry" && preset !== "line" ? "#4472c4" : "none"),
+        strokeFallback: definition.kind === "connector" || preset === "line" ? "#000000" : "none", maxNodes: limits.maxNodes - count });
       if(definition.kind!=="connector"&&preset!=="line")styleView(node,{"background-color":"transparent"});
-      for (const path of evaluated.paths) {
-        const drawing = svgElement(document, "path", { d: svgPath(path), fill: path.fill ? fill : "none", ...strokeAttributes(document, computed, "--office-line", definition.kind === "connector" || preset === "line" ? "#000000" : "none") });
-        if (!path.stroke) drawing.setAttribute("stroke", "none");
-        addArrows(document, svg, drawing, computed, id); svg.append(drawing);
-      }
       const children = [...node.childNodes]; node.append(svg);
       if (definition.kind === "connector") connectors.push({ node, definition });
       if (children.length || definition.kind==="text" || definition.kind==="geometry"&&evaluated.textRect) {

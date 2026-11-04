@@ -20,7 +20,7 @@ export function workbookDrawingOrientation(source: HTMLElement): WorkbookDrawing
 export function createWorkbookDrawingFragment(document: Document, nodeId: string, projection: WorkbookDrawingProjection, viewportWidthPt: number, orientation: WorkbookDrawingOrientation, rightToLeft: boolean, content: HTMLElement): HTMLElement {
   const { rect, clip } = projection;
   if (![rect.x, rect.y, rect.width, rect.height, clip.x, clip.y, clip.width, clip.height, viewportWidthPt, orientation.rotationDegrees].every(Number.isFinite)
-    || Math.min(rect.width, rect.height, clip.width, clip.height, viewportWidthPt) <= 0 || content.ownerDocument !== document || content.parentNode || content.isConnected)
+    || Math.min(rect.width, rect.height) < 0 || Math.min(clip.width, clip.height, viewportWidthPt) <= 0 || content.ownerDocument !== document || content.parentNode || content.isConnected)
     throw new DocumentError("InvalidOperation", "A drawing fragment requires finite geometry and fresh detached content.");
   const root = markViewNode(document.createElement("div")), body = document.createElement("div");
   root.dataset.officeView = "workbook-drawing"; root.dataset.sourceNodeId = nodeId; root.dataset.pane = projection.pane;

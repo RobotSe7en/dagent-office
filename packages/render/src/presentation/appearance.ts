@@ -57,9 +57,10 @@ export function strokeAttributes(document: Document, style: CSSStyleDeclaration,
   const cap = property(style, prefix + "-cap", "flat");
   return { stroke: color, "stroke-width": width, "stroke-linecap": cap === "rnd" ? "round" : cap === "sq" ? "square" : "butt", "stroke-linejoin": property(style, prefix + "-join", "round"), "stroke-miterlimit": numeric(style, prefix + "-miter-limit", 8), ...(patterns[dash] ? { "stroke-dasharray": patterns[dash]!.map(n => n * width).join(" ") } : {}) };
 }
-export function addArrows(document: Document, svg: SVGSVGElement, path: SVGPathElement, style: CSSStyleDeclaration, id: string): void {
+export function addArrows(document: Document, svg: SVGSVGElement, path: SVGPathElement, style: CSSStyleDeclaration, id: string, account?: (amount: number) => void): void {
   for (const side of ["start", "end"] as const) {
     const prefix = "--office-line-" + side, type = property(style, prefix + "-arrow", "none"); if (type === "none") continue;
+    account?.(3); // defs, marker and its one geometry primitive.
     const size = (value: string): number => value === "sm" ? 2 : value === "lg" ? 5 : 3;
     const width = size(property(style, prefix + "-w")), length = size(property(style, prefix + "-len"));
     const marker = svgElement(document, "marker", { id: id + "-" + side, markerWidth: length, markerHeight: width, refX: length, refY: width / 2, orient: "auto-start-reverse", viewBox: `0 0 ${length} ${width}`, overflow: "visible" });

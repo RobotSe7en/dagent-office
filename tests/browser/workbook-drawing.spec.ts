@@ -7,8 +7,9 @@ import { readXlsxRecords } from '../../packages/office/src/xlsx/read.js';
 import { projectXlsxRecords } from '../../packages/office/tests/helpers/xlsx-record-model.js';
 import type { measureContentSource, rejectContentSource } from './fixtures/workbook-content-source.js';
 import type { measureImageView, disposeImageView } from './fixtures/workbook-image-view.js';
+import type { measureObjectGeometry } from './fixtures/workbook-object-geometry.js';
 
-declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView } } }
+declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView; measureObjectGeometry: typeof measureObjectGeometry } } }
 const inputs: { name: string; snapshot: WorkbookSnapshot; text: Record<string, string>; resources: Record<string, string> }[] = [];
 let code = '';
 test.beforeAll(async () => {
@@ -44,6 +45,22 @@ for (const rtl of [false, true]) test(`cropped worksheet pictures retain full ro
   }
 });
 test.beforeEach(async ({ page }) => { await page.goto('/'); await page.addScriptTag({ content: code }); });
+
+test('workbook geometry shares preset paths, native colors and bounded gradient/arrow primitives', async ({ page }) => {
+  for (const input of inputs.filter(input => input.name.endsWith('08-images-shapes'))) {
+    const result = await page.evaluate(snapshot => window.workbookContentHost.measureObjectGeometry(snapshot), input.snapshot);
+    expect(result.results.map(object => object.preset)).toEqual(['rect', 'roundRect', 'rect']);
+    for (const object of result.results.slice(1)) {
+      expect(object.paths).toHaveLength(1);
+      expect(object.paths[0]).toMatchObject({ fill: 'rgba(232,240,230,1)', stroke: 'rgba(40,116,84,1)', width: '1' });
+      expect(object.textRect!.width).toBeGreaterThan(0); expect(object.textRect!.height).toBeGreaterThan(0);
+    }
+    expect(result.errors).toEqual(Array(3).fill('ResourceLimitExceeded')); expect(result.nodes).toBe(19);
+    expect(new Set(result.ids).size).toBe(result.ids.length); expect(new Set(result.arrows).size).toBe(4);
+    expect(result.arrows.every(reference => result.ids.includes(reference!.slice(5, -1)))).toBe(true);
+    expect(result.stops).toEqual(['rgba(255,0,0,1)', 'rgba(0,0,255,1)']);
+  }
+});
 
 test('bounded auxiliary projections preserve native drawing and comment text without activating image paths', async ({ page }) => {
   const requests: string[] = []; page.on('request', request => requests.push(request.url()));
