@@ -27,10 +27,10 @@ export async function measureWorkbookCharts(snapshot: WorkbookSnapshot, plots: r
       const walker = surface.document.createTreeWalker(result.element, 0xffff_ffff); let nodes = 0; do { nodes++; } while (walker.nextNode());
       const svg = result.element.querySelector('svg')!, text = [...svg.querySelectorAll('text')];
       const errors = [], unchanged = () => before === source.outerHTML;
-      for (const kind of ['node-budget', 'point-budget', 'text-budget', 'formatter', 'invalid-data', 'source-title', 'missing-title', 'axis-scale', 'formatted-text-budget']) {
+      for (const kind of ['node-budget', 'point-budget', 'text-budget', 'formatter', 'invalid-data', 'source-title', 'missing-title', 'axis-scale', 'formatted-text-budget', 'coordinate-scale']) {
         try {
-          const selected = kind === 'invalid-data' ? { ...data, series: data.series.map(series => ({ ...series, values: [NaN, ...series.values.slice(1)] })) } : data;
-          const appearance = kind === 'formatter' ? { ...chart, showLabels: true, labelContents: ['value' as const] } : kind === 'axis-scale' ? { ...chart, kind: 'column' as const, minimum: 1e16, maximum: 1e16 + 4, majorUnit: .1, showValueAxis: false } : kind === 'formatted-text-budget' ? { ...chart, kind: 'column' as const } : chart;
+          const selected = kind === 'invalid-data' || kind === 'coordinate-scale' ? { ...data, series: data.series.map(series => ({ ...series, values: [kind === 'invalid-data' ? NaN : Number.MAX_VALUE, ...series.values.slice(1)] })) } : data;
+          const appearance = kind === 'formatter' ? { ...chart, showLabels: true, labelContents: ['value' as const] } : kind === 'axis-scale' ? { ...chart, kind: 'column' as const, minimum: 1e16, maximum: 1e16 + 4, majorUnit: .1, showValueAxis: false } : kind === 'coordinate-scale' ? { ...chart, kind: 'column' as const, minimum: 0, maximum: 1, majorUnit: .1 } : kind === 'formatted-text-budget' ? { ...chart, kind: 'column' as const } : chart;
           createWorkbookChartView(source, appearance, selected, 360, 220, 'failure-' + index, { formatNumber: kind === 'formatter' ? () => { throw Error('format rejected'); } : kind === 'formatted-text-budget' ? () => 'x'.repeat(10000) : formatNumber,
             ...(kind === 'missing-title' ? {} : { title: kind === 'source-title' ? source.querySelector('div')! : title() }),
             ...(kind === 'node-budget' ? { maxNodes: result.peakNodes - 1 } : {}), ...(kind === 'point-budget' ? { maxPoints: 1 } : {}), ...(kind === 'text-budget' ? { maxCodeUnits: 1 } : kind === 'formatted-text-budget' ? { maxCodeUnits: 1000 } : {}) });

@@ -89,7 +89,7 @@ test('workbook chart graphics use current values and isolated source styles with
       expect(result.reported).toBe(result.nodes); expect(result.peak).toBeGreaterThan(result.nodes); expect(result.exact).toBe(true); expect(result.unchanged).toBe(true); expect(result.sourceClasses).toBe(0);
       expect(result.svgSize).toEqual([480, 293]); expect(result.fonts.every(value => Math.abs(parseFloat(value) - 13) < .02), JSON.stringify(result.fonts)).toBe(true);
       expect(result.colors.every(value => value.replace(/\s/g, '') === 'rgb(12,34,56)'), JSON.stringify(result.colors)).toBe(true);
-      expect(result.errors).toEqual(['ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'format rejected', 'InvalidOperation', 'InvalidOperation', 'InvalidOperation', 'ResourceLimitExceeded', 'ResourceLimitExceeded']);
+      expect(result.errors).toEqual(['ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'format rejected', 'InvalidOperation', 'InvalidOperation', 'InvalidOperation', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded']);
       expect(result.negativePie).toBe(result.kind === 'pie' ? 'UnsupportedFeature' : '');
       expect(result.titleProjection.map(part => part.text).join('')).toBe(result.titleText);
       for (const part of result.titleProjection) { expect(part.owned).toBe(true); expect(part.to - part.from).toBe(part.text.length); expect(result.titleText!.slice(part.from, part.to)).toBe(part.text); }

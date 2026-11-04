@@ -1,4 +1,5 @@
 import type { ChartAppearance, DeepReadonly } from "@dagent-office/core";
+import { DocumentError } from "@dagent-office/core";
 import { markViewNode, ownViewAttribute } from "./view-nodes.js";
 import { cssStringValue, numeric, property, resolvedColor, strokeAttributes, svgFill } from "./presentation/appearance.js";
 import { svgElement as createSvgElement } from "./presentation/svg.js";
@@ -111,7 +112,11 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     const rough = (largest - minimum) / 8 || 1, power = 10 ** Math.floor(Math.log10(rough)), factor = rough / power, unit = chart.majorUnit ?? (factor <= 1 ? 1 : factor <= 2 ? 2 : factor <= 5 ? 5 : 10) * power;
     const maximum = chart.maximum ?? (Math.floor(largest / unit) + 1) * unit;
     const majorTicks = chartAxisTicks(minimum, maximum, unit, 1024, 0.001);
-    const y = (v: number): number => top + (chart.reverseValues ? (v - minimum) : (maximum - v)) / (maximum - minimum) * h;
+    const y = (v: number): number => {
+      const position = top + (chart.reverseValues ? (v - minimum) : (maximum - v)) / (maximum - minimum) * h;
+      if (!Number.isFinite(position)) throw new DocumentError("ResourceLimitExceeded", "Chart values exceed the finite preview coordinate scale.");
+      return position;
+    };
     const axisX = valueRight ? right : left;
     const tick = (x: number, y: number, vertical: boolean, s: CSSStyleDeclaration, minor = false): void => {
       const kind = property(s, "--office-axis-" + (minor ? "minor" : "major") + "-tick", "cross"); if (kind === "none") return;
