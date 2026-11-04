@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import type { WorkbookSnapshot } from '@dagent-office/core';
@@ -10,15 +12,20 @@ import type { measureContentSource, rejectContentSource } from './fixtures/workb
 import type { measureImageView, disposeImageView } from './fixtures/workbook-image-view.js';
 import type { measureObjectGeometry } from './fixtures/workbook-object-geometry.js';
 import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
-import type { measureDrawingText, measureDrawingTextLayout } from './fixtures/workbook-drawing-text.js';
+import type { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback } from './fixtures/workbook-drawing-text.js';
 
-declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView; measureObjectGeometry: typeof measureObjectGeometry; measureDrawingGradients: typeof measureDrawingGradients; measureDrawingText: typeof measureDrawingText; measureDrawingTextLayout: typeof measureDrawingTextLayout } } }
+declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView; measureObjectGeometry: typeof measureObjectGeometry; measureDrawingGradients: typeof measureDrawingGradients; measureDrawingText: typeof measureDrawingText; measureDrawingTextLayout: typeof measureDrawingTextLayout; measureNativeDrawingText: typeof measureNativeDrawingText; measureDrawingTextFallback: typeof measureDrawingTextFallback } } }
 const inputs: { name: string; snapshot: WorkbookSnapshot; text: Record<string, string>; resources: Record<string, string> }[] = [];
 let code = '';
+let nativeText: WorkbookSnapshot;
+const textEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-drawing-text-semantics.json', 'utf8')) as { sourceSha256: string; cases: { fontPt: number | null; endPt: number | null; paragraphs: string[]; listStyle: string; observed: { lineAdvancePt: number; words: { text: string; boundsPt: number[] }[] } }[] };
 test.beforeAll(async () => {
   const bundle = await build({ configFile: false, build: { write: false, minify: false, lib: { entry: fileURLToPath(new URL('./fixtures/workbook-content-source.ts', import.meta.url)), formats: ['iife'], name: 'WorkbookDrawingProbe' } } });
   if (!Array.isArray(bundle) && !('output' in bundle)) throw Error('Unexpected drawing fixture bundle');
   const output = Array.isArray(bundle) ? bundle.flatMap(part => part.output) : bundle.output; code = output.filter(part => part.type === 'chunk').map(part => part.code).join('\n');
+  const nativeBytes = execFileSync('python3', ['-c', "import importlib.util,sys; s=importlib.util.spec_from_file_location('drawing_text_inputs','scripts/check-xlsx-drawing-text.py'); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); sys.stdout.buffer.write(m.generate(m.inputs()))"], { maxBuffer: 16 * 1024 * 1024 });
+  expect(createHash('sha256').update(nativeBytes).digest('hex')).toBe(textEvidence.sourceSha256);
+  nativeText = projectXlsxRecords(await readXlsxRecords(nativeBytes)).model.snapshot();
   for (const prefix of ['', 'producer/']) for (const name of ['07-three-charts', '08-images-shapes', '09-classic-notes', '10-modern-threads']) {
     const { model } = projectXlsxRecords(await readXlsxRecords(readFileSync(`examples/xlsx/${prefix}${name}.xlsx`))), snapshot = model.snapshot();
     const ids = [...(snapshot.metadata.workbook.stories ?? []).map(story => story.rootNodeId), ...(snapshot.metadata.workbook.objects ?? []).map(object => object.nodeId)];
@@ -141,6 +148,33 @@ test('drawing text layout uses native insets, bounded auto-fit and readable glyp
     expect(result.insetOverflow).toEqual({ width: 1, overflow: true });
     expect(result).toMatchObject({ unchanged: true, cleaned: true, errors: ['ResourceLimitExceeded', 'InvalidOperation', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded'] });
   }
+});
+
+test('explicit native drawing text follows independent fixed-font line advances and empty paragraph sizes', async ({ page }) => {
+  const actual = await page.evaluate(snapshot => window.workbookContentHost.measureNativeDrawingText(snapshot), nativeText);
+  expect(actual).toHaveLength(textEvidence.cases.length);
+  for (const [index, entry] of actual.entries()) {
+    const reference = textEvidence.cases[index]!;
+    expect(entry.unchanged).toBe(true); expect(entry.sourceText).toBe(reference.paragraphs.join('')); expect(entry.placeholders).toBe(reference.paragraphs.flatMap(text => text.split('\n')).filter(text => !text).length);
+    expect(entry.fallback).toBe(false);
+    expect(entry.nodes).toBe(entry.declared); expect(entry.exact).toBe(entry.textNodes); expect(entry.limited).toBe('ResourceLimitExceeded');
+    // Producer-only default font/defPPr differences are recorded separately.
+    if (reference.fontPt === null && !['level-22', 'both'].includes(reference.listStyle) || reference.paragraphs.includes('') && reference.endPt === null) continue;
+    expect(Math.abs(entry.lineAdvancePt - reference.observed.lineAdvancePt), `case ${index}`).toBeLessThan(.75);
+    entry.words.forEach((word, wordIndex) => {
+      const expected = reference.observed.words[wordIndex]!; expect(word.text).toBe(expected.text);
+      word.boundsPt.forEach((value, axis) => expect(Math.abs(value - expected.boundsPt[axis]!), `case ${index}, ${word.text}, axis ${axis}`).toBeLessThan(1.5));
+    });
+  }
+});
+
+test('drawing text fallback accounts for transient probes and empty lines without inventing source offsets', async ({ page }) => {
+  const result = await page.evaluate(snapshot => window.workbookContentHost.measureDrawingTextFallback(snapshot), inputs.find(input => input.name === '08-images-shapes')!.snapshot);
+  expect(result).toMatchObject({ error: 'ResourceLimitExceeded', fallback: true, unchanged: true, sourceText: 'Alpha\nBeta', placeholders: 2, cleaned: true });
+  expect(result.nodes).toBe(result.declared);
+  expect(result.paragraphs[1]).toBeGreaterThan(0);
+  expect(result.paragraphs[0]).toBeCloseTo(result.paragraphs[1]! * 2, 1);
+  expect(result.paragraphs[2]).toBeCloseTo(result.paragraphs[1]!, 1);
 });
 
 test('bounded auxiliary projections preserve native drawing and comment text without activating image paths', async ({ page }) => {

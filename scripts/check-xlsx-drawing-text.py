@@ -29,6 +29,10 @@ def inputs():
     result += [{"fontPt": 14, "endPt": end, "paragraphs": ["", "Alpha", "Beta"], "insets": "default", "listStyle": "none"} for end in [None, 14, 18]]
     result += [{"fontPt": 14, "endPt": None, "paragraphs": ["Alpha", "Beta"], "insets": inset, "listStyle": "none"} for inset in ["zero", "explicit-default"]]
     result += [{"fontPt": None, "endPt": None, "paragraphs": ["Alpha", "Beta"], "insets": "default", "listStyle": kind} for kind in ["default-10", "level-22", "both"]]
+    result += [{"fontPt": 14, "endPt": end, "breakPt": size, "paragraphs": ["Alpha\n", "Beta"], "insets": "default", "listStyle": "none"}
+               for size in [14, 22] for end in [None, 14, 18]]
+    result += [{"fontPt": 14, "endPt": 14, "breakPt": size, "paragraphs": paragraphs, "insets": "default", "listStyle": "none"}
+               for size in [14, 22] for paragraphs in [["\nAlpha", "Beta"], ["Alpha\n\nBeta"]]]
     return result
 
 
@@ -43,7 +47,9 @@ def generate(cases):
         for word in case["paragraphs"]:
             size = "" if case["fontPt"] is None else f' sz="{case["fontPt"] * 100}"'
             end = "" if case["endPt"] is None else f' sz="{case["endPt"] * 100}"'
-            run = f'<a:r><a:rPr{size}><a:latin typeface="Liberation Sans"/></a:rPr><a:t>{word}</a:t></a:r>' if word else ""
+            break_size = case.get("breakPt", case["fontPt"])
+            line_break = '<a:br><a:rPr' + ("" if break_size is None else f' sz="{break_size * 100}"') + '><a:latin typeface="Liberation Sans"/></a:rPr></a:br>'
+            run = line_break.join(f'<a:r><a:rPr{size}><a:latin typeface="Liberation Sans"/></a:rPr><a:t>{part}</a:t></a:r>' if part else "" for part in word.split("\n"))
             paragraphs += f'<a:p><a:pPr/>{run}<a:endParaRPr{end}/></a:p>'
         inset = ' lIns="0" rIns="0" tIns="0" bIns="0"' if case["insets"] == "zero" else ' lIns="91440" rIns="91440" tIns="45720" bIns="45720"' if case["insets"] == "explicit-default" else ""
         style = ""

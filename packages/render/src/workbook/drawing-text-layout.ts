@@ -22,7 +22,7 @@ export interface WorkbookDrawingTextLimits { readonly maxNodes?: number; readonl
 /** Resolve local fonts and measure complete, unrotated object rectangles before
  * their pane projections are created. Text counters its object's reflections;
  * the outer object still owns rotation, flips, fill/effects and clipping. */
-export function layoutWorkbookDrawingTexts(scope: HTMLElement, inputs: readonly WorkbookDrawingTextLayoutInput[], limits: WorkbookDrawingTextLimits = {}): { readonly objects: readonly WorkbookDrawingTextLayout[]; readonly fonts: readonly FontResolution[] } {
+export function layoutWorkbookDrawingTexts(scope: HTMLElement, inputs: readonly WorkbookDrawingTextLayoutInput[], limits: WorkbookDrawingTextLimits = {}): { readonly objects: readonly WorkbookDrawingTextLayout[]; readonly fonts: readonly FontResolution[]; readonly usedFallbackLineMetrics: boolean } {
   const document = scope.ownerDocument, view = document.defaultView, maxNodes = limits.maxNodes ?? 50_000, maxPasses = limits.maxPasses ?? 8, maxExtent = limits.maxExtentPt ?? 1_000_000;
   if (!scope.isConnected || !view || document.fonts.status === "loading" || !Number.isSafeInteger(maxNodes) || maxNodes < 1 || !Number.isSafeInteger(maxPasses) || maxPasses < 1 || maxPasses > 128 || !Number.isFinite(maxExtent) || maxExtent <= 0) throw new DocumentError("InvalidOperation", "Drawing text layout requires a connected surface, settled fonts and finite layout budgets.");
   let nodes = 1;
@@ -66,11 +66,22 @@ export function layoutWorkbookDrawingTexts(scope: HTMLElement, inputs: readonly 
     scope.append(root);
     for (const item of prepared) decorateDrawingLists(item.text, amount => { account(amount); item.nodes += amount; });
     const fonts = resolvePreviewFontsInScope(document, root, "[data-office-text-style],[data-office-script],.sdk-ppt-marker");
-    const normalLines = new Map<string, number>();
-    const lineHeight = (computed: CSSStyleDeclaration, reduced: boolean): number => {
-      const line = parseFloat(computed.lineHeight); if (Number.isFinite(line) || !reduced) return line;
+    const normalLines = new Map<string, number>(), lineContext = document.createElement("canvas").getContext("2d");
+    let usedFallbackLineMetrics = false;
+    const lineHeight = (computed: CSSStyleDeclaration): number => {
+      const line = parseFloat(computed.lineHeight); if (Number.isFinite(line)) return line;
+      if (parseFloat(computed.fontSize) === 0) return 0;
       const properties = ["font-family", "font-size", "font-weight", "font-style", "font-stretch", "font-variant", "letter-spacing"], key = JSON.stringify(properties.map(name => computed.getPropertyValue(name)));
       const cached = normalLines.get(key); if (cached !== undefined) return cached;
+      // Measure scalable font bounds at a fixed large size: browser pixel
+      // rounding at the actual 14–18pt size otherwise adds a full pixel to
+      // every line in some engines. No large canvas bitmap is allocated.
+      if (lineContext) lineContext.font = `${computed.fontStyle} ${computed.fontVariant} ${computed.fontWeight} 1024px ${computed.fontFamily}`;
+      const metrics = lineContext?.measureText("M"), height = metrics ? (metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent) * parseFloat(computed.fontSize) / 1024 : NaN;
+      if (Number.isFinite(height) && height > 0) { normalLines.set(key, height); return height; }
+      // Legacy engines do not expose font bounds. Keep a measured DOM fallback
+      // and report its use; do not silently claim native normal-leading parity.
+      usedFallbackLineMetrics = true;
       account(2); const probe = document.createElement("span");
       probe.style.cssText = "position:absolute;display:block;width:max-content;white-space:pre;line-height:normal;margin:0;padding:0;border:0";
       for (const name of properties) probe.style.setProperty(name, computed.getPropertyValue(name));
@@ -83,9 +94,15 @@ export function layoutWorkbookDrawingTexts(scope: HTMLElement, inputs: readonly 
     };
     const objects = prepared.map(item => {
       const { text, object } = item, properties = object.text, styles = [text, ...text.querySelectorAll<HTMLElement>("[data-office-text-style],[data-office-script],.sdk-ppt-marker")].map(node => {
-        const computed = view.getComputedStyle(node); return { node, size: parseFloat(computed.fontSize), line: lineHeight(computed, (properties?.lineSpacingReduction ?? 0) > 0) };
+        const computed = view.getComputedStyle(node); return { node, size: parseFloat(computed.fontSize), line: lineHeight(computed) };
       });
-      const apply = (scale: number): void => { for (const { node, size, line } of styles) { node.style.fontSize = size * scale + "px"; if (Number.isFinite(line)) node.style.lineHeight = line * scale * (1 - (properties?.lineSpacingReduction ?? 0)) + "px"; } };
+      const apply = (scale: number): void => { for (const { node, size, line } of styles) {
+        // DrawingML's paragraph default is an inheritance/insertion style,
+        // not an extra large glyph on every line. Actual run/empty-line boxes
+        // carry explicit sizes and leading; suppress only the paragraph strut.
+        if (node.localName === "p" || node.closest('[data-office-text-break="true"]')) { node.style.fontSize = "0px"; node.style.lineHeight = "0px"; node.style.minHeight = "0px"; }
+        else { node.style.fontSize = size * scale + "px"; if (Number.isFinite(line)) node.style.lineHeight = line * scale * (1 - (properties?.lineSpacingReduction ?? 0)) + "px"; }
+      } };
       let scale = properties?.fontScale ?? 1;
       const measured = () => ({ width: Math.max(text.scrollWidth, text.clientWidth), height: Math.max(text.scrollHeight, text.clientHeight),
         availableWidth: (item.geometry.textRect?.width ?? 0) / .75, availableHeight: (item.geometry.textRect?.height ?? 0) / .75 });
@@ -105,7 +122,7 @@ export function layoutWorkbookDrawingTexts(scope: HTMLElement, inputs: readonly 
       item.element.remove(); return Object.freeze({ element: item.element, text: item.input.text, widthPt: item.width, heightPt: item.height, geometry: item.geometry, scale, overflow: exceeded, nodes: item.nodes });
     });
     complete = true;
-    return Object.freeze({ objects: Object.freeze(objects), fonts });
+    return Object.freeze({ objects: Object.freeze(objects), fonts, usedFallbackLineMetrics });
   } finally {
     if (!complete) for (const input of inputs) input.text.element.remove();
     root.remove(); root.replaceChildren();

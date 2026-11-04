@@ -3,7 +3,7 @@ import { WorkbookContentSources } from '../../../packages/render/src/workbook/co
 import { disposeImageView, measureImageView } from './workbook-image-view.js';
 import { measureObjectGeometry } from './workbook-object-geometry.js';
 import { measureDrawingGradients } from './drawing-gradient.js';
-import { measureDrawingText, measureDrawingTextLayout } from './workbook-drawing-text.js';
+import { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback } from './workbook-drawing-text.js';
 
 function sourceText(root: Node): string {
   if (root.nodeType === 3) return root.textContent ?? '';
@@ -38,4 +38,4 @@ export function rejectContentSource(snapshot: WorkbookSnapshot, maxNodes?: numbe
   try { const source = new WorkbookContentSources(document, snapshot, maxNodes, maxCodeUnits); source.dispose(); return ''; }
   catch (error) { return (error as { code: string }).code; }
 }
-Object.assign(window, { workbookContentHost: { measureContentSource, rejectContentSource, measureImageView, disposeImageView, measureObjectGeometry, measureDrawingGradients, measureDrawingText, measureDrawingTextLayout } });
+Object.assign(window, { workbookContentHost: { measureContentSource, rejectContentSource, measureImageView, disposeImageView, measureObjectGeometry, measureDrawingGradients, measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback } });

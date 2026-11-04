@@ -2,7 +2,7 @@
   "scope": "Pinned Calc DrawingML text fallback, nonempty/empty paragraph metrics and text insets. Microsoft Office fallback is documented separately; SDK line boxes and Excel/WPS are unverified.",
   "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
   "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
-  "sourceSha256": "ad2d8883b1d699e24088629ac5cadc2d061ed81852c20246fd0bc23407380fc7",
+  "sourceSha256": "320fd52933c1334b5ba8585b8d3838aa0797f913575462e2910dae55f27a287b",
   "fontManifest": {
     "source": "examples/xlsx/reference.json#environment.fonts",
     "sha256": "bda037c50b31e342e0e460755840725d14dd8bfaeccca8de54269277342a5119"
@@ -898,6 +898,528 @@
         "resavedEndSizes": [
           "2200",
           "2200"
+        ]
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": null,
+      "breakPt": 14,
+      "paragraphs": [
+        "Alpha\n",
+        "Beta"
+      ],
+      "insets": "default",
+      "listStyle": "none",
+      "observed": {
+        "pdfScale": 0.998535158,
+        "words": [
+          {
+            "text": "Alpha",
+            "boundsPt": [
+              7.255973,
+              3.26768,
+              43.086123,
+              18.917953
+            ]
+          },
+          {
+            "text": "Beta",
+            "boundsPt": [
+              7.255973,
+              34.608589,
+              36.074352,
+              50.258862
+            ]
+          }
+        ],
+        "lineAdvancePt": 31.340909,
+        "resavedInsets": {
+          "lIns": "90000",
+          "rIns": "90000",
+          "tIns": "45000",
+          "bIns": "45000"
+        },
+        "resavedRunSizes": [
+          [
+            "1400"
+          ],
+          [
+            "1400"
+          ]
+        ],
+        "resavedEndSizes": [
+          "1400",
+          "1400"
+        ]
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "breakPt": 14,
+      "paragraphs": [
+        "Alpha\n",
+        "Beta"
+      ],
+      "insets": "default",
+      "listStyle": "none",
+      "observed": {
+        "pdfScale": 0.998535158,
+        "words": [
+          {
+            "text": "Alpha",
+            "boundsPt": [
+              7.255973,
+              3.26768,
+              43.086123,
+              18.917953
+            ]
+          },
+          {
+            "text": "Beta",
+            "boundsPt": [
+              7.255973,
+              34.608589,
+              36.074352,
+              50.258862
+            ]
+          }
+        ],
+        "lineAdvancePt": 31.340909,
+        "resavedInsets": {
+          "lIns": "90000",
+          "rIns": "90000",
+          "tIns": "45000",
+          "bIns": "45000"
+        },
+        "resavedRunSizes": [
+          [
+            "1400"
+          ],
+          [
+            "1400"
+          ]
+        ],
+        "resavedEndSizes": [
+          "1400",
+          "1400"
+        ]
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 18,
+      "breakPt": 14,
+      "paragraphs": [
+        "Alpha\n",
+        "Beta"
+      ],
+      "insets": "default",
+      "listStyle": "none",
+      "observed": {
+        "pdfScale": 0.998535158,
+        "words": [
+          {
+            "text": "Alpha",
+            "boundsPt": [
+              7.255973,
+              3.26768,
+              43.086123,
+              18.917953
+            ]
+          },
+          {
+            "text": "Beta",
+            "boundsPt": [
+              7.255973,
+              39.09416,
+              36.074352,
+              54.744433
+            ]
+          }
+        ],
+        "lineAdvancePt": 35.82648,
+        "resavedInsets": {
+          "lIns": "90000",
+          "rIns": "90000",
+          "tIns": "45000",
+          "bIns": "45000"
+        },
+        "resavedRunSizes": [
+          [
+            "1400"
+          ],
+          [
+            "1400"
+          ]
+        ],
+        "resavedEndSizes": [
+          "1400",
+          "1400"
+        ]
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": null,
+      "breakPt": 22,
+      "paragraphs": [
+        "Alpha\n",
+        "Beta"
+      ],
+      "insets": "default",
+      "listStyle": "none",
+      "observed": {
+        "pdfScale": 0.998535158,
+        "words": [
+          {
+            "text": "Alpha",
+            "boundsPt": [
+              7.255973,
+              3.26768,
+              43.086123,
+              18.917953
+            ]
+          },
+          {
+            "text": "Beta",
+            "boundsPt": [
+              7.255973,
+              43.550688,
+              36.074352,
+              59.200961
+            ]
+          }
+        ],
+        "lineAdvancePt": 40.283008,
+        "resavedInsets": {
+          "lIns": "90000",
+          "rIns": "90000",
+          "tIns": "45000",
+          "bIns": "45000"
+        },
+        "resavedRunSizes": [
+          [
+            "1400"
+          ],
+          [
+            "1400"
+          ]
+        ],
+        "resavedEndSizes": [
+          "1400",
+          "1400"
+        ]
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "breakPt": 22,
+      "paragraphs": [
+        "Alpha\n",
+        "Beta"
+      ],
+      "insets": "default",
+      "listStyle": "none",
+      "observed": {
+        "pdfScale": 0.998535158,
+        "words": [
+          {
+            "text": "Alpha",
+            "boundsPt": [
+              7.255973,
+              3.26768,
+              43.086123,
+              18.917953
+            ]
+          },
+          {
+            "text": "Beta",
+            "boundsPt": [
+              7.255973,
+              34.608589,
+              36.074352,
+              50.258862
+            ]
+          }
+        ],
+        "lineAdvancePt": 31.340909,
+        "resavedInsets": {
+          "lIns": "90000",
+          "rIns": "90000",
+          "tIns": "45000",
+          "bIns": "45000"
+        },
+        "resavedRunSizes": [
+          [
+            "1400"
+          ],
+          [
+            "1400"
+          ]
+        ],
+        "resavedEndSizes": [
+          "1400",
+          "1400"
+        ]
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 18,
+      "breakPt": 22,
+      "paragraphs": [
+        "Alpha\n",
+        "Beta"
+      ],
+      "insets": "default",
+      "listStyle": "none",
+      "observed": {
+        "pdfScale": 0.998535158,
+        "words": [
+          {
+            "text": "Alpha",
+            "boundsPt": [
+              7.255973,
+              3.26768,
+              43.086123,
+              18.917953
+            ]
+          },
+          {
+            "text": "Beta",
+            "boundsPt": [
+              7.255973,
+              39.09416,
+              36.074352,
+              54.744433
+            ]
+          }
+        ],
+        "lineAdvancePt": 35.82648,
+        "resavedInsets": {
+          "lIns": "90000",
+          "rIns": "90000",
+          "tIns": "45000",
+          "bIns": "45000"
+        },
+        "resavedRunSizes": [
+          [
+            "1400"
+          ],
+          [
+            "1400"
+          ]
+        ],
+        "resavedEndSizes": [
+          "1400",
+          "1400"
+        ]
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "breakPt": 14,
+      "paragraphs": [
+        "\nAlpha",
+        "Beta"
+      ],
+      "insets": "default",
+      "listStyle": "none",
+      "observed": {
+        "pdfScale": 0.998535158,
+        "words": [
+          {
+            "text": "Alpha",
+            "boundsPt": [
+              7.255973,
+              18.938635,
+              43.086123,
+              34.588908
+            ]
+          },
+          {
+            "text": "Beta",
+            "boundsPt": [
+              7.255973,
+              34.608589,
+              36.074352,
+              50.258862
+            ]
+          }
+        ],
+        "lineAdvancePt": 15.669954,
+        "resavedInsets": {
+          "lIns": "90000",
+          "rIns": "90000",
+          "tIns": "45000",
+          "bIns": "45000"
+        },
+        "resavedRunSizes": [
+          [
+            "1400"
+          ],
+          [
+            "1400"
+          ]
+        ],
+        "resavedEndSizes": [
+          "1400",
+          "1400"
+        ]
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "breakPt": 14,
+      "paragraphs": [
+        "Alpha\n\nBeta"
+      ],
+      "insets": "default",
+      "listStyle": "none",
+      "observed": {
+        "pdfScale": 0.998535158,
+        "words": [
+          {
+            "text": "Alpha",
+            "boundsPt": [
+              7.255973,
+              3.26768,
+              43.086123,
+              18.917953
+            ]
+          },
+          {
+            "text": "Beta",
+            "boundsPt": [
+              7.255973,
+              34.608589,
+              36.074352,
+              50.258862
+            ]
+          }
+        ],
+        "lineAdvancePt": 31.340909,
+        "resavedInsets": {
+          "lIns": "90000",
+          "rIns": "90000",
+          "tIns": "45000",
+          "bIns": "45000"
+        },
+        "resavedRunSizes": [
+          [
+            "1400",
+            "1400"
+          ]
+        ],
+        "resavedEndSizes": [
+          "1400"
+        ]
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "breakPt": 22,
+      "paragraphs": [
+        "\nAlpha",
+        "Beta"
+      ],
+      "insets": "default",
+      "listStyle": "none",
+      "observed": {
+        "pdfScale": 0.998535158,
+        "words": [
+          {
+            "text": "Alpha",
+            "boundsPt": [
+              7.255973,
+              27.880734,
+              43.086123,
+              43.531007
+            ]
+          },
+          {
+            "text": "Beta",
+            "boundsPt": [
+              7.255973,
+              43.550688,
+              36.074352,
+              59.200961
+            ]
+          }
+        ],
+        "lineAdvancePt": 15.669954,
+        "resavedInsets": {
+          "lIns": "90000",
+          "rIns": "90000",
+          "tIns": "45000",
+          "bIns": "45000"
+        },
+        "resavedRunSizes": [
+          [
+            "1400"
+          ],
+          [
+            "1400"
+          ]
+        ],
+        "resavedEndSizes": [
+          "1400",
+          "1400"
+        ]
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "breakPt": 22,
+      "paragraphs": [
+        "Alpha\n\nBeta"
+      ],
+      "insets": "default",
+      "listStyle": "none",
+      "observed": {
+        "pdfScale": 0.998535158,
+        "words": [
+          {
+            "text": "Alpha",
+            "boundsPt": [
+              7.255973,
+              3.26768,
+              43.086123,
+              18.917953
+            ]
+          },
+          {
+            "text": "Beta",
+            "boundsPt": [
+              7.255973,
+              43.550688,
+              36.074352,
+              59.200961
+            ]
+          }
+        ],
+        "lineAdvancePt": 40.283008,
+        "resavedInsets": {
+          "lIns": "90000",
+          "rIns": "90000",
+          "tIns": "45000",
+          "bIns": "45000"
+        },
+        "resavedRunSizes": [
+          [
+            "1400",
+            "1400"
+          ]
+        ],
+        "resavedEndSizes": [
+          "1400"
         ]
       }
     }

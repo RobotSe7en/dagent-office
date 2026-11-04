@@ -47,35 +47,56 @@ export function createWorkbookDrawingText(source: HTMLElement, object: DeepReado
     if (child.nodeType !== 1 || (child as Element).localName !== "p") throw new DocumentError("InvalidDocument", "Drawing text must consist of source paragraphs.");
     account(1);
     const paragraph = child as HTMLElement, runs = workbookRichTextFonts(paragraph, Math.max(1, maxNodes - nodes)), baseOffset = offset;
-    let runIndex = 0, localOffset = 0;
+    let runIndex = 0, localOffset = 0, lineHasText = false, insertionStyle = paragraph;
     const target = document.createElement("p"), computed = style(paragraph, target);
     target.style.margin = "0"; target.style.minHeight = "1em"; target.style.flex = "none";
     for (const name of paragraphStyle) target.style.setProperty(name, computed.getPropertyValue(name));
     for (const name of listAttributes) { const value = paragraph.getAttribute(name); if (value !== null) target.setAttribute(name, value); }
     for (const name of computed) if (name.startsWith("--office-list-") || name.startsWith("--office-bullet-")) target.style.setProperty(name, computed.getPropertyValue(name));
+    const emptyLine = (parent: HTMLElement, end: boolean): void => {
+      // Empty lines carry the preceding break's insertion style, overridden
+      // by endParaRPr only at the paragraph end. This view-only character never
+      // becomes a source UTF-16 unit. The temporary inheritance probe is private
+      // to the already projected source and is removed on every exit path.
+      account(1); const placeholder = markViewNode(document.createElement("span"));
+      placeholder.dataset.officeView = "workbook-drawing-empty-line"; placeholder.setAttribute("aria-hidden", "true");
+      account(1); const probe = document.createElement("span"), base = style(insertionStyle, probe);
+      for (const name of base) if (name.startsWith("--office-font-") || name.startsWith("--office-major-") || name.startsWith("--office-minor-")) probe.style.setProperty(name, base.getPropertyValue(name));
+      placeholder.className = end ? paragraph.dataset.officeEndStyle ?? "" : ""; probe.append(placeholder); paragraph.append(probe);
+      try {
+        const computed = style(placeholder, placeholder);
+        placeholder.style.fontFamily = computed.getPropertyValue("--office-font-ascii").trim() || computed.getPropertyValue("--office-minor-ascii").trim() || computed.fontFamily;
+      } finally { probe.remove(); nodes--; }
+      placeholder.removeAttribute("class"); account(1); placeholder.append(document.createTextNode("\u200b")); parent.append(placeholder);
+    };
     const appendText = (text: string, original: HTMLElement, parent: HTMLElement): void => {
       const end = localOffset + text.length;
+      const computed = view.getComputedStyle(original);
       while (localOffset < end) {
         const run = runs[runIndex++];
         if (!run || run.from !== localOffset || run.to > end) throw new DocumentError("InvalidDocument", "Drawing font runs do not match the source text.");
         account(2); const span = document.createElement("span"), node = document.createTextNode(run.text);
-        span.dataset.officeScript = run.role; span.style.fontFamily = run.font.family; span.append(node); parent.append(span);
+        span.dataset.officeScript = run.role; span.style.fontFamily = run.font.family; span.style.fontSize = run.font.sizePx + "px"; span.style.lineHeight = computed.lineHeight; span.append(node); parent.append(span);
         projections.push(Object.freeze({ node, sourceNodeId: original.dataset.nodeId!, from: baseOffset + run.from, to: baseOffset + run.to })); localOffset = run.to;
       }
+      if (text.length) { lineHasText = text.includes("\n") ? !text.endsWith("\n") : true; insertionStyle = original; }
     };
     const append = (original: HTMLElement, parent: HTMLElement, depth: number): void => {
       if (depth > 64) throw new DocumentError("ResourceLimitExceeded", "Drawing text exceeds its nesting budget.");
       for (const child of original.childNodes) {
         if (child.nodeType === 3) appendText(child.textContent ?? "", original, parent);
         else if (child.nodeType === 1 && inline.has((child as Element).localName)) {
-          const element = child as HTMLElement; account(1); const span = document.createElement("span"); style(element, span); parent.append(span);
-          if (element.localName === "br") appendText("\n", element, span);
+          const element = child as HTMLElement;
+          if (element.localName === "br" && !lineHasText) { if (!localOffset) insertionStyle = element; emptyLine(parent, false); }
+          account(1); const span = document.createElement("span"); style(element, span); parent.append(span);
+          if (element.localName === "br") { span.dataset.officeTextBreak = "true"; appendText("\n", element, span); }
           else append(element, span, depth + 1);
         } else throw new DocumentError("InvalidDocument", "Drawing text contains unsupported inline content.");
       }
     };
     append(paragraph, target, 0);
     if (runIndex !== runs.length) throw new DocumentError("InvalidDocument", "Drawing text did not consume all source font runs.");
+    if (!lineHasText) emptyLine(target, true);
     offset += localOffset; root.append(target);
   }
   return Object.freeze({ element: root, projections: Object.freeze(projections), nodes });
