@@ -12,7 +12,10 @@
 
 ## Current implementation order
 
-- The complete V1 model design (R1-05A) and independent Word closure (R1-14) are complete. Defer R1-15 without renumbering it or claiming all R1-16 acceptance has passed; the current work is iteration 2 PPT.
+- Follow [iteration 3](docs/iteration-3.md): R3-01 design is recorded; R3-02 through R3-20 remain outstanding. Complete the full declared XLSX reading gate R3-08 before official editing. Formula parsing, reference rewriting, dependency calculation, grid input and OOXML are first-party implementations; do not introduce Univer or another formula engine.
+- R3 includes native tables, basic rules, charts, pictures, basic shapes/text boxes, classic and modern comments, PDF/PNG and the 10,000-row actual-data target. Do not reduce scope or performance gates without asking the user.
+- The user has authorized all five planned stage PRs to be committed, pushed, independently reviewed, fixed, rechecked and merged after all CI checks pass on the final head. This supersedes the earlier manual-merge choice. Do not commit directly to main, publish npm packages, or use sub-agents.
+- The complete V1 model design (R1-05A) and independent Word closure (R1-14) are complete. Defer R1-15 without renumbering it or claiming all R1-16 acceptance has passed; the current work is iteration 3 Excel.
 - Complete R1-10 DOCX reading, style mapping, read-only preview and import acceptance before R1-06 or subsequent editing work. Keep existing task IDs.
 - Import preserves fields and cached results, classic comments, and text insertion/deletion revisions. Unsupported content fails explicitly; no default partial import. Native export is implemented in R1-13; R1-14 verifies the independent packaged Word closure; host integration remains R1-15.
 - Follow [iteration 2](docs/iteration-2.md): complete R2-02 through R2-06 model, independent fixtures, full declared PPTX reading and read-only acceptance before R2-07 editing. The reading gate includes the selected charts, notes and classic/modern comments.

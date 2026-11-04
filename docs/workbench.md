@@ -56,6 +56,6 @@ Playground 提供报告协作样例和固定提案，使用公开 React 入口�
 
 Playground 使用 `appearance: "workspace"`：左侧文档列表提供样例、当前页面导入的文件、搜索与格式筛选，右侧集中文件操作、编辑和协作工具，下方为画布和批注卡片。文档切换保留各自的会话、修订及撤销历史，刷新页面后清除；不提供正式存储。选择后出现的小批注框使用同一事务入口，非模态填写和取消不推进修订。窄屏将文档列表改为横向排列，批注卡片移到画布下方；Office 画布在自己的容器内滚动。
 
-[R1-11 富文本输入](rich-text.md)、[R1-12 分页／PDF 渲染](pagination-rendering.md)及 [R1-13 原生 DOCX 导出](docx-export.md)已实现。第一轮历史与延期的宿主验收见[第一轮细则](iteration-1.md)；当前[第二轮 PPT](iteration-2.md)计划扩展格式、只读依赖、全局作用域及批注回复，这些 PPT 能力尚未实现。
+[R1-11 富文本输入](rich-text.md)、[R1-12 分页／PDF 渲染](pagination-rendering.md)及 [R1-13 原生 DOCX 导出](docx-export.md)已实现。第一轮历史与延期的宿主验收见[第一轮细则](iteration-1.md)；[第二轮 PPT](iteration-2.md)已实现格式操作、只读依赖、全局作用域及批注回复，见[PPT 工作台](presentation-workbench.md)。当前进入[第三轮 Excel](iteration-3.md)，工作簿协作尚未实现。
 
 Playground 的 DOCX／PDF 下载、修订守卫、导出报告及独立打包消费验收见 [Word 闭环](word-closure.md)。
