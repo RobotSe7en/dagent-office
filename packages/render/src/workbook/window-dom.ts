@@ -10,7 +10,7 @@ export type WorkbookCellPainter = (body: HTMLElement, source: WorkbookCell | und
 /** Internal virtual DOM compositor, not an XLSX preview entry point. The source
  * painter owns number formats, rich text and appearance. Geometry and source
  * identity remain independent of those concerns and of physical RTL positions. */
-export function replaceWorkbookWindow(container: HTMLElement, frame: WorkbookWindowFrame, paint: WorkbookCellPainter, rightToLeft: boolean): HTMLElement {
+export function replaceWorkbookWindow(container: HTMLElement, frame: WorkbookWindowFrame, paint: WorkbookCellPainter, rightToLeft: boolean, borders: readonly SVGSVGElement[] = []): HTMLElement {
   const document = container.ownerDocument, root = markViewNode(document.createElement("div")), rows = new Map<number, HTMLElement>(), accessible = new Set<number>();
   root.dataset.officeView = "workbook-window"; root.dataset.sheetId = frame.sheetId;
   root.setAttribute("role", "grid"); root.setAttribute("aria-readonly", "true");
@@ -41,6 +41,7 @@ export function replaceWorkbookWindow(container: HTMLElement, frame: WorkbookWin
     clip.append(body); row.append(clip);
   }
   for (const [, row] of [...rows].sort((a, b) => a[0] - b[0])) root.append(row);
+  root.append(...borders);
   // No mutation of the current view until every projected cell was painted.
   container.replaceChildren(root);
   return root;

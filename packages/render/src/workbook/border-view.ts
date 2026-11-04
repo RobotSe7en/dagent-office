@@ -1,21 +1,14 @@
 import { DocumentError } from "@dagent-office/core";
 import { svgElement } from "../presentation/svg.js";
 import { markViewNode } from "../view-nodes.js";
-import type { WorkbookBorderKind } from "./border-priority.js";
+import type { WorkbookBorderPaint } from "./border-style.js";
+import { workbookBorderStrokes } from "./border-style.js";
 import type { WorkbookRect } from "./projection.js";
 
-export interface WorkbookBorderEdge {
-  readonly kind: WorkbookBorderKind; readonly color: string;
+export type WorkbookBorderEdge = WorkbookBorderPaint & {
   readonly from: { readonly x: number; readonly y: number }; readonly to: { readonly x: number; readonly y: number };
-}
-interface Stroke { readonly width: number; readonly offset: number; readonly dash?: readonly number[] }
-const profiles: Readonly<Partial<Record<WorkbookBorderKind, readonly Stroke[]>>> = {
-  none: [], hair: [{ width: .1, offset: 0 }], thin: [{ width: .75, offset: 0 }], medium: [{ width: 1.75, offset: 0 }], thick: [{ width: 2.5, offset: 0 }],
-  double: [{ width: .5, offset: -.625 }, { width: .5, offset: .625 }],
-  dashed: [{ width: .75, offset: 0, dash: [3, 1] }], dotted: [{ width: .75, offset: 0, dash: [.5, 1] }],
-  mediumDashed: [{ width: 1.75, offset: 0, dash: [8, 2.5] }],
-  dashDot: [{ width: .75, offset: 0, dash: [8, 2.5, 2.5, 2.5] }], mediumDashDot: [{ width: 1.75, offset: 0, dash: [8, 2.5, 2.5, 2.5] }],
-  dashDotDot: [{ width: .75, offset: 0, dash: [8, 2.5, 2.5, 2.5, 2.5, 2.5] }], mediumDashDotDot: [{ width: 1.75, offset: 0, dash: [8, 2.5, 2.5, 2.5, 2.5, 2.5] }],
+  /** Distance from the source edge's physical start when a neighbor splits it. */
+  readonly dashOffsetPt?: number;
 };
 
 /** Draw already-selected, physical edges in one clipped pane. Keep full edge
@@ -33,18 +26,20 @@ export function createWorkbookBorderView(document: Document, bounds: WorkbookRec
   for (const edge of edges) {
     if (![edge.from.x, edge.from.y, edge.to.x, edge.to.y].every(Number.isFinite) || edge.from.x !== edge.to.x && edge.from.y !== edge.to.y)
       throw new DocumentError("InvalidDocument", "A worksheet border requires an axis-aligned finite edge.");
-    if (!Object.hasOwn(profiles, edge.kind)) throw new DocumentError("UnsupportedFeature", "This worksheet border has no verified stroke geometry.");
+    if (edge.dashOffsetPt !== undefined && !Number.isFinite(edge.dashOffsetPt)) throw new DocumentError("InvalidDocument", "A worksheet border requires a finite dash offset.");
+    const strokes = workbookBorderStrokes(edge);
     // Only a resolved sRGB color may reach SVG stroke. In particular, neither
     // a URL paint server nor an unresolved CSS variable can load a resource.
     const color = edge.color.length <= 80 ? /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*(\d*\.?\d+))?\s*\)$/.exec(edge.color) : null;
     if (!color || color.slice(1, 4).some(channel => Number(channel) > 255) || Number(color[4] ?? 1) > 1)
       throw new DocumentError("InvalidDocument", "A worksheet border requires a resolved sRGB color.");
     if (edge.from.x === edge.to.x && edge.from.y === edge.to.y) continue;
-    for (const stroke of profiles[edge.kind]!) {
+    for (const stroke of strokes) {
       if (++nodes > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Worksheet border strokes exceed their node budget.");
       const x = edge.from.x === edge.to.x ? stroke.offset : 0, y = edge.from.y === edge.to.y ? stroke.offset : 0;
       root.append(svgElement(document, "line", { x1: edge.from.x + x, y1: edge.from.y + y, x2: edge.to.x + x, y2: edge.to.y + y,
-        fill: "none", stroke: edge.color, "stroke-width": stroke.width, "stroke-linecap": "butt", ...(stroke.dash ? { "stroke-dasharray": stroke.dash.join(" ") } : {}) }));
+        fill: "none", stroke: edge.color, "stroke-width": stroke.width, "stroke-linecap": stroke.cap ?? "butt",
+        ...(stroke.dash ? { "stroke-dasharray": stroke.dash.join(" "), ...(edge.dashOffsetPt ? { "stroke-dashoffset": edge.dashOffsetPt } : {}) } : {}) }));
     }
   }
   return root;

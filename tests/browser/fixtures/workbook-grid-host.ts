@@ -16,11 +16,15 @@ import { createWorkbookTextView } from "../../../packages/render/src/workbook/te
 import { workbookCellFill } from "../../../packages/render/src/workbook/cell-fill.js";
 import { createWorkbookBorderView } from "../../../packages/render/src/workbook/border-view.js";
 import type { WorkbookBorderEdge } from "../../../packages/render/src/workbook/border-view.js";
+import type { WorkbookBorderKind } from "../../../packages/render/src/workbook/border-priority.js";
 import { WorkbookTextDirection } from "../../../packages/render/src/workbook/text-direction.js";
 import { textLayoutMeasurement } from "./workbook-text-layout.js";
 import type { TextLayoutCase } from "./workbook-text-layout.js";
 import { layoutWorkbookTexts } from "../../../packages/render/src/workbook/text-layout.js";
 import type { WorkbookTextLayoutInput } from "../../../packages/render/src/workbook/text-layout.js";
+import { borderSourceMeasurement } from "./workbook-border-source.js";
+import { projectWorkbookBorders } from "../../../packages/render/src/workbook/border-projection.js";
+import { workbookCellBorders } from "../../../packages/render/src/workbook/cell-borders.js";
 
 const encode = (text: string) => new TextEncoder().encode(text);
 async function main() {
@@ -32,6 +36,7 @@ async function main() {
   metadata.workbook.themeCssClass = 'grid-theme';
   files.set('styles.css', encode(new TextDecoder().decode(files.get('styles.css')!) + '.normal-metric{font-family:"Liberation Serif";font-size:20pt;font-weight:normal}.grid-theme{--office-theme-accent1:#4472c4}.cell-highlight{font-family:"Liberation Serif";font-size:13pt;font-style:italic}.rich-style{font-weight:bold;color:#993355}table[data-row="9984"] tr[data-row="9999"] td[data-column="9"]{background-color:var(--office-theme-accent1)}'));
   sheet.frozen = { rows: 2, columns: 1 }; sheet.merges = [{ from: { row: 0, column: 0 }, to: { row: 6, column: 6 } }];
+  files.set('styles.css', encode(new TextDecoder().decode(files.get('styles.css')!) + '.cell-default{--office-cell-border-left-kind:thin;--office-cell-border-right-kind:thin;--office-cell-border-top-kind:thin;--office-cell-border-bottom-kind:thin;--office-cell-border-left-color:#777;--office-cell-border-right-color:#777;--office-cell-border-top-color:#777;--office-cell-border-bottom-color:#777}'));
   for (const [row, column, text] of [[0, 0, '合并😀禰󠄀'], [9999, 9, '一万行'], [1_048_575, 16_383, '末格']] as const) {
     const blockRow = Math.floor(row / 256) * 256, blockColumn = Math.floor(column / 32) * 32, path = `sheets/sheet-1/${blockRow}-${blockColumn}.html`;
     const bytes = encode(`<!doctype html><html><head></head><body><table data-sheet-id="sheet-1" data-row="${blockRow}" data-column="${blockColumn}"><tbody><tr data-row="${row}"><td data-column="${column}" data-value-type="text"${row === 9999 ? ' class="cell-highlight"' : ''}>${row === 9999 ? '<span class="rich-style">一万</span>行' : row === 0 ? '合并😀<span>禰</span><span>󠄀</span>' : text}</td></tr></tbody></table></body></html>`);
@@ -46,6 +51,7 @@ async function main() {
   const style = document.createElement('style'); style.textContent = model.snapshot().styles.map(style => style.css).join('\n'); document.head.append(style);
   let rightToLeft = false;
   const host = {
+    borderSourceMeasurement() { return borderSourceMeasurement(container); },
     textLayoutMeasurement(cases: readonly TextLayoutCase[]) { return textLayoutMeasurement(container, cases); },
     async render(viewport: WorkbookViewport, rtl = false) {
       const current = await loader.load('sheet-1', dimensions, viewport);
@@ -63,11 +69,15 @@ async function main() {
           }
           const normal = measureWorkbookColumnFont(container, model.snapshot().metadata.workbook, 'sheet-1');
           const laidOut = layoutWorkbookTexts(container, textInputs, normal.spaceWidthPx);
+          const borderPanes = projectWorkbookBorders(dimensions, loader.frame!.layout, merges, (row, column) => {
+            const source = sources.get(row, column); return source && workbookCellBorders(document, getComputedStyle(source.element), rtl);
+          }, rtl);
+          const borders = borderPanes.filter(pane => pane.edges.length).map(pane => createWorkbookBorderView(document, pane.bounds, pane.edges));
           replaceWorkbookWindow(container, loader.frame!, (body, cell, projection) => {
             const source = sources.get(projection.row, projection.column)!;
             body.style.backgroundColor = workbookCellFill(document, getComputedStyle(source.element));
             if (cell?.value.type === 'text') body.append(laidOut.cells[texts.get(projection)]!.element);
-          }, rtl);
+          }, rtl, borders);
         } finally { sources.dispose(); }
       }
       return current;
@@ -75,7 +85,7 @@ async function main() {
     inspect() {
       const root = container.firstElementChild as HTMLElement, bounds = root.getBoundingClientRect();
       const cells = [...root.querySelectorAll<HTMLElement>('[data-office-view="workbook-cell"]')];
-      return { cellCount: cells.length, accessibleCells: root.querySelectorAll('[role="gridcell"]').length, rows: [...root.querySelectorAll('[role="row"]')].map(row => Number(row.getAttribute('aria-rowindex'))),
+      return { cellCount: cells.length, borderLines: root.querySelectorAll('svg line').length, accessibleCells: root.querySelectorAll('[role="gridcell"]').length, rows: [...root.querySelectorAll('[role="row"]')].map(row => Number(row.getAttribute('aria-rowindex'))),
         sourceUnchanged: [...before].every(([path, bytes]) => { const after = model.serialize().get(path)!; return bytes.length === after.length && bytes.every((byte, index) => byte === after[index]); }),
         merges: cells.filter(cell => cell.dataset.row === '0' && cell.dataset.column === '0').map(cell => {
           const clip = cell.getBoundingClientRect(), body = cell.firstElementChild!.getBoundingClientRect();
@@ -214,8 +224,8 @@ async function main() {
       const strokes = [...layer.querySelectorAll('line')].map(line => ({ from: [Number(line.getAttribute('x1')), Number(line.getAttribute('y1'))], to: [Number(line.getAttribute('x2')), Number(line.getAttribute('y2'))],
         width: Number(line.getAttribute('stroke-width')), dash: (line.getAttribute('stroke-dasharray') ?? '').split(' ').filter(Boolean).map(Number), cap: line.getAttribute('stroke-linecap') }));
       const rasterImages: string[] = [], rasterSizes: number[][] = [];
-      const raster = async (x: number, kind: WorkbookBorderEdge['kind']) => {
-        const svg = createWorkbookBorderView(document, { x, y: 0, width: 40, height: 20 }, [{ kind, color: 'rgba(255,0,0,1)', from: { x: -3, y: 10 }, to: { x: 80, y: 10 } }]);
+      const raster = async (x: number, kind: WorkbookBorderKind, split = false) => {
+        const svg = createWorkbookBorderView(document, { x, y: 0, width: 40, height: 20 }, [{ kind, color: 'rgba(255,0,0,1)', from: { x: split ? x : -3, y: 10 }, to: { x: 80, y: 10 }, ...(split ? { dashOffsetPt: x + 3 } : {}) }]);
         // Rasterize a standalone image, without the pane's DOM placement. SVG
         // image intrinsic dimensions come from attributes, not CSS box sizes.
         svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); svg.setAttribute('width', '160'); svg.setAttribute('height', '80');
@@ -229,10 +239,15 @@ async function main() {
         } finally { URL.revokeObjectURL(url); }
       };
       const first = await raster(0, 'dashed'), clipped = await raster(7, 'dashed'), double = await raster(0, 'double');
-      let difference = 0, painted = 0, maskDifference = 0;
+      const split = await raster(7, 'dashed', true);
+      let difference = 0, painted = 0, maskDifference = 0, splitDifference = 0, splitMaskDifference = 0;
       for (let y = 0; y < 80; y++) for (let x = 0; x < 132; x++) {
         const a = first[(y * 160 + x + 28) * 4 + 3]!, b = clipped[(y * 160 + x) * 4 + 3]!;
         difference = Math.max(difference, Math.abs(a - b)); if ((a > 128) !== (b > 128)) maskDifference++;
+      }
+      for (let index = 3; index < clipped.length; index += 4) {
+        splitDifference = Math.max(splitDifference, Math.abs(clipped[index]! - split[index]!));
+        if ((clipped[index]! > 128) !== (split[index]! > 128)) splitMaskDifference++;
       }
       for (let x = 0; x < 132; x++) if (clipped[(40 * 160 + x) * 4 + 3]! > 128) painted++;
       const doubleRows = Array.from({ length: 80 }, (_, y) => y).filter(y => double[(y * 160 + 80) * 4 + 3]! > 128);
@@ -241,7 +256,7 @@ async function main() {
         try { createWorkbookBorderView(document, bounds, [edge]); } catch (error) { failures.push((error as { code: string }).code); }
       }
       try { createWorkbookBorderView(document, bounds, [basic], 2); } catch (error) { failures.push((error as { code: string }).code); }
-      return { strokes, difference, maskDifference, painted, doubleRows, failures, rasterImages, rasterSizes };
+      return { strokes, difference, maskDifference, splitDifference, splitMaskDifference, painted, doubleRows, failures, rasterImages, rasterSizes };
     },
     textDirectionMeasurement() {
       const scope = document.createElement('div'); scope.dir = 'rtl'; container.append(scope);

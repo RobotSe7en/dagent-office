@@ -4,14 +4,17 @@ import { fileURLToPath } from "node:url";
 import type { WorkbookViewport } from "../../packages/render/src/workbook/viewport.js";
 import type { WorkbookTextFontRun } from "../../packages/render/src/workbook/text-fonts.js";
 import type { WorkbookBorderEdge } from "../../packages/render/src/workbook/border-view.js";
+import type { WorkbookBorderKind } from "../../packages/render/src/workbook/border-priority.js";
 import borderReference from "../../docs/evidence/xlsx-border-semantics.json" with { type: "json" };
 import alignmentReference from "../../docs/evidence/xlsx-alignment-semantics.json" with { type: "json" };
 import type { TextLayoutCase, textLayoutMeasurement } from "./fixtures/workbook-text-layout.js";
+import type { borderSourceMeasurement } from "./fixtures/workbook-border-source.js";
 
 interface GridHost {
+  borderSourceMeasurement(): ReturnType<typeof borderSourceMeasurement>;
   textLayoutMeasurement(cases: readonly TextLayoutCase[]): ReturnType<typeof textLayoutMeasurement>;
   render(viewport: WorkbookViewport, rtl?: boolean): Promise<boolean>;
-  inspect(): { cellCount: number; accessibleCells: number; rows: number[]; sourceUnchanged: boolean; merges: { pane?: string; text: string | null; clip: { x: number; y: number; width: number; height: number }; body: { x: number; y: number; width: number; height: number }; hit?: { row: number; column: number } }[] };
+  inspect(): { cellCount: number; borderLines: number; accessibleCells: number; rows: number[]; sourceUnchanged: boolean; merges: { pane?: string; text: string | null; clip: { x: number; y: number; width: number; height: number }; body: { x: number; y: number; width: number; height: number }; hit?: { row: number; column: number } }[] };
   failedPaint(): boolean; dispose(): void;
   numericMeasurement(): Promise<{ rounded: { kind: string; text?: string }; scientific: { kind: string; text?: string }; actual: number; predicted: number; overflow: boolean; fill?: { kind: string; text?: string } }>;
   columnFontMeasurement(): Promise<{ measured: { cssClass: string; maximumDigitWidthPx: number; fonts: { requestedFamily: string; substituted: boolean }[] }; fallback: { cssClass: string; maximumDigitWidthPx: number }; actual: number; unrelatedUnchanged: boolean; retainedProbes: number }>;
@@ -19,7 +22,7 @@ interface GridHost {
   sourceStyleMeasurement(): Promise<{ text: string | null; font: string; size: string; italic: string; background: string; bold: string; foreground: string; plain: string; blockRow?: string; row?: string; bound: boolean; before: string; disposed: boolean; noPartial: boolean; retained: number; rejected: string[] }>;
   textFontMeasurement(): Promise<{ runs: readonly WorkbookTextFontRun[]; rich: readonly WorkbookTextFontRun[]; withBreak: readonly WorkbookTextFontRun[]; limited: boolean; unchanged: boolean; frozen: boolean }>;
   textViewMeasurement(): Promise<{ rich: TextRunView[]; mixed: TextRunView[]; decorated: TextRunView[]; decoration: { strike: string; strikeStyle: string; underline: string; underlineStyle: string; plain: string }; text: string | null; failures: string[]; unchanged: boolean; frozen: boolean }>;
-  borderViewMeasurement(edges: readonly WorkbookBorderEdge[]): Promise<{ strokes: { from: number[]; to: number[]; width: number; dash: number[]; cap: string | null }[]; difference: number; maskDifference: number; painted: number; doubleRows: number[]; failures: string[]; rasterImages: string[]; rasterSizes: number[][] }>;
+  borderViewMeasurement(edges: readonly WorkbookBorderEdge[]): Promise<{ strokes: { from: number[]; to: number[]; width: number; dash: number[]; cap: string | null }[]; difference: number; maskDifference: number; splitDifference: number; splitMaskDifference: number; painted: number; doubleRows: number[]; failures: string[]; rasterImages: string[]; rasterSizes: number[][] }>;
   textDirectionMeasurement(): { values: string[]; explicit: string[]; wholeStringDirection: string; retainedText: string | null; failures: string[]; remaining: number; ownerDirection: string };
 }
 interface TextRunView { text: string; from: number; to: number; family: string; weight: string; color: string; x: number; y: number; width: number; height: number }
@@ -56,7 +59,10 @@ test('viewport DOM stays bounded at row 10,000 and the far worksheet corner', as
   await expect(page.locator('[data-row="9999"][data-column="9"]')).toHaveText('一万行');
   const last = await page.evaluate(async () => { await window.workbookGridHost.render({ widthPt: 960, heightPt: 600, scrollLeftPt: Number.MAX_SAFE_INTEGER, scrollTopPt: Number.MAX_SAFE_INTEGER }); return window.workbookGridHost.inspect(); });
   await expect(page.locator('[data-row="1048575"][data-column="16383"]')).toHaveText('末格');
-  for (const report of [first, middle, last]) { expect(report.cellCount).toBeLessThanOrEqual(5000); expect(report.sourceUnchanged).toBe(true); }
+  for (const report of [first, middle, last]) {
+    expect(report.cellCount).toBeLessThanOrEqual(5000); expect(report.sourceUnchanged).toBe(true);
+    expect(report.borderLines).toBeGreaterThan(0); expect(report.borderLines).toBeLessThanOrEqual(report.cellCount * 4);
+  }
   expect(last.cellCount).toBeLessThanOrEqual(48 * 60); expect(middle.cellCount).toBeLessThanOrEqual(48 * 60);
   await page.evaluate(() => window.workbookGridHost.dispose()); await expect(page.locator('#workbook-grid-probe')).toHaveCount(0);
 });
@@ -126,7 +132,7 @@ test('rich text display preserves source offsets, local style and independent na
 
 test('border strokes match native point geometry and keep dash phase across clipped panes', async ({ page }, testInfo) => {
   const native = Object.entries(borderReference.kinds.pdfStrokes).filter(([kind]) => kind !== 'none' && kind !== 'slantDashDot');
-  const edges = native.map(([kind, strokes]) => ({ kind: kind as WorkbookBorderEdge['kind'], color: 'rgba(255,0,0,1)',
+  const edges = native.map(([kind, strokes]) => ({ kind: kind as WorkbookBorderKind, color: 'rgba(255,0,0,1)',
     from: { x: strokes[0]!.from[0]!, y: strokes.reduce((sum, stroke) => sum + stroke.from[1]!, 0) / strokes.length },
     to: { x: strokes[0]!.to[0]!, y: strokes.reduce((sum, stroke) => sum + stroke.to[1]!, 0) / strokes.length } }));
   const report = await page.evaluate(edges => window.workbookGridHost.borderViewMeasurement(edges), edges);
@@ -140,7 +146,8 @@ test('border strokes match native point geometry and keep dash phase across clip
     for (const point of ['from', 'to'] as const) for (let axis = 0; axis < 2; axis++) expect(Math.abs(actual[point][axis]! - expected[point][axis]!)).toBeLessThan(.01);
   }
   for (let i = 0; i < report.rasterImages.length; i++) await testInfo.attach(`border-raster-${i}`, { body: Buffer.from(report.rasterImages[i]!.split(',')[1]!, 'base64'), contentType: 'image/png' });
-  expect(report.rasterSizes).toEqual([[160, 80], [160, 80], [160, 80]]);
+  expect(report.rasterSizes).toEqual(Array(4).fill([160, 80]));
+  expect(report.splitMaskDifference).toBe(0); expect(report.splitDifference).toBeLessThanOrEqual(1);
   expect(report.maskDifference).toBe(0); expect(report.difference).toBeLessThanOrEqual(1); expect(report.painted).toBeGreaterThan(70); expect(report.painted).toBeLessThan(110);
   expect(report.doubleRows.length).toBeGreaterThanOrEqual(2);
   expect(report.doubleRows.some((row, index) => index && row - report.doubleRows[index - 1]! >= 3)).toBe(true);
@@ -209,4 +216,21 @@ test('worksheet wrapping and shrink preserve text offsets and report missing fon
   expect(multiline!.requiredHeightPt).toBeCloseTo((result.measurements[6]!.requiredHeightPt - 1.5) * 2 + 1.5, 1);
   for (const item of [plain!, shrunk!, wrapped!]) { expect(item.text).toBe(base.text); expect(item.offsets.at(-1)![1]).toBe(base.text.length); }
   expect(result.fonts.find(font => font.requestedFamily === 'Missing Workbook Layout Face')).toMatchObject({ substituted: true });
+});
+
+test('source border resolution keeps native logical sides and physical CSS stroke widths distinct', async ({ page }, testInfo) => {
+  const result = await page.evaluate(() => window.workbookGridHost.borderSourceMeasurement());
+  expect(result).toMatchObject({ unchanged: true, failures: ['InvalidDocument', 'UnsupportedFeature', 'UnsupportedFeature', 'UnsupportedFeature', 'InvalidDocument'] });
+  expect(result.native[0]).toEqual(result.native[1]);
+  expect(result.native[0]).toEqual({ before: { kind: 'thin', color: 'rgba(143,170,220,1)' }, after: { kind: 'double', color: 'rgba(10,20,30,1)' } });
+  expect(result.css[0]!.before).toEqual({ kind: 'css', style: 'double', widthPt: 3, color: 'rgba(10,20,30,0.5)' });
+  expect(result.css[0]!.after).toEqual({ kind: 'css', style: 'dashed', widthPt: 1.5, color: 'rgba(0,0,255,1)' });
+  expect(result.css[0]!.top).toEqual({ kind: 'css', style: 'dotted', widthPt: .75, color: 'rgba(0,128,0,1)' });
+  expect(result.css[1]!.after).toEqual(result.css[0]!.before); expect(result.css[1]!.before).toEqual(result.css[0]!.after);
+  expect(result.aliases[0]!.before!.kind).toBe('medium'); expect(result.aliases[0]!.after!.kind).toBe('thin');
+  expect(result.aliases[1]).toEqual(result.aliases[2]);
+  expect(result.strokes.map(item => [item.width, item.dash, item.cap])).toEqual([
+    ['1', null, 'butt'], ['1', null, 'butt'], ['1.5', '4.5 1.5', 'butt'], ['0.75', '0 1.5', 'round'], ['0.5', null, 'butt'], ['0.5', null, 'butt'],
+  ]);
+  await page.locator('#workbook-css-border-probe').screenshot({ path: testInfo.outputPath('workbook-css-borders.png') });
 });

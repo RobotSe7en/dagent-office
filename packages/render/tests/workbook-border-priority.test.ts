@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { selectWorkbookBorder } from "../src/workbook/border-priority.js";
 import type { WorkbookBorderKind } from "../src/workbook/border-priority.js";
+import { workbookBorderStrokes } from "../src/workbook/border-style.js";
 
 describe("regular worksheet shared-border selection", () => {
   it("matches 588 independent PDF edge colors, including RTL physical-side ties", () => {
@@ -22,5 +23,28 @@ describe("regular worksheet shared-border selection", () => {
     expect(selectWorkbookBorder(undefined, none, "row", true)).toBeUndefined();
     expect(selectWorkbookBorder(none, none, "column", true)).toBeUndefined();
     expect(() => selectWorkbookBorder({ kind: "toString" as WorkbookBorderKind }, none, "row", false)).toThrowError(expect.objectContaining({ code: "UnsupportedFeature" }));
+  });
+  it("compares source CSS widths with native outer widths without quantizing them", () => {
+    const native = { kind: "double" as const }, medium = { kind: "medium" as const }, thin = { kind: "thin" as const };
+    const css = { kind: "css" as const, style: "solid" as const, widthPt: 1.76 };
+    expect(selectWorkbookBorder(native, css, "row", false)).toBe(css);
+    expect(selectWorkbookBorder({ ...css, widthPt: 1.75 }, native, "row", false)).toBe(native);
+    const double = { ...css, style: "double" as const, widthPt: .75 };
+    expect(selectWorkbookBorder(thin, double, "column", true)).toBe(double);
+    expect(selectWorkbookBorder(double, medium, "column", true)).toBe(medium);
+    expect(selectWorkbookBorder(css, { ...css }, "column", true)).toBe(css);
+    for (const widthPt of [0, -1, NaN, Infinity, 1e308]) expect(() => selectWorkbookBorder({ ...css, widthPt }, native, "row", false)).toThrowError(expect.objectContaining({ code: "InvalidDocument" }));
+  });
+  it("retains CSS stroke thickness, double gaps and round dotted geometry", () => {
+    const solid = { kind: "css" as const, style: "solid" as const, widthPt: 2.25 };
+    expect(workbookBorderStrokes(solid)).toEqual([{ width: 2.25, offset: 0 }]);
+    const double = workbookBorderStrokes({ ...solid, style: "double" });
+    expect(double.map(stroke => stroke.width)).toEqual([.75, .75]);
+    expect(double[1]!.offset + double[1]!.width / 2 - (double[0]!.offset - double[0]!.width / 2)).toBe(2.25);
+    expect(double[1]!.offset - double[1]!.width / 2 - (double[0]!.offset + double[0]!.width / 2)).toBe(.75);
+    expect(workbookBorderStrokes({ ...solid, style: "dotted" })).toEqual([{ width: 2.25, offset: 0, dash: [0, 4.5], cap: "round" }]);
+    expect(workbookBorderStrokes({ ...solid, style: "dashed" })).toEqual([{ width: 2.25, offset: 0, dash: [6.75, 2.25] }]);
+    expect(() => workbookBorderStrokes({ ...solid, widthPt: 1e308 })).toThrowError(expect.objectContaining({ code: "InvalidDocument" }));
+    expect(() => workbookBorderStrokes({ kind: "slantDashDot" })).toThrowError(expect.objectContaining({ code: "UnsupportedFeature" }));
   });
 });

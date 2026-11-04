@@ -26,6 +26,12 @@ export function resolvedWorkbookColor(document: Document, style: CSSStyleDeclara
   let source = style.getPropertyValue(prefix + "-color").trim(); if (!source) return undefined;
   if (source.toLowerCase() === "currentcolor") source = style.color;
   const rawTint = style.getPropertyValue(prefix + "-tint").trim(), tint = rawTint ? Number(rawTint) : 0;
+  return workbookDisplayColor(document, source, tint);
+}
+
+/** Normalize a computed CSS color for first-party paint layers. The caller
+ * resolves contextual values such as currentColor before crossing this edge. */
+export function workbookDisplayColor(document: Document, source: string, tint = 0): string {
   let context = contexts.get(document);
   if (!context) {
     const created = document.createElement("canvas").getContext("2d");
