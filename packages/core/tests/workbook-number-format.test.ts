@@ -7,7 +7,7 @@ describe('native number-format source compiler', () => {
     const evidence = JSON.parse(readFileSync('docs/evidence/xlsx-number-format-semantics.json', 'utf8')) as { cases: { samples: { code: string }[] }[] };
     let count = 0;
     for (const entry of evidence.cases) for (const sample of entry.samples) { expect(compileNumberFormat(sample.code).length).toBeGreaterThan(0); count++; }
-    expect(count).toBe(74);
+    expect(count).toBe(130);
   });
   it('separates only unquoted, unescaped section delimiters', () => {
     const format = compileNumberFormat('0.00;[Red](0.00);"—;";"收入 "@');

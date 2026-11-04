@@ -3,6 +3,7 @@ import { checkLimit, freeze, invalid, unsupported } from "../document/validation
 export type NumberFormatToken =
   | { readonly kind: "literal"; readonly text: string }
   | { readonly kind: "digit"; readonly value: "0" | "#" | "?" }
+  | { readonly kind: "integer"; readonly digits: string }
   | { readonly kind: "decimal" | "comma" | "percent" | "slash" | "text" | "general" }
   | { readonly kind: "exponent"; readonly positiveSign: boolean; readonly upperCase: boolean }
   | { readonly kind: "date"; readonly field: "y" | "m" | "d" | "h" | "s"; readonly length: number }
@@ -76,6 +77,10 @@ export function compileNumberFormat(code: string): readonly NumberFormatSection[
         literal(currency[1]!);
       } else unsupported("This number-format calendar, digit system or bracket extension is not implemented.");
     } else if ("0#?".includes(value)) section.tokens.push({ kind: "digit", value: value as "0" | "#" | "?" });
+    else if (/^[1-9]$/.test(value)) {
+      while (code[cursor] && /^\d$/.test(code[cursor]!)) cursor++;
+      section.tokens.push({ kind: "integer", digits: code.slice(start, cursor) });
+    }
     else if (value === ".") section.tokens.push({ kind: "decimal" });
     else if (value === ",") section.tokens.push({ kind: "comma" });
     else if (value === "%") section.tokens.push({ kind: "percent" });

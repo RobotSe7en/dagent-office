@@ -19,6 +19,7 @@ ARCHIVE_HASH = "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c
 REPORT = ROOT / "docs/evidence/xlsx-number-format-semantics.json"
 T = "urn:oasis:names:tc:opendocument:xmlns:table:1.0"
 O = "urn:oasis:names:tc:opendocument:xmlns:office:1.0"
+TEXT = "urn:oasis:names:tc:opendocument:xmlns:text:1.0"
 CASES = [(0, "yyyy-mm-dd"), (1, "yyyy-mm-dd"), (59, "yyyy-mm-dd"), (60, "yyyy-mm-dd"), (61, "yyyy-mm-dd"),
          (59.9 / 86400, "hh:mm"), (59.9 / 86400, "hh:mm:ss"), (59.9 / 86400, "hh:mm:ss.00"), (.5, "h:mm AM/PM"), (1.25, "[h]:mm"),
          (1.005, "0.00"), (-1.005, "0.00"), (.47, "#.##"), (0, "#.##"), (0, "0.##"), (12345.678, "#,##0.00"),
@@ -28,6 +29,13 @@ CASES = [(0, "yyyy-mm-dd"), (1, "yyyy-mm-dd"), (59, "yyyy-mm-dd"), (60, "yyyy-mm
          (0, "0#"), (0, "0?"), (0, "?0#"), (0, "00?"), (0, "?#0"), (0, "0.?0"), (1, "0.?0"), (0, ".00"), (0, "0.#0"), (1, "0.#0")]
 COMMON = ["00:00", "00:00:59", "00:00:59.90", "12:00 PM", "30:00", "1.01", "-1.01", ".47", "", "0", "12,345.68", "(1,234.50)", "—", "12.2M", "12.3E+2", "1.2E+3", "1.23E+03", "1 1/4", "1 \u20073/10", "50.00%%", "(1)", "123456789012345"]
 COMMON += ["0", "0\u2007", "\u20070", "00\u2007", "\u20070", "0.\u20070", "1.\u20070", ".00", "0.00", "1.00"]
+CASES += [(value, code) for code in ["# ?/?", "# ??/??", "# ?/8", "?/?", "0/0"] for value in [0, 1, 1.3, 1.99, .01]]
+COMMON += ["0 \u2007 \u2007", "1 \u2007 \u2007", "1 2/7", "2 \u2007 \u2007", "0 \u2007 \u2007",
+           "0 \u2007\u2007 \u2007\u2007", "1 \u2007\u2007 \u2007\u2007", "1 \u20073/10", "1 98/99", " \u20071/99",
+           "0 \u2007 ", "1 \u2007 ", "1 2/8", "2 \u2007 ", "0 \u2007 "]
+COMMON += ["0/1", "1/1", "9/7", "2/1", "0/1"] * 2
+CASES += [(123.456, "# ?/16"), (123.456, "# ?/10"), (123.456, "# ??/100")]
+COMMON += ["123 7/16", "123 5/10", "123 46/100"]
 
 
 def module(name, path):
@@ -56,13 +64,15 @@ def generate(date1904):
 
 def observe(path):
     with ZipFile(path) as archive: root = ET.fromstring(archive.read("content.xml"))
-    # ODS text:s retains repeated spaces. The selected samples only need its
-    # literal text and a figure-space character; reject unhandled layout markup.
+    def content(node):
+        if node.tag == f"{{{TEXT}}}s": return " " * int(node.get(f"{{{TEXT}}}c", "1"))
+        if node.tag == f"{{{TEXT}}}tab": return "\t"
+        if node.tag == f"{{{TEXT}}}line-break": return "\n"
+        return (node.text or "") + "".join(content(child) + (child.tail or "") for child in node)
     values = []
     for cell in root.iter(f"{{{T}}}table-cell"):
         if not cell.get(f"{{{O}}}value-type"): continue
-        assert all(node.tag not in ["{urn:oasis:names:tc:opendocument:xmlns:text:1.0}s", "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}tab"] for node in cell.iter())
-        values.append("".join(cell.itertext()))
+        values.append(content(cell))
     return values
 
 

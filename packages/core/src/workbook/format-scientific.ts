@@ -1,5 +1,5 @@
 import { checkLimit, invalid, unsupported } from "../document/validation.js";
-import { decimalMagnitude } from "./format-decimal.js";
+import { decimalComponents, decimalMagnitude } from "./format-decimal.js";
 import { formatDecimalSection } from "./format-numeric.js";
 import type { NumericSectionDisplay, NumberDisplayPart, NumberSeparators } from "./format-numeric.js";
 import type { NumberFormatSection } from "./number-format.js";
@@ -26,7 +26,7 @@ export function formatScientificSection(value: number, section: NumberFormatSect
   const scale = (percent ? 2 : 0) - 3 * commas;
   let exponent = 0;
   if (value !== 0) {
-    const leading = Number(Math.abs(value).toExponential().split("e")[1]) + scale;
+    const source = decimalComponents(value), leading = source.digits.length + source.exponent - 1 + scale;
     exponent = engineering ? Math.floor(leading / interval) * interval : leading - integer.length + 1;
     const rounded = decimalMagnitude(value, fraction, scale - exponent);
     if (rounded.integer.length > integer.length) exponent += interval;
