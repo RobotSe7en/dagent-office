@@ -62,6 +62,8 @@ General 的内部宽度适配已按 [Excel General 说明](https://support.micro
 
 原生表的默认外观及数字格式同样来自 [Normal 样式](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.cellstyle?view=openxml-3.0.1)，不以 `cellXfs[0]` 替代。内部预览按单元格、有效行、列、表默认的顺序选择外观和数字格式引用；两类引用分别回退，不把 CSS 类列表顺序当作级联优先级。已存储但没有显式格式的空白与隐式空白采用同一回退规则，显式格式零则保留覆盖含义。行的原生 `customFormat` 未启用时，不应用该行的 `s`；启用但省略 `s` 时应用原生缺省的格式零。稀疏维度通过二分查找定位，不展开百万行。[54 个独立 Calc 结果](evidence/xlsx-cell-style-semantics.json)覆盖这些区别，包含 Normal 与格式零不同的数值显示和背景色；可用 `python3 scripts/check-xlsx-cell-styles.py` 重核。此项不代表完整条件格式或最终视觉验收。
 
+窗口样式测量已保留源块的 `table/tbody/tr/td` 祖先、坐标属性和富文本 `span/br`，因此基于源结构的 CSS 仍按浏览器级联匹配，不受虚拟网格裁剪容器影响。跨窗格的同一锚点只建立一份测量源；临时节点按窗口累计限额构建，全部校验完成后才连接到测量表面，释放时清空节点及索引。惰性 HTML 解析后的结构和属性白名单会拒绝脚本、事件、资源标签及与查询不符的单元格，失败不留下部分测量树。三浏览器已核对远端块选择器、富文本格式、主题变量和释放；完整单元格绘制仍待接入。
+
 原生样式适配已将 32 份样例的有效单元格字体、主题/索引颜色、纯色填充、边框、对齐及数字格式映射到可校验的 CSS/格式定义。主题引用、字体角色、原字体名及明暗参数保留为来源；色阶应用、精确边框和特殊对齐需要 R3-08 渲染器解析。原生命名样式定义及更新标记目前只在导入中间态保留，最终持久化取舍仍待产品决策，不能称为完整样式保真已通过。
 
 内部颜色显示已按 [SpreadsheetML 的 HLS 亮度规则](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.foregroundcolor?view=openxml-3.0.1)处理正负 tint，区别于 DrawingML 的 RGB tint/shade。浏览器解析源 CSS 中的主题/索引变量及当前文字颜色，保留源引用；原生 ARGB 高字节不作为单元格透明度。无效颜色或明暗参数明确失败。[108 个固定 Calc 颜色观测](evidence/xlsx-color-tint-semantics.json)与连续 HLS 转换的差别最多为一个 8 位通道单位，记录了舍入边界，不声称逐字节颜色一致；运行 `python3 scripts/check-xlsx-color-tints.py` 可复核。三浏览器另核对变量、颜色语法、透明度和无效值处理。

@@ -10,6 +10,7 @@ import { measureNumberDisplay } from "../../../packages/render/src/workbook/numb
 import { formatGeneralNumber } from "../../../packages/core/src/workbook/format-general.js";
 import { measureWorkbookColumnFont } from "../../../packages/render/src/workbook/column-font.js";
 import { resolvedWorkbookColor } from "../../../packages/render/src/workbook/color.js";
+import { WorkbookCellSources } from "../../../packages/render/src/workbook/cell-source.js";
 
 const encode = (text: string) => new TextEncoder().encode(text);
 async function main() {
@@ -18,11 +19,12 @@ async function main() {
   const metadata = JSON.parse(new TextDecoder().decode(files.get(manifest.metadata)!)) as WorkbookDocumentMetadata;
   const sheet = metadata.workbook.sheets[0]!;
   metadata.workbook.columnWidthFontCssClass = 'normal-metric';
-  files.set('styles.css', encode(new TextDecoder().decode(files.get('styles.css')!) + '.normal-metric{font-family:"Liberation Serif";font-size:20pt;font-weight:normal}'));
+  metadata.workbook.themeCssClass = 'grid-theme';
+  files.set('styles.css', encode(new TextDecoder().decode(files.get('styles.css')!) + '.normal-metric{font-family:"Liberation Serif";font-size:20pt;font-weight:normal}.grid-theme{--office-theme-accent1:#4472c4}.cell-highlight{font-family:"Liberation Serif";font-size:13pt;font-style:italic}.rich-style{font-weight:bold;color:#993355}table[data-row="9984"] tr[data-row="9999"] td[data-column="9"]{background-color:var(--office-theme-accent1)}'));
   sheet.frozen = { rows: 2, columns: 1 }; sheet.merges = [{ from: { row: 0, column: 0 }, to: { row: 6, column: 6 } }];
   for (const [row, column, text] of [[0, 0, '合并😀禰󠄀'], [9999, 9, '一万行'], [1_048_575, 16_383, '末格']] as const) {
     const blockRow = Math.floor(row / 256) * 256, blockColumn = Math.floor(column / 32) * 32, path = `sheets/sheet-1/${blockRow}-${blockColumn}.html`;
-    const bytes = encode(`<!doctype html><html><head></head><body><table data-sheet-id="sheet-1" data-row="${blockRow}" data-column="${blockColumn}"><tbody><tr data-row="${row}"><td data-column="${column}" data-value-type="text">${text}</td></tr></tbody></table></body></html>`);
+    const bytes = encode(`<!doctype html><html><head></head><body><table data-sheet-id="sheet-1" data-row="${blockRow}" data-column="${blockColumn}"><tbody><tr data-row="${row}"><td data-column="${column}" data-value-type="text"${row === 9999 ? ' class="cell-highlight"' : ''}>${row === 9999 ? '<span class="rich-style">一万</span>行' : text}</td></tr></tbody></table></body></html>`);
     const digest = await crypto.subtle.digest('SHA-256', bytes);
     manifest.chunks.push({ sheetId: 'sheet-1', row: blockRow, column: blockColumn, path, sha256: [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('') });
     files.set(path, bytes);
@@ -106,6 +108,24 @@ async function main() {
         }
         return { values, errors, unchanged };
       } finally { wrapper.remove(); }
+    },
+    async sourceStyleMeasurement() {
+      await loader.load('sheet-1', dimensions, { widthPt: 240, heightPt: 80, scrollLeftPt: 0, scrollTopPt: 99_970 });
+      const previous = container.firstChild, source = new WorkbookCellSources(container, model.snapshot(), loader.frame!);
+      const cell = source.get(9999, 9)!, plain = source.get(9999, 8)!, style = getComputedStyle(cell.element), rich = getComputedStyle(cell.element.querySelector('span')!);
+      const result = { text: cell.element.textContent, font: style.fontFamily, size: style.fontSize, italic: style.fontStyle, background: style.backgroundColor,
+        bold: rich.fontWeight, foreground: rich.color, plain: plain.element.className, blockRow: cell.element.closest('table')!.dataset.row, row: cell.element.parentElement!.dataset.row,
+        bound: source.get(9999, 16_384) === undefined, before: cell.element.outerHTML, disposed: false, noPartial: false, retained: -1, rejected: [] as string[] };
+      source.dispose(); source.dispose();
+      try { source.get(9999, 9); } catch { result.disposed = true; }
+      try { new WorkbookCellSources(container, model.snapshot(), loader.frame!, 5); } catch { result.noPartial = previous === container.firstChild; }
+      const frame = loader.frame!, original = frame.getCell(0, 0)!;
+      for (const content of ['<img src="https://example.invalid/workbook-injected" onerror="window.workbookInjected=true">', '<script>window.workbookInjected=true</script>', '<span onclick="window.workbookInjected=true">bad</span>', '<svg><text>bad</text></svg>', '<span>wrong source text</span>']) {
+        const corrupt = { ...frame, getCell: (row: number, column: number) => row === 0 && column === 0 ? { ...original, html: '<td data-column="0" data-value-type="text">' + content + '</td>' } : frame.getCell(row, column) };
+        try { new WorkbookCellSources(container, model.snapshot(), corrupt); } catch (error) { result.rejected.push((error as { code: string }).code); }
+      }
+      result.retained = container.querySelectorAll('[data-office-view="workbook-source-measurement"]').length;
+      return result;
     },
     dispose() { loader.dispose(); container.remove(); style.remove(); },
   };

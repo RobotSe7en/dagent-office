@@ -10,6 +10,7 @@ interface GridHost {
   numericMeasurement(): Promise<{ rounded: { kind: string; text?: string }; scientific: { kind: string; text?: string }; actual: number; predicted: number; overflow: boolean; fill?: { kind: string; text?: string } }>;
   columnFontMeasurement(): Promise<{ measured: { cssClass: string; maximumDigitWidthPx: number; fonts: { requestedFamily: string; substituted: boolean }[] }; fallback: { cssClass: string; maximumDigitWidthPx: number }; actual: number; unrelatedUnchanged: boolean; retainedProbes: number }>;
   colorMeasurement(): { values: (string | undefined)[]; errors: string[]; unchanged: boolean };
+  sourceStyleMeasurement(): Promise<{ text: string | null; font: string; size: string; italic: string; background: string; bold: string; foreground: string; plain: string; blockRow?: string; row?: string; bound: boolean; before: string; disposed: boolean; noPartial: boolean; retained: number; rejected: string[] }>;
 }
 declare global { interface Window { workbookGridHost: GridHost } }
 let code = '';
@@ -70,4 +71,14 @@ test('worksheet colors resolve theme variables and luminance without treating na
   const result = await page.evaluate(() => window.workbookGridHost.colorMeasurement());
   expect(result.values).toEqual(['rgba(143,170,220,1)', 'rgba(51,90,161,1)', 'rgba(20,40,60,1)', 'rgba(255,0,0,1)', 'rgba(20,40,60,0.5)', 'rgba(0,255,0,1)', undefined]);
   expect(result.errors).toEqual(['InvalidDocument', 'InvalidDocument', 'InvalidDocument']); expect(result.unchanged).toBe(true);
+});
+
+test('bounded cell style projection retains source chunk selectors, rich runs and lifecycle isolation', async ({ page }) => {
+  const requests: string[] = []; page.on('request', request => { if (request.url().includes('workbook-injected')) requests.push(request.url()); });
+  const report = await page.evaluate(() => window.workbookGridHost.sourceStyleMeasurement());
+  expect(report).toMatchObject({ text: '一万行', italic: 'italic', background: 'rgb(68, 114, 196)', bold: '700', foreground: 'rgb(153, 51, 85)', plain: 'cell-default', blockRow: '9984', row: '9999', bound: true, disposed: true, noPartial: true, retained: 0 });
+  expect(report.font).toContain('Liberation Serif'); expect(parseFloat(report.size)).toBeCloseTo(13 / .75, 1);
+  expect(report.before).toContain('<span class="rich-style">一万</span>行');
+  expect(report.rejected).toEqual(Array(5).fill('InvalidDocument')); expect(requests).toEqual([]);
+  expect(await page.evaluate(() => (window as unknown as Record<string, unknown>).workbookInjected)).toBeUndefined();
 });
