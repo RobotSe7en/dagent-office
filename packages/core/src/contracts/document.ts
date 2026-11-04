@@ -25,7 +25,7 @@ const manifestFields = {
 };
 export const ContentDocumentManifestSchema = z.strictObject({ ...manifestFields, kind: z.enum(["document", "presentation"]), entrypoint: PackagePathSchema });
 export type ContentDocumentManifest = z.infer<typeof ContentDocumentManifestSchema>;
-export const WorkbookManifestSchema = z.strictObject({ ...manifestFields, kind: z.literal("workbook"), chunks: z.array(WorkbookChunkDescriptorSchema) });
+export const WorkbookManifestSchema = z.strictObject({ ...manifestFields, kind: z.literal("workbook"), chunks: z.array(WorkbookChunkDescriptorSchema), content: PackagePathSchema.optional() });
 export type WorkbookManifest = z.infer<typeof WorkbookManifestSchema>;
 export const DocumentManifestSchema = z.union([ContentDocumentManifestSchema, WorkbookManifestSchema]);
 export type DocumentManifest = z.infer<typeof DocumentManifestSchema>;

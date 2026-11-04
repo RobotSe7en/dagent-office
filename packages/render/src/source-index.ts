@@ -192,6 +192,7 @@ export class PreviewSource {
   }
 
   rectangles(anchor: DeepReadonly<Anchor>): DOMRect[] {
+    if (anchor.kind === "cells") throw new DocumentError("UnsupportedFeature", "Cell anchors require a workbook grid projection.");
     if (anchor.kind === "region") {
       const surface = this.elements.get(anchor.surfaceId)?.element;
       if (!surface) return [];

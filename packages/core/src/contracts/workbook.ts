@@ -112,6 +112,7 @@ export const WorkbookMetadataSchema = z.strictObject({
   names: z.array(WorkbookDefinedNameSchema).optional(),
   tableStyles: z.array(WorkbookTableStyleSchema).optional(),
   defaultTableStyle: WorkbookTableStyleReferenceSchema.optional(),
+  stories: z.array(z.strictObject({ storyId: IdentifierSchema, rootNodeId: IdentifierSchema, kind: z.literal("comment"), sheetId: IdentifierSchema })).optional(),
 });
 export type WorkbookMetadata = z.infer<typeof WorkbookMetadataSchema>;
 export const WorkbookDocumentMetadataSchema = z.strictObject({

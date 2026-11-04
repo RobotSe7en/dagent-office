@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { IdentifierSchema, RectangleSchema, RevisionSchema } from "./primitives.js";
+import { WorkbookRangeSchema } from "./workbook-coordinates.js";
 
 export const TextRangeSchema = z.strictObject({
   nodeId: IdentifierSchema,
@@ -10,6 +11,7 @@ export const TextRangeSchema = z.strictObject({
 export type TextRange = z.infer<typeof TextRangeSchema>;
 
 export const AnchorSchema = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("cells"), sheetId: IdentifierSchema, ranges: z.array(WorkbookRangeSchema).min(1) }),
   TextRangeSchema.extend({ kind: z.literal("text") }),
   z.strictObject({
     kind: z.literal("text-set"),

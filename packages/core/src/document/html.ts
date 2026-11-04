@@ -68,7 +68,15 @@ export interface ParsedHtml {
   signature(nodeId: string): string | undefined;
 }
 
-export function parseHtml(source: string, manifest: DeepReadonly<ContentDocumentManifest>, files: DocumentPackage, limits: DocumentReadLimits, cssBudget: CssBudget): ParsedHtml {
+/** The same scriptless HTML boundary serves document bodies and bounded
+ * workbook object/comment content. Cell chunks retain their compact parser. */
+export interface HtmlSourceDescriptor {
+  readonly kind: "document" | "presentation" | "workbook-content";
+  readonly entrypoint: string;
+  readonly styles: readonly string[];
+  readonly assets: DeepReadonly<ContentDocumentManifest["assets"]>;
+}
+export function parseHtml(source: string, manifest: HtmlSourceDescriptor, files: DocumentPackage, limits: DocumentReadLimits, cssBudget: CssBudget): ParsedHtml {
   try {
     const tree = parseHtmlTree(source, limits, supportedTags);
     const html = tree.childNodes.find((node) => isElement(node) && node.tagName === "html") as Element | undefined;
@@ -133,7 +141,7 @@ export function parseHtml(source: string, manifest: DeepReadonly<ContentDocument
         }
         const nodeId = attribute(node, "data-node-id");
         if (!inBody && nodeId !== undefined) invalid("Document node identities belong inside the body root.");
-        if (inBody && !structuralTags.has(tag) && nodeId === undefined) invalid("A document element is missing its node identity.");
+        if (inBody && (manifest.kind === "workbook-content" || !structuralTags.has(tag)) && nodeId === undefined) invalid("A document element is missing its node identity.");
         if (nodeId !== undefined) {
           if (!nodeId || index.has(nodeId)) invalid("Document node identities must be nonempty and unique.");
           index.set(nodeId, { element: node, parentId, children: [] });

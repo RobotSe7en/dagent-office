@@ -42,6 +42,7 @@ export function validateAnnotations(annotations: readonly Annotation[], manifest
     return false;
   };
   for (const annotation of annotations) {
+    if (annotation.anchor.kind === "cells") invalid("Cell anchors require a workbook document.");
     if (identities.has(annotation.annotationId) || annotation.documentId !== manifest.documentId || annotation.baseRevision > manifest.revision) {
       invalid("Annotations require unique identities and must belong to this document and its history.");
     }

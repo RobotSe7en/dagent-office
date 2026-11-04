@@ -31,6 +31,7 @@ export interface WorkbookSnapshot {
   readonly styles: readonly DeepReadonly<ContextStyle>[];
   readonly metadata: DeepReadonly<WorkbookDocumentMetadata>;
   readonly annotations: readonly DeepReadonly<Annotation>[];
+  readonly content?: { readonly path: string; readonly html: string };
 }
 export type DocumentSnapshot = ContentDocumentSnapshot | WorkbookSnapshot;
 export interface WorkbookCell extends WorkbookCoordinate {

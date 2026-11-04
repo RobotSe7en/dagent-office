@@ -39,6 +39,7 @@ function immutable<Value>(value: Value): Value {
 }
 const statusLabels = { open: "待处理", resolved: "已处理", closed: "已关闭", needs_reanchor: "需要重新定位" };
 function anchorLabel(anchor: DeepReadonly<Anchor>, model: ContentDocumentModel): string {
+  if (anchor.kind === "cells") throw new DocumentError("UnsupportedFeature", "Cell anchors require a workbook interaction surface.");
   if (anchor.kind === "text") return anchor.quote;
   if (anchor.kind === "text-set") return anchor.ranges.map((range) => range.quote).join(" … ");
   const nodeLabel = (id: string): string => {

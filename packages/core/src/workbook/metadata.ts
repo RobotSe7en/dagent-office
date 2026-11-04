@@ -5,7 +5,7 @@ import { validateWorkbookRules } from "./rules.js";
 import { validateWorkbookTables } from "./tables.js";
 import { parseFormula } from "./formula.js";
 
-export function validateWorkbookMetadata(workbook: WorkbookMetadata, classes: ReadonlySet<string>, maxItems: number): Set<string> {
+export function validateWorkbookMetadata(workbook: WorkbookMetadata, classes: ReadonlySet<string>, maxItems: number): { formats: Set<string>; items: number } {
   const ids = new Set<string>(), names = new Set<string>(); let visible = 0, items = 0;
   const classExists = (name: string): void => { if (/[\t\n\f\r ]/.test(name) || !classes.has(name)) invalid("A workbook dimension style is not defined."); };
   if (workbook.themeCssClass !== undefined) classExists(workbook.themeCssClass);
@@ -58,7 +58,7 @@ export function validateWorkbookMetadata(workbook: WorkbookMetadata, classes: Re
   items += nameIds.size;
   items += validateWorkbookTables(workbook, classExists, formatExists, maxItems);
   checkLimit(items + formats.size, maxItems);
-  return formats;
+  return { formats, items: items + formats.size };
 }
 
 function validatePrint(print: WorkbookPrint, classExists: (name: string) => void): number {

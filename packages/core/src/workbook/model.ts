@@ -5,8 +5,10 @@ import { parseContract } from "../schema-registry.js";
 import { normalizeCss } from "../document/css.js";
 import { assetDigest, validateAssets } from "../document/assets.js";
 import { readJson, readText, encode } from "../document/package.js";
-import { checkLimit, freeze, invalid, unsupported } from "../document/validation.js";
+import { checkLimit, freeze, invalid } from "../document/validation.js";
+import { parseHtml } from "../document/html.js";
 import { validateWorkbookMetadata } from "./metadata.js";
+import { validateWorkbookContent } from "./content.js";
 import { createFormulaTemplatePool } from "./formula.js";
 import { CHUNK_ROWS, CHUNK_COLUMNS, MAX_SHEET_COLUMNS, MAX_SHEET_ROWS, indexWorkbookChunk, decodeWorkbookCell } from "./chunk-index.js";
 import type { ChunkIndex } from "./chunk-index.js";
@@ -25,12 +27,13 @@ export function openWorkbookModel(files: Map<string, Uint8Array>, manifest: Work
   const limits = readLimits(inputLimits), metadata = parseContract("document-metadata", readJson(files, manifest.metadata));
   if (!("workbook" in metadata)) invalid("Manifest kind and workbook metadata must match.");
   const annotations = parseContract("annotations", readJson(files, manifest.annotations));
-  if (annotations.length) unsupported("Workbook annotations are not implemented yet.");
   validateAssets(manifest.assets, files);
   const cssBudget = { nodes: 0 }, classes = new Set<string>();
   const styles = manifest.styles.map(path => ({ path, css: normalizeCss(readText(files, path), "stylesheet", documentLimits, cssBudget) }));
   for (const style of styles) walk(parse(style.css), node => { if (node.type === "ClassSelector") classes.add(ident.decode(node.name)); });
-  const formats = validateWorkbookMetadata(metadata.workbook, classes, documentLimits.maxNodes);
+  const { formats, items } = validateWorkbookMetadata(metadata.workbook, classes, documentLimits.maxNodes);
+  const content = manifest.content === undefined ? undefined : parseHtml(readText(files, manifest.content), { kind: "workbook-content", entrypoint: manifest.content, styles: manifest.styles, assets: manifest.assets }, files, documentLimits, cssBudget);
+  validateWorkbookContent(metadata.workbook, manifest, annotations, content, classes, documentLimits.maxNodes, items);
   const sheets = new Map(metadata.workbook.sheets.map(sheet => [sheet.sheetId, new Map<number, ChunkIndex>()]));
   const chunks: { path: string; index: ChunkIndex }[] = [], formulas = createFormulaTemplatePool(limits.maxFormulaTemplates, limits.maxFormulaKeyCodeUnits);
   let cellCount = 0, formulaCount = 0;
@@ -44,7 +47,8 @@ export function openWorkbookModel(files: Map<string, Uint8Array>, manifest: Work
     checkLimit(cellCount, limits.maxCells); checkLimit(formulaCount, limits.maxFormulas);
     sheet.set(key, index); chunks.push({ path: chunk.path, index }); files.delete(chunk.path);
   }
-  const snapshot: WorkbookSnapshot = freeze({ manifest, metadata, annotations, styles });
+  const snapshot: WorkbookSnapshot = freeze({ manifest, metadata, annotations, styles, ...(content ? { content: { path: manifest.content!, html: content.html } } : {}) });
+  if (content) files.set(manifest.content!, encode(content.html));
   files.set("manifest.json", encode(JSON.stringify(manifest)));
   files.set(manifest.metadata, encode(JSON.stringify(metadata))); files.set(manifest.annotations, encode(JSON.stringify(annotations)));
   for (const style of styles) files.set(style.path, encode(style.css));
@@ -69,7 +73,7 @@ export function openWorkbookModel(files: Map<string, Uint8Array>, manifest: Work
     return freeze(cells);
   }
   return Object.freeze({
-    kind: "workbook", snapshot: () => snapshot, getNode: () => undefined,
+    kind: "workbook", snapshot: () => snapshot, getNode: (nodeId: string) => content?.getNode(nodeId),
     readWindow,
     getCell: (sheetId: string, row: number, column: number) => readWindow({ sheetId, row, column, rows: 1, columns: 1 })[0],
     serialize: () => new Map([...Array.from(files, ([path, bytes]) => [path, new Uint8Array(bytes)] as const), ...chunks.map(chunk => [chunk.path, chunk.index.serialize()] as const)]),
