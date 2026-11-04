@@ -15,11 +15,17 @@ import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
 import type { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback } from './fixtures/workbook-drawing-text.js';
 import type { measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } from './fixtures/workbook-surface.js';
 import type { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } from './fixtures/workbook-shadow.js';
+import type { measureWorkbookCharts } from './fixtures/workbook-chart.js';
+import type { BasicChartData } from '../../packages/render/src/chart.js';
+import { modelChartSource, DEFAULT_CHART_READ_LIMITS } from '../../packages/render/src/workbook/chart-source.js';
+
+declare global { interface Window { workbookChartHost: { measureWorkbookCharts: typeof measureWorkbookCharts } } }
 
 declare global { interface Window { workbookShadowHost: { measureWorkbookShadows: typeof measureWorkbookShadows; mountWorkbookShadowPixels: typeof mountWorkbookShadowPixels; disposeWorkbookShadowPixels: typeof disposeWorkbookShadowPixels } } }
 
 declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView; measureObjectGeometry: typeof measureObjectGeometry; measureDrawingGradients: typeof measureDrawingGradients; measureDrawingText: typeof measureDrawingText; measureDrawingTextLayout: typeof measureDrawingTextLayout; measureNativeDrawingText: typeof measureNativeDrawingText; measureDrawingTextFallback: typeof measureDrawingTextFallback; measureWorkbookSurface: typeof measureWorkbookSurface; mountWorkbookSurfacePixels: typeof mountWorkbookSurfacePixels; disposeWorkbookSurfacePixels: typeof disposeWorkbookSurfacePixels } } }
 const inputs: { name: string; snapshot: WorkbookSnapshot; text: Record<string, string>; resources: Record<string, string> }[] = [];
+const chartPlots = new Map<string, BasicChartData[]>();
 let code = '';
 let nativeText: WorkbookSnapshot;
 let nativeShadows: WorkbookSnapshot, nativeBlur: WorkbookSnapshot;
@@ -42,6 +48,19 @@ test.beforeAll(async () => {
     const { model } = projectXlsxRecords(await readXlsxRecords(readFileSync(`examples/xlsx/${prefix}${name}.xlsx`))), snapshot = model.snapshot();
     const ids = [...(snapshot.metadata.workbook.stories ?? []).map(story => story.rootNodeId), ...(snapshot.metadata.workbook.objects ?? []).map(object => object.nodeId)];
     inputs.push({ name: prefix + name, snapshot, text: Object.fromEntries(ids.map(id => [id, model.getNode(id)!.text])), resources: Object.fromEntries(snapshot.manifest.assets.map(asset => [asset.path, Buffer.from(model.getAsset(asset.path)!).toString('base64')])) });
+    if (name === '07-three-charts') {
+      const definitions = snapshot.metadata.workbook.charts!, response = await modelChartSource(model).read({ ...DEFAULT_CHART_READ_LIMITS, documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, chartIds: definitions.map(chart => chart.chartId) }, new AbortController().signal);
+      chartPlots.set(prefix + name, response.charts.map((chart, index) => {
+        const values = (role: string, seriesId?: string) => {
+          const data = chart.references.find(ref => ref.role === role && (seriesId === undefined || 'seriesId' in ref && ref.seriesId === seriesId))!.data;
+          if (data.kind !== 'cells') throw Error('Independent chart fixture must contain static references');
+          return data.areas.flatMap(area => area.cells.map(cell => { if (cell.state !== 'constant') throw Error('Expected independent constants'); return cell.value; }));
+        };
+        return { categories: values('categories').map(value => { if (value.type !== 'text') throw Error('Expected text categories'); return value.value; }),
+          series: definitions[index]!.series.map(series => ({ seriesId: series.seriesId, name: values('series-name', series.seriesId).map(value => { if (value.type !== 'text') throw Error('Expected text series name'); return value.value; }).join(''),
+            values: values('series-values', series.seriesId).map(value => { if (value.type !== 'number') throw Error('Expected numeric constants'); return value.value; }) })) };
+      }));
+    }
   }
   for (const kind of ['default', 'inherited', 'zero']) {
     const files = new Map(readDocumentZip(readFileSync('examples/xlsx/08-images-shapes.xlsx'))), decoder = new TextDecoder(), encoder = new TextEncoder();
@@ -51,6 +70,21 @@ test.beforeAll(async () => {
     files.set(path, encoder.encode(xml)); files.set(theme, encoder.encode(decoder.decode(files.get(theme)!).replace('<a:ln w="12700"', '<a:ln w="50800"')));
     const { model } = projectXlsxRecords(await readXlsxRecords(writeOpcZip(files)));
     inputs.push({ name: 'line-' + kind, snapshot: model.snapshot(), text: {}, resources: {} });
+  }
+});
+
+test('workbook chart graphics use current values and isolated source styles with bounded failure cleanup', async ({ page }) => {
+  for (const input of inputs.filter(input => input.name.endsWith('07-three-charts'))) {
+    const results = await page.evaluate(({ snapshot, plots }) => window.workbookChartHost.measureWorkbookCharts(snapshot, plots), { snapshot: input.snapshot, plots: chartPlots.get(input.name)! });
+    expect(results.map(result => result.kind)).toEqual(['column', 'line', 'pie']);
+    for (const result of results) {
+      expect(result.reported).toBe(result.nodes); expect(result.peak).toBeGreaterThan(result.nodes); expect(result.exact).toBe(true); expect(result.unchanged).toBe(true); expect(result.sourceClasses).toBe(0);
+      expect(result.svgSize).toEqual([480, 293]); expect(result.fonts.every(value => Math.abs(parseFloat(value) - 13) < .02), JSON.stringify(result.fonts)).toBe(true);
+      expect(result.colors.every(value => value.replace(/\s/g, '') === 'rgb(12,34,56)'), JSON.stringify(result.colors)).toBe(true);
+      expect(result.errors).toEqual(['ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'format rejected', 'InvalidOperation', 'InvalidOperation', 'InvalidOperation', 'ResourceLimitExceeded', 'ResourceLimitExceeded']);
+      expect(result.text).toEqual(expect.arrayContaining(['第一季度', '第二季度', '第三季度']));
+    }
+    expect(results[0]!.bars).toHaveLength(6); expect(results[0]!.bars[2]! / results[0]!.bars[0]!).toBeCloseTo(4, 4);
   }
 });
 

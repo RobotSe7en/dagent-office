@@ -1,9 +1,9 @@
-import { DocumentError } from "@dagent-office/core";
 import type { ChartAppearance, DeepReadonly } from "@dagent-office/core";
 import { markViewNode, ownViewAttribute } from "./view-nodes.js";
 import { cssStringValue, numeric, property, resolvedColor, strokeAttributes, svgFill } from "./presentation/appearance.js";
 import { svgElement as createSvgElement } from "./presentation/svg.js";
 import type { DrawingGradientBounds } from "./drawing-gradient.js";
+import { chartAxisTicks } from "./chart-axis.js";
 
 /** Derived plot values. The owning format adapter supplies its authoritative
  * source binding, visibility, coercion and explicit number-display policy. */
@@ -16,6 +16,7 @@ export interface BasicChartOptions {
    * The adapter owns any temporary probes and releases them even on failure. */
   readonly style: (classes?: string) => CSSStyleDeclaration;
   readonly formatNumber: (value: number, format?: string) => string;
+  readonly accountText?: (codeUnits: number) => void;
   readonly title?: HTMLElement;
 }
 const palette = ["#4472c4", "#ed7d31", "#a5a5a5", "#ffc000", "#5b9bd5", "#70ad47"];
@@ -29,11 +30,12 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
   const base = style(chart.textCssClass), legendStyle = style([chart.textCssClass, chart.legendCssClass].filter(Boolean).join(" "));
   const font = (s: CSSStyleDeclaration): Record<string, string> => ({ "font-family": s.fontFamily, "font-size": String(parseFloat(s.fontSize) * 0.75), "font-weight": s.fontWeight, "font-style": s.fontStyle, fill: property(s, "--office-text-color") ? resolvedColor(document, s, "--office-text") : s.color });
   const text = (value: string, x: number, y: number, s = base, anchor = "middle"): SVGTextElement => {
+    options.accountText?.(value.length);
     const label = svgElement(document, "text", { x, y, "text-anchor": anchor, "dominant-baseline": "middle", ...font(s) });
     if (/\p{Script=Han}/u.test(value)) { label.dataset.officeScript = "east-asia"; label.setAttribute("font-family", property(s, "--office-font-east-asia", property(s, "--office-minor-east-asia", s.fontFamily))); }
     const lines = value.split("\n");
-    if (lines.length === 1) label.textContent = value;
-    else lines.forEach((line, index) => { const span = svgElement(document, "tspan", { x, dy: index ? "1.2em" : String(-(lines.length - 1) * parseFloat(s.fontSize) * 0.75 * 0.6) }); span.textContent = line; label.append(span); });
+    if (lines.length === 1) { if (value) account(1); label.textContent = value; }
+    else lines.forEach((line, index) => { const span = svgElement(document, "tspan", { x, dy: index ? "1.2em" : String(-(lines.length - 1) * parseFloat(s.fontSize) * 0.75 * 0.6) }); if (line) account(1); span.textContent = line; label.append(span); });
     svg.append(label); return label;
   };
   const catStyle = style(chart.categoryAxisCssClass), valStyle = style(chart.valueAxisCssClass), gridStyle = style(chart.gridCssClass);
@@ -97,7 +99,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     const minimum = chart.minimum ?? low, largest = chart.maximum ?? high;
     const rough = (largest - minimum) / 8 || 1, power = 10 ** Math.floor(Math.log10(rough)), factor = rough / power, unit = chart.majorUnit ?? (factor <= 1 ? 1 : factor <= 2 ? 2 : factor <= 5 ? 5 : 10) * power;
     const maximum = chart.maximum ?? (Math.floor(largest / unit) + 1) * unit;
-    if (!(maximum > minimum) || !Number.isFinite(unit) || (maximum - minimum) / unit > 1024) throw new DocumentError("ResourceLimitExceeded", "Chart axis ticks exceed the preview budget.");
+    const majorTicks = chartAxisTicks(minimum, maximum, unit, 1024, 0.001);
     const y = (v: number): number => top + (chart.reverseValues ? (v - minimum) : (maximum - v)) / (maximum - minimum) * h;
     const axisX = valueRight ? right : left;
     const tick = (x: number, y: number, vertical: boolean, s: CSSStyleDeclaration, minor = false): void => {
@@ -105,7 +107,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
       const length = minor ? 2 : 4, start = kind === "in" ? 0 : -length, end = kind === "out" ? 0 : length;
       svg.append(svgElement(document, "line", { x1: x + (vertical ? 0 : start), x2: x + (vertical ? 0 : end), y1: y + (vertical ? start : 0), y2: y + (vertical ? end : 0), ...strokeAttributes(document, s, "--office-line", "#898989") }));
     };
-    for (let value = minimum; value <= maximum + unit * 0.001; value += unit) {
+    for (const value of majorTicks) {
       const position = y(value);
       if (chart.showValueAxis !== false) {
         const grid = strokeAttributes(document, gridStyle, "--office-line", "#d9d9d9");
@@ -116,8 +118,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     }
     const minorUnit = numeric(valStyle, "--office-axis-minor-unit", unit / 5);
     if (minorUnit > 0 && chart.showValueAxis !== false) {
-      if ((maximum - minimum) / minorUnit > 4096) throw new DocumentError("ResourceLimitExceeded", "Chart minor ticks exceed the preview budget.");
-      for (let value = minimum; value <= maximum; value += minorUnit) if (Math.abs((value - minimum) / unit - Math.round((value - minimum) / unit)) > 0.001) tick(axisX, y(value), false, valStyle, true);
+      for (const value of chartAxisTicks(minimum, maximum, minorUnit, 4096)) if (Math.abs((value - minimum) / unit - Math.round((value - minimum) / unit)) > 0.001) tick(axisX, y(value), false, valStyle, true);
     }
     const baseline = y(Math.max(minimum, Math.min(maximum, 0))), axisY = categoryTop ? top : baseline;
     if (chart.showCategoryAxis !== false) svg.append(svgElement(document, "line", { x1: left, y1: axisY, x2: right, y2: axisY, ...strokeAttributes(document, catStyle, "--office-line", "#b7b7b7") }));
