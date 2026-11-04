@@ -103,3 +103,5 @@ pnpm probe:workbook-model
 经典兼容占位备注的核对、缺失定位后的处理及 VML 备注外观尚未完成，不能据此宣称两类原生批注已验收。非空提及/扩展当前明确拒绝，不会触发通知或忽略其元数据；完整读取边界仍需最终复核。格式依据为 Microsoft 的 [CT_ThreadedComment](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/42f9b03d-9662-4204-9783-dbeb324a691c)、[CT_Person](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/6274371e-7c5c-46e3-b661-cbeb4abfe968) 和[兼容占位备注](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/6383f002-c90b-401c-a1d7-66b97b14cb3e)。
 
 经典备注的内部记录也已读取作者、单元格、富文本和兼容线程标记，保留待处理的原生几何属性。独立来源的加粗中文与 Calc 重存的普通字重分别按实际来源保存，不互相补造。VML 几何尚未接入；[固定 Calc 探针](evidence/xlsx-note-semantics.json)验证其单元格锚点优先于 VML 位置数值，验证脚本为 `python scripts/check-xlsx-note-semantics.py`，仅 `--record` 更新证据。固定 Office 归档和字体清单均检查摘要；此探针不代表 Excel/WPS 或 SDK 视觉验收。
+
+绘图锚点基础契约区分绝对坐标、单端单元格加尺寸和双端单元格锚点。统一使用文档点单位，保留负偏移、超过一行的偏移以及移动/缩放标志；DrawingML EMU/通用长度和 VML 像素在适配边界转换。三类图表、图片、形状及文本框的 12 个独立源/Calc 锚点已通过定向解析检查，零尺寸保留原值；这些仅是锚点基础，不代表对象、图表或备注框已经完整映射。VML 像素解释依据 [Anchor](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.vml.spreadsheet.anchor?view=openxml-3.0.1)；坐标结构和数值界限按仓库固定的官方 Transitional XSD 检查。

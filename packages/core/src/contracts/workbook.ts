@@ -5,6 +5,7 @@ import { WorkbookConditionalRuleSchema, WorkbookDataValidationSchema } from "./w
 import { WorkbookAutoFilterSchema, WorkbookTableSchema, WorkbookTableStyleReferenceSchema, WorkbookTableStyleSchema } from "./workbook-tables.js";
 import { WorkbookCommentAuthorSchema, WorkbookCommentSchema } from "./workbook-comments.js";
 export * from "./workbook-comments.js";
+export * from "./workbook-drawing.js";
 export * from "./workbook-coordinates.js";
 export * from "./workbook-rules.js";
 export * from "./workbook-tables.js";
