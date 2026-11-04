@@ -34,6 +34,7 @@ export function readWorkbookTheme(opc: OpcPackage, workbookPart: string): Workbo
     if (!rgb || !/^[0-9a-f]{6}$/i.test(rgb)) fail(source, "A theme base color must be an untransformed RGB value.");
     css[`--office-theme-${role}`] = "#" + rgb.toLowerCase();
   }
+  for (const [role, base] of [["bg1", "lt1"], ["bg2", "lt2"], ["tx1", "dk1"], ["tx2", "dk2"]]) css[`--office-theme-${role}`] = `var(--office-theme-${base})`;
   attributes(fonts, ["name"]); check(fonts, ["majorFont", "minorFont"], A);
   for (const kind of ["major", "minor"] as const) {
     const source = one(fonts, kind + "Font", A); if (!source) fail(fonts, "A theme font family is missing.");

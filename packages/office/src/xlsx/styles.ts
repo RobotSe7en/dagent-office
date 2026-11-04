@@ -9,6 +9,8 @@ import { attributes, boolean, integer, one, spreadsheetText, value } from "./val
 import { SpreadsheetColors, colorDeclarations } from "./colors.js";
 import { readWorkbookTheme } from "./theme.js";
 import type { WorkbookTheme } from "./theme.js";
+import { readDrawingTheme } from "./drawing-theme.js";
+import type { WorkbookDrawingTheme } from "./drawing-theme.js";
 import { fontDeclarations } from "./font.js";
 import { alignmentDeclarations, borderDeclarations, fillDeclarations } from "./appearance.js";
 import type { CellStyleReference, SheetStyles } from "./sheet.js";
@@ -45,6 +47,7 @@ const defaultBorder = Object.fromEntries(["left", "right", "top", "bottom"].map(
  * are CSS declarations; number-format definitions remain typed source metadata. */
 export class XlsxStyles implements SheetStyles, RichTextStyles {
   readonly theme: WorkbookTheme;
+  readonly drawingTheme: WorkbookDrawingTheme;
   readonly colors: SpreadsheetColors;
   readonly cellFormats: readonly NativeFormat[];
   readonly styleFormats: readonly NativeFormat[];
@@ -67,6 +70,7 @@ export class XlsxStyles implements SheetStyles, RichTextStyles {
     }
     this.colors = new SpreadsheetColors(one(root, "colors"), this.theme.colors);
     this.addRule("xlsx-theme", { ...this.theme.css, ...this.colors.css });
+    this.drawingTheme = readDrawingTheme(this.theme.source, (name, css) => this.addRule(name, css));
     for (const node of root ? table(root, "numFmts", "numFmt") ?? [] : []) {
       attributes(node, ["numFmtId", "formatCode"]); check(node, [], S);
       const id = integer(node, "numFmtId"), code = spreadsheetText(value(node, "formatCode") ?? "", node, 2048);
