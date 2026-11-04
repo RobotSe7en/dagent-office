@@ -170,6 +170,8 @@ pnpm probe:workbook-model
 
 同一原生继承规则也用于描边：`ln/@w` 缺省时不覆盖主题线宽，完全无继承值时使用 0.75pt；显式零宽保持为零。工作簿主题继承及零宽通过三浏览器检查，共享 PPT 导入、原生导出重开与形状／分组／连接线／图表回归通过。已保存包中的显式线宽保持原值。
 
+形状／文本框已有独立的有界富文本投影：在源祖先仍连接时读取样式，生成不携带源 CSS 类和 DOM 身份的显示节点；共享单元格的字体角色分段，保留跨 span 的组合字符／变体选择符及带样式换行。每个可见文本片段记录原节点身份和对象内 UTF-16 区间，段落之间不额外插入字符；源结构空白占用的偏移仍保留。原始／Calc 两份绘图来源、局部字体诊断、精确节点预算及失败后源不变已通过三浏览器检查。段落排版、自适应、翻转后的文字方向和完整原生页面对照仍待完成。
+
 [32 项原生阴影方向探针](evidence/xlsx-drawing-shadow-semantics.json)覆盖零模糊、形状旋转、水平／垂直翻转、两个阴影方向和 `rotWithShape` 两种值；运行 `python3 scripts/check-xlsx-drawing-effects.py` 可按固定 Office 归档和字体重核。该 Calc 版本始终保持阴影的页面方向，重存后写入 `rotWithShape="0"`。[格式定义](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.outershadow?view=openxml-3.0.1)则明确区分是否随形状旋转；因此不能把这一生产者差异作为 SDK 忽略源标志的依据。模糊核、最终阴影画面和 Excel/WPS 仍未核验。
 
 原生图片、预设形状和文本框的内部适配已通过独立第 08 号来源及 Calc 重存的包重开检查：原始图片字节、矩形裁剪、旋转、三类锚点、精确 UTF-16 正文、主题引用、段落/字符样式和换行样式均进入同一来源。对象和文字超链接绑定其 HTML 节点，沿用工作簿的安全外链/内部地址校验。背景填充引用按原生 `fillRef` 的 1001 起始编号解析，依据 [FillReference](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.fillreference?view=openxml-3.0.1)。Calc 把样例文本框改存为普通矩形，读取器保留该来源差异；当前尚未完成公开原生导入及对象视觉验收。

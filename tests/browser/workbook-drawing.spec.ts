@@ -10,8 +10,9 @@ import type { measureContentSource, rejectContentSource } from './fixtures/workb
 import type { measureImageView, disposeImageView } from './fixtures/workbook-image-view.js';
 import type { measureObjectGeometry } from './fixtures/workbook-object-geometry.js';
 import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
+import type { measureDrawingText } from './fixtures/workbook-drawing-text.js';
 
-declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView; measureObjectGeometry: typeof measureObjectGeometry; measureDrawingGradients: typeof measureDrawingGradients } } }
+declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView; measureObjectGeometry: typeof measureObjectGeometry; measureDrawingGradients: typeof measureDrawingGradients; measureDrawingText: typeof measureDrawingText } } }
 const inputs: { name: string; snapshot: WorkbookSnapshot; text: Record<string, string>; resources: Record<string, string> }[] = [];
 let code = '';
 test.beforeAll(async () => {
@@ -95,6 +96,25 @@ test('omitted native line widths inherit the theme before the final default, and
     const input = inputs.find(input => input.name === 'line-' + kind)!;
     const result = await page.evaluate(snapshot => window.workbookContentHost.measureObjectGeometry(snapshot), input.snapshot);
     expect(Number(result.results[1]!.paths[0]!.width)).toBe(Number(width));
+  }
+});
+
+test('drawing text keeps native styles and exact UTF-16 projections across paragraphs, spans and styled breaks', async ({ page }) => {
+  for (const input of inputs.filter(input => input.name.endsWith('08-images-shapes'))) {
+    const result = await page.evaluate(snapshot => window.workbookContentHost.measureDrawingText(snapshot), input.snapshot);
+    for (const object of result.native) {
+      expect(object.text).toBe(input.text[object.nodeId]); expect(object.pieces.map(piece => piece.text).join('')).toBe(object.text);
+      expect(object).toMatchObject({ unchanged: true, detachedSource: true, inheritedIds: 0 }); expect(object.nodes).toBe(object.actualNodes);
+      expect(object.fonts.length).toBeGreaterThan(0);
+      expect(object.pieces.filter(piece => piece.role === 'east-asia').every(piece => piece.family.includes('Noto Sans CJK SC'))).toBe(true);
+    }
+    expect(result.pieces.map(piece => piece.text).join('')).toBe('A中󠄀\né😀Tail');
+    expect(result.pieces.find(piece => piece.text === '󠄀')).toMatchObject({ role: 'east-asia', from: 2, to: 4, sourceNodeId: 'drawing-r2' });
+    expect(result.pieces.find(piece => piece.text === '\n')).toMatchObject({ from: 4, to: 5, sourceNodeId: 'drawing-br', size: '24px' });
+    expect(result.pieces.find(piece => piece.text.startsWith('e'))!.weight).toBe('700');
+    expect(result.pieces.find(piece => piece.text === 'Tail')).toMatchObject({ from: 11, to: 15, sourceNodeId: 'drawing-p2' });
+    expect(result.unchanged).toBe(true); expect(result.exact).toBe(result.nodes);
+    expect(result.errors).toEqual(['InvalidOperation', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'InvalidDocument', 'InvalidOperation']);
   }
 });
 

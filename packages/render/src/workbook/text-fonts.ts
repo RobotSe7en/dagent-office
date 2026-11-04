@@ -17,7 +17,13 @@ export interface WorkbookTextFontRun {
  * offsets for width measurement and later view projection. No font is loaded
  * or substituted here; the view owns local-font diagnostics and fallback. */
 export function workbookTextFonts(source: WorkbookSourceCell, maxRuns = 50_000): readonly WorkbookTextFontRun[] {
-  const { element } = source, view = element.ownerDocument.defaultView;
+  return workbookRichTextFonts(source.element, maxRuns);
+}
+
+/** Shared cell/paragraph font projection. A paragraph caller starts a new
+ * script context, while adjacent spans keep combining/variation sequences. */
+export function workbookRichTextFonts(element: HTMLElement, maxRuns = 50_000): readonly WorkbookTextFontRun[] {
+  const view = element.ownerDocument.defaultView;
   if (!view || !element.isConnected || !Number.isSafeInteger(maxRuns) || maxRuns < 1) throw new DocumentError("InvalidOperation", "Workbook text fonts require a connected source projection and a positive run budget.");
   const runs: WorkbookTextFontRun[] = [], styles = new WeakMap<Element, CSSStyleDeclaration>(), fonts = new WeakMap<Element, Map<OfficeFontRole, WorkbookTextFont>>();
   let offset = 0, previous: OfficeFontRole = "ascii";
@@ -43,7 +49,7 @@ export function workbookTextFonts(source: WorkbookSourceCell, maxRuns = 50_000):
   const walker = element.ownerDocument.createTreeWalker(element, view.NodeFilter.SHOW_ELEMENT | view.NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     if (node.nodeType === 3) append(node.textContent ?? "", node.parentElement!);
-    else if ((node as Element).localName === "br") { append("\n", node.parentElement!); previous = "ascii"; }
+    else if ((node as Element).localName === "br") { append("\n", node as Element); previous = "ascii"; }
   }
   return Object.freeze(runs);
 }
