@@ -83,6 +83,8 @@ test('workbook chart graphics use current values and isolated source styles with
       expect(result.colors.every(value => value.replace(/\s/g, '') === 'rgb(12,34,56)'), JSON.stringify(result.colors)).toBe(true);
       expect(result.errors).toEqual(['ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'format rejected', 'InvalidOperation', 'InvalidOperation', 'InvalidOperation', 'ResourceLimitExceeded', 'ResourceLimitExceeded']);
       expect(result.negativePie).toBe(result.kind === 'pie' ? 'UnsupportedFeature' : '');
+      expect(result.titleProjection.map(part => part.text).join('')).toBe(result.titleText);
+      for (const part of result.titleProjection) { expect(part.owned).toBe(true); expect(part.to - part.from).toBe(part.text.length); expect(result.titleText!.slice(part.from, part.to)).toBe(part.text); }
       expect(result.text).toEqual(expect.arrayContaining(['第一季度', '第二季度', '第三季度']));
     }
     expect(results[0]!.bars).toHaveLength(6); expect(results[0]!.bars[2]! / results[0]!.bars[0]!).toBeCloseTo(4, 4);

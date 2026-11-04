@@ -1,12 +1,12 @@
 import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookObject } from "@dagent-office/core";
+import type { DeepReadonly, WorkbookChart, WorkbookObject } from "@dagent-office/core";
 import { markViewNode } from "../view-nodes.js";
 import { workbookRichTextFonts } from "./text-fonts.js";
 
 export interface WorkbookDrawingTextProjection {
   readonly node: Text;
   readonly sourceNodeId: string;
-  /** UTF-16 offsets in the whole object; paragraph boundaries add no units. */
+  /** UTF-16 offsets in the whole text body; paragraph boundaries add no units. */
   readonly from: number;
   readonly to: number;
 }
@@ -26,11 +26,26 @@ const listAttributes = ["data-office-bullet", "data-office-numbering", "data-off
  * resource attributes. Layout, lists, local-font diagnostics and pane clipping
  * belong to its compositor; no source node is moved or changed here. */
 export function createWorkbookDrawingText(source: HTMLElement, object: DeepReadonly<WorkbookObject>, maxNodes = 50_000): WorkbookDrawingTextView {
+  if (object.kind !== "text" && object.kind !== "geometry" || source.dataset.nodeId !== object.nodeId || source.dataset.officeKind !== object.kind) throw new DocumentError("InvalidDocument", "Drawing text requires its own shape or text-box source.");
+  return createTextBody(source, object.nodeId, maxNodes);
+}
+
+/** Rich chart titles retain their own text-body identity and exact UTF-16
+ * projection. Cell-linked titles instead use the chart reference data adapter. */
+export function createWorkbookChartText(chartSource: HTMLElement, chart: DeepReadonly<WorkbookChart>, role: "title" | "category-axis-title" | "value-axis-title", maxNodes = 50_000): WorkbookDrawingTextView {
+  if (chartSource.dataset.nodeId !== chart.nodeId || chartSource.dataset.officeKind !== "chart") throw new DocumentError("InvalidDocument", "Chart text requires its own source chart.");
+  const nodeId = role === "title" ? chart.titleNodeId : role === "category-axis-title" ? chart.categoryAxisTitle?.nodeId : role === "value-axis-title" ? chart.valueAxisTitle?.nodeId : undefined;
+  if (!nodeId) throw new DocumentError("InvalidOperation", "This chart title has no rich-text source body.");
+  const source = [...chartSource.children].find(child => (child as HTMLElement).dataset.nodeId === nodeId) as HTMLElement | undefined;
+  if (!source) throw new DocumentError("InvalidDocument", "A rich chart title must belong directly to its source chart.");
+  return createTextBody(source, nodeId, maxNodes);
+}
+
+function createTextBody(source: HTMLElement, nodeId: string, maxNodes: number): WorkbookDrawingTextView {
   const document = source.ownerDocument, view = document.defaultView;
   if (!source.isConnected || !view || !Number.isSafeInteger(maxNodes) || maxNodes < 1) throw new DocumentError("InvalidOperation", "Drawing text requires a connected source and a positive node budget.");
-  if (object.kind !== "text" && object.kind !== "geometry" || source.dataset.nodeId !== object.nodeId || source.dataset.officeKind !== object.kind) throw new DocumentError("InvalidDocument", "Drawing text requires its own shape or text-box source.");
   const root = markViewNode(document.createElement("div")), projections: WorkbookDrawingTextProjection[] = [];
-  root.dataset.officeView = "workbook-drawing-text"; root.dataset.sourceNodeId = object.nodeId;
+  root.dataset.officeView = "workbook-drawing-text"; root.dataset.sourceNodeId = nodeId;
   let nodes = 1, offset = 0;
   const account = (amount: number): void => { nodes += amount; if (nodes > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Drawing text exceeds its node budget."); };
   const style = (original: HTMLElement, target: HTMLElement): CSSStyleDeclaration => {

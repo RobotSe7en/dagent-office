@@ -3,6 +3,7 @@ import type { BasicChartData } from '../../../packages/render/src/chart.js';
 import { createWorkbookChartView } from '../../../packages/render/src/workbook/chart-view.js';
 import { createWorkbookSurface } from '../../../packages/render/src/workbook/surface.js';
 import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';
+import { createWorkbookChartText } from '../../../packages/render/src/workbook/drawing-text.js';
 
 export async function measureWorkbookCharts(snapshot: WorkbookSnapshot, plots: readonly BasicChartData[]) {
   const container = document.createElement('div'); document.body.append(container);
@@ -14,9 +15,7 @@ export async function measureWorkbookCharts(snapshot: WorkbookSnapshot, plots: r
     for (const [index, definition] of definitions.entries()) {
       const chart = { ...definition, textCssClass: 'chart-text-probe', categoryAxisCssClass: 'chart-text-probe', valueAxisCssClass: 'chart-text-probe' };
       const source = projection.get(chart.nodeId)!, before = source.outerHTML, data = plots[index]!;
-      const title = () => {
-        const result = surface.document.createElement('div'); result.textContent = '标题😀'; result.style.cssText = 'font:13pt "Liberation Sans";color:rgb(12,34,56)'; return result;
-      };
+      const title = () => createWorkbookChartText(source, chart, 'title').element;
       // The test supplies an explicit numeric-only format policy. Workbook
       // locale/date policy and rich title projection are separate integration.
       const formatNumber = (value: number, format?: string) => format === '0%' ? `${value * 100}%` : String(Number(value.toPrecision(12)));
@@ -38,12 +37,14 @@ export async function measureWorkbookCharts(snapshot: WorkbookSnapshot, plots: r
         if (!unchanged()) throw Error('Chart probe changed source after failure');
       }
       const exact = createWorkbookChartView(source, chart, data, 360, 220, 'exact-' + index, { ...options(), maxNodes: result.peakNodes });
+      const titleText = createWorkbookChartText(source, chart, 'title'), richSource = source.querySelector<HTMLElement>('[data-node-id="' + chart.titleNodeId + '"]')!;
+      const titleProjection = titleText.projections.map(item => ({ from: item.from, to: item.to, text: item.node.data, owned: richSource.querySelector('[data-node-id="' + item.sourceNodeId + '"]') !== null }));
       let negativePie = '';
       if (chart.kind === 'pie') {
         try { createWorkbookChartView(source, chart, { ...data, series: data.series.map(series => ({ ...series, values: [-2, ...series.values.slice(1)] })) }, 360, 220, 'negative-pie', options()); negativePie = 'accepted'; }
         catch (error) { negativePie = (error as { code: string }).code; }
       }
-      results.push({ kind: chart.kind, nodes, reported: result.nodes, peak: result.peakNodes, exact: exact.nodes === nodes, unchanged: unchanged(), errors, negativePie,
+      results.push({ kind: chart.kind, nodes, reported: result.nodes, peak: result.peakNodes, exact: exact.nodes === nodes, unchanged: unchanged(), errors, negativePie, titleProjection, titleText: richSource.textContent,
         sourceClasses: result.element.querySelectorAll('[class],[data-node-id]').length,
         svgSize: [svg.clientWidth, svg.clientHeight], text: text.map(node => node.textContent),
         fonts: text.map(node => surface.document.defaultView!.getComputedStyle(node).fontSize), colors: text.map(node => surface.document.defaultView!.getComputedStyle(node).fill),
