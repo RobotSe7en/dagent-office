@@ -15,6 +15,7 @@ export interface WorkbookPane {
   readonly rows: readonly AxisCell[]; readonly columns: readonly AxisCell[];
 }
 export interface WorkbookViewportLayout {
+  readonly widthPt: number; readonly heightPt: number;
   readonly panes: readonly WorkbookPane[];
   readonly scrollLeftPt: number; readonly scrollTopPt: number;
   readonly maxScrollLeftPt: number; readonly maxScrollTopPt: number;
@@ -46,7 +47,7 @@ export function workbookViewport(dimensions: { readonly rows: AxisDimensions; re
   pane("frozenRows", fixedWidth, 0, bodyWidth, fixedHeight, frozenWidth + scrollLeftPt, 0);
   pane("frozenColumns", 0, fixedHeight, fixedWidth, bodyHeight, 0, frozenHeight + scrollTopPt);
   pane("body", fixedWidth, fixedHeight, bodyWidth, bodyHeight, frozenWidth + scrollLeftPt, frozenHeight + scrollTopPt);
-  return { panes, scrollLeftPt, scrollTopPt, maxScrollLeftPt, maxScrollTopPt, cellCount };
+  return { widthPt: viewport.widthPt, heightPt: viewport.heightPt, panes, scrollLeftPt, scrollTopPt, maxScrollLeftPt, maxScrollTopPt, cellCount };
 }
 
 function runs(cells: readonly AxisCell[]): { start: number; count: number }[] {
