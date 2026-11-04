@@ -43,4 +43,14 @@ describe("workbook source projection", () => {
     expect(() => hitWorkbookCell(dimensions, layout, index, NaN, 0)).toThrow();
     expect(() => projectWorkbookCells(dimensions, layout, index, 39)).toThrowError(expect.objectContaining({ code: 'ResourceLimitExceeded' }));
   });
+  it("bounds point lookup for thousands of long merges in shuffled columns", () => {
+    let probes = 0;
+    const ranges = Array.from({ length: 10000 }, (_, index) => {
+      const column = index * 7919 % 10000, source = range(index, column, 100000, column);
+      return { get from() { probes++; return source.from; }, get to() { probes++; return source.to; } };
+    });
+    const index = new WorkbookMergeIndex(ranges); probes = 0;
+    expect(index.at(50000, 7919)).toBe(ranges[1]);
+    expect(probes).toBeLessThan(100);
+  });
 });

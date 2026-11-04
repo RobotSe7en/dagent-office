@@ -13,7 +13,7 @@ export interface WorkbookGridCell {
   /** Logical inline/block coordinates relative to the entire viewport. */
   readonly rect: WorkbookRect; readonly clip: WorkbookRect;
 }
-interface Branch { readonly range: Range; readonly start: number; readonly end: number; readonly fromColumn: number; readonly toColumn: number; readonly left?: Branch; readonly right?: Branch }
+interface Branch { readonly row: number; readonly crossing: readonly Range[]; readonly left?: Branch; readonly right?: Branch }
 
 /** The core already validates nonoverlapping merges. This derived interval tree
  * indexes their row spans without expanding any covered source cells. */
@@ -21,25 +21,33 @@ export class WorkbookMergeIndex {
   private readonly root: Branch | undefined;
   constructor(ranges: readonly Range[]) {
     const sorted = [...ranges].sort((a, b) => a.from.row - b.from.row || a.from.column - b.from.column);
-    function build(from: number, to: number): Branch | undefined {
-      if (from === to) return undefined;
-      const middle = (from + to) >>> 1, range = sorted[middle]!, left = build(from, middle), right = build(middle + 1, to);
-      return { range, start: Math.min(range.from.row, left?.start ?? Infinity), end: Math.max(range.to.row, left?.end ?? -1, right?.end ?? -1),
-        fromColumn: Math.min(range.from.column, left?.fromColumn ?? Infinity, right?.fromColumn ?? Infinity),
-        toColumn: Math.max(range.to.column, left?.toColumn ?? -1, right?.toColumn ?? -1), ...(left ? { left } : {}), ...(right ? { right } : {}) };
+    function build(values: readonly Range[]): Branch | undefined {
+      if (!values.length) return undefined;
+      const row = values[values.length >>> 1]!.from.row, before: Range[] = [], after: Range[] = [], crossing: Range[] = [];
+      for (const range of values) {
+        if (range.to.row < row) before.push(range);
+        else if (range.from.row > row) after.push(range);
+        else crossing.push(range);
+      }
+      // Every crossing range contains this row, so validated nonoverlap makes
+      // its column interval disjoint. A point needs one binary column lookup,
+      // even if thousands of long row intervals have shuffled column order.
+      crossing.sort((a, b) => a.from.column - b.from.column);
+      const left = build(before), right = build(after);
+      return { row, crossing, ...(left ? { left } : {}), ...(right ? { right } : {}) };
     }
-    this.root = build(0, sorted.length);
+    this.root = build(sorted);
   }
   at(row: number, column: number): Range | undefined {
-    function find(branch: Branch | undefined): Range | undefined {
-      if (!branch || branch.start > row || branch.end < row || branch.fromColumn > column || branch.toColumn < column) return undefined;
-      const left = find(branch.left); if (left) return left;
-      const range = branch.range;
-      if (range.from.row > row) return undefined;
-      if (range.to.row >= row && range.from.column <= column && column <= range.to.column) return range;
-      return find(branch.right);
+    let branch = this.root;
+    while (branch) {
+      let low = 0, high = branch.crossing.length;
+      while (low < high) { const middle = (low + high) >>> 1; if (branch.crossing[middle]!.to.column < column) low = middle + 1; else high = middle; }
+      const range = branch.crossing[low];
+      if (range && range.from.column <= column && range.from.row <= row && range.to.row >= row) return range;
+      branch = row < branch.row ? branch.left : row > branch.row ? branch.right : undefined;
     }
-    return find(this.root);
+    return undefined;
   }
 }
 
