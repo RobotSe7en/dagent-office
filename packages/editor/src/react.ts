@@ -19,7 +19,7 @@ export function PresentationWorkbench(props:PresentationWorkbenchProps):ReactEle
   useEffect(()=>{
     if(!container.current)return;
     const view=mountPresentationWorkbench(container.current,props.session,{
-      ...(props.title?{title:props.title}:{}),...(props.layout?{layout:props.layout}:{}),...(props.limits?{limits:props.limits}:{}),...(props.presentationSurfaceId?{presentationSurfaceId:props.presentationSurfaceId}:{}),
+      ...(props.title?{title:props.title}:{}),...(props.layout?{layout:props.layout}:{}),...(props.limits?{limits:props.limits}:{}),...(props.presentationSurfaceId?{presentationSurfaceId:props.presentationSurfaceId}:{}),...(props.appearance?{appearance:props.appearance}:{}),
       ...(props.supportedOperations?{supportedOperations:props.supportedOperations}:{}),...(props.contextLimits?{contextLimits:props.contextLimits}:{}),...(props.proposalResources?{proposalResources:props.proposalResources}:{}),
       ...(hasSubmission?{onSubmitAnnotations:request=>latest.current.onSubmitAnnotations!(request)}:{}),
       onSelectionChange:selection=>latest.current.onSelectionChange?.(selection),onError:error=>latest.current.onError?.(error),onInputRecovery:text=>latest.current.onInputRecovery?.(text),onEvent:event=>latest.current.onEvent?.(event),
@@ -27,7 +27,7 @@ export function PresentationWorkbench(props:PresentationWorkbenchProps):ReactEle
     try{latest.current.onViewChange?.(view);}catch(error){view.dispose();throw error;}
     void view.ready.catch(()=>{/* The JS workbench reports rendering failures. */});
     return()=>{view.dispose();latest.current.onViewChange?.(undefined);};
-  },[props.session,props.title,props.layout,props.limits,props.presentationSurfaceId,props.supportedOperations,props.contextLimits,props.proposalResources,hasSubmission]);
+  },[props.session,props.title,props.layout,props.limits,props.presentationSurfaceId,props.supportedOperations,props.contextLimits,props.proposalResources,props.appearance,hasSubmission]);
   return createElement("div",{ref:container,className:props.className});
 }
 
@@ -44,11 +44,12 @@ export function PresentationEditor(props:PresentationEditorProps):ReactElement {
       ...(props.title?{title:props.title}:{}),...(props.layout?{layout:props.layout}:{}),...(props.limits?{limits:props.limits}:{}),
       onSelectionChange:selection=>latest.current.onSelectionChange?.(selection),onError:error=>latest.current.onError?.(error),onInputRecovery:text=>latest.current.onInputRecovery?.(text),
       ...(props.presentationSurfaceId?{presentationSurfaceId:props.presentationSurfaceId}:{}),
+      ...(props.appearance?{appearance:props.appearance}:{}),
     });
     try{latest.current.onViewChange?.(view);}catch(error){view.dispose();throw error;}
     void view.ready.catch(()=>{/* The mounted editor forwards rendering errors through onError. */});
     return()=>{view.dispose();latest.current.onViewChange?.(undefined);};
-  },[props.session,props.title,props.layout,props.limits,props.presentationSurfaceId]);
+  },[props.session,props.title,props.layout,props.limits,props.presentationSurfaceId,props.appearance]);
   return createElement("div",{ref:container,className:props.className});
 }
 
@@ -67,6 +68,7 @@ export function DocumentWorkbench(props: DocumentWorkbenchProps): ReactElement {
     if (!container.current) return;
     const workbenchOptions:DocumentWorkbenchOptions={
       ...(props.editable !== undefined ? { editable: props.editable } : {}),
+      ...(props.appearance ? { appearance: props.appearance } : {}),
       ...(props.title ? { title: props.title } : {}),
       ...(props.layout ? { layout: props.layout } : {}), ...(props.limits ? { limits: props.limits } : {}),
       ...(props.supportedOperations ? { supportedOperations: props.supportedOperations } : {}),
@@ -81,6 +83,6 @@ export function DocumentWorkbench(props: DocumentWorkbenchProps): ReactElement {
     let active = true;
     void view.ready.catch((error: unknown) => { if (active) latest.current.onError?.(error instanceof Error ? error : new Error("Preview failed.")); });
     return () => { active = false; view.dispose(); latest.current.onViewChange?.(undefined); };
-  }, [props.session, props.title, props.layout, props.limits, props.supportedOperations, props.contextLimits, props.editable, hasSubmission]);
+  }, [props.session, props.title, props.layout, props.limits, props.supportedOperations, props.contextLimits, props.editable, props.appearance, hasSubmission]);
   return createElement("div", { ref: container, className: props.className });
 }

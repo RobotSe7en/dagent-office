@@ -7,9 +7,12 @@ import type { DocumentPreviewOptions } from "./preview.js";
 import type { DocumentRenderReport } from "@dagent-office/render";
 import type { FontResolution } from "./fonts.js";
 import type { PreviewSource } from "./source-index.js";
+import { annotationPopoverStyles, createAnnotationPopover, workspaceControls } from "./workspace.js";
+import type { AnnotationPopover } from "./workspace.js";
 
 export type DocumentInteractionMode = "text" | "node" | "region";
 export interface DocumentInteractionOptions extends DocumentPreviewOptions {
+  readonly appearance?: "default" | "workspace";
   readonly onSelectionChange?: (selection: DocumentSelection | undefined) => void;
   readonly onError?: (error: Error) => void;
 }
@@ -62,6 +65,21 @@ export function mountDocumentInteraction(
   const shadow = element.attachShadow({ mode: "open" });
   const style = document.createElement("style");
   style.textContent = `:host{display:block;color:#20252b;font:14px system-ui,sans-serif}*{box-sizing:border-box}button,select,textarea{font:inherit}button,select{padding:6px 10px}button{cursor:pointer}button:disabled{cursor:default}button[aria-pressed=true]{background:#e5efff;border-color:#245aa5}button:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #245aa5;outline-offset:2px}.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}.stage{overflow:auto;max-height:70vh;border:1px solid #d5dbe2}.panel{padding:12px 0}.composer{display:flex;flex-wrap:wrap;gap:8px;align-items:center}textarea{display:block;width:100%;min-height:64px;padding:8px}.selection{white-space:pre-wrap;overflow-wrap:anywhere}.card{padding:12px;margin-top:10px;border:1px solid #d5dbe2;border-radius:4px}.card p{margin:6px 0;white-space:pre-wrap;overflow-wrap:anywhere}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.error{color:#a00000}.summary{margin:8px 0}h2{font-size:16px;margin:12px 0}`;
+  const workspace = options.appearance === "workspace";
+  if (workspace) style.textContent += workspaceControls + annotationPopoverStyles + `
+    :host{display:block}.toolbar{gap:6px;margin:0;padding:10px 20px;background:#fcfdfb;border-bottom:1px solid #dfe7df}
+    .workspace-body{display:grid;grid-template-columns:minmax(0,1fr) 258px}
+    .stage{border:0;background:#edf1ee;max-height:calc(100dvh - 420px);min-height:340px;min-width:0}
+    .panel{margin:0;padding:17px 14px;border-left:1px solid #e0e8e0;background:#fafcf9;max-height:calc(100dvh - 420px);min-height:340px;overflow:auto}
+    .panel h2{margin:0 0 10px;font-size:12px;font-weight:600}.summary{font-size:10px;color:#9aa695;margin:0 0 15px}
+    .selection{font-size:10px;color:#8b9b85;max-height:40px;overflow:hidden;line-height:1.7}
+    .card{padding:12px;margin-top:10px;border:1px solid #dfe8dc;border-radius:7px;background:white;box-shadow:0 2px 4px #25422504}
+    .card p{font-size:11px;line-height:1.7}.card p:first-child{font-size:9px;color:#8ba07e;margin:0 0 9px}.card p:nth-child(2){border-left:2px solid #bed0ae;padding-left:8px;color:#93a187;font-size:10px;max-height:65px;overflow:hidden}
+    .actions{gap:4px}.actions button{font-size:9px;padding:4px 6px;border-color:transparent;background:#f4f7f1}
+    .empty-annotations{font-size:11px;color:#9da992;line-height:1.9;padding:26px 8px;text-align:center}
+    @media(max-width:1050px){.workspace-body{grid-template-columns:minmax(0,1fr) 220px}.panel{padding:14px 10px}.toolbar{padding:9px 13px;gap:4px}.toolbar button,.toolbar select{font-size:11px;padding:5px 7px}}
+    @media(max-width:800px){.workspace-body{grid-template-columns:minmax(0,1fr)}.panel{border-left:0;border-top:1px solid #dfe7df;min-height:0;max-height:280px}.stage{max-height:65vh;min-height:330px}}
+  `;
   const toolbar = document.createElement("div");
   toolbar.className = "toolbar";
   toolbar.setAttribute("role", "toolbar");
@@ -95,7 +113,8 @@ export function mountDocumentInteraction(
   error.setAttribute("role", "alert");
   error.hidden = true;
   panel.append(heading, summary, selectionText, draft, composer, list, error);
-  shadow.append(style, toolbar, stage, panel);
+  if (workspace) { const body = document.createElement("div"); body.className = "workspace-body"; body.append(stage, panel); shadow.append(style, toolbar, body); }
+  else shadow.append(style, toolbar, stage, panel);
   container.append(element);
 
   let disposed = false, mode: DocumentInteractionMode = "text", zoom = 1;
@@ -112,6 +131,10 @@ export function mountDocumentInteraction(
   let cardControls = new AbortController();
   const editDrafts = new Map<string, { value: string; baseRevision: number }>();
   const modeButtons = new Map<DocumentInteractionMode, HTMLButtonElement>();
+  let popover: AnnotationPopover | undefined;
+  let newComment: HTMLButtonElement | undefined;
+
+  function showComposer(): void { if (selection && !nativeDragging) popover?.open(); }
 
   function report(reason: unknown): void {
     if (disposed) return;
@@ -151,10 +174,14 @@ export function mountDocumentInteraction(
     const next = anchor ? immutable({ documentId, baseRevision: revision, anchor }) : undefined;
     // Painting a DOM highlight can itself emit selectionchange during native dragging.
     if (selectionText.textContent && JSON.stringify(selection) === JSON.stringify(next)) return;
+    if (workspace && JSON.stringify(selection?.anchor) !== JSON.stringify(next?.anchor)) draft.value = "";
     selection = next;
     selectionText.textContent = selection ? anchorLabel(selection.anchor, session) : "尚未选择";
     add.disabled = !selection;
     clear.disabled = !selection;
+    if (newComment) newComment.disabled = !selection;
+    if (!selection) { popover?.close(); if (workspace) draft.value = ""; }
+    else showComposer();
     options.onSelectionChange?.(selection);
     highlight();
   }
@@ -198,6 +225,21 @@ export function mountDocumentInteraction(
     draft.value = "";
   }, composer);
   const clear = button("清除选择", clearSelection, composer);
+  if (workspace) {
+    draft.placeholder = "写下批注或希望修改的内容…";
+    const cancel = button("取消", () => { draft.value = ""; clearSelection(); }, composer);
+    cancel.title = "取消批注";
+    popover = createAnnotationPopover(shadow, draft, [draft, composer], {
+      bounds: () => stage.getBoundingClientRect(),
+      rect: () => {
+        const rect = selection && source?.rectangles(selection.anchor).at(-1), frame = preview?.element.getBoundingClientRect();
+        return rect && frame ? new DOMRect(frame.left + rect.left * zoom, frame.top + rect.top * zoom, rect.width * zoom, rect.height * zoom) : undefined;
+      },
+      quote: () => selection ? anchorLabel(selection.anchor, session) : "",
+      submit: () => add.click(), cancel: () => { draft.value = ""; clearSelection(); },
+    });
+    newComment = button("新建批注", () => { requireSelection(); popover?.open(); draft.focus(); }, toolbar);
+  }
 
   function updatePanel(): void {
     const snapshot = session.snapshot(), history = session.history();
@@ -211,6 +253,7 @@ export function mountDocumentInteraction(
     cardControls = new AbortController();
     const cardButton = (label: string, action: () => void, parent: HTMLElement): HTMLButtonElement => button(label, action, parent, cardControls.signal);
     list.replaceChildren();
+    if (workspace && !snapshot.annotations.length) { const empty = document.createElement("p"); empty.className = "empty-annotations"; empty.textContent = "还没有批注。\n选中文档内容，写下你的想法。"; list.append(empty); }
     for (const id of editDrafts.keys()) if (!snapshot.annotations.some((annotation) => annotation.annotationId === id)) editDrafts.delete(id);
     for (const annotation of snapshot.annotations) {
       const card = document.createElement("div");
@@ -371,7 +414,7 @@ export function mountDocumentInteraction(
     };
     frame.addEventListener("selectionchange", selectionChanged, { signal });
     frame.addEventListener("pointerup", () => {
-      if (mode === "text") { nativeDragging = false; selectionChanged(); highlight(); }
+      if (mode === "text") { nativeDragging = false; selectionChanged(); highlight(); showComposer(); }
     }, { signal });
     view.addEventListener("blur", () => { nativeDragging = false; highlight(); }, { signal });
     frame.addEventListener("click", (event) => {
@@ -414,6 +457,7 @@ export function mountDocumentInteraction(
       move(event);
       drag = undefined;
       source!.root.releasePointerCapture(event.pointerId);
+      showComposer();
     }, { signal });
     frame.addEventListener("pointercancel", () => { drag = undefined; nativeDragging = false; setSelection(undefined); }, { signal });
     source.root.addEventListener("lostpointercapture", () => {
@@ -515,6 +559,7 @@ export function mountDocumentInteraction(
       frameCleanup?.();
       frameCleanup = undefined;
       preview?.dispose();
+      popover?.dispose();
       preview = undefined;
       cancelPointerSelection = () => {};
       selection = undefined;

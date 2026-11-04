@@ -17,7 +17,9 @@ import type { PresentationRegions } from "./presentation/regions.js";
 import { createCommentControls } from "./presentation/comment-controls.js";
 import { createChartControls } from "./presentation/chart-controls.js";
 import { createDefinitionControls } from "./presentation/definition-controls.js";
+import { annotationPopoverStyles, workspaceControls } from "./workspace.js";
 export interface PresentationEditorOptions extends DocumentPreviewOptions {
+    readonly appearance?: "default" | "workspace";
     readonly onSelectionChange?: (selection: DocumentSelection | undefined) => void;
     readonly onError?: (error: Error) => void;
     readonly onInputRecovery?: (text: string) => void;
@@ -55,6 +57,21 @@ export function mountPresentationEditor(container: HTMLElement, session: Documen
     element.tabIndex = 0;
     const style = document.createElement("style");
     style.textContent = ":host{display:block;font:14px system-ui;color:#20252b}*{box-sizing:border-box}button,input,select{font:inherit}button,select{padding:5px 8px}button{cursor:pointer}button:disabled{cursor:default}button[aria-pressed=true]{background:#deebff;border-color:#245aa5}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #245aa5;outline-offset:2px}.inspector{max-height:30vh;overflow:auto}.tools{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.body{display:grid;grid-template-columns:180px minmax(0,1fr);gap:12px}.nav{max-height:75vh;overflow:auto}.nav button{display:block;width:100%;text-align:left;margin:4px 0}.stage{overflow:auto;max-height:75vh;border:1px solid #ccd3dc}.plane{position:relative;width:max-content;min-width:100%}fieldset{display:flex;flex-wrap:wrap;gap:8px;border:1px solid #ccd3dc;margin:8px 0;padding:8px}label{display:inline-flex;align-items:center;gap:4px}input[type=number]{width:80px}.error{color:#a00000;white-space:pre-wrap}.status{margin:6px 0}h2{font-size:14px;margin:12px 0 6px}small{color:#555}";
+    const workspace = options.appearance === "workspace";
+    if (workspace) style.textContent += workspaceControls + annotationPopoverStyles + `
+      .tools{margin:0;padding:10px 17px;background:#fcfdfb;border-bottom:1px solid #dfe7df;gap:5px}.tools button,.tools select{font-size:10px;padding:5px 7px}.tools label{font-size:10px;color:#94a086}
+      .advanced-tools{padding:9px 18px;background:#f9fbf7;border-bottom:1px solid #e0e8dc;font-size:10px;color:#8e9e81}.advanced-tools summary{cursor:pointer}.inspector{max-height:230px;overflow:auto;padding-top:7px}
+      .status{margin:0;padding:7px 18px;background:#f4f7f1;color:#91a085;font-size:10px}
+      .body{grid-template-columns:135px minmax(0,1fr) 240px;gap:0;background:#edf1ee}
+      .nav{padding:5px 9px 16px;border-right:1px solid #dfe7dc;background:#f7f9f4;max-height:65vh}.nav h2{font-size:10px;color:#8fa080;font-weight:550;margin:13px 5px 9px}.nav button{font-size:10px;white-space:normal;border:1px solid #e2e9df;padding:10px 8px;line-height:1.7;margin:6px 0}
+      .stage{border:0;min-height:410px;max-height:65vh}.comments-pane{max-height:65vh;overflow:auto;padding:14px 10px;background:#fafcf8;border-left:1px solid #dfe7dc}
+      .comments-pane>fieldset{display:block;padding:0;margin:0;border:0}.comments-pane legend{font-size:12px;font-weight:600;margin-bottom:13px;color:#58744c}.comments-pane section{border:1px solid #dfe8d9;border-radius:7px;background:white;padding:11px;margin-bottom:10px;overflow-wrap:anywhere}
+      .comments-pane section p{font-size:11px;line-height:1.8;color:#718269;margin-top:0}.comments-pane section button{font-size:9px;padding:4px 6px;margin:2px;border-color:transparent;background:#f4f7f0}.comments-pane input{max-width:100%;margin-top:8px}
+      .annotation-popover label{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}.annotation-popover label input{min-width:0;max-width:100%}.annotation-popover select{font-size:10px;margin-bottom:9px}.annotation-popover .composer button{font-size:11px}
+      fieldset{border-color:#dfe7d9;border-radius:5px;font-size:11px}small{color:#8d9d81}
+      @media(max-width:1100px){.body{grid-template-columns:105px minmax(0,1fr) 210px}.tools{padding:8px 12px;gap:4px}.tools button{font-size:9px;padding:5px}.comments-pane{padding:12px 8px}}
+      @media(max-width:800px){.body{grid-template-columns:100px minmax(0,1fr)}.comments-pane{grid-column:1/-1;max-height:280px;border-top:1px solid #dfe7dc;border-left:0}.stage{min-height:330px}.tools{max-height:130px;overflow:auto}}
+    `;
     const toolbar = document.createElement("div");
     toolbar.className = "tools";
     toolbar.setAttribute("role", "toolbar");
@@ -80,7 +97,11 @@ export function mountPresentationEditor(container: HTMLElement, session: Documen
     plane.append(previewHost);
     stage.append(plane);
     body.append(nav, stage);
-    shadow.append(style, toolbar, inspector, status, error, body);
+    const commentsPane = document.createElement("aside"); commentsPane.className = "comments-pane"; commentsPane.setAttribute("aria-label", "幻灯片批注");
+    if (workspace) {
+        const advanced = document.createElement("details"), summary = document.createElement("summary"); advanced.className = "advanced-tools"; summary.textContent = "对象属性与高级编辑"; advanced.append(summary, inspector);
+        body.append(commentsPane); shadow.append(style, toolbar, advanced, status, error, body);
+    } else shadow.append(style, toolbar, inspector, status, error, body);
     let disposed = false, busy = true, selected: string[] = [], active = session.snapshot().metadata.presentation!.slides[0]!.slideId, zoom = 1, generation = 0, gestures: ObjectGestures | undefined, frameControls: AbortController | undefined, navControls = new AbortController();
     let input: PresentationInput | undefined, inputScope: {
         kind: "text";
@@ -192,6 +213,7 @@ export function mountPresentationEditor(container: HTMLElement, session: Documen
         regions?.paint();
         renderControls();
         notify();
+        if (workspace) commentControls.selectionChanged();
     };
     const perform = (operations: DocumentOperation[], prepareOptions?: TransactionPrepareOptions): TransactionReceipt => {
         ensure();
@@ -223,6 +245,7 @@ export function mountPresentationEditor(container: HTMLElement, session: Documen
         regions?.paint();
         renderControls();
         notify();
+        if (workspace) commentControls.selectionChanged();
     }
     function regionLayoutKey(slideId: string): string { ensure(); if(definitionSurface)throw new DocumentError("InvalidOperation","请先返回幻灯片画布，再核对区域布局。"); const slide = p().slides.find(s => s.slideId === slideId); if (!slide || !current())
         throw new DocumentError("InvalidOperation", "请等待幻灯片画布就绪后检查区域布局。"); return preview.source()!.layoutKey(slide.rootNodeId); }
@@ -311,11 +334,20 @@ export function mountPresentationEditor(container: HTMLElement, session: Documen
     const appearance = createAppearanceControls(document, inspector, { session, selected: () => selected, element: id => preview.source()?.elements.get(id)?.element, current: () => current(), perform: operations => perform(operations), attempt });
     const connectors = createConnectorControls(document, inspector, { session, node: readNode, selected: () => selected, current: () => current(), perform: operations => perform(operations), attempt });
     const textControls = createTextControls(document, inspector, { session, input: () => input, target: () => { const id = inputScope?.kind === "text" ? inputScope.nodeId : selected.length === 1 ? selected[0] : undefined; const object = p().objects.find(o => o.nodeId === id); return object && ["text", "geometry", "table"].includes(object.kind) ? id : undefined; }, edit: () => editText(), notes: () => editNotes(), finish: () => finishInput(), perform: operations => { perform(operations); }, attempt });
+    if (workspace) {
+        for (const label of ["编辑文字", "编辑备注", "完成输入"]) {
+            const control = [...inspector.querySelectorAll("button")].find(node => node.textContent === label);
+            if (control) toolbar.append(control);
+        }
+    }
     const tableControls = createTableControls(document, inspector, { session, target: () => selected.length === 1 && p().objects.find(o => o.nodeId === selected[0])?.kind === "table" ? selected[0] : undefined, perform: operations => { perform(operations); }, attempt });
     let preview = mountPreview(previewHost, session, options);
     const definitions = createDefinitionControls(document, inspector, { session, activeSlide: () => active, surface: () => definitionSurface, object: () => selected.length === 1 ? selected[0] : undefined, selectSurface: id => setDefinitionSurface(id), attempt });
     const chartControls = createChartControls(document, inspector, { session, target: () => selected.length === 1 ? selected[0] : undefined, parent: currentSurface, perform: operations => { perform(operations); }, select: id => selectObjects([id]), attempt });
-    const commentControls = createCommentControls(document, inspector, { session, selection, slideRoot: () => currentSlide().rootNodeId, perform: operations => { perform(operations); }, edit: editComment, locate: focusAnnotation, attempt });
+    const commentControls = createCommentControls(document, workspace ? commentsPane : inspector, { session, selection, slideRoot: () => currentSlide().rootNodeId, perform: operations => { perform(operations); }, edit: editComment, locate: focusAnnotation, attempt }, workspace ? { root: shadow, toolbar, bounds: () => stage.getBoundingClientRect(), rect: chosen => {
+        const rect = preview.source()?.rectangles(chosen.anchor).at(-1), frame = preview.element.getBoundingClientRect();
+        return rect ? new DOMRect(frame.left + rect.left * zoom, frame.top + rect.top * zoom, rect.width * zoom, rect.height * zoom) : undefined;
+    } } : undefined);
     container.append(element);
     const current = (): boolean => !disposed && !busy && preview.layout().revision === session.snapshot().manifest.revision;
     const keyboard = (event: KeyboardEvent): void => {
@@ -437,6 +469,7 @@ export function mountPresentationEditor(container: HTMLElement, session: Documen
     }
     function setActiveSlide(slideId: string): void {
         ensure();
+        commentControls.clearSelection();
         regionSelection = undefined;
         if (inputScope)
             finishInput();
@@ -457,6 +490,10 @@ export function mountPresentationEditor(container: HTMLElement, session: Documen
         if (!Number.isFinite(value) || value < .5 || value > 2)
             throw new DocumentError("InvalidOperation", "缩放范围为 50% 至 200%。");
         zoom = value;
+        if (![...zoomChoice.options].some(option => option.value === String(value))) {
+            const option = document.createElement("option"); option.value = String(value); option.textContent = Math.round(value * 100) + "%"; zoomChoice.append(option);
+        }
+        zoomChoice.value = String(value);
         const frame = preview.element.contentDocument, body = frame?.body, computed = body ? frame!.defaultView!.getComputedStyle(body) : undefined;
         let width = p().size.width * 4 / 3 + (parseFloat(computed?.paddingLeft ?? "0") || 0) + (parseFloat(computed?.paddingRight ?? "0") || 0);
         previewHost.style.width = width + "px";
@@ -596,6 +633,7 @@ export function mountPresentationEditor(container: HTMLElement, session: Documen
     }
     function setMode(mode: "text" | "node" | "region"): void {
         ensure();
+        commentControls.clearSelection();
         if (!["text", "node", "region"].includes(mode))
             throw new DocumentError("InvalidOperation", "Unsupported presentation interaction mode.");
         finishInput();
@@ -618,6 +656,7 @@ export function mountPresentationEditor(container: HTMLElement, session: Documen
         const source = preview.source()!, frame = source.root.ownerDocument;
         gestures = bindObjectGestures(frame, { session, source, selected: () => selected, select: selectObjects, current: () => current() && !inputScope && !regionMode, perform: operations => { perform(operations); }, error: report });
         frame.addEventListener("keydown", keyboard, { signal: frameControls.signal });
+        if (workspace) frame.addEventListener("pointerup", () => { if (inputScope?.kind === "text" && !input?.composing() && frame.getSelection()?.isCollapsed === false) commentControls.selectionChanged(); }, { signal: frameControls.signal });
         frame.addEventListener("dblclick", event => { const target = event.target as Element | null, node = target?.closest<HTMLElement>('[data-node-id][data-office-kind]'); if (node && source.elements.get(node.dataset.nodeId!)?.element === node && ["text", "geometry", "table"].includes(node.dataset.officeKind!))
             attempt(() => editText(node.dataset.nodeId)); }, { signal: frameControls.signal });
         regions = bindPresentationRegions(frame, { session, source, enabled: () => current() && regionMode && !definitionSurface, selected: () => regionSelection, focus: () => focusedAnnotation, select: anchor => { if (anchor.kind === "region") {
@@ -673,11 +712,12 @@ export function mountPresentationEditor(container: HTMLElement, session: Documen
     }
     const loadPreview = (version: number): Promise<void> => preview.ready.then(() => { if (disposed || version !== generation)
         return; previewLoaded = true; if (preview.layout().revision !== session.snapshot().manifest.revision)
-        preview.update(session); bind(); return preview.settled().then(() => { if (!disposed && version === generation)
+        preview.update(session); if (workspace && version === 0) zoom = stage.clientWidth >= p().size.width * 4 / 3 * .8 ? .75 : .5; bind(); return preview.settled().then(() => { if (!disposed && version === generation)
         setZoom(zoom); }); });
     let ready: Promise<void> = loadPreview(0);
     function setDefinitionSurface(rootNodeId?: string): void {
         ensure();
+        commentControls.clearSelection();
         if (rootNodeId && ![...p().masters, ...p().layouts, ...p().notesMasters].some(d => d.rootNodeId === rootNodeId))
             throw new DocumentError("InvalidOperation", "请选择现有的母版、布局或备注母版。");
         finishInput();

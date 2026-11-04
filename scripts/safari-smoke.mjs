@@ -106,7 +106,23 @@ try {
   assert.equal(await execute("return window.presentationWorkbenchHost.session.getNode('heading-p').text"), "项目进展");
   assert.deepEqual(await execute("return window.presentationWorkbenchHost.errors"), []);
   await execute("window.presentationWorkbenchHost.dispose()");
-  mkdirSync(root + ".cache", { recursive: true }); writeFileSync(root + ".cache/safari-result.json", JSON.stringify({ capabilities: created.capabilities, checks: ["pure preview pages", "native input", "undo", "cross-page selection", "presentation fixed pages", "three native charts", "reversible presentation projection", "presentation disposal", "PPT native input/history", "PPT frozen request/candidate/apply/undo", "PPT editor/workbench disposal"] }, null, 2));
+  await installFixture("interaction-host.ts");
+  const workspaceFiles = ["manifest.json", "content.html", "styles.css", "metadata.json", "annotations.json"].map(path => [path, [...readFileSync(root + "examples/report/" + path)]]);
+  const workspace = await command("POST", `/session/${session}/execute/async`, { script: "const done=arguments[arguments.length-1];window.interactionHost.mount(arguments[0],false,'workspace').then(()=>done({ok:true}),error=>done({error:String(error)}));", args: [workspaceFiles] });
+  assert.equal(workspace.ok, true, JSON.stringify(workspace));
+  await execute("const d=window.interactionHost.view.element.shadowRoot.querySelector('iframe').contentDocument,r=d.createRange(),p=d.querySelector('[data-node-id=n-summary]');r.setStart(p.firstChild,2);r.setEnd(p.firstChild,8);d.getSelection().removeAllRanges();d.getSelection().addRange(r);d.dispatchEvent(new Event('selectionchange'));");
+  for (let pass = 0; pass < 50 && !await execute("return window.interactionHost.view.element.shadowRoot.querySelector('[role=dialog]').hidden===false"); pass++) await pause();
+  assert.equal(await execute("return window.interactionHost.view.element.shadowRoot.querySelector('[role=dialog]').hidden"), false);
+  const composer = await execute("return window.interactionHost.view.element.shadowRoot.querySelector('[role=dialog] textarea')");
+  await command("POST", `/session/${session}/element/${composer[elementKey]}/value`, { text: "Safari 批注", value: [..."Safari 批注"] });
+  await execute("[...window.interactionHost.view.element.shadowRoot.querySelectorAll('[role=dialog] button')].find(node=>node.textContent==='添加批注').click()");
+  assert.equal(await execute("return window.interactionHost.session.snapshot().manifest.revision"), 1);
+  assert.equal(await execute("return window.interactionHost.session.getAnnotations().at(-1).instruction"), "Safari 批注");
+  await execute("window.interactionHost.session.undo();window.interactionHost.view.dispose();window.interactionHost.view.dispose()");
+  assert.equal(await execute("return window.interactionHost.session.snapshot().manifest.revision"), 2);
+  assert.equal(await execute("return document.querySelectorAll('iframe').length"), 0);
+  await execute("window.interactionHost.session.dispose()");
+  mkdirSync(root + ".cache", { recursive: true }); writeFileSync(root + ".cache/safari-result.json", JSON.stringify({ capabilities: created.capabilities, checks: ["pure preview pages", "native input", "undo", "cross-page selection", "presentation fixed pages", "three native charts", "reversible presentation projection", "presentation disposal", "PPT native input/history", "PPT frozen request/candidate/apply/undo", "PPT editor/workbench disposal", "workspace floating comment/input/undo/disposal"] }, null, 2));
   console.log("Safari acceptance passed: Word input/history/selection and PPT preview/input/proposals/history/disposal.");
 } catch (error) {
   if (session) { try { mkdirSync(root + ".cache", { recursive: true }); writeFileSync(root + ".cache/safari-failure.png", Buffer.from(await command("GET", `/session/${session}/screenshot`), "base64")); } catch {} }

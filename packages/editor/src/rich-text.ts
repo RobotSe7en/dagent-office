@@ -8,8 +8,9 @@ import { blockSelector, bookmark, caretAt, inputProofs, inputStep, offsetAt, res
 import type { InputStep, SelectionBookmark } from "./rich-text/dom.js";
 import { SourceProjection } from "./rich-text/projection.js";
 import { deleteNativeRange, nativeDeletionRange, styleNativeRange } from "./rich-text/operations.js";
+import { workspaceControls } from "./workspace.js";
 
-export interface DocumentTextEditorOptions extends DocumentPreviewOptions { readonly onError?: (error: Error) => void }
+export interface DocumentTextEditorOptions extends DocumentPreviewOptions { readonly appearance?: "default" | "workspace"; readonly onError?: (error: Error) => void }
 export interface DocumentTextEditor {
   readonly element: HTMLElement;
   readonly ready: Promise<void>;
@@ -30,6 +31,7 @@ export function mountDocumentTextEditor(container: HTMLElement, session: Documen
   const document = container.ownerDocument, element = document.createElement("div"), shadow = element.attachShadow({ mode: "open" });
   const style = document.createElement("style");
   style.textContent = ":host{display:block;font:14px system-ui}button,select{font:inherit;padding:6px 10px}.toolbar{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.stage{max-height:70vh;overflow:auto;border:1px solid #ccd3dc}.error{color:#a00000}";
+  if (options.appearance === "workspace") style.textContent += workspaceControls + ".toolbar{margin:0;padding:10px 20px;background:#fcfdfb;border-bottom:1px solid #dfe7df}.stage{border:0;min-height:420px;max-height:calc(100dvh - 350px);background:#edf1ee}.toolbar button,.toolbar select{font-size:11px}";
   const toolbar = document.createElement("div"); toolbar.className = "toolbar"; toolbar.setAttribute("role", "toolbar"); toolbar.setAttribute("aria-label", "正文格式");
   const stage = document.createElement("div"); stage.className = "stage";
   const error = document.createElement("p"); error.setAttribute("role", "alert"); error.className = "error"; error.hidden = true;
