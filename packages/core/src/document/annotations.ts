@@ -1,5 +1,5 @@
 import type { Annotation, TextRange } from "../contracts/annotations.js";
-import type { DocumentManifest } from "../contracts/document.js";
+import type { ContentDocumentManifest } from "../contracts/document.js";
 import type { ParsedHtml } from "./html.js";
 import { isTextBoundary } from "./text.js";
 import { invalid } from "./validation.js";
@@ -33,7 +33,7 @@ export function validTextRanges(ranges: readonly TextRange[], html: ParsedHtml):
 }
 
 /** Validate source anchors, independent of native Word comment metadata. */
-export function validateAnnotations(annotations: readonly Annotation[], manifest: DocumentManifest, html: ParsedHtml): void {
+export function validateAnnotations(annotations: readonly Annotation[], manifest: ContentDocumentManifest, html: ParsedHtml): void {
   const identities = new Set<string>();
   const inside = (id: string, surface: string): boolean => {
     for (let current: string | null = id; current !== null; current = html.peekNode(current)!.parentNodeId) {

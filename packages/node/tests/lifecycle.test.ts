@@ -1,8 +1,9 @@
+import { openContentFixture as openDocument } from "../../../tests/content-fixture.js";
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright-core";
 import type { Browser, BrowserContext } from "playwright-core";
 import { expect, test, vi } from "vitest";
-import { openDocument } from "@dagent-office/core";
+import {} from "@dagent-office/core";
 import { createDocumentConverter } from "@dagent-office/node";
 function deferred<T>(): { promise: Promise<T>; resolve(value: T): void } {
   let resolve: (value: T) => void = () => {};

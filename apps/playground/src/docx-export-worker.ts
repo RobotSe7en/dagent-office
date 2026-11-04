@@ -9,7 +9,7 @@ const scope = globalThis as unknown as {
 scope.onmessage = (event) => {
   const { taskId, files } = event.data;
   try {
-    const output = exportDocx(openDocument(new Map(files))), bytes = new Uint8Array(output.bytes);
+    const output = exportDocx(openDocument(new Map(files), { kind: "document" })), bytes = new Uint8Array(output.bytes);
     scope.postMessage({ taskId, ok: true, bytes, report: output.report }, [bytes.buffer]);
   } catch (reason) {
     const error = reason instanceof DocumentError ? reason : new DocumentError("ExportFailed", "无法生成 DOCX，请重试。");

@@ -16,7 +16,7 @@ self.addEventListener("message", async (event: MessageEvent<{ kind: "open" | "ca
   const token = ++generation, candidate: ChunkIndex[] = [], start = performance.now(), formulas = createFormulaTemplatePool();
   try {
     for (let row = 0; row < baselineRows; row += 256) {
-      candidate.push(indexWorkbookChunk(generateBlock(row), { sheetId: "baseline", row, column: 0 }, undefined, formulas));
+      candidate.push(indexWorkbookChunk(generateBlock(row), { sheetId: "baseline", row, column: 0 }, undefined, { formulas }));
       self.postMessage({ kind: "progress", id, rows: Math.min(row + 256, baselineRows) });
       await new Promise(resolve => setTimeout(resolve, 0));
       if (generation !== token) return;

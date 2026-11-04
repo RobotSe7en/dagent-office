@@ -110,6 +110,7 @@ export function App() {
           ? importDocx(value, { documentId: createOpaqueId() })
           : kind === "pptx" ? importPptx(value,{documentId:createOpaqueId()}) : readDocumentZip(value);
       const next = openDocument(files);
+      if (next.kind === "workbook") throw new Error("Excel 编辑尚未开放。");
       if (current === generation.current) activate(next, { ...file, kind: next.snapshot().metadata.presentation ? "presentation" : "word" });
     } catch (reason) {
       if (current === generation.current)

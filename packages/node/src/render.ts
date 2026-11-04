@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { chromium } from "playwright-core";
 import type { Browser, BrowserContext } from "playwright-core";
 import { DocumentError, openDocument } from "@dagent-office/core";
-import type { DocumentErrorCode, DocumentModel } from "@dagent-office/core";
+import type { DocumentErrorCode, ContentDocumentModel } from "@dagent-office/core";
 import { DEFAULT_RENDER_LIMITS, renderLimits } from "@dagent-office/render/contracts";
 import type { BrowserRenderBridge, BrowserRenderResult, DocumentRenderReport, RenderLimits } from "@dagent-office/render/contracts";
 import { conversionEnvironment } from "./environment.js";
@@ -37,8 +37,8 @@ export interface RenderedOutput {
   readonly engine: { readonly name: "chromium"; readonly version: string };
 }
 export interface DocumentConverter {
-  renderPdf(model: DocumentModel, options?: RenderOptions): Promise<RenderedOutput>;
-  renderPage(model: DocumentModel, options?: PageRenderOptions): Promise<RenderedOutput>;
+  renderPdf(model: ContentDocumentModel, options?: RenderOptions): Promise<RenderedOutput>;
+  renderPage(model: ContentDocumentModel, options?: PageRenderOptions): Promise<RenderedOutput>;
   /** Cancels outstanding jobs and closes every context and the owned browser. */
   close(): Promise<void>;
 }
@@ -62,7 +62,7 @@ export function createDocumentConverter(options: ConverterOptions = {}): Documen
   for (const key of ["maxConcurrency", "timeoutMs", "maxInputBytes", "maxOutputBytes", "maxPixels"] as const) positive(quota[key], key);
   let script: Promise<string> | undefined, closing: Promise<void> | undefined, closed = false, cleanupFailed = false;
   const jobs = new Set<{ controller: AbortController; completion: Promise<unknown> }>();
-  async function render(model: DocumentModel, format: "pdf" | "png", settings: PageRenderOptions = {}): Promise<RenderedOutput> {
+  async function render(model: ContentDocumentModel, format: "pdf" | "png", settings: PageRenderOptions = {}): Promise<RenderedOutput> {
     if (closed) throw new ConversionError("InvalidOperation", "The converter has been closed.");
     if (settings.signal?.aborted) throw abortError(settings.signal);
     if (jobs.size >= quota.maxConcurrency) throw new ConversionError("Busy", "The converter is at its configured concurrency limit.");
@@ -75,7 +75,7 @@ export function createDocumentConverter(options: ConverterOptions = {}): Documen
       size += new TextEncoder().encode(path).length + value.byteLength;
       if (size > quota.maxInputBytes) throw new ConversionError("ResourceLimitExceeded", "Document exceeds the conversion input byte budget.");
     }
-    const checked = openDocument(files), metadata = checked.snapshot().metadata;
+    const checked = openDocument(files, { kind: model.kind }), metadata = checked.snapshot().metadata;
     const width = metadata.presentation ? metadata.presentation.size.width : Math.max(metadata.pageSetup.width, ...metadata.sections.map((section) => (section.pageSetup ?? metadata.pageSetup).width));
     if (width > 20_000) throw new ConversionError("UnsupportedFeature", "Page width exceeds the renderer size limit.");
     const scale = settings.scale ?? 1, pageIndex = settings.pageIndex ?? 0;
@@ -153,7 +153,7 @@ export function createDocumentConverter(options: ConverterOptions = {}): Documen
     },
   };
 }
-export async function renderDocumentPdf(model: DocumentModel, options: ConverterOptions & RenderOptions = {}): Promise<RenderedOutput> {
+export async function renderDocumentPdf(model: ContentDocumentModel, options: ConverterOptions & RenderOptions = {}): Promise<RenderedOutput> {
   const converter = createDocumentConverter(options);
   try { return await converter.renderPdf(model, options); } finally { await converter.close(); }
 }

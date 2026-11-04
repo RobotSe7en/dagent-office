@@ -41,7 +41,7 @@ if (isMainThread) {
   for (let row = 0; row < baselineRows; row += 256) {
     let start = performance.now(); const bytes = generateBlock(row); generationMs += performance.now() - start;
     hash.update(bytes); start = performance.now();
-    chunks.push(indexWorkbookChunk(bytes, { sheetId: 'baseline', row, column: 0 }, undefined, formulas)); indexingMs += performance.now() - start;
+    chunks.push(indexWorkbookChunk(bytes, { sheetId: 'baseline', row, column: 0 }, undefined, { formulas })); indexingMs += performance.now() - start;
   }
   const windows = [], start = performance.now();
   for (const row of [0, 255, 256, baselineRows - 1]) {

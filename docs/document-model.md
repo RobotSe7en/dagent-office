@@ -1,6 +1,6 @@
 # 文档包读取与模型
 
-三格式模型及来源规则见[数据模型](data-model.md)。DOCX 读取及只读验收已前移至 R1-06 前，当前状态与细则见[第一轮计划](iteration-1.md)。
+三格式模型及来源规则见[数据模型](data-model.md)。本文说明 Word/PPT 内容模型；统一入口新增的工作簿分块快照和窗口查询见 [R3-03](workbook-model.md)。DOCX 读取及只读验收已前移至 R1-06 前，当前状态与细则见[第一轮计划](iteration-1.md)。
 
 R1-04 提供 `document` 类型、格式版本 1 的只读文档模型，R1-05 增加[资源校验、宿主资源收集和 ZIP 适配](resources-and-zip.md)，R2-02 增加 [Presentation 严格契约、新建与文档包模型](presentation-model.md)。输入是宿主已授权的虚拟文件 Map；核心不访问文件系统、网络或模型服务。
 

@@ -1,5 +1,5 @@
 import { DocumentError } from "@dagent-office/core";
-import type { Anchor, DeepReadonly, DocumentModel, Rectangle, TextRange } from "@dagent-office/core";
+import type { Anchor, DeepReadonly, ContentDocumentModel, Rectangle, TextRange } from "@dagent-office/core";
 import type { RenderedPage } from "./contracts.js";
 import { viewNodeRole } from "./view-nodes.js";
 
@@ -64,7 +64,7 @@ export class PreviewSource {
     for (const token of this.tokens) if (token.from >= entry.from && token.to <= entry.to && entry.element.contains(token.node)) this.fieldViews.set(token.node, display);
   }
 
-  constructor(document: Document, model: DocumentModel) {
+  constructor(document: Document, model: ContentDocumentModel) {
     this.document = document;
     this.model = model;
     const documentRoot = document.querySelector<HTMLElement>('body > [data-office-kind="document"][data-node-id],body > [data-office-kind="presentation"][data-node-id]');
@@ -74,7 +74,7 @@ export class PreviewSource {
     this.root = main ? this.elements.get(main.rootNodeId)!.element : documentRoot;
     this.mainOrder = [this.root, ...this.root.querySelectorAll<HTMLElement>("[data-node-id]")].map((node) => node.dataset.nodeId!);
   }
-  private readonly model: DocumentModel;
+  private readonly model: ContentDocumentModel;
   /** Text splitting at measured line boundaries changes DOM positions, never source offsets. */
   reindex(): void {
     this.elements.clear(); this.tokens.length = 0; this.fieldViews = new WeakMap();
@@ -124,7 +124,7 @@ export class PreviewSource {
     return token.node.isConnected && style.visibility === "visible" && this.tokenRange(token).getClientRects().length > 0;
   }
 
-  textAnchor(range: Range, model: DocumentModel): Anchor | undefined {
+  textAnchor(range: Range, model: ContentDocumentModel): Anchor | undefined {
     if (range.collapsed) return undefined;
     if (!this.contains(range.startContainer) || !this.contains(range.endContainer))
       throw new DocumentError("InvalidOperation", "文字选择必须位于同一正文内容域。");

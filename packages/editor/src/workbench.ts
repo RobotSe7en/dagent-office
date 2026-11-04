@@ -1,6 +1,6 @@
 import { DocumentError, parseContract } from "@dagent-office/core";
 import type {
-  AnnotationSubmissionHandler, CandidateChange, DocumentInteractionRequest, DocumentModel, DocumentSelection,
+  AnnotationSubmissionHandler, CandidateChange, DocumentInteractionRequest, ContentDocumentModel, DocumentSelection,
   DocumentSession, EditProposal, InteractionRequestInput, TransactionReceipt,
 } from "@dagent-office/core";
 import { mountDocumentInteraction } from "./interaction.js";
@@ -196,14 +196,14 @@ export function mountDocumentWorkbench(container: HTMLElement, session: Document
     const anchor = document.createElement("a"); anchor.href = url; anchor.download = "document.request.json"; anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
-  function previewModel(change: CandidateChange): DocumentModel {
+  function previewModel(change: CandidateChange): ContentDocumentModel {
     return change.model;
   }
   function loadProposal(request: DocumentInteractionRequest, proposal: EditProposal): CandidateChange {
     ensureActive();
     if (candidate) throw new DocumentError("InvalidOperation", "请先应用或拒绝当前提案，再载入下一份提案。");
     const next = session.prepareProposal(request, proposal);
-    let model: DocumentModel;
+    let model: ContentDocumentModel;
     try { model = previewModel(next); } catch (reason) { session.discard(next); throw reason; }
     candidatePreview?.dispose(); candidatePreview = undefined;
     candidate = next; activeRequest = immutable(parseContract("interaction-request", request)); deliveredRequest = activeRequest;

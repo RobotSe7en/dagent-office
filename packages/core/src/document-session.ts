@@ -1,6 +1,6 @@
 import type { Anchor,Annotation } from "./contracts/annotations.js";
 import { isPresentationCommentPoint } from "./document/presentation.js";
-import type { DocumentMetadata } from "./contracts/document.js";
+import type { ContentDocumentMetadata } from "./contracts/document.js";
 import type { DocumentEvent } from "./contracts/events.js";
 import type { AnnotationOperation, DocumentTransaction } from "./contracts/operations.js";
 import type { CandidateChange, DocumentSession, DocumentEventListener, DocumentModel, DocumentSessionOptions, TextOffsetMapping, TransactionReceipt } from "./runtime.js";
@@ -34,7 +34,7 @@ export { DEFAULT_DOCUMENT_SESSION_LIMITS } from "./session/limits.js";
 function invalid(message: string): never { throw new DocumentError("InvalidOperation", message); }
 
 /** Remove definitions only when their complete source object was deleted. Partial damage fails validation. */
-function updateWordMetadata(metadata: DocumentMetadata, before: DocumentState, after: ParsedHtml): void {
+function updateWordMetadata(metadata: ContentDocumentMetadata, before: DocumentState, after: ParsedHtml): void {
   const word = metadata.word;
   if (!word) return;
   word.hyperlinks = word.hyperlinks.filter((item) => after.hasNode(item.nodeId));
@@ -201,7 +201,9 @@ export function createDocumentSession(document: DocumentModel, options: Document
     const resources = stageResources(base, options, limits);
     const edit = new DocumentEdit(resources.state, limits, allocate);
     let annotations = parseContract("annotations", base.snapshot.annotations);
-    const metadata: DocumentMetadata = parseContract("document-metadata", base.snapshot.metadata);
+    const parsedMetadata = parseContract("document-metadata", base.snapshot.metadata);
+    if ("workbook" in parsedMetadata) invalid("Workbook editing is not implemented yet.");
+    const metadata: ContentDocumentMetadata = parsedMetadata;
     const files = new Map(resources.state.files);
     const styles=new PresentationStyleEdit(files,base.snapshot.manifest.styles,limits);
     const parseEdited = (): ParsedHtml => parseHtml(edit.html(), resources.state.snapshot.manifest, files, limits, { nodes: 0 });
@@ -254,7 +256,7 @@ export function createDocumentSession(document: DocumentModel, options: Document
     const next = buildDocumentState(files, limits);
     checkLimit(retainedBytes([...activeCandidates.values(), next]), budgets.maxCandidateBytes);
     const diff = compareStates(base, next, edit.textEdits);
-    const model=Object.freeze({snapshot:()=>next.snapshot,getNode:(nodeId:string)=>next.html.getNode(nodeId),serialize:()=>new Map([...next.files].map(([path,bytes])=>[path,new Uint8Array(bytes)]))});
+    const model=Object.freeze({kind:next.snapshot.manifest.kind,snapshot:()=>next.snapshot,getNode:(nodeId:string)=>next.html.getNode(nodeId),serialize:()=>new Map([...next.files].map(([path,bytes])=>[path,new Uint8Array(bytes)]))});
     const candidate = freeze({ documentId: transaction.documentId, baseRevision: transaction.baseRevision,
       preview: next.snapshot,model, ...diff }) as unknown as CandidateChange;
     issued.set(candidate, { baseRevision: transaction.baseRevision, consumed: false });
@@ -293,6 +295,7 @@ export function createDocumentSession(document: DocumentModel, options: Document
   }
 
   return Object.freeze({
+    kind: state().snapshot.manifest.kind,
     snapshot: () => state().snapshot,
     getNode: (id: string) => state().html.getNode(id),
     getAnnotations: () => state().snapshot.annotations,

@@ -1,7 +1,8 @@
+import { openContentFixture as openDocument } from "../../../tests/content-fixture.js";
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
-import { createPresentation, openDocument } from "@dagent-office/core";
-import type { DocumentModel } from "@dagent-office/core";
+import { createPresentation } from "@dagent-office/core";
+import type { ContentDocumentModel as DocumentModel } from "@dagent-office/core";
 import { writeDocumentZip, exportPptx } from "@dagent-office/office";
 import { createDocumentConverter, executeConversionRequest, parseConversionRequest, serveConversionProtocol } from "@dagent-office/node";
 import type { ConversionRequestV1, DocumentConverter, RenderedOutput } from "@dagent-office/node";

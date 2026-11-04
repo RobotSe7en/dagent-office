@@ -1,8 +1,10 @@
 import type { DefaultTreeAdapterTypes } from "parse5";
-import { parseHtmlTree } from "../document/html-parser.js";
+import { defaultTreeAdapter, html as htmlNamespace } from "parse5";
+import { parseHtmlTree, parseHtmlFragment } from "../document/html-parser.js";
 import { decodeText } from "../document/package.js";
 import { checkLimit, invalid } from "../document/validation.js";
 import type { FormulaExpression, FormulaTemplatePool } from "./formula.js";
+import type { WorkbookFormulaSource, WorkbookValue } from "../contracts/workbook.js";
 
 // Private R3 storage baseline. The workbook reader will additionally validate
 // formula syntax, styles, resources and cross-chunk references before opening.
@@ -13,6 +15,13 @@ export const MAX_SHEET_COLUMNS = 16_384;
 export interface ChunkPosition { readonly sheetId: string; readonly row: number; readonly column: number }
 export interface ChunkWindow { readonly row: number; readonly column: number; readonly rows: number; readonly columns: number }
 export interface IndexedCellSource { readonly row: number; readonly column: number; readonly html: string }
+export interface ChunkValidation {
+  readonly formulas?: FormulaTemplatePool;
+  readonly cssClasses?: ReadonlySet<string>;
+  readonly numberFormats?: ReadonlySet<string>;
+  readonly maxNodes?: number;
+  readonly maxDepth?: number;
+}
 export interface ChunkIndex {
   readonly position: ChunkPosition;
   readonly cellCount: number;
@@ -61,18 +70,23 @@ function integer(value: string | undefined): number {
   if (!Number.isSafeInteger(number)) invalid("Invalid workbook coordinate.");
   return number;
 }
-function textContent(node: Node): string {
+function validateClass(value: string | undefined, classes?: ReadonlySet<string>): void {
+  if (value !== undefined && classes) for (const name of value.split(/[\t\n\f\r ]+/).filter(Boolean)) if (!classes.has(name)) invalid("A workbook CSS class is not defined.");
+}
+function textContent(node: Node, classes?: ReadonlySet<string>): string {
   if (node.nodeName === "#text") return (node as DefaultTreeAdapterTypes.TextNode).value;
   if (!("tagName" in node)) invalid("Unsupported workbook cell content.");
   if (node.tagName === "br") { attributes(node, []); return "\n"; }
   if (node.tagName !== "span" && node.tagName !== "td") invalid("Unsupported workbook rich text.");
-  if (node.tagName === "span") attributes(node, ["class"]);
-  return node.childNodes.map(textContent).join("");
+  if (node.tagName === "span") validateClass(attributes(node, ["class"])["class"], classes);
+  return node.childNodes.map(child => textContent(child, classes)).join("");
 }
-function validateCell(cell: Element): { column: number; formula?: string } {
+function validateCell(cell: Element, validation?: ChunkValidation): { column: number; formula?: string } {
   const attrs = attributes(cell, ["data-column", "data-value-type", "data-value", "data-formula", "data-cache-state", "data-format-id", "class"]);
   const column = integer(attrs["data-column"]), type = attrs["data-value-type"], value = attrs["data-value"];
-  const text = textContent(cell);
+  validateClass(attrs["class"], validation?.cssClasses);
+  if (attrs["data-format-id"] !== undefined && validation?.numberFormats && !validation.numberFormats.has(attrs["data-format-id"])) invalid("A workbook number format is not defined.");
+  const text = textContent(cell, validation?.cssClasses);
   checkLimit(text.length, 32_767);
   if (type === "number") { if (value === undefined || !numeric.test(value) || !Number.isFinite(Number(value))) invalid("Invalid workbook number."); }
   else if (type === "boolean") { if (value !== "true" && value !== "false") invalid("Invalid workbook boolean."); }
@@ -90,7 +104,8 @@ function validateCell(cell: Element): { column: number; formula?: string } {
 }
 
 /** Validates one bounded source block, retaining bytes and compact offsets only. */
-export function indexWorkbookChunk(input: Uint8Array, position: ChunkPosition, maxBytes = 8 * 1024 * 1024, formulas?: FormulaTemplatePool): ChunkIndex {
+export function indexWorkbookChunk(input: Uint8Array, position: ChunkPosition, maxBytes = 8 * 1024 * 1024, validation?: ChunkValidation): ChunkIndex {
+  const formulas = validation?.formulas;
   if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) invalid("Invalid workbook chunk budget.");
   checkLimit(input.byteLength, maxBytes);
   if (!position.sheetId || !Number.isInteger(position.row) || !Number.isInteger(position.column)
@@ -98,7 +113,7 @@ export function indexWorkbookChunk(input: Uint8Array, position: ChunkPosition, m
     || position.column < 0 || position.column >= MAX_SHEET_COLUMNS || position.column % CHUNK_COLUMNS) invalid("Invalid workbook chunk position.");
   const bytes = new Uint8Array(input), location = Object.freeze({ ...position });
   const source = decodeText(bytes);
-  const tree = parseHtmlTree(source, { maxFiles: 1, maxPackageBytes: maxBytes, maxFileBytes: maxBytes, maxNodes: 100_000, maxDepth: 16, maxCssNodes: 1 }, tags);
+  const tree = parseHtmlTree(source, { maxFiles: 1, maxPackageBytes: maxBytes, maxFileBytes: maxBytes, maxNodes: validation?.maxNodes ?? 100_000, maxDepth: Math.min(16, validation?.maxDepth ?? 16), maxCssNodes: 1 }, tags);
   const [html] = only(tree, ["html"]), [head, body] = only(html!, ["head", "body"]);
   attributes(html!, []); attributes(head!, []); attributes(body!, []); only(head!, []);
   const [table] = only(body!, ["table"]), tableAttrs = attributes(table!, ["data-sheet-id", "data-row", "data-column"]);
@@ -114,7 +129,7 @@ export function indexWorkbookChunk(input: Uint8Array, position: ChunkPosition, m
     let previousColumn = -1;
     for (const cell of elements(row)) {
       if (cell.tagName !== "td") invalid("Expected a workbook cell.");
-      const { column, formula } = validateCell(cell);
+      const { column, formula } = validateCell(cell, validation);
       if (column <= previousColumn || column < location.column || column >= location.column + CHUNK_COLUMNS) invalid("Workbook cells must be ordered within their chunk.");
       previousColumn = column;
       const span = cell.sourceCodeLocation;
@@ -133,6 +148,19 @@ export function indexWorkbookChunk(input: Uint8Array, position: ChunkPosition, m
   const coords = Uint16Array.from(coordinates), starts = Uint32Array.from(offsets), stops = Uint32Array.from(ends);
   // Do not close over the temporary tree, decoded source or per-cell objects.
   return createIndex(bytes, location, coords, starts, stops, formulaCount, Uint16Array.from(formulaCoordinates), Uint32Array.from(templateIds), formulas);
+}
+
+/** Only used on already validated, bounded cell slices; no retained parse tree. */
+export function decodeWorkbookCell(source: string): { value: WorkbookValue; formula?: WorkbookFormulaSource; text: string; cssClass?: string; formatId?: string } {
+  const context = defaultTreeAdapter.createElement("tr", htmlNamespace.NS.HTML, []);
+  const fragment = parseHtmlFragment(source, context, { maxFiles: 1, maxPackageBytes: 8 * 1024 * 1024, maxFileBytes: 8 * 1024 * 1024, maxNodes: 100_000, maxDepth: 16, maxCssNodes: 1 }, tags);
+  const [cell] = only(fragment, ["td"]);
+  const attrs = Object.fromEntries(cell!.attrs.map(a => [a.name, a.value])), text = textContent(cell!);
+  const type = attrs["data-value-type"], raw = attrs["data-value"];
+  const value: WorkbookValue = type === "number" ? { type, value: Number(raw) } : type === "boolean" ? { type, value: raw === "true" }
+    : type === "error" ? { type, value: raw as Extract<WorkbookValue, { type: "error" }>["value"] } : type === "blank" ? { type } : { type: "text", value: text };
+  return { value, text, ...(attrs["class"] !== undefined ? { cssClass: attrs["class"] } : {}), ...(attrs["data-format-id"] !== undefined ? { formatId: attrs["data-format-id"] } : {}),
+    ...(attrs["data-formula"] !== undefined ? { formula: { expression: attrs["data-formula"], cacheState: attrs["data-cache-state"] as WorkbookFormulaSource["cacheState"] } } : {}) };
 }
 
 function createIndex(bytes: Uint8Array, position: ChunkPosition, coords: Uint16Array, starts: Uint32Array, stops: Uint32Array, formulaCount: number, formulaCoords: Uint16Array, templateIds: Uint32Array, formulas: FormulaTemplatePool | undefined): ChunkIndex {

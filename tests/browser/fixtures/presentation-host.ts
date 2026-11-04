@@ -1,5 +1,6 @@
-import { createDocumentSession, openDocument } from "@dagent-office/core";
-import type { DocumentModel, DocumentOperation, DocumentSession } from "@dagent-office/core";
+import { openContentFixture as openDocument } from "../../content-fixture.js";
+import { createDocumentSession } from "@dagent-office/core";
+import type { ContentDocumentModel as DocumentModel, DocumentOperation, DocumentSession } from "@dagent-office/core";
 import { mountPreview, SourceProjection } from "@dagent-office/render";
 import type { DocumentPreviewOptions } from "@dagent-office/render";
 import { mountDocumentInteraction, mountDocumentTextEditor, mountDocumentWorkbench } from "@dagent-office/editor";

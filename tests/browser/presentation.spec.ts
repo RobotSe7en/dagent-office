@@ -1,3 +1,4 @@
+import { openContentFixture as openDocument } from "../content-fixture.js";
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
@@ -5,7 +6,7 @@ import type { Page } from "@playwright/test";
 import { build } from "vite";
 import { importPptx, readDocumentZip } from "@dagent-office/office";
 import { writeOpcZip } from "../../packages/office/src/document-zip.js";
-import { createPresentation, openDocument, readPresentationGeometry } from "@dagent-office/core";
+import { createPresentation, readPresentationGeometry } from "@dagent-office/core";
 import type { DocumentPackage } from "@dagent-office/core";
 import type { DocumentPreviewOptions } from "@dagent-office/render";
 import type { PresentationHost } from "./fixtures/presentation-host.js";

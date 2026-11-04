@@ -1,5 +1,5 @@
 import { DocumentError } from "@dagent-office/core";
-import type { DocumentModel } from "@dagent-office/core";
+import type { ContentDocumentModel } from "@dagent-office/core";
 import type { DocumentPreview, DocumentPreviewOptions } from "../preview.js";
 import { renderLimits } from "../contracts.js";
 import type { PresentationRenderReport, FontResolution } from "../contracts.js";
@@ -12,10 +12,10 @@ import type { PreviewSource } from "../source-index.js";
 import { composePresentation } from "./canvas.js";
 import type { PresentationCanvas } from "./canvas.js";
 
-export function mountPresentationPreview(container: HTMLElement, input: DocumentModel, options: DocumentPreviewOptions): DocumentPreview & { source(): PreviewSource | undefined } {
+export function mountPresentationPreview(container: HTMLElement, input: ContentDocumentModel, options: DocumentPreviewOptions): DocumentPreview & { source(): PreviewSource | undefined } {
   if (options.layout === "continuous") throw new DocumentError("InvalidOperation", "Presentations use fixed pages layout.");
   const limits = renderLimits(options.limits), host = container.ownerDocument, frame = host.createElement("iframe");
-  const prepare = (model: DocumentModel): ReturnType<typeof preparePreviewPackage> => {
+  const prepare = (model: ContentDocumentModel): ReturnType<typeof preparePreviewPackage> => {
     const snapshot = model.snapshot(); if (snapshot.manifest.kind !== "presentation") throw new DocumentError("UnsupportedFormat", "Use a new preview when changing the document kind.");
     const result = preparePreviewPackage(model);
     if (result.model.snapshot().manifest.kind !== "presentation") { for (const url of result.urls) URL.revokeObjectURL(url); throw new DocumentError("UnsupportedFormat", "A presentation package is required."); }

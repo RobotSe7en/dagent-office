@@ -1,5 +1,5 @@
 import { DocumentError, evaluatePresentationPreset, readPresentationGeometry } from "@dagent-office/core";
-import type { DeepReadonly, DocumentModel, PresentationGeometry, PresentationMetadata, PresentationObject } from "@dagent-office/core";
+import type { DeepReadonly, ContentDocumentModel, PresentationGeometry, PresentationMetadata, PresentationObject } from "@dagent-office/core";
 import type { DocumentRenderReport, LayoutDiagnostic, LayoutFieldResult, RenderedPage, RenderLimits } from "../contracts.js";
 import { PreviewSource } from "../source-index.js";
 import { hideFromViewSelection, markViewNode, measureViewContent, ownViewAttribute, ownViewStyle } from "../view-nodes.js";
@@ -23,7 +23,7 @@ export interface PresentationCanvas {
   measure(): Pick<DocumentRenderReport, "pages" | "nodePages" | "diagnostics">;
 }
 /** Fixed slide composition. Every injected object is a reversible view node. */
-export function composePresentation(document: Document, model: DocumentModel, limits: Readonly<RenderLimits>,surfaceId?:string): PresentationCanvas {
+export function composePresentation(document: Document, model: ContentDocumentModel, limits: Readonly<RenderLimits>,surfaceId?:string): PresentationCanvas {
   const snapshot = model.snapshot(), metadata = snapshot.metadata.presentation;
   if (snapshot.manifest.kind !== "presentation" || !metadata) throw new DocumentError("UnsupportedFormat", "A presentation canvas requires a presentation package.");
   const source = new PreviewSource(document, model), root = source.root;

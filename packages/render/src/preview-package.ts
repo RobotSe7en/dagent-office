@@ -1,7 +1,7 @@
 import { openDocument } from "@dagent-office/core";
-import type { DocumentModel } from "@dagent-office/core";
+import type { ContentDocumentModel } from "@dagent-office/core";
 
-export interface PreparedPreview { readonly model: DocumentModel; readonly document: Document; readonly urls: string[] }
+export interface PreparedPreview { readonly model: ContentDocumentModel; readonly document: Document; readonly urls: string[] }
 export function packagePath(reference: string, entrypoint: string): string {
   const parts = entrypoint.split("/").slice(0, -1);
   for (const token of reference.split("/")) { const value = decodeURIComponent(token); if (value === "..") parts.pop(); else if (value !== ".") parts.push(value); }
@@ -10,8 +10,8 @@ export function packagePath(reference: string, entrypoint: string): string {
 export function safeStyleText(source: string): string { return source.replace(/<\/style/gi, value => "<\\" + value.slice(1)); }
 /** Shared scriptless package preparation. Object URLs are scoped to this view,
  * including repeated references to one asset, and are revoked by its owner. */
-export function preparePreviewPackage(input: DocumentModel): PreparedPreview {
-  const model = openDocument(input.serialize()), snapshot = model.snapshot(), files = model.serialize();
+export function preparePreviewPackage(input: ContentDocumentModel): PreparedPreview {
+  const model = openDocument(input.serialize(), { kind: input.kind }), snapshot = model.snapshot(), files = model.serialize();
   const document = new DOMParser().parseFromString(snapshot.html, "text/html");
   for (const link of document.querySelectorAll("link")) link.remove();
   const policy = document.createElement("meta"); policy.httpEquiv = "Content-Security-Policy";

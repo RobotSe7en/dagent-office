@@ -1,6 +1,7 @@
+import { openContentFixture as openDocument } from "../../../tests/content-fixture.js";
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
-import { createDocumentSession, openDocument } from "@dagent-office/core";
+import { createDocumentSession } from "@dagent-office/core";
 import type { Anchor, Annotation } from "@dagent-office/core";
 import { exportDocx, importDocx } from "@dagent-office/office";
 import { strFromU8, unzipSync } from "fflate";

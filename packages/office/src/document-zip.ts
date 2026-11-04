@@ -89,7 +89,7 @@ function writeZip(input: DocumentPackage, options: DocumentZipOptions, document:
   }
   // Validate stable copied bytes, including every declared resource. Normalization
   // remains an explicit document-model serialization step rather than an archive side effect.
-  if (document) openDocument(files, { limits });
+  if (document) openDocument(files, { limits, ...(options.workbookLimits ? { workbookLimits: options.workbookLimits } : {}), ...(options.kind ? { kind: options.kind } : {}) });
   const chunks: Uint8Array[] = [];
   let length = 0;
   try {

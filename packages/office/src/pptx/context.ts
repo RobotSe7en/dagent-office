@@ -1,5 +1,5 @@
 import { createAssetDescriptor, DocumentError } from "@dagent-office/core";
-import type { Annotation, DocumentManifest, PresentationMetadata } from "@dagent-office/core";
+import type { Annotation, ContentDocumentManifest, PresentationMetadata } from "@dagent-office/core";
 import { openOpc } from "../ooxml/package.js";
 import type { OpcPackage } from "../ooxml/package.js";
 import { attr, fail, number, R, unsupported } from "../ooxml/xml.js";
@@ -42,7 +42,7 @@ export class Context {
   work = 0;
   outputBytes = 0;
   readonly css: string[] = [];
-  readonly assets: DocumentManifest["assets"] = [];
+  readonly assets: ContentDocumentManifest["assets"] = [];
   readonly files: Map<string, Uint8Array> = new Map();
   readonly surfaces: Map<string, Surface> = new Map();
   readonly nativeNodes: Map<string, Map<string, string>> = new Map();

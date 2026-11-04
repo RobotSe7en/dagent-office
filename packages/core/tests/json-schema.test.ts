@@ -69,8 +69,9 @@ test("schemas have unique versioned identifiers and generation does not share mu
   const ids = CONTRACT_NAMES.map((name) => getContractJsonSchema(name).$id);
   expect(new Set(ids).size).toBe(CONTRACT_NAMES.length);
   const schema = getContractJsonSchema("document-manifest");
-  const properties = schema.properties as Record<string, Record<string, unknown>>;
+  const branches = schema.anyOf as { properties: Record<string, Record<string, unknown>> }[];
+  const properties = branches[0]!.properties;
   properties.format!.const = "changed";
-  delete (schema as Record<string, unknown>).properties;
-  expect(getContractJsonSchema("document-manifest")).toHaveProperty("properties.format.const", "dagent-office");
+  delete (schema as Record<string, unknown>).anyOf;
+  expect(getContractJsonSchema("document-manifest")).toHaveProperty("anyOf.0.properties.format.const", "dagent-office");
 });

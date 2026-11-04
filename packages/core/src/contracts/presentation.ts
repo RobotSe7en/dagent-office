@@ -92,5 +92,5 @@ export const PresentationDocumentMetadataSchema = z.strictObject({
   title: z.string().optional(), locale: IdentifierSchema.optional(), presentation: PresentationMetadataSchema,
 });
 export type PresentationDocumentMetadata = z.infer<typeof PresentationDocumentMetadataSchema> & {
-  readonly word?: never; readonly pageSetup?: never; readonly sections?: never;
+  readonly word?: never; readonly workbook?: never; readonly pageSetup?: never; readonly sections?: never;
 };

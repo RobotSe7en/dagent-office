@@ -1,5 +1,5 @@
 import { DEFAULT_DOCUMENT_READ_LIMITS, DocumentError, openDocument } from "@dagent-office/core";
-import type { DeepReadonly, DocumentModel, DocumentPackage, DocumentReadLimits, DocumentSection, DocumentSnapshot, PageSetup, WordMetadata, WordDocumentMetadata } from "@dagent-office/core";
+import type { DeepReadonly, ContentDocumentModel, DocumentPackage, DocumentReadLimits, DocumentSection, ContentDocumentSnapshot, PageSetup, WordMetadata, WordDocumentMetadata } from "@dagent-office/core";
 import type { DocumentZipOptions } from "./document-zip.js";
 import { writeOpcZip } from "./document-zip.js";
 import { xml } from "./ooxml/xml.js";
@@ -37,7 +37,7 @@ const date = (raw: string | undefined): string | undefined => {
 };
 class Exporter {
   private readonly files: DocumentPackage;
-  private readonly snapshot: DocumentSnapshot & { readonly metadata: DeepReadonly<WordDocumentMetadata> };
+  private readonly snapshot: ContentDocumentSnapshot & { readonly metadata: DeepReadonly<WordDocumentMetadata> };
   private readonly tree: SourceTree;
   private readonly css: ExportCss;
   private readonly styles: ExportStyles;
@@ -63,7 +63,7 @@ class Exporter {
   private readonly flowStyles = new WeakMap<SourceElement, Css>();
   private readonly visibility = new WeakMap<SourceNode, boolean>();
   private readonly emittedText = new WeakSet<SourceNode>();
-  constructor(document: DocumentModel, private readonly limits: DocumentReadLimits) {
+  constructor(document: ContentDocumentModel, private readonly limits: DocumentReadLimits) {
     const snapshot = document.snapshot();
     if (snapshot.metadata.presentation !== undefined) unsupported("PPT sources cannot be exported as DOCX.");
     this.files = document.serialize(); this.snapshot = { ...snapshot, metadata: snapshot.metadata }; this.tree = parseSource(this.snapshot.html, limits);
@@ -463,8 +463,8 @@ class Exporter {
 }
 /** Generate a native, editable DOCX exclusively from the current validated HTML
  * package. No original Office bytes, DOM, filesystem or network is consulted. */
-export function exportDocx(document: DocumentModel, options: DocxExportOptions = {}): DocxExportResult {
-  const model = openDocument(document.serialize(), options), limits = { ...DEFAULT_DOCUMENT_READ_LIMITS, ...options.limits };
+export function exportDocx(document: ContentDocumentModel, options: DocxExportOptions = {}): DocxExportResult {
+  const model = openDocument(document.serialize(), { ...options, kind: "document" }), limits = { ...DEFAULT_DOCUMENT_READ_LIMITS, ...options.limits };
   if (model.snapshot().manifest.kind !== "document") throw new DocumentError("UnsupportedFormat", "DOCX export requires a Word document package.");
   const output = new Exporter(model, limits).write();
   return Object.freeze({ bytes: writeOpcZip(output.files, options), report: output.report });

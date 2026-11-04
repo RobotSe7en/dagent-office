@@ -1,7 +1,8 @@
+import { openContentFixture as openDocument } from "../../../tests/content-fixture.js";
 import { readFileSync, readdirSync } from "node:fs";
 import { expect, test } from "vitest";
-import { createDocumentSession, createPresentation, DocumentError, openDocument, resolvePresentationGeometry } from "@dagent-office/core";
-import type { DocumentModel } from "@dagent-office/core";
+import { createDocumentSession, createPresentation, DocumentError, resolvePresentationGeometry } from "@dagent-office/core";
+import type { ContentDocumentModel as DocumentModel } from "@dagent-office/core";
 import { exportDocx, exportPptx, importPptx } from "@dagent-office/office";
 import { strFromU8, strToU8, unzipSync } from "fflate";
 const directory = new URL("../../../examples/pptx/", import.meta.url);

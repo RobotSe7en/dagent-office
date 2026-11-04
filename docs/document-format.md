@@ -94,12 +94,14 @@ R1-10 已实现声明范围的读取与连续预览，具体能力和限制见[D
 
 ## Excel 工作簿
 
-工作表以分块 HTML 表格表达，单元格节点携带工作表和地址信息。只加载可视窗口所需的行列，不把完整工作簿展开为一个 DOM。
+工作表以分块 HTML 表格表达，由表身份及零基准行列坐标定位单元格。当前基础包契约及已实现边界见[工作簿模型](workbook-model.md)。只加载可视窗口所需的行列，不把完整工作簿展开为一个 DOM。
 
 ```html
-<td data-node-id="cell-total" data-sheet-id="sheet-1"
-    data-cell="C8" data-value-type="number"
-    data-formula="=SUM(C2:C7)">12800</td>
+<table data-sheet-id="sheet-1" data-row="0" data-column="0"><tbody>
+  <tr data-row="7"><td data-column="2" data-value-type="number"
+    data-value="12800" data-formula="=SUM(C2:C7)"
+    data-cache-state="imported">12800</td></tr>
+</tbody></table>
 ```
 
 常量单元格的原始值和类型是内容源；公式单元格的公式是计算源，展示文本及公式缓存结果是派生值。编辑后的计算结果由公式适配器产生。无法计算时保留公式并标明结果未更新，不伪造新结果。

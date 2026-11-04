@@ -1,7 +1,8 @@
+import { openContentFixture as openDocument } from "../../../tests/content-fixture.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
-import { createAssetDescriptor, createDocumentSession, DocumentError, openDocument, parseContract } from "@dagent-office/core";
+import { createAssetDescriptor, createDocumentSession, DocumentError, parseContract } from "@dagent-office/core";
 import type { CandidateChange, DocumentEditingSession, DocumentErrorCode, DocumentOperation, DocumentSessionOptions } from "@dagent-office/core";
 import { annotations, proposal, repository } from "./fixtures.js";
 

@@ -1,5 +1,5 @@
 import type { DefaultTreeAdapterTypes } from "parse5";
-import type { DocumentManifest } from "../contracts/document.js";
+import type { ContentDocumentManifest } from "../contracts/document.js";
 import type { DeepReadonly, DocumentNode, DocumentPackage, DocumentReadLimits } from "../runtime.js";
 import { DocumentError } from "../errors.js";
 import { normalizeCss } from "./css.js";
@@ -68,7 +68,7 @@ export interface ParsedHtml {
   signature(nodeId: string): string | undefined;
 }
 
-export function parseHtml(source: string, manifest: DeepReadonly<DocumentManifest>, files: DocumentPackage, limits: DocumentReadLimits, cssBudget: CssBudget): ParsedHtml {
+export function parseHtml(source: string, manifest: DeepReadonly<ContentDocumentManifest>, files: DocumentPackage, limits: DocumentReadLimits, cssBudget: CssBudget): ParsedHtml {
   try {
     const tree = parseHtmlTree(source, limits, supportedTags);
     const html = tree.childNodes.find((node) => isElement(node) && node.tagName === "html") as Element | undefined;

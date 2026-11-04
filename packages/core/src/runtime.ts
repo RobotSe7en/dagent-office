@@ -1,5 +1,6 @@
 import type { Annotation, Anchor } from "./contracts/annotations.js";
-import type { AssetDescriptor, DocumentManifest, DocumentMetadata } from "./contracts/document.js";
+import type { AssetDescriptor, ContentDocumentManifest, ContentDocumentMetadata, WorkbookManifest } from "./contracts/document.js";
+import type { WorkbookDocumentMetadata, WorkbookValue, WorkbookFormulaSource, WorkbookCoordinate } from "./contracts/workbook.js";
 import type { DocumentEvent } from "./contracts/events.js";
 import type { ContextStyle, DocumentInteractionRequest, EditProposal } from "./contracts/interaction.js";
 import type { ContentOperationName, DocumentTransaction } from "./contracts/operations.js";
@@ -18,12 +19,35 @@ export interface AssetProvider {
 }
 
 /** A derived, read-only view, not a second persistence format. */
-export interface DocumentSnapshot {
-  readonly manifest: DeepReadonly<DocumentManifest>;
+export interface ContentDocumentSnapshot {
+  readonly manifest: DeepReadonly<ContentDocumentManifest>;
   readonly html: string;
   readonly styles: readonly DeepReadonly<ContextStyle>[];
-  readonly metadata: DeepReadonly<DocumentMetadata>;
+  readonly metadata: DeepReadonly<ContentDocumentMetadata>;
   readonly annotations: readonly DeepReadonly<Annotation>[];
+}
+export interface WorkbookSnapshot {
+  readonly manifest: DeepReadonly<WorkbookManifest>;
+  readonly styles: readonly DeepReadonly<ContextStyle>[];
+  readonly metadata: DeepReadonly<WorkbookDocumentMetadata>;
+  readonly annotations: readonly DeepReadonly<Annotation>[];
+}
+export type DocumentSnapshot = ContentDocumentSnapshot | WorkbookSnapshot;
+export interface WorkbookCell extends WorkbookCoordinate {
+  readonly sheetId: string;
+  readonly value: DeepReadonly<WorkbookValue>;
+  readonly formula?: DeepReadonly<WorkbookFormulaSource>;
+  readonly html: string;
+  readonly text: string;
+  readonly cssClass?: string;
+  readonly formatId?: string;
+}
+export interface WorkbookWindow extends WorkbookCoordinate {
+  readonly sheetId: string; readonly rows: number; readonly columns: number;
+}
+export interface WorkbookReadLimits {
+  readonly maxCells: number; readonly maxFormulas: number; readonly maxWindowCells: number;
+  readonly maxFormulaTemplates: number; readonly maxFormulaKeyCodeUnits: number;
 }
 
 export interface DocumentReadLimits {
@@ -37,6 +61,9 @@ export interface DocumentReadLimits {
 
 export interface OpenDocumentOptions {
   readonly limits?: Partial<DocumentReadLimits>;
+  readonly workbookLimits?: Partial<WorkbookReadLimits>;
+  /** Optional expected format; a mismatch fails without converting content. */
+  readonly kind?: "document" | "presentation" | "workbook";
 }
 
 /** A derived node view. Text offsets use UTF-16; br is \n and img is U+FFFC. */
@@ -51,11 +78,21 @@ export interface DocumentNode {
 }
 
 /** Read-only document loading and serialization; editing belongs to DocumentSession. */
-export interface DocumentModel {
-  snapshot(): DocumentSnapshot;
+export interface ContentDocumentModel {
+  readonly kind: "document" | "presentation";
+  snapshot(): ContentDocumentSnapshot;
   getNode(nodeId: string): DocumentNode | undefined;
   serialize(): DocumentPackage;
 }
+export interface WorkbookModel {
+  readonly kind: "workbook";
+  snapshot(): WorkbookSnapshot;
+  getNode(nodeId: string): DocumentNode | undefined;
+  getCell(sheetId: string, row: number, column: number): WorkbookCell | undefined;
+  readWindow(window: WorkbookWindow): readonly WorkbookCell[];
+  serialize(): DocumentPackage;
+}
+export type DocumentModel = ContentDocumentModel | WorkbookModel;
 
 export interface DocumentSelection {
   readonly documentId: string;
@@ -89,9 +126,9 @@ export interface CandidateChange {
   readonly [candidateBrand]: true;
   readonly documentId: string;
   readonly baseRevision: number;
-  readonly preview: DocumentSnapshot;
+  readonly preview: ContentDocumentSnapshot;
   /** Immutable candidate source, including staged resources; no editing session. */
-  readonly model:DocumentModel;
+  readonly model:ContentDocumentModel;
   readonly affectedNodeIds: readonly string[];
   /** Stable slide identities whose rendered content or dependencies changed. PPT only. */
   readonly affectedSlideIds?: readonly string[];
@@ -154,7 +191,7 @@ export interface TransactionPrepareOptions {
 }
 
 /** Shared transaction and history boundary for editing views. */
-export interface DocumentEditingSession extends DocumentModel {
+export interface DocumentEditingSession extends ContentDocumentModel {
   getAnnotations(): readonly DeepReadonly<Annotation>[];
   prepare(transaction: DocumentTransaction, options?: TransactionPrepareOptions): CandidateChange;
   commit(candidate: CandidateChange): TransactionReceipt;
