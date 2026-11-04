@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createWorkbook, DEFAULT_DOCUMENT_READ_LIMITS, openDocument, WorkbookPrintSchema } from "@dagent-office/core";
+import { createWorkbook, DEFAULT_DOCUMENT_READ_LIMITS, openDocument, parseWorkbookFormula, printWorkbookFormula, WorkbookPrintSchema } from "@dagent-office/core";
 import { openOpc, openOpcFiles } from "../src/ooxml/package.js";
 import { S, xml } from "../src/ooxml/xml.js";
 import { readWorkbook } from "../src/xlsx/workbook.js";
@@ -61,6 +61,14 @@ describe("native workbook names and print metadata", () => {
       (s: string) => s.replace('</definedNames>', '<definedName name="_xlnm.Print_Area" localSheetId="0">Data!$A$1:$L$30</definedName></definedNames>'),
     ];
     for (const edit of edits) expect(() => readWorkbook(workbookVariant(edit))).toThrow();
+  });
+  it("retains A1-relative name offsets independently of the active worksheet", () => {
+    for (const activeTab of [0, 1]) {
+      const opc = workbookVariant(xml => xml.replace('activeTab="0"', `activeTab="${activeTab}"`).replace('</definedNames>', '<definedName name="Relative">Data!$A1</definedName></definedNames>'));
+      const book = readWorkbook(opc);
+      const source = book.names.find(name => name.name === 'Relative')!;
+      expect(printWorkbookFormula(parseWorkbookFormula(source.expression, source.origin), { row: 3, column: 2 })).toBe("='Data'!$A4");
+    }
   });
   it("parses literal ampersands and basic fields, rejects unsupported controls, and keeps unspecified paper unspecified", () => {
     const node = document(`<worksheet xmlns="${S}"/>`);

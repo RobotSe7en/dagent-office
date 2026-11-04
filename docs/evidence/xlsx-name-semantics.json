@@ -1,0 +1,245 @@
+{
+  "scope": "Relative defined-name origin, caller-sheet binding and local shadowing only. Excel/WPS and SDK calculation remain unverified.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "cases": [
+    {
+      "activeCell": "A1",
+      "activeSheetIndex": 0,
+      "sourceSha256": "8b7a6367b57c6f69e2594ed28502b56b4f85ab5414691aafd2600fdfa8292d24",
+      "observed": {
+        "names": [
+          {
+            "name": "Relative",
+            "scope": null,
+            "origin": "$Data.$A$1",
+            "reference": "$Data.$A1",
+            "expression": null
+          },
+          {
+            "name": "RelativeColumn",
+            "scope": null,
+            "origin": "$Data.$A$1",
+            "reference": "$Data.A$1",
+            "expression": null
+          },
+          {
+            "name": "Scoped",
+            "scope": null,
+            "origin": "$Data.$A$1",
+            "reference": null,
+            "expression": "100"
+          },
+          {
+            "name": "Unqualified",
+            "scope": null,
+            "origin": "$Data.$A$1",
+            "reference": ".$A1",
+            "expression": null
+          },
+          {
+            "name": "Scoped",
+            "scope": "Data",
+            "origin": "$Data.$A$1",
+            "reference": null,
+            "expression": "10"
+          },
+          {
+            "name": "Scoped",
+            "scope": "Second",
+            "origin": "$Data.$A$1",
+            "reference": null,
+            "expression": "20"
+          }
+        ],
+        "sheets": {
+          "Data": {
+            "C2": {
+              "formula": "of:=Relative",
+              "value": "20"
+            },
+            "C3": {
+              "formula": "of:=Relative",
+              "value": "30"
+            },
+            "D3": {
+              "formula": "of:=RelativeColumn",
+              "value": "400"
+            },
+            "C4": {
+              "formula": "of:=Unqualified",
+              "value": "44"
+            },
+            "D4": {
+              "formula": "of:=Scoped",
+              "value": "10"
+            }
+          },
+          "Second": {
+            "C2": {
+              "formula": "of:=Relative",
+              "value": "20"
+            },
+            "C3": {
+              "formula": "of:=Relative",
+              "value": "30"
+            },
+            "D3": {
+              "formula": "of:=RelativeColumn",
+              "value": "400"
+            },
+            "C4": {
+              "formula": "of:=Unqualified",
+              "value": "444"
+            },
+            "D4": {
+              "formula": "of:=Scoped",
+              "value": "20"
+            }
+          },
+          "Third": {
+            "C2": {
+              "formula": "of:=Relative",
+              "value": "20"
+            },
+            "C3": {
+              "formula": "of:=Relative",
+              "value": "30"
+            },
+            "D3": {
+              "formula": "of:=RelativeColumn",
+              "value": "400"
+            },
+            "C4": {
+              "formula": "of:=Unqualified",
+              "value": "4444"
+            },
+            "D4": {
+              "formula": "of:=Scoped",
+              "value": "100"
+            }
+          }
+        }
+      }
+    },
+    {
+      "activeCell": "H8",
+      "activeSheetIndex": 1,
+      "sourceSha256": "0ef07c9088229e6e5f61e1f464fbbe8dfdbfaccd7b08fc4e9bfafde413d1bff4",
+      "observed": {
+        "names": [
+          {
+            "name": "Relative",
+            "scope": null,
+            "origin": "$Data.$A$1",
+            "reference": "$Data.$A1",
+            "expression": null
+          },
+          {
+            "name": "RelativeColumn",
+            "scope": null,
+            "origin": "$Data.$A$1",
+            "reference": "$Data.A$1",
+            "expression": null
+          },
+          {
+            "name": "Scoped",
+            "scope": null,
+            "origin": "$Data.$A$1",
+            "reference": null,
+            "expression": "100"
+          },
+          {
+            "name": "Unqualified",
+            "scope": null,
+            "origin": "$Data.$A$1",
+            "reference": ".$A1",
+            "expression": null
+          },
+          {
+            "name": "Scoped",
+            "scope": "Data",
+            "origin": "$Data.$A$1",
+            "reference": null,
+            "expression": "10"
+          },
+          {
+            "name": "Scoped",
+            "scope": "Second",
+            "origin": "$Data.$A$1",
+            "reference": null,
+            "expression": "20"
+          }
+        ],
+        "sheets": {
+          "Data": {
+            "C2": {
+              "formula": "of:=Relative",
+              "value": "20"
+            },
+            "C3": {
+              "formula": "of:=Relative",
+              "value": "30"
+            },
+            "D3": {
+              "formula": "of:=RelativeColumn",
+              "value": "400"
+            },
+            "C4": {
+              "formula": "of:=Unqualified",
+              "value": "44"
+            },
+            "D4": {
+              "formula": "of:=Scoped",
+              "value": "10"
+            }
+          },
+          "Second": {
+            "C2": {
+              "formula": "of:=Relative",
+              "value": "20"
+            },
+            "C3": {
+              "formula": "of:=Relative",
+              "value": "30"
+            },
+            "D3": {
+              "formula": "of:=RelativeColumn",
+              "value": "400"
+            },
+            "C4": {
+              "formula": "of:=Unqualified",
+              "value": "444"
+            },
+            "D4": {
+              "formula": "of:=Scoped",
+              "value": "20"
+            }
+          },
+          "Third": {
+            "C2": {
+              "formula": "of:=Relative",
+              "value": "20"
+            },
+            "C3": {
+              "formula": "of:=Relative",
+              "value": "30"
+            },
+            "D3": {
+              "formula": "of:=RelativeColumn",
+              "value": "400"
+            },
+            "C4": {
+              "formula": "of:=Unqualified",
+              "value": "4444"
+            },
+            "D4": {
+              "formula": "of:=Scoped",
+              "value": "100"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

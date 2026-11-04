@@ -119,6 +119,8 @@ export function readWorkbook(opc: OpcPackage): NativeWorkbook {
     attributes(node, ["name", "localSheetId", "hidden", "comment", "function", "vbProcedure", "xlm"]);
     if (node.content.some(item => typeof item !== "string")) fail(node, "Defined name content must be text.");
     if (boolean(node, "function") || boolean(node, "vbProcedure") || boolean(node, "xlm")) unsupported(node, "Macro names are not supported.");
+    // Native defined-name offsets use A1, not the selected cell or active tab;
+    // see the independent pinned-Calc name-origin probes in scripts/.
     const name = spreadsheetText(value(node, "name") ?? "", node, 255), expression = "=" + text(node), origin = { row: 0, column: 0 }, ast = parseWorkbookFormula(expression, origin);
     const index = value(node, "localSheetId") === undefined ? undefined : integer(node, "localSheetId", 0, sheets.length - 1), scope = index === undefined ? undefined : sheets[index]!;
     const key = JSON.stringify([index ?? null, name.toUpperCase()]);
