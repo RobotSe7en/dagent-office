@@ -19,6 +19,10 @@ describe("worksheet chart object and style mapping", () => {
     expect(charts[0]?.categories?.expression).toBe("=Data!$A$2:$A$4");
     expect(charts[0]?.series[0]?.name).toMatchObject({ kind: "reference", reference: { expression: "=Data!$B$1" } });
     expect(charts[0]?.series[0]?.values).toMatchObject({ expression: "=Data!$B$2:$B$4", valueType: "number", cache: { state: "imported" } });
+    const sheetId = snapshot.metadata.workbook.activeSheetId;
+    const bound = model.resolveReference(charts[0]!.series[0]!.values.expression, { sheetId, row: 0, column: 0 });
+    expect(bound).toEqual({ kind: "ranges", areas: [{ sheetId, from: { row: 1, column: 1 }, to: { row: 3, column: 1 } }] });
+    expect(model.readWindow({ sheetId, row: 1, column: 1, rows: 3, columns: 1 }).map(cell => cell.value)).toEqual([2, 5, 8].map(value => ({ type: "number", value })));
     for (const chart of charts) { expect(model.getNode(chart.titleNodeId!)?.text).toBe("图表 " + chart.kind); expect(chart.legend).toBe("bottom"); }
     expect(openDocument(model.serialize(), { kind: "workbook" }).snapshot()).toEqual(snapshot);
   });
@@ -28,6 +32,9 @@ describe("worksheet chart object and style mapping", () => {
     const chart = model.snapshot().metadata.workbook.charts![0]!;
     expect(chart.titleNodeId).toBeUndefined(); expect(chart.titleCssClass).toBeDefined(); expect(chart.titleReference).toMatchObject({ expression: "=Data!$A$1", cache: { state: "imported" } });
     expect(chart.numberFormat).toBe("0%"); expect(model.getNode(chart.nodeId)?.text).toBe("");
+    const sheetId = model.snapshot().metadata.workbook.activeSheetId;
+    expect(model.resolveReference(chart.titleReference!.expression, { sheetId, row: 0, column: 0 })).toEqual({ kind: "ranges", areas: [{ sheetId, from: { row: 0, column: 0 }, to: { row: 0, column: 0 } }] });
+    expect(model.getCell(sheetId, 0, 0)?.value).toEqual({ type: "text", value: "季度" });
     expect(model.snapshot().styles[0]?.css).toContain('--office-axis-number-format-source-linked:false');
   });
   it("retains the selected modern leader-line flag and rejects conflicting or unknown extensions", async () => {

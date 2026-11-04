@@ -5,6 +5,7 @@ import type { DocumentEvent } from "./contracts/events.js";
 import type { ContextStyle, DocumentInteractionRequest, EditProposal } from "./contracts/interaction.js";
 import type { ContentOperationName, DocumentTransaction } from "./contracts/operations.js";
 import type { PresentationInteractionRequest,PresentationEditProposal,PresentationOperationName } from "./contracts/presentation-interaction.js";
+import type { WorkbookReferenceLocation, WorkbookReferenceResult } from "./workbook/reference.js";
 
 export type DeepReadonly<Value> = Value extends readonly (infer Item)[]
   ? readonly DeepReadonly<Item>[]
@@ -91,6 +92,8 @@ export interface WorkbookModel {
   getNode(nodeId: string): DocumentNode | undefined;
   getCell(sheetId: string, row: number, column: number): WorkbookCell | undefined;
   readWindow(window: WorkbookWindow): readonly WorkbookCell[];
+  /** Resolve source ranges without evaluating formulas or expanding cells. */
+  resolveReference(expression: string, origin: WorkbookReferenceLocation): WorkbookReferenceResult;
   serialize(): DocumentPackage;
 }
 export type DocumentModel = ContentDocumentModel | WorkbookModel;

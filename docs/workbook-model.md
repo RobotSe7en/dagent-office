@@ -16,11 +16,14 @@ if (model.kind === "workbook") {
   const cells = model.readWindow({ sheetId, row: 0, column: 0, rows: 40, columns: 20 });
   // 新建工作簿没有实际单元格，cells 为空；未存储的坐标是隐式空白。
   model.getCell(sheetId, 0, 0);
+  model.resolveReference("=A1:B20", { sheetId, row: 0, column: 0 });
   openDocument(model.serialize(), { kind: "workbook" });
 }
 ```
 
 可选 `kind` 参数是预期格式断言，不做转换；不匹配即失败，并帮助 TypeScript 收窄返回类型。`createDocumentSession` 当前明确拒绝工作簿，直到 R3-08 读取门槛之后开放编辑。Playground 编辑器和 Node 转换目前也拒绝工作簿，不把它当成空白 Word。
+
+`resolveReference` 根据本模型的工作表、名称和智能表，返回有序源区域、引用错误或明确的未解析原因；不展开单元格、不求值，也不使用图表缓存。返回的联合区域保留顺序和重复覆盖，调用者不能直接当作集合去重。具体支持和预算见[引用基础](workbook-formulas.md)。
 
 ## 文件与来源
 

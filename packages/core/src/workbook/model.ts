@@ -12,6 +12,7 @@ import { validateWorkbookContent } from "./content.js";
 import { createFormulaTemplatePool } from "./formula.js";
 import { CHUNK_ROWS, CHUNK_COLUMNS, MAX_SHEET_COLUMNS, MAX_SHEET_ROWS, indexWorkbookChunk, decodeWorkbookCell } from "./chunk-index.js";
 import type { ChunkIndex } from "./chunk-index.js";
+import { WorkbookReferences } from "./reference.js";
 
 export const DEFAULT_WORKBOOK_READ_LIMITS: WorkbookReadLimits = Object.freeze({
   maxCells: 250_000, maxFormulas: 25_000, maxWindowCells: 5000, maxFormulaTemplates: 25_000, maxFormulaKeyCodeUnits: 4 * 1024 * 1024,
@@ -54,6 +55,7 @@ export function openWorkbookModel(files: Map<string, Uint8Array>, manifest: Work
     }
   }
   const snapshot: WorkbookSnapshot = freeze({ manifest, metadata, annotations, styles, ...(content ? { content: { path: manifest.content!, html: content.html } } : {}) });
+  const references = new WorkbookReferences(snapshot.metadata.workbook);
   if (content) files.set(manifest.content!, encode(content.html));
   files.set("manifest.json", encode(JSON.stringify(manifest)));
   files.set(manifest.metadata, encode(JSON.stringify(metadata))); files.set(manifest.annotations, encode(JSON.stringify(annotations)));
@@ -81,6 +83,7 @@ export function openWorkbookModel(files: Map<string, Uint8Array>, manifest: Work
   return Object.freeze({
     kind: "workbook", snapshot: () => snapshot, getNode: (nodeId: string) => content?.getNode(nodeId),
     readWindow,
+    resolveReference: references.resolve.bind(references),
     getCell: (sheetId: string, row: number, column: number) => readWindow({ sheetId, row, column, rows: 1, columns: 1 })[0],
     serialize: () => new Map([...Array.from(files, ([path, bytes]) => [path, new Uint8Array(bytes)] as const), ...chunks.map(chunk => [chunk.path, chunk.index.serialize()] as const)]),
   });

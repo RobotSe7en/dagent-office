@@ -23,6 +23,7 @@ export { DEFAULT_WORKBOOK_READ_LIMITS } from "./workbook/model.js";
 export { parseFormula as parseWorkbookFormula } from "./workbook/formula.js";
 export type { FormulaExpression as WorkbookFormulaExpression, FormulaOrigin as WorkbookFormulaOrigin } from "./workbook/formula.js";
 export { printFormula as printWorkbookFormula } from "./workbook/formula-print.js";
+export type { WorkbookReferenceLocation, WorkbookReferenceArea, WorkbookReferenceResult } from "./workbook/reference.js";
 export { createSharedFormulaTable as createSharedWorkbookFormulas } from "./workbook/shared-formula.js";
 export type { SharedFormulaTable as SharedWorkbookFormulas } from "./workbook/shared-formula.js";
 export { readPresentationGeometry,isPresentationCommentPoint } from "./document/presentation.js";
