@@ -9,6 +9,7 @@ import type { WorkbookViewport } from "../../../packages/render/src/workbook/vie
 import { measureNumberDisplay } from "../../../packages/render/src/workbook/number-layout.js";
 import { formatGeneralNumber } from "../../../packages/core/src/workbook/format-general.js";
 import { measureWorkbookColumnFont } from "../../../packages/render/src/workbook/column-font.js";
+import { resolvedWorkbookColor } from "../../../packages/render/src/workbook/color.js";
 
 const encode = (text: string) => new TextEncoder().encode(text);
 async function main() {
@@ -89,6 +90,22 @@ async function main() {
       const actual = Math.max(...spans.map(span => span.getBoundingClientRect().width)); for (const span of spans) span.remove();
       const unrelatedUnchanged = unrelated.style.fontFamily === originalFamily; unrelated.remove();
       return { measured, fallback, actual, unrelatedUnchanged, retainedProbes: container.querySelectorAll('.normal-metric').length };
+    },
+    colorMeasurement() {
+      const wrapper = document.createElement('div'); wrapper.style.setProperty('--office-theme-accent1', '#4472c4'); container.append(wrapper);
+      const values: (string | undefined)[] = [], errors: string[] = []; let unchanged = true;
+      try {
+        for (const [color, tint, nativeAlpha] of [['var(--office-theme-accent1)', '.4', '0'], ['var(--office-theme-accent1)', '-.2', '128'], ['currentColor', '0', '255'], ['red', '0', ''], ['rgba(20,40,60,.5)', '0', ''], ['hsl(120,100%,50%)', '0', ''], ['', '', '']]) {
+          const node = document.createElement('span'); node.style.color = 'rgb(20,40,60)';
+          node.style.setProperty('--office-cell-fill-color', color!); node.style.setProperty('--office-cell-fill-tint', tint!); node.style.setProperty('--office-cell-fill-native-alpha', nativeAlpha!); wrapper.append(node);
+          const before = node.style.cssText; values.push(resolvedWorkbookColor(document, getComputedStyle(node), '--office-cell-fill')); unchanged &&= before === node.style.cssText;
+        }
+        for (const [color, tint] of [['not-a-color', '0'], ['red', '1px'], ['red', '2']]) {
+          const node = document.createElement('span'); node.style.setProperty('--office-cell-fill-color', color!); node.style.setProperty('--office-cell-fill-tint', tint!); wrapper.append(node);
+          try { resolvedWorkbookColor(document, getComputedStyle(node), '--office-cell-fill'); } catch (error) { errors.push((error as { code: string }).code); }
+        }
+        return { values, errors, unchanged };
+      } finally { wrapper.remove(); }
     },
     dispose() { loader.dispose(); container.remove(); style.remove(); },
   };

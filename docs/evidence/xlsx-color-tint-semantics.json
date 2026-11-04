@@ -1,0 +1,769 @@
+{
+  "scope": "Native Calc SpreadsheetML HLS tint observations. Continuous HLS conversion differs at some 8-bit rounding ties by at most one channel unit; it is not a byte-exact native-color or Excel/WPS visual acceptance claim.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "sourceSha256": "413b4722b961ca9a5ad01da097d0ade673ea8462395d31f5839af328d4763bb7",
+  "localeEnvironment": {
+    "LC_ALL": "C.UTF-8",
+    "LANG": "C.UTF-8",
+    "TZ": "UTC"
+  },
+  "samples": [
+    {
+      "rgb": "#000000",
+      "tint": -1,
+      "native": "#000000",
+      "continuousHls": "#000000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#000000",
+      "tint": -0.8,
+      "native": "#000000",
+      "continuousHls": "#000000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#000000",
+      "tint": -0.5,
+      "native": "#000000",
+      "continuousHls": "#000000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#000000",
+      "tint": -0.2,
+      "native": "#000000",
+      "continuousHls": "#000000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#000000",
+      "tint": 0,
+      "native": "#000000",
+      "continuousHls": "#000000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#000000",
+      "tint": 0.2,
+      "native": "#333333",
+      "continuousHls": "#333333",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#000000",
+      "tint": 0.4,
+      "native": "#666666",
+      "continuousHls": "#666666",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#000000",
+      "tint": 0.8,
+      "native": "#cccccc",
+      "continuousHls": "#cccccc",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#000000",
+      "tint": 1,
+      "native": "#ffffff",
+      "continuousHls": "#ffffff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ffffff",
+      "tint": -1,
+      "native": "#000000",
+      "continuousHls": "#000000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ffffff",
+      "tint": -0.8,
+      "native": "#333333",
+      "continuousHls": "#333333",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ffffff",
+      "tint": -0.5,
+      "native": "#808080",
+      "continuousHls": "#808080",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ffffff",
+      "tint": -0.2,
+      "native": "#cccccc",
+      "continuousHls": "#cccccc",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ffffff",
+      "tint": 0,
+      "native": "#ffffff",
+      "continuousHls": "#ffffff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ffffff",
+      "tint": 0.2,
+      "native": "#ffffff",
+      "continuousHls": "#ffffff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ffffff",
+      "tint": 0.4,
+      "native": "#ffffff",
+      "continuousHls": "#ffffff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ffffff",
+      "tint": 0.8,
+      "native": "#ffffff",
+      "continuousHls": "#ffffff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ffffff",
+      "tint": 1,
+      "native": "#ffffff",
+      "continuousHls": "#ffffff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#4472c4",
+      "tint": -1,
+      "native": "#000000",
+      "continuousHls": "#000000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#4472c4",
+      "tint": -0.8,
+      "native": "#0d1728",
+      "continuousHls": "#0d1728",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#4472c4",
+      "tint": -0.5,
+      "native": "#203864",
+      "continuousHls": "#203864",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#4472c4",
+      "tint": -0.2,
+      "native": "#335aa1",
+      "continuousHls": "#335aa1",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#4472c4",
+      "tint": 0,
+      "native": "#4472c4",
+      "continuousHls": "#4472c4",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#4472c4",
+      "tint": 0.2,
+      "native": "#698ed0",
+      "continuousHls": "#698ed0",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#4472c4",
+      "tint": 0.4,
+      "native": "#8faadc",
+      "continuousHls": "#8faadc",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#4472c4",
+      "tint": 0.8,
+      "native": "#dae3f3",
+      "continuousHls": "#dae3f3",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#4472c4",
+      "tint": 1,
+      "native": "#ffffff",
+      "continuousHls": "#ffffff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ed7d31",
+      "tint": -1,
+      "native": "#000000",
+      "continuousHls": "#000000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ed7d31",
+      "tint": -0.8,
+      "native": "#351805",
+      "continuousHls": "#351805",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ed7d31",
+      "tint": -0.5,
+      "native": "#843c0b",
+      "continuousHls": "#843c0b",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ed7d31",
+      "tint": -0.2,
+      "native": "#d26012",
+      "continuousHls": "#d26012",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ed7d31",
+      "tint": 0,
+      "native": "#ed7d31",
+      "continuousHls": "#ed7d31",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ed7d31",
+      "tint": 0.2,
+      "native": "#f1975a",
+      "continuousHls": "#f1975a",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ed7d31",
+      "tint": 0.4,
+      "native": "#f4b183",
+      "continuousHls": "#f4b183",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ed7d31",
+      "tint": 0.8,
+      "native": "#fbe5d6",
+      "continuousHls": "#fbe5d6",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ed7d31",
+      "tint": 1,
+      "native": "#ffffff",
+      "continuousHls": "#ffffff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#70ad47",
+      "tint": -1,
+      "native": "#000000",
+      "continuousHls": "#000000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#70ad47",
+      "tint": -0.8,
+      "native": "#16230e",
+      "continuousHls": "#16230e",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#70ad47",
+      "tint": -0.5,
+      "native": "#385623",
+      "continuousHls": "#385723",
+      "maximumChannelDelta": 1
+    },
+    {
+      "rgb": "#70ad47",
+      "tint": -0.2,
+      "native": "#5a8a39",
+      "continuousHls": "#5a8a39",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#70ad47",
+      "tint": 0,
+      "native": "#70ad47",
+      "continuousHls": "#70ad47",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#70ad47",
+      "tint": 0.2,
+      "native": "#8cc168",
+      "continuousHls": "#8cc168",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#70ad47",
+      "tint": 0.4,
+      "native": "#a9d18e",
+      "continuousHls": "#a9d18e",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#70ad47",
+      "tint": 0.8,
+      "native": "#e2f0d9",
+      "continuousHls": "#e2f0d9",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#70ad47",
+      "tint": 1,
+      "native": "#ffffff",
+      "continuousHls": "#ffffff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ff0000",
+      "tint": -1,
+      "native": "#000000",
+      "continuousHls": "#000000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ff0000",
+      "tint": -0.8,
+      "native": "#330000",
+      "continuousHls": "#330000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ff0000",
+      "tint": -0.5,
+      "native": "#800000",
+      "continuousHls": "#800000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ff0000",
+      "tint": -0.2,
+      "native": "#cc0000",
+      "continuousHls": "#cc0000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ff0000",
+      "tint": 0,
+      "native": "#ff0000",
+      "continuousHls": "#ff0000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ff0000",
+      "tint": 0.2,
+      "native": "#ff3333",
+      "continuousHls": "#ff3333",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ff0000",
+      "tint": 0.4,
+      "native": "#ff6666",
+      "continuousHls": "#ff6666",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ff0000",
+      "tint": 0.8,
+      "native": "#ffcccc",
+      "continuousHls": "#ffcccc",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#ff0000",
+      "tint": 1,
+      "native": "#ffffff",
+      "continuousHls": "#ffffff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#00ff00",
+      "tint": -1,
+      "native": "#000000",
+      "continuousHls": "#000000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#00ff00",
+      "tint": -0.8,
+      "native": "#003300",
+      "continuousHls": "#003300",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#00ff00",
+      "tint": -0.5,
+      "native": "#008000",
+      "continuousHls": "#008000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#00ff00",
+      "tint": -0.2,
+      "native": "#00cc00",
+      "continuousHls": "#00cc00",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#00ff00",
+      "tint": 0,
+      "native": "#00ff00",
+      "continuousHls": "#00ff00",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#00ff00",
+      "tint": 0.2,
+      "native": "#33ff33",
+      "continuousHls": "#33ff33",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#00ff00",
+      "tint": 0.4,
+      "native": "#66ff66",
+      "continuousHls": "#66ff66",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#00ff00",
+      "tint": 0.8,
+      "native": "#ccffcc",
+      "continuousHls": "#ccffcc",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#00ff00",
+      "tint": 1,
+      "native": "#ffffff",
+      "continuousHls": "#ffffff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#0000ff",
+      "tint": -1,
+      "native": "#000000",
+      "continuousHls": "#000000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#0000ff",
+      "tint": -0.8,
+      "native": "#000033",
+      "continuousHls": "#000033",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#0000ff",
+      "tint": -0.5,
+      "native": "#000080",
+      "continuousHls": "#000080",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#0000ff",
+      "tint": -0.2,
+      "native": "#0000cc",
+      "continuousHls": "#0000cc",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#0000ff",
+      "tint": 0,
+      "native": "#0000ff",
+      "continuousHls": "#0000ff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#0000ff",
+      "tint": 0.2,
+      "native": "#3333ff",
+      "continuousHls": "#3333ff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#0000ff",
+      "tint": 0.4,
+      "native": "#6666ff",
+      "continuousHls": "#6666ff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#0000ff",
+      "tint": 0.8,
+      "native": "#ccccff",
+      "continuousHls": "#ccccff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#0000ff",
+      "tint": 1,
+      "native": "#ffffff",
+      "continuousHls": "#ffffff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#123456",
+      "tint": -1,
+      "native": "#000000",
+      "continuousHls": "#000000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#123456",
+      "tint": -0.8,
+      "native": "#040a11",
+      "continuousHls": "#040a11",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#123456",
+      "tint": -0.5,
+      "native": "#091a2b",
+      "continuousHls": "#091a2b",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#123456",
+      "tint": -0.2,
+      "native": "#0e2a45",
+      "continuousHls": "#0e2a45",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#123456",
+      "tint": 0,
+      "native": "#123456",
+      "continuousHls": "#123456",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#123456",
+      "tint": 0.2,
+      "native": "#205d99",
+      "continuousHls": "#205d99",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#123456",
+      "tint": 0.4,
+      "native": "#3685d5",
+      "continuousHls": "#3685d5",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#123456",
+      "tint": 0.8,
+      "native": "#bcd6f1",
+      "continuousHls": "#bcd6f1",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#123456",
+      "tint": 1,
+      "native": "#ffffff",
+      "continuousHls": "#ffffff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#888888",
+      "tint": -1,
+      "native": "#000000",
+      "continuousHls": "#000000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#888888",
+      "tint": -0.8,
+      "native": "#1b1b1b",
+      "continuousHls": "#1b1b1b",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#888888",
+      "tint": -0.5,
+      "native": "#444444",
+      "continuousHls": "#444444",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#888888",
+      "tint": -0.2,
+      "native": "#6d6d6d",
+      "continuousHls": "#6d6d6d",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#888888",
+      "tint": 0,
+      "native": "#888888",
+      "continuousHls": "#888888",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#888888",
+      "tint": 0.2,
+      "native": "#a0a0a0",
+      "continuousHls": "#a0a0a0",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#888888",
+      "tint": 0.4,
+      "native": "#b8b8b8",
+      "continuousHls": "#b8b8b8",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#888888",
+      "tint": 0.8,
+      "native": "#e7e7e7",
+      "continuousHls": "#e7e7e7",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#888888",
+      "tint": 1,
+      "native": "#ffffff",
+      "continuousHls": "#ffffff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#7f8081",
+      "tint": -1,
+      "native": "#000000",
+      "continuousHls": "#000000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#7f8081",
+      "tint": -0.8,
+      "native": "#191a1a",
+      "continuousHls": "#191a1a",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#7f8081",
+      "tint": -0.5,
+      "native": "#3f4041",
+      "continuousHls": "#3f4041",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#7f8081",
+      "tint": -0.2,
+      "native": "#666667",
+      "continuousHls": "#666667",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#7f8081",
+      "tint": 0,
+      "native": "#7f8081",
+      "continuousHls": "#7f8081",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#7f8081",
+      "tint": 0.2,
+      "native": "#99999a",
+      "continuousHls": "#99999a",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#7f8081",
+      "tint": 0.4,
+      "native": "#b2b3b3",
+      "continuousHls": "#b2b3b3",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#7f8081",
+      "tint": 0.8,
+      "native": "#e5e6e6",
+      "continuousHls": "#e5e6e6",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#7f8081",
+      "tint": 1,
+      "native": "#ffffff",
+      "continuousHls": "#ffffff",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#c1ab29",
+      "tint": -1,
+      "native": "#000000",
+      "continuousHls": "#000000",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#c1ab29",
+      "tint": -0.8,
+      "native": "#272208",
+      "continuousHls": "#272208",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#c1ab29",
+      "tint": -0.5,
+      "native": "#605514",
+      "continuousHls": "#615614",
+      "maximumChannelDelta": 1
+    },
+    {
+      "rgb": "#c1ab29",
+      "tint": -0.2,
+      "native": "#9a8921",
+      "continuousHls": "#9a8921",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#c1ab29",
+      "tint": 0,
+      "native": "#c1ab29",
+      "continuousHls": "#c1ab29",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#c1ab29",
+      "tint": 0.2,
+      "native": "#d8c449",
+      "continuousHls": "#d8c449",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#c1ab29",
+      "tint": 0.4,
+      "native": "#e2d276",
+      "continuousHls": "#e2d276",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#c1ab29",
+      "tint": 0.8,
+      "native": "#f5f0d1",
+      "continuousHls": "#f5f0d1",
+      "maximumChannelDelta": 0
+    },
+    {
+      "rgb": "#c1ab29",
+      "tint": 1,
+      "native": "#ffffff",
+      "continuousHls": "#ffffff",
+      "maximumChannelDelta": 0
+    }
+  ]
+}

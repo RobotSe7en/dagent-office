@@ -9,6 +9,7 @@ interface GridHost {
   failedPaint(): boolean; dispose(): void;
   numericMeasurement(): Promise<{ rounded: { kind: string; text?: string }; scientific: { kind: string; text?: string }; actual: number; predicted: number; overflow: boolean; fill?: { kind: string; text?: string } }>;
   columnFontMeasurement(): Promise<{ measured: { cssClass: string; maximumDigitWidthPx: number; fonts: { requestedFamily: string; substituted: boolean }[] }; fallback: { cssClass: string; maximumDigitWidthPx: number }; actual: number; unrelatedUnchanged: boolean; retainedProbes: number }>;
+  colorMeasurement(): { values: (string | undefined)[]; errors: string[]; unchanged: boolean };
 }
 declare global { interface Window { workbookGridHost: GridHost } }
 let code = '';
@@ -63,4 +64,10 @@ test('column font metrics use their declared Normal font and keep legacy default
   expect(report.measured.fonts).toContainEqual(expect.objectContaining({ requestedFamily: 'Liberation Serif', substituted: false }));
   expect(Math.abs(report.actual - report.measured.maximumDigitWidthPx)).toBeLessThan(.1); expect(report.retainedProbes).toBe(0);
   expect(report.unrelatedUnchanged).toBe(true);
+});
+
+test('worksheet colors resolve theme variables and luminance without treating native ARGB bytes as opacity', async ({ page }) => {
+  const result = await page.evaluate(() => window.workbookGridHost.colorMeasurement());
+  expect(result.values).toEqual(['rgba(143,170,220,1)', 'rgba(51,90,161,1)', 'rgba(20,40,60,1)', 'rgba(255,0,0,1)', 'rgba(20,40,60,0.5)', 'rgba(0,255,0,1)', undefined]);
+  expect(result.errors).toEqual(['InvalidDocument', 'InvalidDocument', 'InvalidDocument']); expect(result.unchanged).toBe(true);
 });

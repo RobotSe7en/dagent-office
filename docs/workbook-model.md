@@ -64,6 +64,8 @@ General 的内部宽度适配已按 [Excel General 说明](https://support.micro
 
 原生样式适配已将 32 份样例的有效单元格字体、主题/索引颜色、纯色填充、边框、对齐及数字格式映射到可校验的 CSS/格式定义。主题引用、字体角色、原字体名及明暗参数保留为来源；色阶应用、精确边框和特殊对齐需要 R3-08 渲染器解析。原生命名样式定义及更新标记目前只在导入中间态保留，最终持久化取舍仍待产品决策，不能称为完整样式保真已通过。
 
+内部颜色显示已按 [SpreadsheetML 的 HLS 亮度规则](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.foregroundcolor?view=openxml-3.0.1)处理正负 tint，区别于 DrawingML 的 RGB tint/shade。浏览器解析源 CSS 中的主题/索引变量及当前文字颜色，保留源引用；原生 ARGB 高字节不作为单元格透明度。无效颜色或明暗参数明确失败。[108 个固定 Calc 颜色观测](evidence/xlsx-color-tint-semantics.json)与连续 HLS 转换的差别最多为一个 8 位通道单位，记录了舍入边界，不声称逐字节颜色一致；运行 `python3 scripts/check-xlsx-color-tints.py` 可复核。三浏览器另核对变量、颜色语法、透明度和无效值处理。
+
 DrawingML 主题的填充、背景填充、线条和效果列表也已映射为共享 CSS 定义，保留占位颜色与对象引用颜色的关系。复用 PPT 的颜色、填充和轮廓原语，Excel 边界额外检查属性、重复选择、颜色变换顺序及累计样式预算。非空对象默认定义、附加配色及未知扩展目前明确拒绝；本项验证覆盖全部 32 份样式来源，尚不代表绘图对象和预览已完成。
 
 `cellXfs` 的 `apply*` 标记控制后续命名样式修改是否覆盖单元格，而不是简单地关闭该格当前格式；实现据 [Microsoft 的 XF 说明](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/68362a4b-5589-4504-b566-e8154dce1de3)保留当前值与更新标记。索引色采用[标准映射](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.indexedcolors?view=openxml-2.8.1)，工作簿明暗参数保留 [HLS 亮度语义](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.foregroundcolor?view=openxml-3.0.1)。
