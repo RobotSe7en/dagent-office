@@ -72,6 +72,8 @@ General 的内部宽度适配已按 [Excel General 说明](https://support.micro
 
 原生样式适配已将 32 份样例的有效单元格字体、主题/索引颜色、纯色填充、边框、对齐及数字格式映射到可校验的 CSS/格式定义。主题引用、字体角色、原字体名及明暗参数保留为来源；色阶应用、精确边框和特殊对齐需要 R3-08 渲染器解析。原生命名样式定义及更新标记目前只在导入中间态保留，最终持久化取舍仍待产品决策，不能称为完整样式保真已通过。
 
+对齐缩进的原生读取范围为 0–255，251–255 不被截断或误拒绝，负数、小数及 256 明确失败；依据为 [MS-OI29500 v20260818 §2.1.693](https://officeprotocoldocs-f5hpbjgea6b8gneq.b02.azurefd.net/files/MS-OI29500/%5BMS-OI29500%5D.pdf#page=295)。实际缩进宽度仍需使用 Normal 字体的空格度量，在完整单元格布局中处理。
+
 内部颜色显示已按 [SpreadsheetML 的 HLS 亮度规则](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.foregroundcolor?view=openxml-3.0.1)处理正负 tint，区别于 DrawingML 的 RGB tint/shade。浏览器解析源 CSS 中的主题/索引变量及当前文字颜色，保留源引用；原生 ARGB 高字节不作为单元格透明度。无效颜色或明暗参数明确失败。[108 个固定 Calc 颜色观测](evidence/xlsx-color-tint-semantics.json)与连续 HLS 转换的差别最多为一个 8 位通道单位，记录了舍入边界，不声称逐字节颜色一致；运行 `python3 scripts/check-xlsx-color-tints.py` 可复核。三浏览器另核对变量、颜色语法、透明度和无效值处理。
 
 普通共享边框的内部选择器已对照[固定 Calc 的 14 类边框记录及 588 个 PDF 边界颜色结果](evidence/xlsx-border-semantics.json)：线宽等级优先，双线排在中等与粗线之间，同等级取物理下方/右方，因此 RTL 列轴会反转源顺序中的平局选择。两侧均无边框时不产生描边，不套用浏览器 CSS 表格的冲突规则。可运行 `python3 scripts/check-xlsx-borders.py` 重核；字体清单摘要、Office 归档及 PDF 工具环境随记录保存。独立描边层已按 PDF 的点单位线宽、虚线节距和双线间隔核对，三浏览器另检查裁剪后虚线实线区域完全对应、抗锯齿透明度最多一个通道单位的变化及双线留空。它只接收已选择的物理边，条件格式、合并周界及最终网格组合仍未接入。Calc 将 `slantDashDot` 变为细虚线，这是外部生产者差异，不能把该输出作为斜线保真的证明，当前描边层明确拒绝该项；Excel/WPS 仍未实机核对。

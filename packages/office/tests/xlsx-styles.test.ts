@@ -64,4 +64,12 @@ describe("native workbook style tables", () => {
     for (const edit of edits) expect(() => new XlsxStyles(variant(edit), "xl/workbook.xml", 1_000_000)).toThrow();
     expect(() => new XlsxStyles(variant(s => s), "xl/workbook.xml", 100)).toThrowError(expect.objectContaining({ code: "ResourceLimitExceeded" }));
   });
+  it("accepts the documented native indentation boundary without truncating it", () => {
+    for (const indent of [250, 251, 255]) {
+      const styles = new XlsxStyles(variant(source => source.replace('<alignment horizontal="center"', `<alignment indent="${indent}" horizontal="center"`)), 'xl/workbook.xml', 1_000_000);
+      expect(styles.stylesheet()).toContain(`--office-cell-indent:${indent};`);
+    }
+    for (const indent of [-1, 256, 1.5]) expect(() => new XlsxStyles(variant(source => source.replace('<alignment horizontal="center"', `<alignment indent="${indent}" horizontal="center"`)), 'xl/workbook.xml', 1_000_000))
+      .toThrowError(expect.objectContaining({ code: 'InvalidDocument' }));
+  });
 });

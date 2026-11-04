@@ -22,7 +22,7 @@ export function alignmentDeclarations(node: XmlNode | undefined, full: boolean):
   for (const [key, property] of [["wrapText", "--office-cell-wrap"], ["shrinkToFit", "--office-cell-shrink-to-fit"], ["justifyLastLine", "--office-cell-justify-last-line"]] as const) {
     if (value(node, key) !== undefined || full) css[property] = String(boolean(node, key));
   }
-  if (node && value(node, "indent") !== undefined || full) css["--office-cell-indent"] = node ? String(integer(node, "indent", 0, 250, 0)) : "0";
+  if (node && value(node, "indent") !== undefined || full) css["--office-cell-indent"] = node ? String(integer(node, "indent", 0, 255, 0)) : "0";
   if (node && value(node, "relativeIndent") !== undefined) css["--office-cell-relative-indent"] = String(integer(node, "relativeIndent", -15, 15));
   if (node && value(node, "readingOrder") !== undefined || full) css["--office-cell-reading-order"] = ["context", "ltr", "rtl"][node ? integer(node, "readingOrder", 0, 2, 0) : 0]!;
   return css;
