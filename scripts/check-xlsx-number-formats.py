@@ -24,8 +24,10 @@ CASES = [(0, "yyyy-mm-dd"), (1, "yyyy-mm-dd"), (59, "yyyy-mm-dd"), (60, "yyyy-mm
          (1.005, "0.00"), (-1.005, "0.00"), (.47, "#.##"), (0, "#.##"), (0, "0.##"), (12345.678, "#,##0.00"),
          (-1234.5, "#,##0.00;[Red](#,##0.00)"), (0, '0.00;[Red](0.00);"—";@'), (12200000, '0.0,,"M"'),
          (1234, "00.0E+0"), (1234, "##0.0E+0"), (1234, "0.00E+00"), (1.25, "# ?/?"), (1.3, "# ??/??"),
-         (.5, "0.00%%"), (-1, "[>=100]0;[<0](0);0"), (123456789012345, "General")]
+         (.5, "0.00%%"), (-1, "[>=100]0;[<0](0);0"), (123456789012345, "General"),
+         (0, "0#"), (0, "0?"), (0, "?0#"), (0, "00?"), (0, "?#0"), (0, "0.?0"), (1, "0.?0"), (0, ".00"), (0, "0.#0"), (1, "0.#0")]
 COMMON = ["00:00", "00:00:59", "00:00:59.90", "12:00 PM", "30:00", "1.01", "-1.01", ".47", "", "0", "12,345.68", "(1,234.50)", "—", "12.2M", "12.3E+2", "1.2E+3", "1.23E+03", "1 1/4", "1 \u20073/10", "50.00%%", "(1)", "123456789012345"]
+COMMON += ["0", "0\u2007", "\u20070", "00\u2007", "\u20070", "0.\u20070", "1.\u20070", ".00", "0.00", "1.00"]
 
 
 def module(name, path):
@@ -84,7 +86,7 @@ def main():
     report = {"scope": "Native Calc formatted text only. Historical 1900 dates differ from Excel; SDK date semantics await user decision. Number-format rendering, fitting, fonts and Excel/WPS remain unverified.", "office": BUILD, "archiveSha256": ARCHIVE_HASH, "localeEnvironment": {"LC_ALL": "C.UTF-8", "LANG": "C.UTF-8", "TZ": "UTC"}, "cases": cases}
     if args.record: REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     else: assert json.loads(REPORT.read_text()) == report, "Native number-format observations changed"
-    print("Verified 54 formatted cells across two date systems with pinned Calc")
+    print(f"Verified {len(CASES) * 2} formatted cells across two date systems with pinned Calc")
 
 
 if __name__ == "__main__": main()

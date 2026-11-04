@@ -10,7 +10,7 @@
   "cases": [
     {
       "dateSystem": "1900",
-      "sourceSha256": "71cf8e225227af2a60b9aba426d473cb2ad13402930626471713ad51fc16efad",
+      "sourceSha256": "ca2b013e1e31dc37d31c381c9db3a791e4e2043da1247aad2ce72380e2a57680",
       "samples": [
         {
           "value": 0,
@@ -146,12 +146,62 @@
           "value": 123456789012345,
           "code": "General",
           "text": "123456789012345"
+        },
+        {
+          "value": 0,
+          "code": "0#",
+          "text": "0"
+        },
+        {
+          "value": 0,
+          "code": "0?",
+          "text": "0 "
+        },
+        {
+          "value": 0,
+          "code": "?0#",
+          "text": " 0"
+        },
+        {
+          "value": 0,
+          "code": "00?",
+          "text": "00 "
+        },
+        {
+          "value": 0,
+          "code": "?#0",
+          "text": " 0"
+        },
+        {
+          "value": 0,
+          "code": "0.?0",
+          "text": "0. 0"
+        },
+        {
+          "value": 1,
+          "code": "0.?0",
+          "text": "1. 0"
+        },
+        {
+          "value": 0,
+          "code": ".00",
+          "text": ".00"
+        },
+        {
+          "value": 0,
+          "code": "0.#0",
+          "text": "0.00"
+        },
+        {
+          "value": 1,
+          "code": "0.#0",
+          "text": "1.00"
         }
       ]
     },
     {
       "dateSystem": "1904",
-      "sourceSha256": "968816ce07301d9d33dfc2339dd452bfa81a356c142a86fe40c334e1b325aa0d",
+      "sourceSha256": "0c835114ee4c5dc9e86ad3a2b282668bc7e53c2693971d1be3b0fb52c5f48208",
       "samples": [
         {
           "value": 0,
@@ -287,6 +337,56 @@
           "value": 123456789012345,
           "code": "General",
           "text": "123456789012345"
+        },
+        {
+          "value": 0,
+          "code": "0#",
+          "text": "0"
+        },
+        {
+          "value": 0,
+          "code": "0?",
+          "text": "0 "
+        },
+        {
+          "value": 0,
+          "code": "?0#",
+          "text": " 0"
+        },
+        {
+          "value": 0,
+          "code": "00?",
+          "text": "00 "
+        },
+        {
+          "value": 0,
+          "code": "?#0",
+          "text": " 0"
+        },
+        {
+          "value": 0,
+          "code": "0.?0",
+          "text": "0. 0"
+        },
+        {
+          "value": 1,
+          "code": "0.?0",
+          "text": "1. 0"
+        },
+        {
+          "value": 0,
+          "code": ".00",
+          "text": ".00"
+        },
+        {
+          "value": 0,
+          "code": "0.#0",
+          "text": "0.00"
+        },
+        {
+          "value": 1,
+          "code": "0.#0",
+          "text": "1.00"
         }
       ]
     }
