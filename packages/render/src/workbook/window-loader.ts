@@ -1,5 +1,5 @@
 import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookCell, WorkbookSheet, WorkbookSnapshot } from "@dagent-office/core";
+import type { DeepReadonly, WorkbookCell, WorkbookCoordinate, WorkbookSheet, WorkbookSnapshot } from "@dagent-office/core";
 import type { AxisDimensions } from "./dimensions.js";
 import { projectWorkbookCells, projectionWindows, WorkbookMergeIndex } from "./projection.js";
 import type { WorkbookGridCell } from "./projection.js";
@@ -7,15 +7,18 @@ import { workbookViewport } from "./viewport.js";
 import type { WorkbookViewport, WorkbookViewportLayout } from "./viewport.js";
 import { cellSourceUnits, checkWindowIdentity, windowLimits } from "./window-source.js";
 import type { WorkbookWindowLimits, WorkbookWindowSource } from "./window-source.js";
+import { workbookAppearanceCoordinates } from "./appearance-coordinates.js";
 
 export interface WorkbookWindowFrame {
   readonly sheetId: string;
   readonly documentId: string; readonly revision: number;
   readonly layout: WorkbookViewportLayout;
   readonly projections: readonly WorkbookGridCell[];
+  readonly sourceCoordinates: readonly Readonly<WorkbookCoordinate>[];
   readonly storedCellCount: number;
   getCell(row: number, column: number): WorkbookCell | undefined;
 }
+export interface WorkbookViewportReadLimits extends WorkbookWindowLimits { readonly maxSourceCells: number }
 
 /** At most one accepted viewport is retained. A complete frame replaces the old
  * frame atomically; cancellation, errors and late responses cannot splice old
@@ -24,11 +27,14 @@ export class WorkbookWindowLoader {
   private controller: AbortController | undefined;
   private accepted: WorkbookWindowFrame | undefined;
   private readonly limits: WorkbookWindowLimits;
+  private readonly maxSourceCells: number;
   private readonly snapshot: WorkbookSnapshot;
   private readonly sheets: ReadonlyMap<string, { readonly sheet: DeepReadonly<WorkbookSheet>; readonly merges: WorkbookMergeIndex }>;
   private disposed = false;
-  constructor(private readonly source: WorkbookWindowSource, limits: Partial<WorkbookWindowLimits> = {}) {
-    this.limits = windowLimits(limits); this.snapshot = source.snapshot;
+  constructor(private readonly source: WorkbookWindowSource, limits: Partial<WorkbookViewportReadLimits> = {}) {
+    const { maxSourceCells = 25_000, ...window } = limits;
+    if (!Number.isSafeInteger(maxSourceCells) || maxSourceCells < 1) throw new DocumentError("InvalidOperation", "Worksheet source-cell limits must be positive safe integers.");
+    this.maxSourceCells = maxSourceCells; this.limits = windowLimits(window); this.snapshot = source.snapshot;
     this.sheets = new Map(this.snapshot.metadata.workbook.sheets.map(sheet => [sheet.sheetId, { sheet, merges: new WorkbookMergeIndex(sheet.merges) }]));
   }
   get frame(): WorkbookWindowFrame | undefined { return this.accepted; }
@@ -39,14 +45,15 @@ export class WorkbookWindowLoader {
     if (!entry) throw new DocumentError("InvalidOperation", "The requested worksheet is not part of this workbook source.");
     const layout = workbookViewport(dimensions, entry.sheet.frozen, viewport, this.limits.maxCells);
     const projections = projectWorkbookCells(dimensions, layout, entry.merges, this.limits.maxCells);
-    const windows = Object.freeze(projectionWindows(sheetId, projections).map(window => Object.freeze(window)));
+    const sourceCoordinates = workbookAppearanceCoordinates(dimensions, layout, projections, entry.merges, this.maxSourceCells);
+    const windows = Object.freeze(projectionWindows(sheetId, sourceCoordinates).map(window => Object.freeze(window)));
     const { documentId, revision } = this.snapshot.manifest;
     try {
-      const response = windows.length ? await this.source.read(Object.freeze({ documentId, revision, windows, ...this.limits }), controller.signal) : { documentId, revision, cells: [] };
+      const response = windows.length ? await this.source.read(Object.freeze({ documentId, revision, windows, maxCells: this.maxSourceCells, maxCodeUnits: this.limits.maxCodeUnits }), controller.signal) : { documentId, revision, cells: [] };
       if (controller.signal.aborted || this.disposed || this.controller !== controller) return false;
       checkWindowIdentity(response, this.snapshot);
-      if (response.cells.length > this.limits.maxCells) throw new DocumentError("ResourceLimitExceeded", "Workbook window response exceeds its cell budget.");
-      const expected = new Set(projections.map(cell => cell.row * 16_384 + cell.column)), cells = new Map<number, WorkbookCell>(); let units = 0;
+      if (response.cells.length > this.maxSourceCells) throw new DocumentError("ResourceLimitExceeded", "Workbook window response exceeds its source-cell budget.");
+      const expected = new Set(sourceCoordinates.map(cell => cell.row * 16_384 + cell.column)), cells = new Map<number, WorkbookCell>(); let units = 0;
       for (const cell of response.cells) {
         const key = cell.row * 16_384 + cell.column;
         if (cell.sheetId !== sheetId || !Number.isSafeInteger(cell.row) || !Number.isSafeInteger(cell.column) || cell.row < 0 || cell.row >= 1_048_576 || cell.column < 0 || cell.column >= 16_384 || !expected.has(key) || cells.has(key)) throw new DocumentError("InvalidDocument", "Workbook window response contains duplicate or unrequested coordinates.");
@@ -60,7 +67,7 @@ export class WorkbookWindowLoader {
       }
       Object.freeze(layout.panes); Object.freeze(layout);
       for (const cell of projections) { Object.freeze(cell.range.from); Object.freeze(cell.range.to); Object.freeze(cell.range); Object.freeze(cell.rect); Object.freeze(cell.clip); Object.freeze(cell); }
-      this.accepted = Object.freeze({ sheetId, documentId, revision, layout, projections: Object.freeze(projections), storedCellCount: cells.size,
+      this.accepted = Object.freeze({ sheetId, documentId, revision, layout, projections: Object.freeze(projections), sourceCoordinates, storedCellCount: cells.size,
         getCell: (row: number, column: number) => Number.isSafeInteger(row) && Number.isSafeInteger(column) && row >= 0 && row < 1_048_576 && column >= 0 && column < 16_384 ? cells.get(row * 16_384 + column) : undefined });
       return true;
     } catch (error) {

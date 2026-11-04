@@ -19,7 +19,9 @@ function source(merged = false) {
     metadata.workbook.sheets[0]!.frozen = { rows: 2, columns: 1 };
   }
   const path = 'sheets/sheet-1/0-0.html';
-  const html = '<!doctype html><html><head></head><body><table data-sheet-id="sheet-1" data-row="0" data-column="0"><tbody><tr data-row="0"><td data-column="0" data-value-type="text">首格😀</td></tr><tr data-row="9"><td data-column="9" data-value-type="number" data-value="42" data-formula="=40+2" data-cache-state="imported">42</td></tr></tbody></table></body></html>';
+  const html = '<!doctype html><html><head></head><body><table data-sheet-id="sheet-1" data-row="0" data-column="0"><tbody><tr data-row="0"><td data-column="0" data-value-type="text">首格😀</td></tr>'
+    + (merged ? '<tr data-row="6"><td data-column="6" data-value-type="blank" class="cell-default"></td></tr>' : '')
+    + '<tr data-row="9"><td data-column="9" data-value-type="number" data-value="42" data-formula="=40+2" data-cache-state="imported">42</td></tr></tbody></table></body></html>';
   const bytes = encode(html); files.set(path, bytes);
   manifest.chunks.push({ sheetId: 'sheet-1', row: 0, column: 0, path, sha256: createHash('sha256').update(bytes).digest('hex') });
   files.set('manifest.json', encode(JSON.stringify(manifest))); files.set(manifest.metadata, encode(JSON.stringify(metadata)));
@@ -32,14 +34,16 @@ function queued(input: WorkbookWindowSource) {
   return { provider, requests, complete };
 }
 describe('bounded immutable workbook viewport reads', () => {
-  it('queries one source anchor for four merged pane projections and keeps only stored cells', async () => {
+  it('keeps one content anchor for four merged pane projections and also reads covered border sources', async () => {
     const input = source(true), queries: WorkbookWindowRequest[] = [];
     const loader = new WorkbookWindowLoader({ snapshot: input.snapshot, read(request, signal) { queries.push(request); return input.read(request, signal); } }, { maxCells: 40 });
     expect(await loader.load('sheet-1', dimensions, viewport)).toBe(true);
     const frame = loader.frame!;
     expect(frame.projections.filter(cell => cell.row === 0 && cell.column === 0)).toHaveLength(4);
-    expect(queries[0]!.windows.reduce((sum, window) => sum + window.rows * window.columns, 0)).toBe(21);
-    expect(frame.storedCellCount).toBe(1); expect(frame.getCell(0, 0)?.text).toBe('首格😀');
+    expect(queries[0]!.windows.reduce((sum, window) => sum + window.rows * window.columns, 0)).toBe(frame.sourceCoordinates.length);
+    expect(frame.sourceCoordinates.length).toBeGreaterThan(21); expect(frame.sourceCoordinates.length).toBeLessThan(100);
+    expect(frame.storedCellCount).toBe(2); expect(frame.getCell(0, 0)?.text).toBe('首格😀');
+    expect(frame.getCell(6, 6)).toMatchObject({ value: { type: 'blank' }, cssClass: 'cell-default' });
     expect(frame.getCell(7, 3)).toBeUndefined(); expect(frame.getCell(-1, 16_384)).toBeUndefined();
     expect(Object.isFrozen(frame.projections[0]?.clip)).toBe(true); expect(Object.isFrozen(frame.layout.panes[0]?.rows)).toBe(true);
     expect(Object.isFrozen(frame.getCell(0, 0)?.value)).toBe(true); expect(Object.isFrozen(queries[0]?.windows)).toBe(true);
@@ -93,6 +97,19 @@ describe('bounded immutable workbook viewport reads', () => {
     const queue = queued(source()), loader = new WorkbookWindowLoader(queue.provider);
     expect(await loader.load('sheet-1', dimensions, { ...viewport, widthPt: 0 })).toBe(true);
     expect(queue.requests).toHaveLength(0); expect(loader.frame?.projections).toEqual([]);
+  });
+  it('checks the separate appearance-source budget before sending a query', async () => {
+    const queue = queued(source(true)), loader = new WorkbookWindowLoader(queue.provider, { maxCells: 40, maxSourceCells: 21 });
+    await expect(loader.load('sheet-1', dimensions, viewport)).rejects.toMatchObject({ code: 'ResourceLimitExceeded' });
+    expect(queue.requests).toHaveLength(0); expect(loader.frame).toBeUndefined();
+    expect(() => new WorkbookWindowLoader(queue.provider, { maxSourceCells: 0 })).toThrowError(expect.objectContaining({ code: 'InvalidOperation' }));
+  });
+  it('retains the accepted frame when a later viewport exceeds its appearance budget', async () => {
+    const input = source(), requests: WorkbookWindowRequest[] = [], loader = new WorkbookWindowLoader({ snapshot: input.snapshot, read(request, signal) { requests.push(request); return input.read(request, signal); } }, { maxSourceCells: 5 });
+    expect(await loader.load('sheet-1', dimensions, { widthPt: 20, heightPt: 10, scrollLeftPt: 0, scrollTopPt: 0 })).toBe(true);
+    const accepted = loader.frame;
+    await expect(loader.load('sheet-1', dimensions, viewport)).rejects.toMatchObject({ code: 'ResourceLimitExceeded' });
+    expect(requests).toHaveLength(1); expect(loader.frame).toBe(accepted);
   });
   it('yields bounded subwindows so cancellation interrupts a direct large read before its next allocation', async () => {
     const model = openDocument(createWorkbook({ documentId: 'cancel' }), { kind: 'workbook' });

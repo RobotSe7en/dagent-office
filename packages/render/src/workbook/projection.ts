@@ -83,7 +83,7 @@ export function projectWorkbookCells(dimensions: { readonly rows: AxisDimensions
 
 /** Query each displayed source anchor once, including hidden/offscreen merge
  * origins. Adjacent anchors share windows; covered cells are not read. */
-export function projectionWindows(sheetId: string, cells: readonly WorkbookGridCell[]): readonly WorkbookWindow[] {
+export function projectionWindows(sheetId: string, cells: readonly Readonly<WorkbookCoordinate>[]): readonly WorkbookWindow[] {
   const byRow = new Map<number, Set<number>>();
   for (const cell of cells) {
     let columns = byRow.get(cell.row); if (!columns) { columns = new Set(); byRow.set(cell.row, columns); }

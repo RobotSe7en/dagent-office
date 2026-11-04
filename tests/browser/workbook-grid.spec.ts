@@ -88,7 +88,7 @@ test('bounded cell style projection retains source chunk selectors, rich runs an
   expect(report).toMatchObject({ text: '一万行', italic: 'italic', background: 'rgb(68, 114, 196)', bold: '700', foreground: 'rgb(153, 51, 85)', plain: 'cell-default', blockRow: '9984', row: '9999', bound: true, disposed: true, noPartial: true, retained: 0 });
   expect(report.font).toContain('Liberation Serif'); expect(parseFloat(report.size)).toBeCloseTo(13 / .75, 1);
   expect(report.before).toContain('<span class="rich-style">一万</span>行');
-  expect(report.rejected).toEqual(Array(5).fill('InvalidDocument')); expect(requests).toEqual([]);
+  expect(report.rejected).toEqual(Array(6).fill('InvalidDocument')); expect(requests).toEqual([]);
   expect(await page.evaluate(() => (window as unknown as Record<string, unknown>).workbookInjected)).toBeUndefined();
 });
 

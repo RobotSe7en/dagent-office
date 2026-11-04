@@ -1,0 +1,1289 @@
+{
+  "scope": "Pinned Calc observations for isolated borders on a 3x3 merged range and stronger outside neighbors, in LTR/RTL. Inconsistent source perimeter styles are intentional; this does not establish Excel/WPS precedence or SDK rendering policy.",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "environment": {
+    "libreOffice": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+    "poppler": "pdfinfo version 25.03.0\nCopyright 2005-2025 The Poppler Developers - http://poppler.freedesktop.org\nCopyright 1996-2011, 2022 Glyph & Cog, LLC",
+    "fontconfig": "fontconfig version 2.15.0",
+    "dpi": 96,
+    "fontManifestSha256": "c69980066d071afe8f248c7774f5265a6eb82990db1f2f78843580df8d2325b4",
+    "fontCount": 424
+  },
+  "localeEnvironment": {
+    "LC_ALL": "C.UTF-8",
+    "LANG": "C.UTF-8",
+    "TZ": "UTC"
+  },
+  "sourceSha256": "e547bc6ad3155145ccdcb956bb5ae783cc68c12bd0d9204f8a23d5be6372cae9",
+  "pdfPages": 80,
+  "cases": [
+    {
+      "name": "L-A1-left",
+      "rightToLeft": false,
+      "sourceCell": "A1",
+      "sourceSide": "left",
+      "pdfStrokes": [
+        {
+          "owner": "merged",
+          "from": [
+            35.929684,
+            36.367275
+          ],
+          "to": [
+            35.929684,
+            126.234453
+          ],
+          "widthPt": 0.749154
+        }
+      ]
+    },
+    {
+      "name": "L-A1-right",
+      "rightToLeft": false,
+      "sourceCell": "A1",
+      "sourceSide": "right",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-A1-top",
+      "rightToLeft": false,
+      "sourceCell": "A1",
+      "sourceSide": "top",
+      "pdfStrokes": [
+        {
+          "owner": "merged",
+          "from": [
+            35.929684,
+            36.367275
+          ],
+          "to": [
+            255.246066,
+            36.367275
+          ],
+          "widthPt": 0.749154
+        }
+      ]
+    },
+    {
+      "name": "L-A1-bottom",
+      "rightToLeft": false,
+      "sourceCell": "A1",
+      "sourceSide": "bottom",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-B1-left",
+      "rightToLeft": false,
+      "sourceCell": "B1",
+      "sourceSide": "left",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-B1-right",
+      "rightToLeft": false,
+      "sourceCell": "B1",
+      "sourceSide": "right",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-B1-top",
+      "rightToLeft": false,
+      "sourceCell": "B1",
+      "sourceSide": "top",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-B1-bottom",
+      "rightToLeft": false,
+      "sourceCell": "B1",
+      "sourceSide": "bottom",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-C1-left",
+      "rightToLeft": false,
+      "sourceCell": "C1",
+      "sourceSide": "left",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-C1-right",
+      "rightToLeft": false,
+      "sourceCell": "C1",
+      "sourceSide": "right",
+      "pdfStrokes": [
+        {
+          "owner": "merged",
+          "from": [
+            255.246066,
+            36.367275
+          ],
+          "to": [
+            255.246066,
+            126.234453
+          ],
+          "widthPt": 0.749154
+        }
+      ]
+    },
+    {
+      "name": "L-C1-top",
+      "rightToLeft": false,
+      "sourceCell": "C1",
+      "sourceSide": "top",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-C1-bottom",
+      "rightToLeft": false,
+      "sourceCell": "C1",
+      "sourceSide": "bottom",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-A2-left",
+      "rightToLeft": false,
+      "sourceCell": "A2",
+      "sourceSide": "left",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-A2-right",
+      "rightToLeft": false,
+      "sourceCell": "A2",
+      "sourceSide": "right",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-A2-top",
+      "rightToLeft": false,
+      "sourceCell": "A2",
+      "sourceSide": "top",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-A2-bottom",
+      "rightToLeft": false,
+      "sourceCell": "A2",
+      "sourceSide": "bottom",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-B2-left",
+      "rightToLeft": false,
+      "sourceCell": "B2",
+      "sourceSide": "left",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-B2-right",
+      "rightToLeft": false,
+      "sourceCell": "B2",
+      "sourceSide": "right",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-B2-top",
+      "rightToLeft": false,
+      "sourceCell": "B2",
+      "sourceSide": "top",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-B2-bottom",
+      "rightToLeft": false,
+      "sourceCell": "B2",
+      "sourceSide": "bottom",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-C2-left",
+      "rightToLeft": false,
+      "sourceCell": "C2",
+      "sourceSide": "left",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-C2-right",
+      "rightToLeft": false,
+      "sourceCell": "C2",
+      "sourceSide": "right",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-C2-top",
+      "rightToLeft": false,
+      "sourceCell": "C2",
+      "sourceSide": "top",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-C2-bottom",
+      "rightToLeft": false,
+      "sourceCell": "C2",
+      "sourceSide": "bottom",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-A3-left",
+      "rightToLeft": false,
+      "sourceCell": "A3",
+      "sourceSide": "left",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-A3-right",
+      "rightToLeft": false,
+      "sourceCell": "A3",
+      "sourceSide": "right",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-A3-top",
+      "rightToLeft": false,
+      "sourceCell": "A3",
+      "sourceSide": "top",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-A3-bottom",
+      "rightToLeft": false,
+      "sourceCell": "A3",
+      "sourceSide": "bottom",
+      "pdfStrokes": [
+        {
+          "owner": "merged",
+          "from": [
+            35.929684,
+            126.234453
+          ],
+          "to": [
+            255.246066,
+            126.234453
+          ],
+          "widthPt": 0.749154
+        }
+      ]
+    },
+    {
+      "name": "L-B3-left",
+      "rightToLeft": false,
+      "sourceCell": "B3",
+      "sourceSide": "left",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-B3-right",
+      "rightToLeft": false,
+      "sourceCell": "B3",
+      "sourceSide": "right",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-B3-top",
+      "rightToLeft": false,
+      "sourceCell": "B3",
+      "sourceSide": "top",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-B3-bottom",
+      "rightToLeft": false,
+      "sourceCell": "B3",
+      "sourceSide": "bottom",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-C3-left",
+      "rightToLeft": false,
+      "sourceCell": "C3",
+      "sourceSide": "left",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-C3-right",
+      "rightToLeft": false,
+      "sourceCell": "C3",
+      "sourceSide": "right",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-C3-top",
+      "rightToLeft": false,
+      "sourceCell": "C3",
+      "sourceSide": "top",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-C3-bottom",
+      "rightToLeft": false,
+      "sourceCell": "C3",
+      "sourceSide": "bottom",
+      "pdfStrokes": []
+    },
+    {
+      "name": "L-neighbor-top",
+      "rightToLeft": false,
+      "outsideCell": "C1",
+      "outsideSide": "bottom",
+      "mergedSide": "top",
+      "pdfStrokes": [
+        {
+          "owner": "merged",
+          "from": [
+            108.667956,
+            51.343836
+          ],
+          "to": [
+            182.140605,
+            51.343836
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            109.035144,
+            50.976649
+          ],
+          "to": [
+            109.035144,
+            141.578201
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "neighbor",
+          "from": [
+            182.140605,
+            51.343836
+          ],
+          "to": [
+            255.246066,
+            51.343836
+          ],
+          "widthPt": 1.748036
+        },
+        {
+          "owner": "merged",
+          "from": [
+            255.246066,
+            51.343836
+          ],
+          "to": [
+            328.718715,
+            51.343836
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            328.351527,
+            50.976649
+          ],
+          "to": [
+            328.351527,
+            141.578201
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            108.667956,
+            141.211014
+          ],
+          "to": [
+            328.718715,
+            141.211014
+          ],
+          "widthPt": 0.749154
+        }
+      ]
+    },
+    {
+      "name": "L-neighbor-bottom",
+      "rightToLeft": false,
+      "outsideCell": "C5",
+      "outsideSide": "top",
+      "mergedSide": "bottom",
+      "pdfStrokes": [
+        {
+          "owner": "merged",
+          "from": [
+            108.667956,
+            51.343836
+          ],
+          "to": [
+            328.718715,
+            51.343836
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            109.035144,
+            50.976649
+          ],
+          "to": [
+            109.035144,
+            141.578201
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            328.351527,
+            50.976649
+          ],
+          "to": [
+            328.351527,
+            141.578201
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            108.667956,
+            141.211014
+          ],
+          "to": [
+            182.140605,
+            141.211014
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "neighbor",
+          "from": [
+            182.140605,
+            141.211014
+          ],
+          "to": [
+            255.246066,
+            141.211014
+          ],
+          "widthPt": 1.748036
+        },
+        {
+          "owner": "merged",
+          "from": [
+            255.246066,
+            141.211014
+          ],
+          "to": [
+            328.718715,
+            141.211014
+          ],
+          "widthPt": 0.749154
+        }
+      ]
+    },
+    {
+      "name": "L-neighbor-left",
+      "rightToLeft": false,
+      "outsideCell": "A3",
+      "outsideSide": "right",
+      "mergedSide": "left",
+      "pdfStrokes": [
+        {
+          "owner": "merged",
+          "from": [
+            108.667956,
+            51.343836
+          ],
+          "to": [
+            328.718715,
+            51.343836
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            109.035144,
+            50.976649
+          ],
+          "to": [
+            109.035144,
+            81.300864
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            328.351527,
+            50.976649
+          ],
+          "to": [
+            328.351527,
+            141.578201
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "neighbor",
+          "from": [
+            109.035144,
+            81.300864
+          ],
+          "to": [
+            109.035144,
+            111.253985
+          ],
+          "widthPt": 1.748036
+        },
+        {
+          "owner": "merged",
+          "from": [
+            109.035144,
+            111.253985
+          ],
+          "to": [
+            109.035144,
+            141.578201
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            108.667956,
+            141.211014
+          ],
+          "to": [
+            328.718715,
+            141.211014
+          ],
+          "widthPt": 0.749154
+        }
+      ]
+    },
+    {
+      "name": "L-neighbor-right",
+      "rightToLeft": false,
+      "outsideCell": "E3",
+      "outsideSide": "left",
+      "mergedSide": "right",
+      "pdfStrokes": [
+        {
+          "owner": "merged",
+          "from": [
+            108.667956,
+            51.343836
+          ],
+          "to": [
+            328.718715,
+            51.343836
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            109.035144,
+            50.976649
+          ],
+          "to": [
+            109.035144,
+            141.578201
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            328.351527,
+            50.976649
+          ],
+          "to": [
+            328.351527,
+            81.300864
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "neighbor",
+          "from": [
+            328.351527,
+            81.300864
+          ],
+          "to": [
+            328.351527,
+            111.253985
+          ],
+          "widthPt": 1.748036
+        },
+        {
+          "owner": "merged",
+          "from": [
+            328.351527,
+            111.253985
+          ],
+          "to": [
+            328.351527,
+            141.578201
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            108.667956,
+            141.211014
+          ],
+          "to": [
+            328.718715,
+            141.211014
+          ],
+          "widthPt": 0.749154
+        }
+      ]
+    },
+    {
+      "name": "R-A1-left",
+      "rightToLeft": true,
+      "sourceCell": "A1",
+      "sourceSide": "left",
+      "pdfStrokes": [
+        {
+          "owner": "merged",
+          "from": [
+            558.566346,
+            36.367275
+          ],
+          "to": [
+            558.566346,
+            126.234453
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            558.566346,
+            36.367275
+          ],
+          "to": [
+            558.566346,
+            126.234453
+          ],
+          "widthPt": 0.749154
+        }
+      ]
+    },
+    {
+      "name": "R-A1-right",
+      "rightToLeft": true,
+      "sourceCell": "A1",
+      "sourceSide": "right",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-A1-top",
+      "rightToLeft": true,
+      "sourceCell": "A1",
+      "sourceSide": "top",
+      "pdfStrokes": [
+        {
+          "owner": "merged",
+          "from": [
+            339.249963,
+            36.367275
+          ],
+          "to": [
+            558.566346,
+            36.367275
+          ],
+          "widthPt": 0.749154
+        }
+      ]
+    },
+    {
+      "name": "R-A1-bottom",
+      "rightToLeft": true,
+      "sourceCell": "A1",
+      "sourceSide": "bottom",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-B1-left",
+      "rightToLeft": true,
+      "sourceCell": "B1",
+      "sourceSide": "left",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-B1-right",
+      "rightToLeft": true,
+      "sourceCell": "B1",
+      "sourceSide": "right",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-B1-top",
+      "rightToLeft": true,
+      "sourceCell": "B1",
+      "sourceSide": "top",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-B1-bottom",
+      "rightToLeft": true,
+      "sourceCell": "B1",
+      "sourceSide": "bottom",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-C1-left",
+      "rightToLeft": true,
+      "sourceCell": "C1",
+      "sourceSide": "left",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-C1-right",
+      "rightToLeft": true,
+      "sourceCell": "C1",
+      "sourceSide": "right",
+      "pdfStrokes": [
+        {
+          "owner": "merged",
+          "from": [
+            339.249963,
+            36.367275
+          ],
+          "to": [
+            339.249963,
+            126.234453
+          ],
+          "widthPt": 0.749154
+        }
+      ]
+    },
+    {
+      "name": "R-C1-top",
+      "rightToLeft": true,
+      "sourceCell": "C1",
+      "sourceSide": "top",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-C1-bottom",
+      "rightToLeft": true,
+      "sourceCell": "C1",
+      "sourceSide": "bottom",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-A2-left",
+      "rightToLeft": true,
+      "sourceCell": "A2",
+      "sourceSide": "left",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-A2-right",
+      "rightToLeft": true,
+      "sourceCell": "A2",
+      "sourceSide": "right",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-A2-top",
+      "rightToLeft": true,
+      "sourceCell": "A2",
+      "sourceSide": "top",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-A2-bottom",
+      "rightToLeft": true,
+      "sourceCell": "A2",
+      "sourceSide": "bottom",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-B2-left",
+      "rightToLeft": true,
+      "sourceCell": "B2",
+      "sourceSide": "left",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-B2-right",
+      "rightToLeft": true,
+      "sourceCell": "B2",
+      "sourceSide": "right",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-B2-top",
+      "rightToLeft": true,
+      "sourceCell": "B2",
+      "sourceSide": "top",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-B2-bottom",
+      "rightToLeft": true,
+      "sourceCell": "B2",
+      "sourceSide": "bottom",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-C2-left",
+      "rightToLeft": true,
+      "sourceCell": "C2",
+      "sourceSide": "left",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-C2-right",
+      "rightToLeft": true,
+      "sourceCell": "C2",
+      "sourceSide": "right",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-C2-top",
+      "rightToLeft": true,
+      "sourceCell": "C2",
+      "sourceSide": "top",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-C2-bottom",
+      "rightToLeft": true,
+      "sourceCell": "C2",
+      "sourceSide": "bottom",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-A3-left",
+      "rightToLeft": true,
+      "sourceCell": "A3",
+      "sourceSide": "left",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-A3-right",
+      "rightToLeft": true,
+      "sourceCell": "A3",
+      "sourceSide": "right",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-A3-top",
+      "rightToLeft": true,
+      "sourceCell": "A3",
+      "sourceSide": "top",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-A3-bottom",
+      "rightToLeft": true,
+      "sourceCell": "A3",
+      "sourceSide": "bottom",
+      "pdfStrokes": [
+        {
+          "owner": "merged",
+          "from": [
+            339.249963,
+            126.234453
+          ],
+          "to": [
+            558.566346,
+            126.234453
+          ],
+          "widthPt": 0.749154
+        }
+      ]
+    },
+    {
+      "name": "R-B3-left",
+      "rightToLeft": true,
+      "sourceCell": "B3",
+      "sourceSide": "left",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-B3-right",
+      "rightToLeft": true,
+      "sourceCell": "B3",
+      "sourceSide": "right",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-B3-top",
+      "rightToLeft": true,
+      "sourceCell": "B3",
+      "sourceSide": "top",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-B3-bottom",
+      "rightToLeft": true,
+      "sourceCell": "B3",
+      "sourceSide": "bottom",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-C3-left",
+      "rightToLeft": true,
+      "sourceCell": "C3",
+      "sourceSide": "left",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-C3-right",
+      "rightToLeft": true,
+      "sourceCell": "C3",
+      "sourceSide": "right",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-C3-top",
+      "rightToLeft": true,
+      "sourceCell": "C3",
+      "sourceSide": "top",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-C3-bottom",
+      "rightToLeft": true,
+      "sourceCell": "C3",
+      "sourceSide": "bottom",
+      "pdfStrokes": []
+    },
+    {
+      "name": "R-neighbor-top",
+      "rightToLeft": true,
+      "outsideCell": "C1",
+      "outsideSide": "bottom",
+      "mergedSide": "top",
+      "pdfStrokes": [
+        {
+          "owner": "merged",
+          "from": [
+            265.749971,
+            51.343836
+          ],
+          "to": [
+            339.22262,
+            51.343836
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            266.117159,
+            50.976649
+          ],
+          "to": [
+            266.117159,
+            141.578201
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "neighbor",
+          "from": [
+            339.22262,
+            51.343836
+          ],
+          "to": [
+            412.32808,
+            51.343836
+          ],
+          "widthPt": 1.748036
+        },
+        {
+          "owner": "merged",
+          "from": [
+            412.32808,
+            51.343836
+          ],
+          "to": [
+            485.800728,
+            51.343836
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            485.433541,
+            50.976649
+          ],
+          "to": [
+            485.433541,
+            141.578201
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            265.749971,
+            141.211014
+          ],
+          "to": [
+            485.800728,
+            141.211014
+          ],
+          "widthPt": 0.749154
+        }
+      ]
+    },
+    {
+      "name": "R-neighbor-bottom",
+      "rightToLeft": true,
+      "outsideCell": "C5",
+      "outsideSide": "top",
+      "mergedSide": "bottom",
+      "pdfStrokes": [
+        {
+          "owner": "merged",
+          "from": [
+            265.749971,
+            51.343836
+          ],
+          "to": [
+            485.800728,
+            51.343836
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            266.117159,
+            50.976649
+          ],
+          "to": [
+            266.117159,
+            141.578201
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            485.433541,
+            50.976649
+          ],
+          "to": [
+            485.433541,
+            141.578201
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            265.749971,
+            141.211014
+          ],
+          "to": [
+            339.22262,
+            141.211014
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "neighbor",
+          "from": [
+            339.22262,
+            141.211014
+          ],
+          "to": [
+            412.32808,
+            141.211014
+          ],
+          "widthPt": 1.748036
+        },
+        {
+          "owner": "merged",
+          "from": [
+            412.32808,
+            141.211014
+          ],
+          "to": [
+            485.800728,
+            141.211014
+          ],
+          "widthPt": 0.749154
+        }
+      ]
+    },
+    {
+      "name": "R-neighbor-left",
+      "rightToLeft": true,
+      "outsideCell": "A3",
+      "outsideSide": "right",
+      "mergedSide": "left",
+      "pdfStrokes": [
+        {
+          "owner": "merged",
+          "from": [
+            265.749971,
+            51.343836
+          ],
+          "to": [
+            485.800728,
+            51.343836
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            266.117159,
+            50.976649
+          ],
+          "to": [
+            266.117159,
+            141.578201
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            485.433541,
+            50.976649
+          ],
+          "to": [
+            485.433541,
+            81.300864
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "neighbor",
+          "from": [
+            485.433541,
+            81.300864
+          ],
+          "to": [
+            485.433541,
+            111.253985
+          ],
+          "widthPt": 1.748036
+        },
+        {
+          "owner": "merged",
+          "from": [
+            485.433541,
+            111.253985
+          ],
+          "to": [
+            485.433541,
+            141.578201
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            265.749971,
+            141.211014
+          ],
+          "to": [
+            485.800728,
+            141.211014
+          ],
+          "widthPt": 0.749154
+        }
+      ]
+    },
+    {
+      "name": "R-neighbor-right",
+      "rightToLeft": true,
+      "outsideCell": "E3",
+      "outsideSide": "left",
+      "mergedSide": "right",
+      "pdfStrokes": [
+        {
+          "owner": "merged",
+          "from": [
+            265.749971,
+            51.343836
+          ],
+          "to": [
+            485.800728,
+            51.343836
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            266.117159,
+            50.976649
+          ],
+          "to": [
+            266.117159,
+            81.300864
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            485.433541,
+            50.976649
+          ],
+          "to": [
+            485.433541,
+            141.578201
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "neighbor",
+          "from": [
+            266.117159,
+            81.300864
+          ],
+          "to": [
+            266.117159,
+            111.253985
+          ],
+          "widthPt": 1.748036
+        },
+        {
+          "owner": "merged",
+          "from": [
+            266.117159,
+            111.253985
+          ],
+          "to": [
+            266.117159,
+            141.578201
+          ],
+          "widthPt": 0.749154
+        },
+        {
+          "owner": "merged",
+          "from": [
+            265.749971,
+            141.211014
+          ],
+          "to": [
+            485.800728,
+            141.211014
+          ],
+          "widthPt": 0.749154
+        }
+      ]
+    }
+  ]
+}

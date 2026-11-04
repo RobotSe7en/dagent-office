@@ -144,6 +144,9 @@ async function main() {
         const corrupt = { ...frame, getCell: (row: number, column: number) => row === 0 && column === 0 ? { ...original, html: '<td data-column="0" data-value-type="text">' + content + '</td>' } : frame.getCell(row, column) };
         try { new WorkbookCellSources(container, model.snapshot(), corrupt); } catch (error) { result.rejected.push((error as { code: string }).code); }
       }
+      const auxiliary = { ...frame, getCell: (row: number, column: number) => row === 6 && column === 6
+        ? { ...original, row, column, html: '<td data-column="6" data-value-type="text"><img src="https://example.invalid/workbook-injected"></td>' } : frame.getCell(row, column) };
+      try { new WorkbookCellSources(container, model.snapshot(), auxiliary); } catch (error) { result.rejected.push((error as { code: string }).code); }
       result.retained = container.querySelectorAll('[data-office-view="workbook-source-measurement"]').length;
       return result;
     },

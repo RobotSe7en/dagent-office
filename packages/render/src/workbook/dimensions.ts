@@ -46,6 +46,18 @@ export class AxisDimensions {
     const run = this.atIndex(index); return run.startPt + (index - run.from) * run.sizePt;
   }
   size(index: number): number { return this.atIndex(index).sizePt; }
+  /** Nearest displayed neighbor in source order, skipping whole hidden runs. */
+  neighbor(index: number, step: -1 | 1): number | undefined {
+    this.atIndex(index);
+    if (step !== -1 && step !== 1) invalid("Worksheet neighbor direction must be -1 or 1.");
+    let next = index + step;
+    while (next >= 0 && next < this.count) {
+      const run = this.atIndex(next);
+      if (run.sizePt > 0 && run.endPt > run.startPt) return next;
+      next = step === -1 ? run.from - 1 : run.to + 1;
+    }
+    return undefined;
+  }
   private indexIn(run: Segment, point: number): number {
     let index = Math.min(run.to, Math.max(run.from, run.from + Math.floor((point - run.startPt) / run.sizePt)));
     // Compare the canonical positions at an exact edge, avoiding an off-by-one

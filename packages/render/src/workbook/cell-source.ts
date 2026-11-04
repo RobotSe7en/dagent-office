@@ -29,7 +29,7 @@ export class WorkbookCellSources {
     let count = 1;
     const account = (amount: number): void => { count += amount; if (count > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Workbook source projection exceeds its node budget."); };
     const tables = new Map<number, { table: HTMLTableElement; body: HTMLTableSectionElement; rows: Map<number, HTMLTableRowElement> }>();
-    const coordinates = [...new Map(frame.projections.map(projection => [projection.row * 16_384 + projection.column, projection])).values()].sort((a, b) => a.row - b.row || a.column - b.column);
+    const coordinates = frame.sourceCoordinates;
     for (const coordinate of coordinates) {
       const { row, column } = coordinate, blockRow = Math.floor(row / 256) * 256, blockColumn = Math.floor(column / 32) * 32, blockKey = blockRow / 256 * 512 + blockColumn / 32;
       let chunk = tables.get(blockKey);
