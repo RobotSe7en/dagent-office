@@ -5,6 +5,8 @@ import { WorkbookConditionalRuleSchema, WorkbookDataValidationSchema } from "./w
 import { WorkbookAutoFilterSchema, WorkbookTableSchema, WorkbookTableStyleReferenceSchema, WorkbookTableStyleSchema } from "./workbook-tables.js";
 import { WorkbookCommentAuthorSchema, WorkbookCommentSchema } from "./workbook-comments.js";
 import { WorkbookObjectSchema } from "./workbook-drawing.js";
+import { WorkbookChartSchema } from "./workbook-charts.js";
+export * from "./workbook-charts.js";
 export * from "./workbook-comments.js";
 export * from "./workbook-drawing.js";
 export * from "./workbook-coordinates.js";
@@ -122,6 +124,7 @@ export const WorkbookMetadataSchema = z.strictObject({
   comments: z.array(WorkbookCommentSchema).optional(),
   objects: z.array(WorkbookObjectSchema).optional(),
   objectHyperlinks: z.array(WorkbookObjectHyperlinkSchema).optional(),
+  charts: z.array(WorkbookChartSchema).optional(),
   stories: z.array(z.strictObject({ storyId: IdentifierSchema, rootNodeId: IdentifierSchema, kind: z.literal("comment"), sheetId: IdentifierSchema })).optional(),
 });
 export type WorkbookMetadata = z.infer<typeof WorkbookMetadataSchema>;

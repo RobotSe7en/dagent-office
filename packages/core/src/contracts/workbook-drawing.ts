@@ -37,5 +37,6 @@ export const WorkbookObjectSchema = z.discriminatedUnion("kind", [
   z.strictObject({ ...object, kind: z.literal("text"), text: DrawingTextPropertiesSchema.optional() }),
   z.strictObject({ ...object, kind: z.literal("geometry"), preset: DrawingPresetSchema, text: DrawingTextPropertiesSchema.optional() }),
   z.strictObject({ ...object, kind: z.literal("image"), preferRelativeResize: z.boolean().optional() }),
+  z.strictObject({ ...object, kind: z.literal("chart"), chartId: IdentifierSchema }),
 ]);
 export type WorkbookObject = z.infer<typeof WorkbookObjectSchema>;

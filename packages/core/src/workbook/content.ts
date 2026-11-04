@@ -6,13 +6,15 @@ import { checkLimit, invalid, unsupported } from "../document/validation.js";
 import { validateWorkbookComments } from "./comments.js";
 import { checkNonOverlappingRanges } from "./ranges.js";
 import { workbookObjects } from "./objects.js";
+import { validateWorkbookCharts } from "./charts.js";
 
 /** Bounded rich comment content is separate from compact cell chunks, while
  * both remain parts of the same persisted HTML package and revision. */
 export function validateWorkbookContent(workbook: WorkbookMetadata, manifest: WorkbookManifest, annotations: readonly Annotation[], html: ParsedHtml | undefined, classes: ReadonlySet<string>, maxItems: number, priorItems = 0): void {
   const sheets = new Set(workbook.sheets.map(sheet => sheet.sheetId)), stories = new Map<string, string>(), storyIds = new Set<string>();
   const objects = workbookObjects(workbook, html);
-  let items = priorItems + objects.size + (workbook.objectHyperlinks?.length ?? 0);
+  const titles = new Set((workbook.charts ?? []).flatMap(chart => chart.titleNodeId ? [chart.titleNodeId] : []));
+  let items = priorItems + objects.size + (workbook.objectHyperlinks?.length ?? 0) + validateWorkbookCharts(workbook, objects, html, classes, maxItems);
   for (const story of workbook.stories ?? []) {
     if (storyIds.has(story.storyId) || stories.has(story.rootNodeId)) invalid("Workbook stories require unique identities.");
     const node = html?.peekNode(story.rootNodeId), parent = node?.parentNodeId ? html?.peekNode(node.parentNodeId) : undefined;
@@ -36,9 +38,10 @@ export function validateWorkbookContent(workbook: WorkbookMetadata, manifest: Wo
       while (parent && !stories.has(parent) && !objects.has(parent)) parent = html.peekNode(parent)!.parentNodeId;
       if (!parent) invalid("Workbook rich content must belong to a declared story or object.");
       const owner = objects.get(parent);
+      if (titles.has(id)) continue;
       if (node.tagName === "img" && owner?.kind === "image" && node.parentNodeId === parent) continue;
       if (!allowed.has(node.tagName) || owner?.kind === "image") unsupported("This workbook content node has no declared comment or object representation.");
-      if (objects.has(parent) && node.tagName === "p" && node.parentNodeId !== parent) invalid("Drawing paragraphs must be direct object children.");
+      if (objects.has(parent) && node.tagName === "p" && node.parentNodeId !== parent && !titles.has(node.parentNodeId!)) invalid("Drawing paragraphs must be direct object or title children.");
     }
   }
   const ids = new Set<string>(), usedBodies = new Set<string>();

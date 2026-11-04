@@ -38,7 +38,7 @@ export function workbookObjects(workbook: WorkbookMetadata, html: ParsedHtml | u
       if (node.childNodeIds.length !== 1 || html!.peekNode(node.childNodeIds[0]!)?.tagName !== "img") invalid("An image object requires exactly one image resource.");
       const crop = (side: string): number => Number(node.attributes[`data-office-crop-${side}`] ?? 0);
       if (crop("left") + crop("right") >= 1 || crop("top") + crop("bottom") >= 1) invalid("An image crop must retain a visible area.");
-    } else {
+    } else if (object.kind !== "chart") {
       if (node.childNodeIds.some(id => html!.peekNode(id)?.tagName !== "p") || object.text !== undefined && !node.childNodeIds.length) invalid("A drawing text body requires source paragraphs.");
       evaluatePresentationPreset(object.kind === "geometry" ? object.preset : "rect", 100, 100, adjustments);
     }
