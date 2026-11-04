@@ -18,14 +18,58 @@ export const WorkbookChunkDescriptorSchema = z.strictObject({
 });
 export type WorkbookChunkDescriptor = z.infer<typeof WorkbookChunkDescriptorSchema>;
 
+export const WorkbookDefinedNameSchema = z.strictObject({
+  nameId: IdentifierSchema, name: z.string().min(1).max(255), sheetId: IdentifierSchema.optional(),
+  expression: z.string().min(2).max(8192).startsWith("="), origin: WorkbookCoordinateSchema,
+  hidden: z.boolean().optional(), description: z.string().max(32767).optional(),
+});
+export type WorkbookDefinedName = z.infer<typeof WorkbookDefinedNameSchema>;
+export const WorkbookHyperlinkSchema = z.strictObject({
+  range: WorkbookRangeSchema, url: z.string().min(1).max(8192).optional(), location: z.string().min(1).max(8192).optional(),
+  tooltip: z.string().max(32767).optional(), display: z.string().max(32767).optional(),
+});
+export type WorkbookHyperlink = z.infer<typeof WorkbookHyperlinkSchema>;
+export const WorkbookPrintRunSchema = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("text"), text: z.string().max(32767), cssClass: IdentifierSchema.optional() }),
+  z.strictObject({ kind: z.literal("field"), field: z.enum(["page", "pages", "sheet", "file", "path", "date", "time"]), cssClass: IdentifierSchema.optional() }),
+]);
+export const WorkbookPrintBandSchema = z.strictObject({
+  left: z.array(WorkbookPrintRunSchema), center: z.array(WorkbookPrintRunSchema), right: z.array(WorkbookPrintRunSchema),
+});
+export const WorkbookPrintSchema = z.strictObject({
+  areas: z.array(WorkbookRangeSchema),
+  repeatRows: z.strictObject({ from: WorkbookRowSchema, to: WorkbookRowSchema }).optional(),
+  repeatColumns: z.strictObject({ from: WorkbookColumnSchema, to: WorkbookColumnSchema }).optional(),
+  paper: z.strictObject({ widthPt: z.number().positive().max(14400), heightPt: z.number().positive().max(14400) }).optional(),
+  orientation: z.enum(["default", "portrait", "landscape"]), pageOrder: z.enum(["downThenOver", "overThenDown"]),
+  marginsPt: z.strictObject({ left: z.number().nonnegative(), right: z.number().nonnegative(), top: z.number().nonnegative(), bottom: z.number().nonnegative(), header: z.number().nonnegative(), footer: z.number().nonnegative() }).optional(),
+  scale: z.discriminatedUnion("kind", [
+    z.strictObject({ kind: z.literal("percent"), percent: z.number().int().min(10).max(400) }),
+    z.strictObject({ kind: z.literal("fit"), width: z.number().int().min(0).max(32767), height: z.number().int().min(0).max(32767) }),
+  ]),
+  horizontalCentered: z.boolean(), verticalCentered: z.boolean(), gridLines: z.boolean(), headings: z.boolean(),
+  blackAndWhite: z.boolean(), firstPage: z.number().int().min(1).max(32767).optional(),
+  rowBreaks: z.array(z.strictObject({ before: WorkbookRowSchema.min(1), from: WorkbookColumnSchema, to: WorkbookColumnSchema })),
+  columnBreaks: z.array(z.strictObject({ before: WorkbookColumnSchema.min(1), from: WorkbookRowSchema, to: WorkbookRowSchema })),
+  headerFooter: z.strictObject({
+    differentFirst: z.boolean(), differentOddEven: z.boolean(), scaleWithDocument: z.boolean(), alignWithMargins: z.boolean(),
+    oddHeader: WorkbookPrintBandSchema, oddFooter: WorkbookPrintBandSchema,
+    evenHeader: WorkbookPrintBandSchema.optional(), evenFooter: WorkbookPrintBandSchema.optional(),
+    firstHeader: WorkbookPrintBandSchema.optional(), firstFooter: WorkbookPrintBandSchema.optional(),
+  }),
+});
+export type WorkbookPrint = z.infer<typeof WorkbookPrintSchema>;
+export type WorkbookPrintBand = z.infer<typeof WorkbookPrintBandSchema>;
+export type WorkbookPrintRun = z.infer<typeof WorkbookPrintRunSchema>;
+
 export const WorkbookNumberFormatSchema = z.strictObject({ formatId: IdentifierSchema, code: z.string().min(1).max(2048) });
 export const WorkbookRowDimensionSchema = z.strictObject({
   from: WorkbookRowSchema, to: WorkbookRowSchema,
-  heightPt: z.number().min(0).max(409).optional(), hidden: z.boolean().optional(), cssClass: IdentifierSchema.optional(),
+  heightPt: z.number().min(0).max(409).optional(), hidden: z.boolean().optional(), cssClass: IdentifierSchema.optional(), numberFormatId: IdentifierSchema.optional(),
 });
 export const WorkbookColumnDimensionSchema = z.strictObject({
   from: WorkbookColumnSchema, to: WorkbookColumnSchema,
-  width: z.number().min(0).max(255).optional(), unit: z.literal("characters"), hidden: z.boolean().optional(), cssClass: IdentifierSchema.optional(),
+  width: z.number().min(0).max(255).optional(), unit: z.literal("characters"), hidden: z.boolean().optional(), cssClass: IdentifierSchema.optional(), numberFormatId: IdentifierSchema.optional(),
 });
 export const WorkbookSheetSchema = z.strictObject({
   sheetId: IdentifierSchema,
@@ -33,7 +77,10 @@ export const WorkbookSheetSchema = z.strictObject({
   visibility: z.enum(["visible", "hidden", "veryHidden"]),
   defaultRowHeightPt: z.number().positive().max(409),
   defaultColumnWidth: z.number().positive().max(255),
+  defaultColumnWidthUnit: z.enum(["characters", "baseCharacters"]).optional(),
+  defaultRowsHidden: z.boolean().optional(),
   defaultCssClass: IdentifierSchema,
+  defaultNumberFormatId: IdentifierSchema.optional(),
   rowDimensions: z.array(WorkbookRowDimensionSchema),
   columnDimensions: z.array(WorkbookColumnDimensionSchema),
   merges: z.array(WorkbookRangeSchema),
@@ -41,6 +88,8 @@ export const WorkbookSheetSchema = z.strictObject({
   showGridLines: z.boolean(),
   rightToLeft: z.boolean(),
   tabColor: z.string().length(7).regex(/^#[a-fA-F0-9]{6}$/).optional(),
+  hyperlinks: z.array(WorkbookHyperlinkSchema).optional(),
+  print: WorkbookPrintSchema.optional(),
 });
 export type WorkbookSheet = z.infer<typeof WorkbookSheetSchema>;
 export const WorkbookMetadataSchema = z.strictObject({
@@ -49,6 +98,7 @@ export const WorkbookMetadataSchema = z.strictObject({
   activeSheetId: IdentifierSchema,
   sheets: z.array(WorkbookSheetSchema).min(1),
   numberFormats: z.array(WorkbookNumberFormatSchema),
+  names: z.array(WorkbookDefinedNameSchema).optional(),
 });
 export type WorkbookMetadata = z.infer<typeof WorkbookMetadataSchema>;
 export const WorkbookDocumentMetadataSchema = z.strictObject({
