@@ -21,6 +21,8 @@ import { readConditionalRules, readDataValidations } from "./rules.js";
 import { auditXlsxPackage } from "./package.js";
 import { readTables, readTableStyles } from "./tables.js";
 import type { NativeTableStyles } from "./tables.js";
+import { readThreadedComments } from "./threaded-comments.js";
+import type { NativeThreads } from "./threaded-comments.js";
 import { readAutoFilter } from "./filter.js";
 
 type RowDimension = WorkbookSheet["rowDimensions"][number];
@@ -44,6 +46,7 @@ export interface XlsxRecords {
   readonly tableStyles: NativeTableStyles;
   readonly chunks: WorkbookChunks;
   readonly sheets: readonly NativeSheetRecords[];
+  readonly threads: NativeThreads;
   readonly counts: { readonly cells: number; readonly formulas: number };
 }
 
@@ -98,5 +101,6 @@ export async function readXlsxRecords(bytes: Uint8Array, options: XlsxReadOption
     await control.checkpoint({ phase: "worksheet", completed: sheetBytes.length * 2, total: sheetBytes.length * 2, sheetId: source.sheetId });
   }
   chunks.finish(); strings.validateReferences();
-  return { opc, control, limits, native, styles, tableStyles, chunks, sheets, counts: { cells, formulas } };
+  const threads = readThreadedComments(opc, native.part, native.sheets, limits.source.maxNodes);
+  return { opc, control, limits, native, styles, tableStyles, chunks, sheets, threads, counts: { cells, formulas } };
 }

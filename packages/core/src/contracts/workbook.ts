@@ -3,6 +3,8 @@ import { IdentifierSchema, PackagePathSchema } from "./primitives.js";
 import { WorkbookColumnSchema, WorkbookCoordinateSchema, WorkbookRangeSchema, WorkbookRowSchema } from "./workbook-coordinates.js";
 import { WorkbookConditionalRuleSchema, WorkbookDataValidationSchema } from "./workbook-rules.js";
 import { WorkbookAutoFilterSchema, WorkbookTableSchema, WorkbookTableStyleReferenceSchema, WorkbookTableStyleSchema } from "./workbook-tables.js";
+import { WorkbookCommentAuthorSchema, WorkbookCommentSchema } from "./workbook-comments.js";
+export * from "./workbook-comments.js";
 export * from "./workbook-coordinates.js";
 export * from "./workbook-rules.js";
 export * from "./workbook-tables.js";
@@ -112,6 +114,8 @@ export const WorkbookMetadataSchema = z.strictObject({
   names: z.array(WorkbookDefinedNameSchema).optional(),
   tableStyles: z.array(WorkbookTableStyleSchema).optional(),
   defaultTableStyle: WorkbookTableStyleReferenceSchema.optional(),
+  commentAuthors: z.array(WorkbookCommentAuthorSchema).optional(),
+  comments: z.array(WorkbookCommentSchema).optional(),
   stories: z.array(z.strictObject({ storyId: IdentifierSchema, rootNodeId: IdentifierSchema, kind: z.literal("comment"), sheetId: IdentifierSchema })).optional(),
 });
 export type WorkbookMetadata = z.infer<typeof WorkbookMetadataSchema>;

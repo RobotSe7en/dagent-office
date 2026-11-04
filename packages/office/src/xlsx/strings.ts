@@ -14,7 +14,7 @@ export interface SharedStrings {
   validateReferences(): void;
 }
 const XML = "http://www.w3.org/XML/1998/namespace";
-function simpleText(node: XmlNode): string {
+export function spreadsheetStringText(node: XmlNode): string {
   for (const [key] of node.attrs) if (!key.startsWith("http://www.w3.org/2000/xmlns/ ") && key !== XML + " space") unsupported(node);
   const space = attr(node, "space", XML);
   if (space !== undefined && space !== "preserve" && space !== "default") fail(node, "Invalid native text whitespace mode.");
@@ -25,12 +25,12 @@ export function richString(node: XmlNode, styles: RichTextStyles): RichString {
   attributes(node, []); check(node, ["t", "r"], S);
   const simple = one(node, "t"), runs = elements(node, "r", S);
   if (simple && runs.length) fail(node, "A native string mixes plain and rich text containers.");
-  if (simple) { const source = simpleText(simple); return { html: textHtml(source), codeUnits: source.length }; }
+  if (simple) { const source = spreadsheetStringText(simple); return { html: textHtml(source), codeUnits: source.length }; }
   let html = "", codeUnits = 0;
   for (const run of runs) {
     attributes(run, []); check(run, ["rPr", "t"], S);
     const source = one(run, "t"); if (!source) fail(run, "A rich text run has no text element.");
-    const decoded = simpleText(source), properties = one(run, "rPr"); codeUnits += decoded.length;
+    const decoded = spreadsheetStringText(source), properties = one(run, "rPr"); codeUnits += decoded.length;
     if (codeUnits > 32767) throw new DocumentError("ResourceLimitExceeded", "A rich string exceeds its UTF-16 budget.");
     const cssClass = properties ? styles.run(properties) : undefined;
     html += cssClass ? `<span class="${textHtml(cssClass)}">${textHtml(decoded)}</span>` : textHtml(decoded);

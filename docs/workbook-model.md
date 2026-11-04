@@ -97,3 +97,7 @@ pnpm probe:workbook-model
 工作簿可选 `manifest.content` 指向同一包内的辅助 HTML，使用 `data-office-kind="workbook-content"` 根节点。它仅包含有界的富文本批注 story，不拼接单元格块，也不创建另一份工作表内容。`snapshot.content` 和 `getNode` 提供正文查询；每个元素有稳定身份，复用无脚本 HTML/CSS 校验。正文和回复各自拥有一个 story；孤立正文、重复归属、未知类名、未来修订和重叠锚点区域明确拒绝。元数据和批注记录共用累计条目限额。
 
 工作表删除后，显式 `needs_reanchor` 的批注可以保留原坐标、正文和回复，等待后续事务重定位；有效批注仍必须指向现有表。Word/PPT 不接受工作簿的 `cells` 锚点，包括需要恢复的项。当前仅实现读取及保存重开；事务映射、原生批注适配和交互验收仍在对应任务内。
+
+现代批注的内部读取现在校验工作簿人员、全局 GUID、按表回复图、原生可选时间、正文及解决状态；嵌套回复的父身份保存在格式元数据中。正文仍是辅助 HTML 的唯一可编辑来源。身份、作者显示名和回复关系在打开 HTML 包时重新校验，重复、循环、跨线程父引用及未来修订不接受；导入映射按条目核算重复作者文本后的 JSON 字节，防止共享长名称放大输出。32 份内部记录链路继续通过；固定 Calc 重存的现代线程丢失仍作为外部差异记录。
+
+经典兼容占位备注的核对、缺失定位后的处理及 VML 备注外观尚未完成，不能据此宣称两类原生批注已验收。非空提及/扩展当前明确拒绝，不会触发通知或忽略其元数据；完整读取边界仍需最终复核。格式依据为 Microsoft 的 [CT_ThreadedComment](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/42f9b03d-9662-4204-9783-dbeb324a691c)、[CT_Person](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/6274371e-7c5c-46e3-b661-cbeb4abfe968) 和[兼容占位备注](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/6383f002-c90b-401c-a1d7-66b97b14cb3e)。

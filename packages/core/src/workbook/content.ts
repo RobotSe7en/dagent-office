@@ -3,6 +3,7 @@ import type { WorkbookManifest } from "../contracts/document.js";
 import type { WorkbookMetadata } from "../contracts/workbook.js";
 import type { ParsedHtml } from "../document/html.js";
 import { checkLimit, invalid, unsupported } from "../document/validation.js";
+import { validateWorkbookComments } from "./comments.js";
 import { checkNonOverlappingRanges } from "./ranges.js";
 
 /** Bounded rich comment content is separate from compact cell chunks, while
@@ -52,5 +53,5 @@ export function validateWorkbookContent(workbook: WorkbookMetadata, manifest: Wo
     checkLimit(items, maxItems);
   }
   for (const id of stories.keys()) if (!usedBodies.has(id)) invalid("A workbook comment story is not owned by an annotation or reply.");
-  checkLimit(items, maxItems);
+  checkLimit(items + validateWorkbookComments(workbook, annotations, maxItems), maxItems);
 }

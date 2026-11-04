@@ -4,6 +4,8 @@ import { createWorkbook, openDocument } from "@dagent-office/core";
 import { readDocumentZip, writeOpcZip } from "../src/document-zip.js";
 import { readXlsxRecords } from "../src/xlsx/read.js";
 import type { XlsxRecords } from "../src/xlsx/read.js";
+import { WorkbookContent } from "../src/xlsx/content.js";
+import { mapThreadedComments } from "../src/xlsx/comment-mapping.js";
 import type { XlsxReadOptions } from "../src/xlsx/options.js";
 
 const encoder = new TextEncoder(), decoder = new TextDecoder();
@@ -13,8 +15,12 @@ const source = (name: string) => readFileSync(`examples/xlsx/${name}.xlsx`);
 function model(records: XlsxRecords) {
   const files = new Map([...createWorkbook({ documentId: "native-records" }), ...records.chunks.files]);
   const manifest = JSON.parse(decoder.decode(files.get("manifest.json")!)); manifest.chunks = records.chunks.descriptors;
+  const content = new WorkbookContent(records.limits.source), comments = mapThreadedComments(records.threads, records.threads.threads, content, "native-records");
+  if (content.html()) { manifest.content = "content.html"; files.set("content.html", encoder.encode(content.html()!)); }
+  files.set("annotations.json", encoder.encode(JSON.stringify(comments.annotations)));
   const metadata = { workbook: { dateSystem: records.native.dateSystem, calculationMode: records.native.calculationMode, activeSheetId: records.native.activeSheetId,
     sheets: records.sheets.map(sheet => sheet.metadata), names: records.native.names, themeCssClass: "xlsx-theme", numberFormats: records.styles.numberFormats(),
+    stories: content.stories, comments: comments.comments, commentAuthors: comments.authors,
     tableStyles: records.tableStyles.definitions, ...(records.tableStyles.defaultStyle ? { defaultTableStyle: records.tableStyles.defaultStyle } : {}) } };
   files.set("manifest.json", encoder.encode(JSON.stringify(manifest))); files.set("metadata.json", encoder.encode(JSON.stringify(metadata)));
   files.set("styles.css", encoder.encode(records.styles.stylesheet())); return openDocument(files, { kind: "workbook", limits: records.limits.source, workbookLimits: records.limits.workbook });
