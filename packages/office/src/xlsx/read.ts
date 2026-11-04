@@ -1,0 +1,93 @@
+import { createSharedWorkbookFormulas, DocumentError } from "@dagent-office/core";
+import type { WorkbookSheet } from "@dagent-office/core";
+import { readDocumentZipAsync } from "../document-zip.js";
+import { ImportControl } from "../import-control.js";
+import { openOpcFiles } from "../ooxml/package.js";
+import type { OpcPackage } from "../ooxml/package.js";
+import { fail } from "../ooxml/xml.js";
+import type { XmlNode } from "../ooxml/xml.js";
+import { cellFormula, readCell } from "./cell.js";
+import { WorkbookChunks } from "./chunks.js";
+import { xlsxLimits } from "./options.js";
+import type { XlsxReadOptions } from "./options.js";
+import { scanWorksheet } from "./scan.js";
+import { readSheet, rowDimension } from "./sheet.js";
+import { readSharedStrings } from "./strings.js";
+import { XlsxStyles } from "./styles.js";
+import { readWorkbook } from "./workbook.js";
+import type { NativeSheet, NativeWorkbook } from "./workbook.js";
+import { one } from "./values.js";
+import { readConditionalRules, readDataValidations } from "./rules.js";
+import { auditXlsxPackage } from "./package.js";
+
+type RowDimension = WorkbookSheet["rowDimensions"][number];
+/** Join identical adjacent explicit runs without expanding implicit rows. */
+function appendRow(rows: RowDimension[], row: RowDimension): void {
+  const previous = rows.at(-1), keys = ["heightPt", "hidden", "cssClass", "numberFormatId"] as const;
+  if (previous && previous.to + 1 === row.from && keys.every(key => previous[key] === row[key])) previous.to = row.to;
+  else rows.push(row);
+}
+export interface NativeSheetRecords {
+  readonly source: NativeSheet;
+  readonly root: XmlNode;
+  readonly metadata: WorkbookSheet;
+}
+export interface XlsxRecords {
+  readonly opc: OpcPackage;
+  readonly control: ImportControl;
+  readonly limits: ReturnType<typeof xlsxLimits>;
+  readonly native: NativeWorkbook;
+  readonly styles: XlsxStyles;
+  readonly chunks: WorkbookChunks;
+  readonly sheets: readonly NativeSheetRecords[];
+  readonly counts: { readonly cells: number; readonly formulas: number };
+}
+
+/** Internal first stage. It deliberately returns remaining feature headers and
+ * native style associations for complete R3-07 mapping, not a public document
+ * package that could silently omit tables, drawings, rules or comments. */
+export async function readXlsxRecords(bytes: Uint8Array, options: XlsxReadOptions = {}): Promise<XlsxRecords> {
+  const limits = xlsxLimits(options), control = new ImportControl(options), budget = { nodes: 0 };
+  const files = await readDocumentZipAsync(bytes, { limits: limits.xml, maxZipBytes: limits.native.maxZipBytes }, control);
+  await control.checkpoint({ phase: "metadata", completed: 0, total: 1 });
+  const opc = openOpcFiles(files, { limits: { ...limits.xml, maxFileBytes: limits.native.maxMetadataBytes } }, budget, limits.native.maxRetainedNodes);
+  auditXlsxPackage(opc);
+  const native = readWorkbook(opc), styles = new XlsxStyles(opc, native.part, limits.native.maxCssCodeUnits), chunks = new WorkbookChunks(limits.source);
+  const stringPart = opc.related(native.part, "sharedStrings");
+  if (stringPart && opc.contentType(stringPart) !== "application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml") fail({ part: stringPart, name: "sst" }, "The shared string content type is invalid.");
+  const strings = await readSharedStrings(stringPart ? files.get(stringPart) : undefined, stringPart ?? native.part, styles, {
+    limits: limits.xml, budget, control, maxRetainedNodes: limits.native.maxRetainedNodes,
+    maxStrings: limits.native.maxSharedStrings, maxCodeUnits: limits.native.maxSharedStringCodeUnits,
+  });
+  const sheets: NativeSheetRecords[] = []; let cells = 0, formulas = 0;
+  for (const source of native.sheets) {
+    const rows: RowDimension[] = [], shared = createSharedWorkbookFormulas(limits.workbook.maxFormulas, limits.workbook.maxFormulaKeyCodeUnits);
+    const scan = { limits: limits.xml, budget, maxRetainedNodes: limits.native.maxRetainedNodes, control, sheetId: source.sheetId };
+    const sheetBytes = files.get(source.part)!;
+    await scanWorksheet(sheetBytes, source.part, { ...scan, pass: 0,
+      cell(node, coordinate) {
+        if (++cells > limits.workbook.maxCells || one(node, "f") && ++formulas > limits.workbook.maxFormulas) throw new DocumentError("ResourceLimitExceeded", "Native cells or formulas exceed their cumulative workbook budget.");
+        cellFormula(node, coordinate, shared, 0);
+      },
+      row(node, row) { const dimension = rowDimension(node, row, styles); if (dimension) appendRow(rows, dimension); },
+    });
+    chunks.startSheet(source.sheetId);
+    const root = await scanWorksheet(sheetBytes, source.part, { ...scan, pass: 1,
+      cell(node, coordinate) { chunks.append(coordinate, readCell(node, coordinate, styles, strings, shared).html); },
+    });
+    const metadata = readSheet(root, source, rows, opc, styles);
+    metadata.conditionalRules = readConditionalRules(root, source.sheetId, styles);
+    Object.assign(metadata, readDataValidations(root, source.sheetId));
+    // Calc often writes hidden="false" on every row. Keep overrides only when
+    // they differ from the sheet default; formatting/height remains explicit.
+    metadata.rowDimensions = [];
+    for (const row of rows) {
+      if (row.hidden === metadata.defaultRowsHidden) delete row.hidden;
+      if (Object.keys(row).length > 2) appendRow(metadata.rowDimensions, row);
+    }
+    sheets.push({ source, root, metadata });
+    await control.checkpoint({ phase: "worksheet", completed: sheetBytes.length * 2, total: sheetBytes.length * 2, sheetId: source.sheetId });
+  }
+  chunks.finish(); strings.validateReferences();
+  return { opc, control, limits, native, styles, chunks, sheets, counts: { cells, formulas } };
+}

@@ -138,6 +138,7 @@ export class XlsxStyles implements SheetStyles, RichTextStyles {
   }
   run(node: XmlNode): string | undefined { return this.sharedRule(fontDeclarations(node, this.colors, false)); }
   tabStyle(node: XmlNode): string { return this.sharedRule(colorDeclarations("--office-tab", this.colors.read(node)))!; }
+  scaleColor(node: XmlNode): string { return this.sharedRule(colorDeclarations("--office-scale", this.colors.read(node)))!; }
   differential(index: number, source: XmlNode): DifferentialStyleReference {
     const previous = this.dxfCache.get(index); if (previous) return previous;
     const node = this.differentials[index]; if (!Number.isSafeInteger(index) || index < 0 || !node) fail(source, "A differential style reference is invalid.");

@@ -85,6 +85,7 @@ export function openOpcFiles(
   files: DocumentPackage,
   options: DocumentZipOptions,
   sharedXmlBudget?: XmlBudget,
+  maxMetadataNodes?: number,
 ): OpcPackage {
   const limits: DocumentReadLimits = {
     ...DEFAULT_DOCUMENT_READ_LIMITS,
@@ -110,7 +111,7 @@ export function openOpcFiles(
         ],
       );
     if (data.byteLength > limits.maxFileBytes) throw new DocumentError("ResourceLimitExceeded", "An XML metadata part exceeds the configured byte budget.");
-    const result = xml(data, part, limits, budget);
+    const result = xml(data, part, limits, budget, maxMetadataNodes);
     parsed.set(part, result);
     return result;
   };

@@ -1,13 +1,9 @@
 import { z } from "zod";
 import { IdentifierSchema, PackagePathSchema } from "./primitives.js";
-
-export const WorkbookRowSchema = z.number().int().min(0).max(1_048_575);
-export const WorkbookColumnSchema = z.number().int().min(0).max(16_383);
-/** Coordinates are zero based; inclusive range ordering is a semantic check. */
-export const WorkbookCoordinateSchema = z.strictObject({ row: WorkbookRowSchema, column: WorkbookColumnSchema });
-export const WorkbookRangeSchema = z.strictObject({ from: WorkbookCoordinateSchema, to: WorkbookCoordinateSchema });
-export type WorkbookCoordinate = z.infer<typeof WorkbookCoordinateSchema>;
-export type WorkbookRange = z.infer<typeof WorkbookRangeSchema>;
+import { WorkbookColumnSchema, WorkbookCoordinateSchema, WorkbookRangeSchema, WorkbookRowSchema } from "./workbook-coordinates.js";
+import { WorkbookConditionalRuleSchema, WorkbookDataValidationSchema } from "./workbook-rules.js";
+export * from "./workbook-coordinates.js";
+export * from "./workbook-rules.js";
 
 export const WorkbookChunkDescriptorSchema = z.strictObject({
   sheetId: IdentifierSchema,
@@ -97,6 +93,9 @@ export const WorkbookSheetSchema = z.strictObject({
   tabCssClass: IdentifierSchema.optional(),
   hyperlinks: z.array(WorkbookHyperlinkSchema).optional(),
   print: WorkbookPrintSchema.optional(),
+  conditionalRules: z.array(WorkbookConditionalRuleSchema).optional(),
+  dataValidations: z.array(WorkbookDataValidationSchema).optional(),
+  disableValidationPrompts: z.boolean().optional(),
 });
 export type WorkbookSheet = z.infer<typeof WorkbookSheetSchema>;
 export const WorkbookMetadataSchema = z.strictObject({

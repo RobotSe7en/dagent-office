@@ -1,32 +1,14 @@
-import type { WorkbookMetadata, WorkbookRange, WorkbookPrint } from "../contracts/workbook.js";
+import type { WorkbookMetadata, WorkbookPrint } from "../contracts/workbook.js";
 import { checkLimit, invalid } from "../document/validation.js";
-import { MAX_SHEET_COLUMNS } from "./chunk-index.js";
+import { checkRange, checkNonOverlappingRanges } from "./ranges.js";
+import { validateWorkbookRules } from "./rules.js";
 import { parseFormula } from "./formula.js";
 
-function checkRange(range: WorkbookRange): void {
-  if (range.from.row > range.to.row || range.from.column > range.to.column) invalid("Workbook ranges must be ordered.");
-}
-/** Sweep rows with a column segment tree; no quadratic pairwise merge scan. */
-function checkMerges(ranges: readonly WorkbookRange[]): void {
-  const events = ranges.flatMap(range => { checkRange(range); return [{ row: range.from.row, delta: 1, range }, { row: range.to.row + 1, delta: -1, range }]; }).sort((a, b) => a.row - b.row || a.delta - b.delta);
-  const maximum = new Int32Array(MAX_SHEET_COLUMNS * 4), lazy = new Int32Array(MAX_SHEET_COLUMNS * 4);
-  function update(node: number, left: number, right: number, from: number, to: number, delta: number): void {
-    if (from <= left && right <= to) { maximum[node]! += delta; lazy[node]! += delta; return; }
-    const middle = (left + right) >>> 1;
-    if (from <= middle) update(node * 2, left, middle, from, to, delta);
-    if (to > middle) update(node * 2 + 1, middle + 1, right, from, to, delta);
-    maximum[node] = lazy[node]! + Math.max(maximum[node * 2]!, maximum[node * 2 + 1]!);
-  }
-  for (const event of events) {
-    update(1, 0, MAX_SHEET_COLUMNS - 1, event.range.from.column, event.range.to.column, event.delta);
-    if (maximum[1]! > 1) invalid("Workbook merges must not overlap.");
-  }
-}
 export function validateWorkbookMetadata(workbook: WorkbookMetadata, classes: ReadonlySet<string>, maxItems: number): Set<string> {
   const ids = new Set<string>(), names = new Set<string>(); let visible = 0, items = 0;
   const classExists = (name: string): void => { if (/[\t\n\f\r ]/.test(name) || !classes.has(name)) invalid("A workbook dimension style is not defined."); };
   if (workbook.themeCssClass !== undefined) classExists(workbook.themeCssClass);
-  const formats = new Set<string>();
+  const formats = new Set<string>(), ruleIds = new Set<string>();
   for (const format of workbook.numberFormats) { if (formats.has(format.formatId)) invalid("Number format identities must be unique."); formats.add(format.formatId); }
   const formatExists = (id: string | undefined): void => { if (id !== undefined && !formats.has(id)) invalid("A workbook number format is not defined."); };
   for (const sheet of workbook.sheets) {
@@ -44,9 +26,9 @@ export function validateWorkbookMetadata(workbook: WorkbookMetadata, classes: Re
       }
     }
     items += sheet.rowDimensions.length + sheet.columnDimensions.length + sheet.merges.length + 1; checkLimit(items, maxItems);
-    checkMerges(sheet.merges);
+    checkNonOverlappingRanges(sheet.merges);
     // Overlapping links would make a cell's navigation target ambiguous.
-    checkMerges((sheet.hyperlinks ?? []).map(link => link.range));
+    checkNonOverlappingRanges((sheet.hyperlinks ?? []).map(link => link.range));
     for (const link of sheet.hyperlinks ?? []) {
       if (!link.url && !link.location) invalid("A workbook hyperlink requires a target.");
       if (link.url !== undefined && (!/^(https?:\/\/|mailto:)/i.test(link.url) || /[\u0000-\u0020\u007f]/.test(link.url))) invalid("A workbook hyperlink has an unsupported target.");
@@ -57,6 +39,7 @@ export function validateWorkbookMetadata(workbook: WorkbookMetadata, classes: Re
     }
     items += sheet.hyperlinks?.length ?? 0;
     if (sheet.print) items += validatePrint(sheet.print, classExists);
+    items += validateWorkbookRules(sheet, ruleIds, classExists, formatExists, maxItems);
     checkLimit(items, maxItems);
   }
   if (!visible || !workbook.sheets.some(sheet => sheet.sheetId === workbook.activeSheetId && sheet.visibility === "visible")) invalid("A workbook needs a visible active worksheet.");

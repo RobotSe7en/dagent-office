@@ -1,0 +1,35 @@
+{
+  "scope": "Native rule origin and dropdown semantics only; no Excel/WPS or full SDK reading acceptance claim.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "cases": [
+    {
+      "case": "reordered",
+      "sourceSha256": "4f998be8a4654c6957a3dcbe3da41ff46fcba4c3b14f1ccfb487d45027b3f12f",
+      "observed": {
+        "conditionalOrigin": "Rules.B2",
+        "conditionalFormula": "formula-is(AND([.B2]>=50;[.B2]<=150))",
+        "validationOrigin": "Rules.H9",
+        "validationFormula": "of:is-true-formula([.H9]>0)"
+      }
+    },
+    {
+      "case": "cross-axis",
+      "sourceSha256": "9189c0e81b305ee5d5d88bf7e26e685b1e651e253f8fe8ee36b7639c8162619a",
+      "observed": {
+        "conditionalOrigin": "Rules.B5",
+        "conditionalFormula": "formula-is(AND([.B2]>=50;[.B2]<=150))",
+        "validationOrigin": "Rules.H8",
+        "validationFormula": "of:is-true-formula([.H7]>0)"
+      }
+    },
+    {
+      "case": "dropdown",
+      "sourceSha256": "6f9adf2dcf4ba0711e5176b35a047f1a0cd59d6f2b3461cdeec81206e116977d",
+      "observed": {
+        "Rules.F2": "unsorted",
+        "Rules.G2": "no"
+      }
+    }
+  ]
+}

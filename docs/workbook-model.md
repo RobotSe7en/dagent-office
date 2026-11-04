@@ -50,6 +50,12 @@ R3-06 接入原生读取时增加了以下可选契约，旧工作簿包无需�
 
 原生一万行分部件链路已执行两遍有界扫描、共享公式处理、40 块 HTML 生成及统一模型重开，核对 200,000 个单元格、20,000 个公式和末行结果。它不依赖技术基线 HTML 生成器，也尚未包含完整公开导入、视觉或最终固定环境验收。
 
+原生记录管线现在贯通异步 ZIP、全包关系审计、样式/共享字符串、逐表双遍扫描、维度压缩和 HTML 分块。32 份独立文件及 Calc 重存文件通过这条内部链路；两份一万行来源均保留 200,000 个单元格和 20,000 个公式。XML 全局节点、单元格、公式与输出字节跨表累计，元数据另设保留节点限制；取消、宿主进度回调异常及输入字节隔离有独立检查。管线保留尚未消费的绘图、智能表和批注头部供后续适配，尚不对外返回一个缺少这些内容的文档包。
+
+`conditionalRules` 已有数值比较、标量公式和双色/三色色阶来源；差异外观及色阶颜色引用 CSS，阈值与优先级保留为元数据。`dataValidations` 保存列表、整数、小数、日期、时间、文本长度和自定义公式，也允许仅有提示的 `none`。规则都保存精确多区域和公式原点；严格检查身份、公式数量、样式引用、优先级及有歧义的重叠验证。已有违规数据不会在读取阶段被修正；规则求值、违规诊断和各编辑入口执行仍未实现。
+
+原生规则验证依据 [SpreadsheetML 条件格式说明](https://learn.microsoft.com/en-us/office/open-xml/spreadsheet/working-with-conditional-formatting)及[数据验证契约](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.datavalidation?view=openxml-2.8.1)，并单独保存[固定 Calc 的探针结果](evidence/xlsx-rule-semantics.json)：传统 `showDropDown="1"` 隐藏列表；多区域公式原点取最左列中最靠上的实际区域起点，不取列表首项或外包矩形角。后者在跨行列样例中分别为 B5/E9，并经外部 ODS 中的引用重定位核对。这是固定 Calc 的独立观测，不冒充 Excel/WPS 实机结论。运行 `python3 scripts/check-xlsx-rule-semantics.py` 重复核对；只有显式 `--record` 更新记录。
+
 每个块是完整的无脚本 HTML 文档，包含一个 table/tbody；以下是其内容示意：
 
 ```html
