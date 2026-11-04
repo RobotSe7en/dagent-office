@@ -15,11 +15,11 @@ import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
 import type { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback } from './fixtures/workbook-drawing-text.js';
 import type { measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } from './fixtures/workbook-surface.js';
 import type { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } from './fixtures/workbook-shadow.js';
-import type { measureWorkbookCharts } from './fixtures/workbook-chart.js';
+import type { measureWorkbookCharts, measureWorkbookChartTitles } from './fixtures/workbook-chart.js';
 import type { BasicChartData } from '../../packages/render/src/chart.js';
 import { modelChartSource, DEFAULT_CHART_READ_LIMITS } from '../../packages/render/src/workbook/chart-source.js';
 
-declare global { interface Window { workbookChartHost: { measureWorkbookCharts: typeof measureWorkbookCharts } } }
+declare global { interface Window { workbookChartHost: { measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartTitles: typeof measureWorkbookChartTitles } } }
 
 declare global { interface Window { workbookShadowHost: { measureWorkbookShadows: typeof measureWorkbookShadows; mountWorkbookShadowPixels: typeof mountWorkbookShadowPixels; disposeWorkbookShadowPixels: typeof disposeWorkbookShadowPixels } } }
 
@@ -62,6 +62,14 @@ test.beforeAll(async () => {
       }));
     }
   }
+  {
+    const files = new Map(readDocumentZip(readFileSync('examples/xlsx/07-three-charts.xlsx'))), part = 'xl/charts/chart1.xml', encoder = new TextEncoder();
+    const title = (text: string, scale: number) => `<c:title><c:tx><c:rich><a:bodyPr><a:normAutofit fontScale="${scale}"/></a:bodyPr><a:lstStyle/><a:p><a:r><a:rPr sz="1400"/><a:t>${text}</a:t></a:r></a:p></c:rich></c:tx></c:title>`;
+    const original = new TextDecoder().decode(files.get(part)!);
+    const xml = original.replace('<c:axPos val="b"/>', '<c:axPos val="b"/>' + title('季度😀', 75000)).replace('<c:axPos val="l"/>', '<c:axPos val="l"/>' + title('收入禰󠄀', 50000));
+    expect(xml).not.toBe(original); files.set(part, encoder.encode(xml));
+    inputs.push({ name: 'chart-title-layout', snapshot: projectXlsxRecords(await readXlsxRecords(writeOpcZip(files))).model.snapshot(), text: {}, resources: {} });
+  }
   for (const kind of ['default', 'inherited', 'zero']) {
     const files = new Map(readDocumentZip(readFileSync('examples/xlsx/08-images-shapes.xlsx'))), decoder = new TextDecoder(), encoder = new TextEncoder();
     const path = 'xl/drawings/drawing1.xml', theme = 'xl/theme/theme1.xml';
@@ -88,6 +96,28 @@ test('workbook chart graphics use current values and isolated source styles with
       expect(result.text).toEqual(expect.arrayContaining(['第一季度', '第二季度', '第三季度']));
     }
     expect(results[0]!.bars).toHaveLength(6); expect(results[0]!.bars[2]! / results[0]!.bars[0]!).toBeCloseTo(4, 4);
+  }
+});
+
+test('workbook rich chart titles share source-aware text layout, fit budgets and failure isolation', async ({ page }) => {
+  for (const input of inputs.filter(input => input.name.endsWith('07-three-charts') || input.name === 'chart-title-layout')) {
+    const result = await page.evaluate(snapshot => window.workbookChartHost.measureWorkbookChartTitles(snapshot), input.snapshot);
+    expect(result).toMatchObject({ unchanged: true, cleaned: true, errors: ['ResourceLimitExceeded', 'InvalidOperation', 'InvalidDocument', 'InvalidOperation', 'ResourceLimitExceeded'] });
+    expect(result.native.length).toBeGreaterThanOrEqual(3);
+    for (const title of result.native) {
+      expect(title.unchanged && title.owned).toBe(true); expect(title.nodes).toBe(title.declared); expect(title.fonts).toBeGreaterThan(0);
+      expect(title.sourceId).toBe(title.expectedId); expect(title.widthPt).toBe(240); expect(title.units).toEqual(title.lengths);
+      expect(title.reflected).toBe('matrix(1, 0, 0, 1, 0, 0)');
+    }
+    if (input.name === 'chart-title-layout') {
+      expect(result.native.filter(title => title.role !== 'title').map(title => ({ role: title.role, text: title.text, scale: title.scale }))).toEqual([
+        { role: 'category-axis-title', text: '季度😀', scale: .75 }, { role: 'value-axis-title', text: '收入禰󠄀', scale: .5 },
+      ]);
+    }
+    expect(result.fits.every(item => item.unchanged && item.sourceText === 'Long title with 中文😀禰󠄀 and several words that need multiple lines.')).toBe(true);
+    expect(result.fits[0]!.overflow).toBe(true); expect(result.fits[0]!.scale).toBe(1);
+    expect(result.fits[1]!.scale).toBeLessThan(1); expect(result.fits[1]!.width).toBe(120); expect(result.fits[1]!.height).toBe(30);
+    expect(result.fits[2]!.height).toBeGreaterThan(30); expect(result.fits[2]!.scale).toBe(1);
   }
 });
 

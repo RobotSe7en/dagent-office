@@ -4,6 +4,8 @@ import { createWorkbookChartView } from '../../../packages/render/src/workbook/c
 import { createWorkbookSurface } from '../../../packages/render/src/workbook/surface.js';
 import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';
 import { createWorkbookChartText } from '../../../packages/render/src/workbook/drawing-text.js';
+import type { WorkbookChartTextRole } from '../../../packages/render/src/workbook/drawing-text.js';
+import { layoutWorkbookChartTexts } from '../../../packages/render/src/workbook/drawing-text-layout.js';
 
 export async function measureWorkbookCharts(snapshot: WorkbookSnapshot, plots: readonly BasicChartData[]) {
   const container = document.createElement('div'); document.body.append(container);
@@ -52,5 +54,52 @@ export async function measureWorkbookCharts(snapshot: WorkbookSnapshot, plots: r
       result.element.remove();
     }
     return results;
+  } finally { sources.dispose(); surface.dispose(); container.remove(); }
+}
+
+export async function measureWorkbookChartTitles(snapshot: WorkbookSnapshot) {
+  const container = document.createElement('div'); document.body.append(container);
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 600, heightPt: 300 });
+  const sources = new WorkbookContentSources(surface.document, snapshot), native = [];
+  try {
+    await surface.document.fonts.ready;
+    const definitions = snapshot.metadata.workbook.charts!, projection = sources.project(surface.source, definitions.map(chart => chart.nodeId));
+    for (const chart of definitions) for (const role of ['title', 'category-axis-title', 'value-axis-title'] as const) {
+      const nodeId = role === 'title' ? chart.titleNodeId : role === 'category-axis-title' ? chart.categoryAxisTitle?.nodeId : chart.valueAxisTitle?.nodeId;
+      if (!nodeId) continue;
+      const source = projection.get(chart.nodeId)!, before = source.outerHTML, text = createWorkbookChartText(source, chart, role);
+      const batch = layoutWorkbookChartTexts(surface.view, [{ source, chart, role, text, widthPt: 240, heightPt: 60 }]);
+      const result = batch.objects[0]!; surface.view.append(result.element);
+      const walker = surface.document.createTreeWalker(result.element, 0xffff_ffff); let nodes = 1; while (walker.nextNode()) nodes++;
+      native.push({ role, unchanged: source.outerHTML === before, nodes, declared: result.nodes, fonts: batch.fonts.length,
+        sourceId: text.element.dataset.sourceNodeId, expectedId: nodeId, widthPt: result.widthPt, scale: result.scale, text: text.projections.map(piece => piece.node.data).join(''),
+        units: text.projections.map(piece => piece.to - piece.from), lengths: text.projections.map(piece => piece.node.data.length),
+        owned: text.projections.every(piece => source.querySelector('[data-node-id="' + piece.sourceNodeId + '"]')),
+        reflected: surface.document.defaultView!.getComputedStyle(text.element).transform });
+      result.element.remove();
+    }
+    const original = definitions[0]!, source = projection.get(original.nodeId)!;
+    const body = source.querySelector<HTMLElement>('[data-node-id="' + original.titleNodeId + '"]')!;
+    body.innerHTML = '<p data-node-id="chart-title-fit" style="font-family:Liberation Sans;--office-font-ascii:&#34;Liberation Sans&#34;;font-size:18pt;line-height:24pt">Long title with 中文😀禰󠄀 and several words that need multiple lines.</p>';
+    const before = source.outerHTML, fits = [];
+    for (const fit of ['none', 'normal', 'shape'] as const) {
+      const chart = { ...original, titleText: { autoFit: fit, wrap: true, fontScale: 1, lineSpacingReduction: 0 } }, text = createWorkbookChartText(source, chart, 'title');
+      const result = layoutWorkbookChartTexts(surface.view, [{ source, chart, role: 'title', text, widthPt: 120, heightPt: 30 }]).objects[0]!;
+      fits.push({ fit, width: result.widthPt, height: result.heightPt, scale: result.scale, overflow: result.overflow, unchanged: source.outerHTML === before,
+        sourceText: text.projections.map(piece => piece.node.data).join('') });
+      result.element.remove();
+    }
+    const errors = [], first = createWorkbookChartText(source, original, 'title'), second = createWorkbookChartText(source, original, 'title');
+    const input = { source, chart: original, role: 'title' as WorkbookChartTextRole, text: first, widthPt: 120, heightPt: 30 };
+    for (const kind of ['budget', 'duplicate', 'foreign-title', 'missing-title', 'later-overflow']) {
+      try {
+        const items = kind === 'duplicate' ? [input, input] : kind === 'foreign-title' ? [{ ...input, chart: { ...original, titleNodeId: 'foreign-title' } }]
+          : kind === 'missing-title' ? [{ ...input, role: 'value-axis-title' as const, chart: { ...original, valueAxisTitle: { reference: { expression: '=Data!A1', valueType: 'text' as const } } } }]
+          : kind === 'later-overflow' ? [input, { ...input, text: second, chart: { ...original, titleText: { autoFit: 'shape' as const } } }] : [input];
+        layoutWorkbookChartTexts(surface.view, items, kind === 'budget' ? { maxNodes: 1 } : kind === 'later-overflow' ? { maxExtentPt: 125 } : {});
+        errors.push('accepted');
+      } catch (error) { errors.push((error as { code: string }).code); }
+    }
+    return { native, fits, errors, unchanged: source.outerHTML === before, cleaned: !first.element.parentNode && !second.element.parentNode && !surface.view.querySelector('[data-office-view="workbook-drawing-text-measurement"]') };
   } finally { sources.dispose(); surface.dispose(); container.remove(); }
 }

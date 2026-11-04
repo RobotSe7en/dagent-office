@@ -1,5 +1,5 @@
 import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookChart, WorkbookObject } from "@dagent-office/core";
+import type { DeepReadonly, DrawingTextProperties, WorkbookChart, WorkbookObject } from "@dagent-office/core";
 import { markViewNode } from "../view-nodes.js";
 import { workbookRichTextFonts } from "./text-fonts.js";
 
@@ -32,13 +32,20 @@ export function createWorkbookDrawingText(source: HTMLElement, object: DeepReado
 
 /** Rich chart titles retain their own text-body identity and exact UTF-16
  * projection. Cell-linked titles instead use the chart reference data adapter. */
-export function createWorkbookChartText(chartSource: HTMLElement, chart: DeepReadonly<WorkbookChart>, role: "title" | "category-axis-title" | "value-axis-title", maxNodes = 50_000): WorkbookDrawingTextView {
+export type WorkbookChartTextRole = "title" | "category-axis-title" | "value-axis-title";
+export function createWorkbookChartText(chartSource: HTMLElement, chart: DeepReadonly<WorkbookChart>, role: WorkbookChartTextRole, maxNodes = 50_000): WorkbookDrawingTextView {
+  const { source } = workbookChartTextSource(chartSource, chart, role);
+  return createTextBody(source, source.dataset.nodeId!, maxNodes);
+}
+
+export function workbookChartTextSource(chartSource: HTMLElement, chart: DeepReadonly<WorkbookChart>, role: WorkbookChartTextRole): { readonly source: HTMLElement; readonly properties: DeepReadonly<DrawingTextProperties> | undefined } {
   if (chartSource.dataset.nodeId !== chart.nodeId || chartSource.dataset.officeKind !== "chart") throw new DocumentError("InvalidDocument", "Chart text requires its own source chart.");
-  const nodeId = role === "title" ? chart.titleNodeId : role === "category-axis-title" ? chart.categoryAxisTitle?.nodeId : role === "value-axis-title" ? chart.valueAxisTitle?.nodeId : undefined;
+  const definition = role === "title" ? { nodeId: chart.titleNodeId, text: chart.titleText } : role === "category-axis-title" ? chart.categoryAxisTitle : role === "value-axis-title" ? chart.valueAxisTitle : undefined;
+  const nodeId = definition?.nodeId;
   if (!nodeId) throw new DocumentError("InvalidOperation", "This chart title has no rich-text source body.");
   const source = [...chartSource.children].find(child => (child as HTMLElement).dataset.nodeId === nodeId) as HTMLElement | undefined;
   if (!source) throw new DocumentError("InvalidDocument", "A rich chart title must belong directly to its source chart.");
-  return createTextBody(source, nodeId, maxNodes);
+  return { source, properties: definition?.text };
 }
 
 function createTextBody(source: HTMLElement, nodeId: string, maxNodes: number): WorkbookDrawingTextView {
