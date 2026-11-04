@@ -1,5 +1,6 @@
 import type { WorkbookSnapshot } from '@dagent-office/core';
 import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';
+import { disposeImageView, measureImageView } from './workbook-image-view.js';
 
 function sourceText(root: Node): string {
   if (root.nodeType === 3) return root.textContent ?? '';
@@ -34,4 +35,4 @@ export function rejectContentSource(snapshot: WorkbookSnapshot, maxNodes?: numbe
   try { const source = new WorkbookContentSources(document, snapshot, maxNodes, maxCodeUnits); source.dispose(); return ''; }
   catch (error) { return (error as { code: string }).code; }
 }
-Object.assign(window, { workbookContentHost: { measureContentSource, rejectContentSource } });
+Object.assign(window, { workbookContentHost: { measureContentSource, rejectContentSource, measureImageView, disposeImageView } });

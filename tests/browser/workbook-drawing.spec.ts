@@ -6,9 +6,10 @@ import type { WorkbookSnapshot } from '@dagent-office/core';
 import { readXlsxRecords } from '../../packages/office/src/xlsx/read.js';
 import { projectXlsxRecords } from '../../packages/office/tests/helpers/xlsx-record-model.js';
 import type { measureContentSource, rejectContentSource } from './fixtures/workbook-content-source.js';
+import type { measureImageView, disposeImageView } from './fixtures/workbook-image-view.js';
 
-declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource } } }
-const inputs: { name: string; snapshot: WorkbookSnapshot; text: Record<string, string> }[] = [];
+declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView } } }
+const inputs: { name: string; snapshot: WorkbookSnapshot; text: Record<string, string>; resources: Record<string, string> }[] = [];
 let code = '';
 test.beforeAll(async () => {
   const bundle = await build({ configFile: false, build: { write: false, minify: false, lib: { entry: fileURLToPath(new URL('./fixtures/workbook-content-source.ts', import.meta.url)), formats: ['iife'], name: 'WorkbookDrawingProbe' } } });
@@ -17,7 +18,29 @@ test.beforeAll(async () => {
   for (const prefix of ['', 'producer/']) for (const name of ['07-three-charts', '08-images-shapes', '09-classic-notes', '10-modern-threads']) {
     const { model } = projectXlsxRecords(await readXlsxRecords(readFileSync(`examples/xlsx/${prefix}${name}.xlsx`))), snapshot = model.snapshot();
     const ids = [...(snapshot.metadata.workbook.stories ?? []).map(story => story.rootNodeId), ...(snapshot.metadata.workbook.objects ?? []).map(object => object.nodeId)];
-    inputs.push({ name: prefix + name, snapshot, text: Object.fromEntries(ids.map(id => [id, model.getNode(id)!.text])) });
+    inputs.push({ name: prefix + name, snapshot, text: Object.fromEntries(ids.map(id => [id, model.getNode(id)!.text])), resources: Object.fromEntries(snapshot.manifest.assets.map(asset => [asset.path, Buffer.from(model.getAsset(asset.path)!).toString('base64')])) });
+  }
+});
+
+for (const rtl of [false, true]) test(`cropped worksheet pictures retain full rotated and flipped geometry across four ${rtl ? 'RTL' : 'LTR'} panes`, async ({ page }, info) => {
+  for (const input of inputs.filter(input => input.name.endsWith('08-images-shapes'))) {
+    const result = await page.evaluate(({ snapshot, resources, rtl }) => window.workbookContentHost.measureImageView(snapshot, resources, rtl), { ...input, rtl });
+    expect(result).toMatchObject({ invalid: 'InvalidDocument', cancelled: 'OperationCancelled', connected: 'InvalidOperation', kept: true, cleared: true, badGeometry: ['InvalidDocument', 'InvalidDocument', 'ResourceLimitExceeded'], extremeAccepted: true, peak: 8, decoded: 17 });
+    const [cropX, cropY] = input.name.startsWith('producer/') ? [.10035, .05039] : [.1, .05];
+    expect(result.panes).toHaveLength(4); expect(result.sourceRotation).toBe(15); expect(result.sourceCrops).toEqual([cropX, cropY, cropX, cropY]);
+    const cosine = Math.cos(Math.PI / 12), sine = Math.sin(Math.PI / 12);
+    for (const pane of result.panes) {
+      expect(pane.body.slice(2)).toEqual([200, 150]); expect(pane.natural).toEqual([32, 24]);
+      for (const [index, value] of [-cosine, -sine, -sine, cosine].entries()) expect(pane.matrix[index]).toBeCloseTo(value, 5);
+      expect(pane.transformed[0]).toBeCloseTo(200 * cosine + 150 * sine, 1); expect(pane.transformed[1]).toBeCloseTo(200 * sine + 150 * cosine, 1);
+      for (const [index, value] of [-cropX! / (1 - 2 * cropX!) * 100, -cropY! / (1 - 2 * cropY!) * 100, 100 / (1 - 2 * cropX!), 100 / (1 - 2 * cropY!)].entries()) expect(pane.crop[index]).toBeCloseTo(value, 3);
+      const sourceLeft = pane.pane === 'body' || pane.pane === 'frozenRows' ? -10 : 10;
+      expect(pane.clip[0]! + pane.body[0]!).toBeCloseTo(rtl ? 240 - sourceLeft - 200 : sourceLeft, 0);
+      expect(pane.clip[1]! + pane.body[1]!).toBeCloseTo(pane.pane === 'body' || pane.pane === 'frozenColumns' ? -5 : 5, 0);
+    }
+    await page.locator('#workbook-image-probe').screenshot({ path: info.outputPath(`${input.name.replace('/', '-')}-${rtl ? 'rtl' : 'ltr'}.png`) });
+    await page.evaluate(() => window.workbookContentHost.disposeImageView());
+    await expect(page.locator('#workbook-image-probe')).toHaveCount(0);
   }
 });
 test.beforeEach(async ({ page }) => { await page.goto('/'); await page.addScriptTag({ content: code }); });

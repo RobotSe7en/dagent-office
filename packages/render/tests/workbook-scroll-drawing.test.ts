@@ -38,5 +38,8 @@ describe("workbook logical scroll and drawing geometry", () => {
     expect(projectWorkbookDrawing(rect, 90, layout)[0]?.clip.x).toBeCloseTo(75);
     expect(projectWorkbookDrawing({ ...rect, width: 0 }, 90, layout)).toEqual([]);
     expect(() => projectWorkbookDrawing(rect, NaN, layout)).toThrow();
+    expect(projectWorkbookDrawing(rect, 0, layout, 12)[0]?.clip.x).toBe(98);
+    expect(() => projectWorkbookDrawing(rect, 0, layout, -1)).toThrow();
+    expect(() => projectWorkbookDrawing(rect, 45, layout, Number.MAX_VALUE)).toThrowError(expect.objectContaining({ code: 'ResourceLimitExceeded' }));
   });
 });

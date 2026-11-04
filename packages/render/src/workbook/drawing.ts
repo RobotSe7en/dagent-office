@@ -20,12 +20,15 @@ export interface WorkbookDrawingProjection { readonly pane: WorkbookPane["kind"]
 
 /** Visibility uses the rotated bounding rectangle, while the object itself
  * keeps the original source geometry and transform center in every pane. */
-export function projectWorkbookDrawing(rect: WorkbookRect, rotationDegrees: number, layout: WorkbookViewportLayout): readonly WorkbookDrawingProjection[] {
-  if (![rect.x, rect.y, rect.width, rect.height, rotationDegrees].every(Number.isFinite) || rect.width < 0 || rect.height < 0)
+export function projectWorkbookDrawing(rect: WorkbookRect, rotationDegrees: number, layout: WorkbookViewportLayout, outsetPt = 0): readonly WorkbookDrawingProjection[] {
+  if (![rect.x, rect.y, rect.width, rect.height, rotationDegrees, outsetPt].every(Number.isFinite) || rect.width < 0 || rect.height < 0 || outsetPt < 0)
     throw new DocumentError("InvalidOperation", "Workbook drawing geometry must be finite with nonnegative extents.");
   if (!rect.width || !rect.height) return [];
   const radians = (rotationDegrees % 360) * Math.PI / 180, cos = Math.abs(Math.cos(radians)), sin = Math.abs(Math.sin(radians));
-  const width = rect.width * cos + rect.height * sin, height = rect.width * sin + rect.height * cos;
+  // Outlines and effects can extend beyond the anchor. Keep a conservative
+  // local outset so a visible stroke/shadow is neither culled nor clipped away.
+  const width = (rect.width + 2 * outsetPt) * cos + (rect.height + 2 * outsetPt) * sin, height = (rect.width + 2 * outsetPt) * sin + (rect.height + 2 * outsetPt) * cos;
+  if (![width, height].every(Number.isFinite)) throw new DocumentError("ResourceLimitExceeded", "Workbook drawing bounds exceed finite geometry.");
   const result: WorkbookDrawingProjection[] = [];
   for (const pane of layout.panes) {
     const placed = { ...rect, x: rect.x - pane.sourceLeftPt + pane.inlineStartPt, y: rect.y - pane.sourceTopPt + pane.blockStartPt };
