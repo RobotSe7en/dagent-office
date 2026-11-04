@@ -22,7 +22,18 @@ export interface BasicChartOptions {
 const palette = ["#4472c4", "#ed7d31", "#a5a5a5", "#ffc000", "#5b9bd5", "#70ad47"];
 export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartAppearance>, data: BasicChartData, width: number, height: number, serial: string, account: (amount: number) => void, options: BasicChartOptions): void {
   const svgElement: typeof createSvgElement = (document, tag, attributes) => { account(1); return createSvgElement(document, tag, attributes); };
-  const document = node.ownerDocument, style = options.style, formatNumber = options.formatNumber;
+  const document = node.ownerDocument, formatNumber = options.formatNumber, styles = new Map<string, CSSStyleDeclaration>();
+  // Validated source CSS has no structural pseudo-classes. One probe per
+  // class list is enough for this immutable render, including repeated labels.
+  const style = (classes?: string): CSSStyleDeclaration => {
+    const key = classes ?? ""; let computed = styles.get(key);
+    if (!computed) { computed = options.style(classes); styles.set(key, computed); }
+    return computed;
+  };
+  const seriesDefinitions = new Map((chart.seriesStyles ?? []).map(series => [series.seriesId, series]));
+  const pointKey = (seriesId: string, index: number): string => JSON.stringify([seriesId, index]);
+  const pointDefinitions = new Map((chart.pointStyles ?? []).map(point => [pointKey(point.seriesId, point.index), point]));
+  const seriesIndexes = new Map(data.series.map((series, index) => [series.seriesId, index]));
   let paintSerial = 0;
   const svg = markViewNode(svgElement(document, "svg", { width: "100%", height: "100%", viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": chart.kind + " chart", "data-sdk-chart": chart.kind }));
   svg.style.cssText = "position:absolute;inset:0;overflow:visible;pointer-events:none";
@@ -52,15 +63,15 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
   const right = width - (chart.kind === "pie" ? 12 : valueRight ? 28 : 16) - (chart.legend === "right" ? legendBand : 0), bottom = height - (chart.kind === "pie" ? 8 : categoryTop ? 12 : 26) - (chart.legend === "bottom" ? legendBand : 0);
   const w = Math.max(1, right - left), h = Math.max(1, bottom - top);
   svg.append(svgElement(document, "rect", { x: left, y: top, width: w, height: h, fill: svgFill(document, plotStyle, svg, serial + "-plot", { x: left, y: top, width: w, height: h }, "--office-fill", "none", account), ...strokeAttributes(document, plotStyle) }));
-  const seriesStyle = new Map(data.series.map(series => [series.seriesId, style(chart.seriesStyles?.find(s => s.seriesId === series.seriesId)?.cssClass)]));
+  const seriesStyle = new Map(data.series.map(series => [series.seriesId, style(seriesDefinitions.get(series.seriesId)?.cssClass)]));
   const pointStyle = (seriesId: string, index: number): CSSStyleDeclaration => {
-    const series = chart.seriesStyles?.find(s => s.seriesId === seriesId), point = chart.pointStyles?.find(p => p.seriesId === seriesId && p.index === index);
+    const series = seriesDefinitions.get(seriesId), point = pointDefinitions.get(pointKey(seriesId, index));
     return point ? style([series?.cssClass, point.cssClass].filter(Boolean).join(" ")) : seriesStyle.get(seriesId)!;
   };
-  const fill = (seriesId: string, index: number, s: CSSStyleDeclaration, bounds: DrawingGradientBounds): string => svgFill(document, s, svg, serial + "-paint-" + ++paintSerial, bounds, "--office-fill", palette[(chart.kind === "pie" ? index : data.series.findIndex(d => d.seriesId === seriesId)) % palette.length]!, account);
+  const fill = (seriesId: string, index: number, s: CSSStyleDeclaration, bounds: DrawingGradientBounds): string => svgFill(document, s, svg, serial + "-paint-" + ++paintSerial, bounds, "--office-fill", palette[(chart.kind === "pie" ? index : seriesIndexes.get(seriesId)!) % palette.length]!, account);
   const label = (series: BasicChartData["series"][number], index: number, value: number, x: number, y: number, percent?: number, baseline?: number): void => {
     if (!chart.showLabels) return;
-    const seriesDefinition = chart.seriesStyles?.find(s => s.seriesId === series.seriesId), point = chart.pointStyles?.find(p => p.seriesId === series.seriesId && p.index === index);
+    const seriesDefinition = seriesDefinitions.get(series.seriesId), point = pointDefinitions.get(pointKey(series.seriesId, index));
     const s = style([chart.textCssClass, chart.labelCssClass, seriesDefinition?.labelCssClass, point?.labelCssClass].filter(Boolean).join(" "));
     const contents = chart.labelContents ?? ["value"], separator = cssStringValue(property(s, "--office-label-separator", ", "));
     const values = contents.map(kind => kind === "category" ? data.categories[index]! : kind === "series" ? series.name : kind === "percent" ? formatNumber(percent ?? 0, "0%") : formatNumber(value, cssStringValue(property(s, "--office-label-number-format", chart.numberFormat ?? "General"))));
@@ -147,7 +158,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
         }
         else {
           segments.push((connected ? "L" : "M") + px + " " + py); connected = true;
-          const definition = chart.seriesStyles?.find(d => d.seriesId === series.seriesId), marker = definition?.marker ?? "none", radius = (definition?.markerSize ?? 5) / 2;
+          const definition = seriesDefinitions.get(series.seriesId), marker = definition?.marker ?? "none", radius = (definition?.markerSize ?? 5) / 2;
           if (marker !== "none") {
             const extent = marker === "dot" ? 1 : radius;
             const color = fill(series.seriesId, index, point, { x: px - extent, y: py - extent, width: extent * 2, height: extent * 2 });
