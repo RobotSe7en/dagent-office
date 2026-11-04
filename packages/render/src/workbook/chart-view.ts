@@ -29,6 +29,7 @@ export function createWorkbookChartView(source: HTMLElement, chart: DeepReadonly
   if (chart.titleVisible !== false && (chart.titleNodeId || chart.titleReference) && !title) throw new DocumentError("InvalidOperation", "A visible chart title requires a materialized title view.");
   if (data.series.length !== chart.series.length || data.series.some((series, index) => series.seriesId !== chart.series[index]!.seriesId || series.values.length !== data.categories.length
     || series.values.some(value => value !== null && !Number.isFinite(value)))) throw new DocumentError("InvalidOperation", "Derived chart values must match their source series and category positions.");
+  if (chart.kind === "pie" && data.series.some(series => series.values.some(value => value !== null && value < 0))) throw new DocumentError("UnsupportedFeature", "Negative worksheet pie values require an explicit plot-value mapping before rendering.");
   let units = 0, points = data.categories.length;
   const accountText = (amount: number): void => { units += amount; if (units > maxCodeUnits) throw new DocumentError("ResourceLimitExceeded", "Chart text exceeds its source and display budget."); };
   for (const name of data.categories) accountText(name.length);

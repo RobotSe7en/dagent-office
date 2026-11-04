@@ -1,0 +1,3362 @@
+{
+  "scope": "Independent chart source/cache mismatch, mixed cell types, blanks and hidden data. Calc producer observations only; no Excel/WPS or SDK rendering acceptance.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "sourceSha256": "4080726387d660ad78da2ff3fb61f4ef37ef8f32964f55258cf6098238208cf4",
+  "fontManifest": {
+    "source": "examples/xlsx/reference.json#environment.fonts",
+    "sha256": "bda037c50b31e342e0e460755840725d14dd8bfaeccca8de54269277342a5119"
+  },
+  "cases": [
+    {
+      "kind": "column",
+      "blankAs": "gap",
+      "hidden": "none",
+      "visibleOnly": true,
+      "observed": {
+        "references": [
+          {
+            "role": "tx",
+            "kind": "strRef",
+            "formula": "Case1!$B$1",
+            "count": 1,
+            "points": [
+              {
+                "index": 0,
+                "value": "Values"
+              }
+            ]
+          },
+          {
+            "role": "cat",
+            "kind": "strRef",
+            "formula": "Case1!$A$2:$A$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "Point0"
+              },
+              {
+                "index": 1,
+                "value": "Point1"
+              },
+              {
+                "index": 2,
+                "value": "Point2"
+              },
+              {
+                "index": 3,
+                "value": "Point3"
+              },
+              {
+                "index": 4,
+                "value": "Point4"
+              },
+              {
+                "index": 5,
+                "value": "Point5"
+              },
+              {
+                "index": 6,
+                "value": "Point6"
+              },
+              {
+                "index": 7,
+                "value": "Point7"
+              },
+              {
+                "index": 8,
+                "value": "Point8"
+              },
+              {
+                "index": 9,
+                "value": "Point9"
+              },
+              {
+                "index": 10,
+                "value": "Point10"
+              },
+              {
+                "index": 11,
+                "value": "Point11"
+              }
+            ]
+          },
+          {
+            "role": "val",
+            "kind": "numRef",
+            "formula": "Case1!$B$2:$B$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "2"
+              },
+              {
+                "index": 3,
+                "value": "1"
+              },
+              {
+                "index": 4,
+                "value": "0"
+              },
+              {
+                "index": 10,
+                "value": "-3"
+              },
+              {
+                "index": 11,
+                "value": "0"
+              }
+            ]
+          }
+        ],
+        "blueGeometry": [
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 162.125 148.191406 L 169.90625 148.191406 L 169.90625 120.027344 L 162.125 120.027344 Z M 162.125 148.191406 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 220.464844 148.191406 L 228.265625 148.191406 L 228.265625 134.097656 L 220.464844 134.097656 Z M 220.464844 148.191406 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 356.617188 148.191406 L 364.398438 148.191406 L 364.398438 105.933594 L 356.617188 105.933594 Z M 356.617188 148.191406 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 255.824219 223.675781 L 253.714844 223.675781 L 253.714844 219.433594 L 257.957031 219.433594 L 257.957031 223.675781 Z M 255.824219 223.675781 "
+            },
+            "transforms": []
+          }
+        ],
+        "pdfWords": [
+          "Category",
+          "Point0",
+          "Point1",
+          "Point2",
+          "Point3",
+          "Point4",
+          "Point5",
+          "Point6",
+          "Point7",
+          "Point8",
+          "Point9",
+          "Point10",
+          "Point11",
+          "Values",
+          "2",
+          "7",
+          "word",
+          "图表",
+          "column",
+          "TRUE",
+          "FALSE",
+          "3",
+          "2",
+          "#N/A",
+          "1",
+          "#DIV/0!",
+          "0",
+          "0",
+          "1",
+          "-3",
+          "-1",
+          "nt0",
+          "t1",
+          "t2",
+          "t3",
+          "t4",
+          "t5",
+          "t6",
+          "t7",
+          "t8",
+          "t9",
+          "t1",
+          "t1",
+          "i",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "0",
+          "Po",
+          "Po",
+          "-2",
+          "-3",
+          "-4",
+          "Values"
+        ]
+      }
+    },
+    {
+      "kind": "column",
+      "blankAs": "zero",
+      "hidden": "none",
+      "visibleOnly": true,
+      "observed": {
+        "references": [
+          {
+            "role": "tx",
+            "kind": "strRef",
+            "formula": "Case2!$B$1",
+            "count": 1,
+            "points": [
+              {
+                "index": 0,
+                "value": "Values"
+              }
+            ]
+          },
+          {
+            "role": "cat",
+            "kind": "strRef",
+            "formula": "Case2!$A$2:$A$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "Point0"
+              },
+              {
+                "index": 1,
+                "value": "Point1"
+              },
+              {
+                "index": 2,
+                "value": "Point2"
+              },
+              {
+                "index": 3,
+                "value": "Point3"
+              },
+              {
+                "index": 4,
+                "value": "Point4"
+              },
+              {
+                "index": 5,
+                "value": "Point5"
+              },
+              {
+                "index": 6,
+                "value": "Point6"
+              },
+              {
+                "index": 7,
+                "value": "Point7"
+              },
+              {
+                "index": 8,
+                "value": "Point8"
+              },
+              {
+                "index": 9,
+                "value": "Point9"
+              },
+              {
+                "index": 10,
+                "value": "Point10"
+              },
+              {
+                "index": 11,
+                "value": "Point11"
+              }
+            ]
+          },
+          {
+            "role": "val",
+            "kind": "numRef",
+            "formula": "Case2!$B$2:$B$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "2"
+              },
+              {
+                "index": 3,
+                "value": "1"
+              },
+              {
+                "index": 4,
+                "value": "0"
+              },
+              {
+                "index": 10,
+                "value": "-3"
+              },
+              {
+                "index": 11,
+                "value": "0"
+              }
+            ]
+          }
+        ],
+        "blueGeometry": [
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 162.125 148.191406 L 169.90625 148.191406 L 169.90625 120.027344 L 162.125 120.027344 Z M 162.125 148.191406 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 220.464844 148.191406 L 228.265625 148.191406 L 228.265625 134.097656 L 220.464844 134.097656 Z M 220.464844 148.191406 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 356.617188 148.191406 L 364.398438 148.191406 L 364.398438 105.933594 L 356.617188 105.933594 Z M 356.617188 148.191406 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 255.824219 223.675781 L 253.714844 223.675781 L 253.714844 219.433594 L 257.957031 219.433594 L 257.957031 223.675781 Z M 255.824219 223.675781 "
+            },
+            "transforms": []
+          }
+        ],
+        "pdfWords": [
+          "Category",
+          "Point0",
+          "Point1",
+          "Point2",
+          "Point3",
+          "Point4",
+          "Point5",
+          "Point6",
+          "Point7",
+          "Point8",
+          "Point9",
+          "Point10",
+          "Point11",
+          "Values",
+          "2",
+          "7",
+          "word",
+          "图表",
+          "column",
+          "TRUE",
+          "FALSE",
+          "3",
+          "2",
+          "#N/A",
+          "1",
+          "#DIV/0!",
+          "0",
+          "0",
+          "1",
+          "-3",
+          "-1",
+          "nt0",
+          "t1",
+          "t2",
+          "t3",
+          "t4",
+          "t5",
+          "t6",
+          "t7",
+          "t8",
+          "t9",
+          "t1",
+          "t1",
+          "i",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "0",
+          "Po",
+          "Po",
+          "-2",
+          "-3",
+          "-4",
+          "Values"
+        ]
+      }
+    },
+    {
+      "kind": "column",
+      "blankAs": "span",
+      "hidden": "none",
+      "visibleOnly": true,
+      "observed": {
+        "references": [
+          {
+            "role": "tx",
+            "kind": "strRef",
+            "formula": "Case3!$B$1",
+            "count": 1,
+            "points": [
+              {
+                "index": 0,
+                "value": "Values"
+              }
+            ]
+          },
+          {
+            "role": "cat",
+            "kind": "strRef",
+            "formula": "Case3!$A$2:$A$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "Point0"
+              },
+              {
+                "index": 1,
+                "value": "Point1"
+              },
+              {
+                "index": 2,
+                "value": "Point2"
+              },
+              {
+                "index": 3,
+                "value": "Point3"
+              },
+              {
+                "index": 4,
+                "value": "Point4"
+              },
+              {
+                "index": 5,
+                "value": "Point5"
+              },
+              {
+                "index": 6,
+                "value": "Point6"
+              },
+              {
+                "index": 7,
+                "value": "Point7"
+              },
+              {
+                "index": 8,
+                "value": "Point8"
+              },
+              {
+                "index": 9,
+                "value": "Point9"
+              },
+              {
+                "index": 10,
+                "value": "Point10"
+              },
+              {
+                "index": 11,
+                "value": "Point11"
+              }
+            ]
+          },
+          {
+            "role": "val",
+            "kind": "numRef",
+            "formula": "Case3!$B$2:$B$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "2"
+              },
+              {
+                "index": 3,
+                "value": "1"
+              },
+              {
+                "index": 4,
+                "value": "0"
+              },
+              {
+                "index": 10,
+                "value": "-3"
+              },
+              {
+                "index": 11,
+                "value": "0"
+              }
+            ]
+          }
+        ],
+        "blueGeometry": [
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 162.125 148.191406 L 169.90625 148.191406 L 169.90625 120.027344 L 162.125 120.027344 Z M 162.125 148.191406 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 220.464844 148.191406 L 228.265625 148.191406 L 228.265625 134.097656 L 220.464844 134.097656 Z M 220.464844 148.191406 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 356.617188 148.191406 L 364.398438 148.191406 L 364.398438 105.933594 L 356.617188 105.933594 Z M 356.617188 148.191406 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 255.824219 223.675781 L 253.714844 223.675781 L 253.714844 219.433594 L 257.957031 219.433594 L 257.957031 223.675781 Z M 255.824219 223.675781 "
+            },
+            "transforms": []
+          }
+        ],
+        "pdfWords": [
+          "Category",
+          "Point0",
+          "Point1",
+          "Point2",
+          "Point3",
+          "Point4",
+          "Point5",
+          "Point6",
+          "Point7",
+          "Point8",
+          "Point9",
+          "Point10",
+          "Point11",
+          "Values",
+          "2",
+          "7",
+          "word",
+          "图表",
+          "column",
+          "TRUE",
+          "FALSE",
+          "3",
+          "2",
+          "#N/A",
+          "1",
+          "#DIV/0!",
+          "0",
+          "0",
+          "1",
+          "-3",
+          "-1",
+          "nt0",
+          "t1",
+          "t2",
+          "t3",
+          "t4",
+          "t5",
+          "t6",
+          "t7",
+          "t8",
+          "t9",
+          "t1",
+          "t1",
+          "i",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "0",
+          "Po",
+          "Po",
+          "-2",
+          "-3",
+          "-4",
+          "Values"
+        ]
+      }
+    },
+    {
+      "kind": "line",
+      "blankAs": "gap",
+      "hidden": "none",
+      "visibleOnly": true,
+      "observed": {
+        "references": [
+          {
+            "role": "tx",
+            "kind": "strRef",
+            "formula": "Case4!$B$1",
+            "count": 1,
+            "points": [
+              {
+                "index": 0,
+                "value": "Values"
+              }
+            ]
+          },
+          {
+            "role": "cat",
+            "kind": "strRef",
+            "formula": "Case4!$A$2:$A$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "Point0"
+              },
+              {
+                "index": 1,
+                "value": "Point1"
+              },
+              {
+                "index": 2,
+                "value": "Point2"
+              },
+              {
+                "index": 3,
+                "value": "Point3"
+              },
+              {
+                "index": 4,
+                "value": "Point4"
+              },
+              {
+                "index": 5,
+                "value": "Point5"
+              },
+              {
+                "index": 6,
+                "value": "Point6"
+              },
+              {
+                "index": 7,
+                "value": "Point7"
+              },
+              {
+                "index": 8,
+                "value": "Point8"
+              },
+              {
+                "index": 9,
+                "value": "Point9"
+              },
+              {
+                "index": 10,
+                "value": "Point10"
+              },
+              {
+                "index": 11,
+                "value": "Point11"
+              }
+            ]
+          },
+          {
+            "role": "val",
+            "kind": "numRef",
+            "formula": "Case4!$B$2:$B$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "2"
+              },
+              {
+                "index": 3,
+                "value": "1"
+              },
+              {
+                "index": 4,
+                "value": "0"
+              },
+              {
+                "index": 10,
+                "value": "-3"
+              },
+              {
+                "index": 11,
+                "value": "0"
+              }
+            ]
+          }
+        ],
+        "blueGeometry": [
+          {
+            "attributes": {
+              "fill": "none",
+              "stroke-width": "1.42591",
+              "stroke-linecap": "butt",
+              "stroke-linejoin": "round",
+              "stroke": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "stroke-opacity": "1",
+              "stroke-miterlimit": "10",
+              "d": "M 224.625619 708.072387 L 244.109312 693.962158 ",
+              "transform": "matrix(0.998832, 0, 0, -0.998832, 0, 841.343092)"
+            },
+            "transforms": [
+              "matrix(0.998832, 0, 0, -0.998832, 0, 841.343092)"
+            ]
+          },
+          {
+            "attributes": {
+              "fill": "none",
+              "stroke-width": "1.42591",
+              "stroke-linecap": "butt",
+              "stroke-linejoin": "round",
+              "stroke": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "stroke-opacity": "1",
+              "stroke-miterlimit": "10",
+              "d": "M 360.93716 651.697954 L 380.420853 693.962158 ",
+              "transform": "matrix(0.998832, 0, 0, -0.998832, 0, 841.343092)"
+            },
+            "transforms": [
+              "matrix(0.998832, 0, 0, -0.998832, 0, 841.343092)"
+            ]
+          },
+          {
+            "attributes": {
+              "fill": "none",
+              "stroke-width": "1.42591",
+              "stroke-linecap": "butt",
+              "stroke-linejoin": "round",
+              "stroke": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "stroke-opacity": "1",
+              "stroke-miterlimit": "10",
+              "d": "M 248.113989 620.524829 L 264.175716 620.524829 ",
+              "transform": "matrix(0.998832, 0, 0, -0.998832, 0, 841.343092)"
+            },
+            "transforms": [
+              "matrix(0.998832, 0, 0, -0.998832, 0, 841.343092)"
+            ]
+          }
+        ],
+        "pdfWords": [
+          "Category",
+          "Point0",
+          "Point1",
+          "Point2",
+          "Point3",
+          "Point4",
+          "Point5",
+          "Point6",
+          "Point7",
+          "Point8",
+          "Point9",
+          "Point10",
+          "Point11",
+          "Values",
+          "2",
+          "7",
+          "word",
+          "图表",
+          "line",
+          "TRUE",
+          "FALSE",
+          "3",
+          "2",
+          "#N/A",
+          "1",
+          "#DIV/0!",
+          "0",
+          "0",
+          "1",
+          "-3",
+          "-1",
+          "nt0",
+          "t1",
+          "t2",
+          "t3",
+          "t4",
+          "t5",
+          "t6",
+          "t7",
+          "t8",
+          "t9",
+          "t1",
+          "t1",
+          "i",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "0",
+          "Po",
+          "Po",
+          "-2",
+          "-3",
+          "-4",
+          "Values"
+        ]
+      }
+    },
+    {
+      "kind": "line",
+      "blankAs": "zero",
+      "hidden": "none",
+      "visibleOnly": true,
+      "observed": {
+        "references": [
+          {
+            "role": "tx",
+            "kind": "strRef",
+            "formula": "Case5!$B$1",
+            "count": 1,
+            "points": [
+              {
+                "index": 0,
+                "value": "Values"
+              }
+            ]
+          },
+          {
+            "role": "cat",
+            "kind": "strRef",
+            "formula": "Case5!$A$2:$A$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "Point0"
+              },
+              {
+                "index": 1,
+                "value": "Point1"
+              },
+              {
+                "index": 2,
+                "value": "Point2"
+              },
+              {
+                "index": 3,
+                "value": "Point3"
+              },
+              {
+                "index": 4,
+                "value": "Point4"
+              },
+              {
+                "index": 5,
+                "value": "Point5"
+              },
+              {
+                "index": 6,
+                "value": "Point6"
+              },
+              {
+                "index": 7,
+                "value": "Point7"
+              },
+              {
+                "index": 8,
+                "value": "Point8"
+              },
+              {
+                "index": 9,
+                "value": "Point9"
+              },
+              {
+                "index": 10,
+                "value": "Point10"
+              },
+              {
+                "index": 11,
+                "value": "Point11"
+              }
+            ]
+          },
+          {
+            "role": "val",
+            "kind": "numRef",
+            "formula": "Case5!$B$2:$B$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "2"
+              },
+              {
+                "index": 3,
+                "value": "1"
+              },
+              {
+                "index": 4,
+                "value": "0"
+              },
+              {
+                "index": 10,
+                "value": "-3"
+              },
+              {
+                "index": 11,
+                "value": "0"
+              }
+            ]
+          }
+        ],
+        "blueGeometry": [
+          {
+            "attributes": {
+              "fill": "none",
+              "stroke-width": "1.42591",
+              "stroke-linecap": "butt",
+              "stroke-linejoin": "round",
+              "stroke": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "stroke-opacity": "1",
+              "stroke-miterlimit": "10",
+              "d": "M 166.201918 722.159152 L 185.6817 693.962158 L 205.145838 693.962158 L 224.625619 708.072387 L 244.109312 693.962158 L 341.476933 693.962158 L 360.93716 651.697954 L 380.420853 693.962158 ",
+              "transform": "matrix(0.998832, 0, 0, -0.998832, 0, 841.343092)"
+            },
+            "transforms": [
+              "matrix(0.998832, 0, 0, -0.998832, 0, 841.343092)"
+            ]
+          },
+          {
+            "attributes": {
+              "fill": "none",
+              "stroke-width": "1.42591",
+              "stroke-linecap": "butt",
+              "stroke-linejoin": "round",
+              "stroke": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "stroke-opacity": "1",
+              "stroke-miterlimit": "10",
+              "d": "M 248.113989 620.524829 L 264.175716 620.524829 ",
+              "transform": "matrix(0.998832, 0, 0, -0.998832, 0, 841.343092)"
+            },
+            "transforms": [
+              "matrix(0.998832, 0, 0, -0.998832, 0, 841.343092)"
+            ]
+          }
+        ],
+        "pdfWords": [
+          "Category",
+          "Point0",
+          "Point1",
+          "Point2",
+          "Point3",
+          "Point4",
+          "Point5",
+          "Point6",
+          "Point7",
+          "Point8",
+          "Point9",
+          "Point10",
+          "Point11",
+          "Values",
+          "2",
+          "7",
+          "word",
+          "图表",
+          "line",
+          "TRUE",
+          "FALSE",
+          "3",
+          "2",
+          "#N/A",
+          "1",
+          "#DIV/0!",
+          "0",
+          "0",
+          "1",
+          "-3",
+          "-1",
+          "nt0",
+          "t1",
+          "t2",
+          "t3",
+          "t4",
+          "t5",
+          "t6",
+          "t7",
+          "t8",
+          "t9",
+          "t1",
+          "t1",
+          "i",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "0",
+          "Po",
+          "Po",
+          "-2",
+          "-3",
+          "-4",
+          "Values"
+        ]
+      }
+    },
+    {
+      "kind": "line",
+      "blankAs": "span",
+      "hidden": "none",
+      "visibleOnly": true,
+      "observed": {
+        "references": [
+          {
+            "role": "tx",
+            "kind": "strRef",
+            "formula": "Case6!$B$1",
+            "count": 1,
+            "points": [
+              {
+                "index": 0,
+                "value": "Values"
+              }
+            ]
+          },
+          {
+            "role": "cat",
+            "kind": "strRef",
+            "formula": "Case6!$A$2:$A$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "Point0"
+              },
+              {
+                "index": 1,
+                "value": "Point1"
+              },
+              {
+                "index": 2,
+                "value": "Point2"
+              },
+              {
+                "index": 3,
+                "value": "Point3"
+              },
+              {
+                "index": 4,
+                "value": "Point4"
+              },
+              {
+                "index": 5,
+                "value": "Point5"
+              },
+              {
+                "index": 6,
+                "value": "Point6"
+              },
+              {
+                "index": 7,
+                "value": "Point7"
+              },
+              {
+                "index": 8,
+                "value": "Point8"
+              },
+              {
+                "index": 9,
+                "value": "Point9"
+              },
+              {
+                "index": 10,
+                "value": "Point10"
+              },
+              {
+                "index": 11,
+                "value": "Point11"
+              }
+            ]
+          },
+          {
+            "role": "val",
+            "kind": "numRef",
+            "formula": "Case6!$B$2:$B$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "2"
+              },
+              {
+                "index": 3,
+                "value": "1"
+              },
+              {
+                "index": 4,
+                "value": "0"
+              },
+              {
+                "index": 10,
+                "value": "-3"
+              },
+              {
+                "index": 11,
+                "value": "0"
+              }
+            ]
+          }
+        ],
+        "blueGeometry": [
+          {
+            "attributes": {
+              "fill": "none",
+              "stroke-width": "1.42591",
+              "stroke-linecap": "butt",
+              "stroke-linejoin": "round",
+              "stroke": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "stroke-opacity": "1",
+              "stroke-miterlimit": "10",
+              "d": "M 166.201918 722.159152 L 224.625619 708.072387 L 244.109312 693.962158 L 360.93716 651.697954 L 380.420853 693.962158 ",
+              "transform": "matrix(0.998832, 0, 0, -0.998832, 0, 841.343092)"
+            },
+            "transforms": [
+              "matrix(0.998832, 0, 0, -0.998832, 0, 841.343092)"
+            ]
+          },
+          {
+            "attributes": {
+              "fill": "none",
+              "stroke-width": "1.42591",
+              "stroke-linecap": "butt",
+              "stroke-linejoin": "round",
+              "stroke": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "stroke-opacity": "1",
+              "stroke-miterlimit": "10",
+              "d": "M 248.113989 620.524829 L 264.175716 620.524829 ",
+              "transform": "matrix(0.998832, 0, 0, -0.998832, 0, 841.343092)"
+            },
+            "transforms": [
+              "matrix(0.998832, 0, 0, -0.998832, 0, 841.343092)"
+            ]
+          }
+        ],
+        "pdfWords": [
+          "Category",
+          "Point0",
+          "Point1",
+          "Point2",
+          "Point3",
+          "Point4",
+          "Point5",
+          "Point6",
+          "Point7",
+          "Point8",
+          "Point9",
+          "Point10",
+          "Point11",
+          "Values",
+          "2",
+          "7",
+          "word",
+          "图表",
+          "line",
+          "TRUE",
+          "FALSE",
+          "3",
+          "2",
+          "#N/A",
+          "1",
+          "#DIV/0!",
+          "0",
+          "0",
+          "1",
+          "-3",
+          "-1",
+          "nt0",
+          "t1",
+          "t2",
+          "t3",
+          "t4",
+          "t5",
+          "t6",
+          "t7",
+          "t8",
+          "t9",
+          "t1",
+          "t1",
+          "i",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "0",
+          "Po",
+          "Po",
+          "-2",
+          "-3",
+          "-4",
+          "Values"
+        ]
+      }
+    },
+    {
+      "kind": "pie",
+      "blankAs": "gap",
+      "hidden": "none",
+      "visibleOnly": true,
+      "observed": {
+        "references": [
+          {
+            "role": "tx",
+            "kind": "strRef",
+            "formula": "Case7!$B$1",
+            "count": 1,
+            "points": [
+              {
+                "index": 0,
+                "value": "Values"
+              }
+            ]
+          },
+          {
+            "role": "cat",
+            "kind": "strRef",
+            "formula": "Case7!$A$2:$A$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "Point0"
+              },
+              {
+                "index": 1,
+                "value": "Point1"
+              },
+              {
+                "index": 2,
+                "value": "Point2"
+              },
+              {
+                "index": 3,
+                "value": "Point3"
+              },
+              {
+                "index": 4,
+                "value": "Point4"
+              },
+              {
+                "index": 5,
+                "value": "Point5"
+              },
+              {
+                "index": 6,
+                "value": "Point6"
+              },
+              {
+                "index": 7,
+                "value": "Point7"
+              },
+              {
+                "index": 8,
+                "value": "Point8"
+              },
+              {
+                "index": 9,
+                "value": "Point9"
+              },
+              {
+                "index": 10,
+                "value": "Point10"
+              },
+              {
+                "index": 11,
+                "value": "Point11"
+              }
+            ]
+          },
+          {
+            "role": "val",
+            "kind": "numRef",
+            "formula": "Case7!$B$2:$B$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "2"
+              },
+              {
+                "index": 3,
+                "value": "1"
+              },
+              {
+                "index": 4,
+                "value": "0"
+              },
+              {
+                "index": 10,
+                "value": "-3"
+              },
+              {
+                "index": 11,
+                "value": "0"
+              }
+            ]
+          }
+        ],
+        "blueGeometry": [
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 306.082031 172.554688 C 307.648438 169.839844 308.914062 166.988281 309.878906 164.011719 C 311.347656 159.566406 312.089844 154.925781 312.089844 150.222656 C 312.089844 145.535156 311.347656 140.894531 309.878906 136.429688 C 308.433594 131.96875 306.28125 127.785156 303.546875 123.988281 C 300.792969 120.207031 297.4375 116.871094 293.65625 114.117188 C 289.859375 111.363281 285.675781 109.230469 281.191406 107.785156 C 276.75 106.316406 272.085938 105.59375 267.402344 105.59375 L 267.402344 150.222656 Z M 306.082031 172.554688 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 267.402344 194.867188 C 272.085938 194.867188 276.75 194.125 281.191406 192.675781 C 285.675781 191.230469 289.859375 189.078125 293.65625 186.34375 C 297.4375 183.589844 300.792969 180.253906 303.546875 176.453125 C 304.472656 175.1875 305.296875 173.902344 306.082031 172.554688 L 267.402344 150.222656 Z M 267.402344 194.867188 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 267.402344 105.59375 C 262.699219 105.59375 258.035156 106.316406 253.59375 107.785156 C 249.109375 109.230469 244.929688 111.363281 241.128906 114.117188 C 237.347656 116.871094 233.992188 120.207031 231.238281 123.988281 C 228.503906 127.785156 226.355469 131.96875 224.90625 136.429688 C 223.4375 140.894531 222.714844 145.535156 222.714844 150.222656 C 222.714844 154.925781 223.4375 159.566406 224.90625 164.011719 C 226.355469 168.472656 228.503906 172.675781 231.238281 176.453125 C 233.992188 180.253906 237.347656 183.589844 241.128906 186.34375 C 244.929688 189.078125 249.109375 191.230469 253.59375 192.675781 C 258.035156 194.125 262.699219 194.867188 267.402344 194.867188 Z M 267.402344 105.59375 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 176.539062 213.683594 L 174.410156 213.683594 L 174.410156 209.464844 L 178.652344 209.464844 L 178.652344 213.683594 Z M 176.539062 213.683594 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 207.015625 213.683594 L 204.90625 213.683594 L 204.90625 209.464844 L 209.144531 209.464844 L 209.144531 213.683594 Z M 207.015625 213.683594 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 237.511719 213.683594 L 235.398438 213.683594 L 235.398438 209.464844 L 239.621094 209.464844 L 239.621094 213.683594 Z M 237.511719 213.683594 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 268.007812 213.683594 L 265.894531 213.683594 L 265.894531 209.464844 L 270.117188 209.464844 L 270.117188 213.683594 Z M 268.007812 213.683594 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 298.503906 213.683594 L 296.371094 213.683594 L 296.371094 209.464844 L 300.613281 209.464844 L 300.613281 213.683594 Z M 298.503906 213.683594 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 332.835938 213.683594 L 330.726562 213.683594 L 330.726562 209.464844 L 334.949219 209.464844 L 334.949219 213.683594 Z M 332.835938 213.683594 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 176.539062 223.675781 L 174.410156 223.675781 L 174.410156 219.433594 L 178.652344 219.433594 L 178.652344 223.675781 Z M 176.539062 223.675781 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 207.015625 223.675781 L 204.90625 223.675781 L 204.90625 219.433594 L 209.144531 219.433594 L 209.144531 223.675781 Z M 207.015625 223.675781 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 237.511719 223.675781 L 235.398438 223.675781 L 235.398438 219.433594 L 239.621094 219.433594 L 239.621094 223.675781 Z M 237.511719 223.675781 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 268.007812 223.675781 L 265.894531 223.675781 L 265.894531 219.433594 L 270.117188 219.433594 L 270.117188 223.675781 Z M 268.007812 223.675781 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 298.503906 223.675781 L 296.371094 223.675781 L 296.371094 219.433594 L 300.613281 219.433594 L 300.613281 223.675781 Z M 298.503906 223.675781 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 332.835938 223.675781 L 330.726562 223.675781 L 330.726562 219.433594 L 334.949219 219.433594 L 334.949219 223.675781 Z M 332.835938 223.675781 "
+            },
+            "transforms": []
+          }
+        ],
+        "pdfWords": [
+          "Category",
+          "Point0",
+          "Point1",
+          "Point2",
+          "Point3",
+          "Point4",
+          "Point5",
+          "Point6",
+          "Point7",
+          "Point8",
+          "Point9",
+          "Point10",
+          "Point11",
+          "Values",
+          "2",
+          "7",
+          "word",
+          "图表",
+          "pie",
+          "TRUE",
+          "FALSE",
+          "#N/A",
+          "#DIV/0!",
+          "-3",
+          "0",
+          "Point0",
+          "Point6",
+          "Point1",
+          "Point7",
+          "Point2",
+          "Point8",
+          "Point3",
+          "Point9",
+          "Point4",
+          "Point10",
+          "Point5",
+          "Point11"
+        ]
+      }
+    },
+    {
+      "kind": "pie",
+      "blankAs": "zero",
+      "hidden": "none",
+      "visibleOnly": true,
+      "observed": {
+        "references": [
+          {
+            "role": "tx",
+            "kind": "strRef",
+            "formula": "Case8!$B$1",
+            "count": 1,
+            "points": [
+              {
+                "index": 0,
+                "value": "Values"
+              }
+            ]
+          },
+          {
+            "role": "cat",
+            "kind": "strRef",
+            "formula": "Case8!$A$2:$A$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "Point0"
+              },
+              {
+                "index": 1,
+                "value": "Point1"
+              },
+              {
+                "index": 2,
+                "value": "Point2"
+              },
+              {
+                "index": 3,
+                "value": "Point3"
+              },
+              {
+                "index": 4,
+                "value": "Point4"
+              },
+              {
+                "index": 5,
+                "value": "Point5"
+              },
+              {
+                "index": 6,
+                "value": "Point6"
+              },
+              {
+                "index": 7,
+                "value": "Point7"
+              },
+              {
+                "index": 8,
+                "value": "Point8"
+              },
+              {
+                "index": 9,
+                "value": "Point9"
+              },
+              {
+                "index": 10,
+                "value": "Point10"
+              },
+              {
+                "index": 11,
+                "value": "Point11"
+              }
+            ]
+          },
+          {
+            "role": "val",
+            "kind": "numRef",
+            "formula": "Case8!$B$2:$B$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "2"
+              },
+              {
+                "index": 3,
+                "value": "1"
+              },
+              {
+                "index": 4,
+                "value": "0"
+              },
+              {
+                "index": 10,
+                "value": "-3"
+              },
+              {
+                "index": 11,
+                "value": "0"
+              }
+            ]
+          }
+        ],
+        "blueGeometry": [
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 306.082031 172.554688 C 307.648438 169.839844 308.914062 166.988281 309.878906 164.011719 C 311.347656 159.566406 312.089844 154.925781 312.089844 150.222656 C 312.089844 145.535156 311.347656 140.894531 309.878906 136.429688 C 308.433594 131.96875 306.28125 127.785156 303.546875 123.988281 C 300.792969 120.207031 297.4375 116.871094 293.65625 114.117188 C 289.859375 111.363281 285.675781 109.230469 281.191406 107.785156 C 276.75 106.316406 272.085938 105.59375 267.402344 105.59375 L 267.402344 150.222656 Z M 306.082031 172.554688 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 267.402344 194.867188 C 272.085938 194.867188 276.75 194.125 281.191406 192.675781 C 285.675781 191.230469 289.859375 189.078125 293.65625 186.34375 C 297.4375 183.589844 300.792969 180.253906 303.546875 176.453125 C 304.472656 175.1875 305.296875 173.902344 306.082031 172.554688 L 267.402344 150.222656 Z M 267.402344 194.867188 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 267.402344 105.59375 C 262.699219 105.59375 258.035156 106.316406 253.59375 107.785156 C 249.109375 109.230469 244.929688 111.363281 241.128906 114.117188 C 237.347656 116.871094 233.992188 120.207031 231.238281 123.988281 C 228.503906 127.785156 226.355469 131.96875 224.90625 136.429688 C 223.4375 140.894531 222.714844 145.535156 222.714844 150.222656 C 222.714844 154.925781 223.4375 159.566406 224.90625 164.011719 C 226.355469 168.472656 228.503906 172.675781 231.238281 176.453125 C 233.992188 180.253906 237.347656 183.589844 241.128906 186.34375 C 244.929688 189.078125 249.109375 191.230469 253.59375 192.675781 C 258.035156 194.125 262.699219 194.867188 267.402344 194.867188 Z M 267.402344 105.59375 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 176.539062 213.683594 L 174.410156 213.683594 L 174.410156 209.464844 L 178.652344 209.464844 L 178.652344 213.683594 Z M 176.539062 213.683594 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 207.015625 213.683594 L 204.90625 213.683594 L 204.90625 209.464844 L 209.144531 209.464844 L 209.144531 213.683594 Z M 207.015625 213.683594 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 237.511719 213.683594 L 235.398438 213.683594 L 235.398438 209.464844 L 239.621094 209.464844 L 239.621094 213.683594 Z M 237.511719 213.683594 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 268.007812 213.683594 L 265.894531 213.683594 L 265.894531 209.464844 L 270.117188 209.464844 L 270.117188 213.683594 Z M 268.007812 213.683594 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 298.503906 213.683594 L 296.371094 213.683594 L 296.371094 209.464844 L 300.613281 209.464844 L 300.613281 213.683594 Z M 298.503906 213.683594 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 332.835938 213.683594 L 330.726562 213.683594 L 330.726562 209.464844 L 334.949219 209.464844 L 334.949219 213.683594 Z M 332.835938 213.683594 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 176.539062 223.675781 L 174.410156 223.675781 L 174.410156 219.433594 L 178.652344 219.433594 L 178.652344 223.675781 Z M 176.539062 223.675781 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 207.015625 223.675781 L 204.90625 223.675781 L 204.90625 219.433594 L 209.144531 219.433594 L 209.144531 223.675781 Z M 207.015625 223.675781 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 237.511719 223.675781 L 235.398438 223.675781 L 235.398438 219.433594 L 239.621094 219.433594 L 239.621094 223.675781 Z M 237.511719 223.675781 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 268.007812 223.675781 L 265.894531 223.675781 L 265.894531 219.433594 L 270.117188 219.433594 L 270.117188 223.675781 Z M 268.007812 223.675781 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 298.503906 223.675781 L 296.371094 223.675781 L 296.371094 219.433594 L 300.613281 219.433594 L 300.613281 223.675781 Z M 298.503906 223.675781 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 332.835938 223.675781 L 330.726562 223.675781 L 330.726562 219.433594 L 334.949219 219.433594 L 334.949219 223.675781 Z M 332.835938 223.675781 "
+            },
+            "transforms": []
+          }
+        ],
+        "pdfWords": [
+          "Category",
+          "Point0",
+          "Point1",
+          "Point2",
+          "Point3",
+          "Point4",
+          "Point5",
+          "Point6",
+          "Point7",
+          "Point8",
+          "Point9",
+          "Point10",
+          "Point11",
+          "Values",
+          "2",
+          "7",
+          "word",
+          "图表",
+          "pie",
+          "TRUE",
+          "FALSE",
+          "#N/A",
+          "#DIV/0!",
+          "-3",
+          "0",
+          "Point0",
+          "Point6",
+          "Point1",
+          "Point7",
+          "Point2",
+          "Point8",
+          "Point3",
+          "Point9",
+          "Point4",
+          "Point10",
+          "Point5",
+          "Point11"
+        ]
+      }
+    },
+    {
+      "kind": "pie",
+      "blankAs": "span",
+      "hidden": "none",
+      "visibleOnly": true,
+      "observed": {
+        "references": [
+          {
+            "role": "tx",
+            "kind": "strRef",
+            "formula": "Case9!$B$1",
+            "count": 1,
+            "points": [
+              {
+                "index": 0,
+                "value": "Values"
+              }
+            ]
+          },
+          {
+            "role": "cat",
+            "kind": "strRef",
+            "formula": "Case9!$A$2:$A$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "Point0"
+              },
+              {
+                "index": 1,
+                "value": "Point1"
+              },
+              {
+                "index": 2,
+                "value": "Point2"
+              },
+              {
+                "index": 3,
+                "value": "Point3"
+              },
+              {
+                "index": 4,
+                "value": "Point4"
+              },
+              {
+                "index": 5,
+                "value": "Point5"
+              },
+              {
+                "index": 6,
+                "value": "Point6"
+              },
+              {
+                "index": 7,
+                "value": "Point7"
+              },
+              {
+                "index": 8,
+                "value": "Point8"
+              },
+              {
+                "index": 9,
+                "value": "Point9"
+              },
+              {
+                "index": 10,
+                "value": "Point10"
+              },
+              {
+                "index": 11,
+                "value": "Point11"
+              }
+            ]
+          },
+          {
+            "role": "val",
+            "kind": "numRef",
+            "formula": "Case9!$B$2:$B$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "2"
+              },
+              {
+                "index": 3,
+                "value": "1"
+              },
+              {
+                "index": 4,
+                "value": "0"
+              },
+              {
+                "index": 10,
+                "value": "-3"
+              },
+              {
+                "index": 11,
+                "value": "0"
+              }
+            ]
+          }
+        ],
+        "blueGeometry": [
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 306.082031 172.554688 C 307.648438 169.839844 308.914062 166.988281 309.878906 164.011719 C 311.347656 159.566406 312.089844 154.925781 312.089844 150.222656 C 312.089844 145.535156 311.347656 140.894531 309.878906 136.429688 C 308.433594 131.96875 306.28125 127.785156 303.546875 123.988281 C 300.792969 120.207031 297.4375 116.871094 293.65625 114.117188 C 289.859375 111.363281 285.675781 109.230469 281.191406 107.785156 C 276.75 106.316406 272.085938 105.59375 267.402344 105.59375 L 267.402344 150.222656 Z M 306.082031 172.554688 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 267.402344 194.867188 C 272.085938 194.867188 276.75 194.125 281.191406 192.675781 C 285.675781 191.230469 289.859375 189.078125 293.65625 186.34375 C 297.4375 183.589844 300.792969 180.253906 303.546875 176.453125 C 304.472656 175.1875 305.296875 173.902344 306.082031 172.554688 L 267.402344 150.222656 Z M 267.402344 194.867188 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 267.402344 105.59375 C 262.699219 105.59375 258.035156 106.316406 253.59375 107.785156 C 249.109375 109.230469 244.929688 111.363281 241.128906 114.117188 C 237.347656 116.871094 233.992188 120.207031 231.238281 123.988281 C 228.503906 127.785156 226.355469 131.96875 224.90625 136.429688 C 223.4375 140.894531 222.714844 145.535156 222.714844 150.222656 C 222.714844 154.925781 223.4375 159.566406 224.90625 164.011719 C 226.355469 168.472656 228.503906 172.675781 231.238281 176.453125 C 233.992188 180.253906 237.347656 183.589844 241.128906 186.34375 C 244.929688 189.078125 249.109375 191.230469 253.59375 192.675781 C 258.035156 194.125 262.699219 194.867188 267.402344 194.867188 Z M 267.402344 105.59375 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 176.539062 213.683594 L 174.410156 213.683594 L 174.410156 209.464844 L 178.652344 209.464844 L 178.652344 213.683594 Z M 176.539062 213.683594 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 207.015625 213.683594 L 204.90625 213.683594 L 204.90625 209.464844 L 209.144531 209.464844 L 209.144531 213.683594 Z M 207.015625 213.683594 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 237.511719 213.683594 L 235.398438 213.683594 L 235.398438 209.464844 L 239.621094 209.464844 L 239.621094 213.683594 Z M 237.511719 213.683594 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 268.007812 213.683594 L 265.894531 213.683594 L 265.894531 209.464844 L 270.117188 209.464844 L 270.117188 213.683594 Z M 268.007812 213.683594 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 298.503906 213.683594 L 296.371094 213.683594 L 296.371094 209.464844 L 300.613281 209.464844 L 300.613281 213.683594 Z M 298.503906 213.683594 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 332.835938 213.683594 L 330.726562 213.683594 L 330.726562 209.464844 L 334.949219 209.464844 L 334.949219 213.683594 Z M 332.835938 213.683594 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 176.539062 223.675781 L 174.410156 223.675781 L 174.410156 219.433594 L 178.652344 219.433594 L 178.652344 223.675781 Z M 176.539062 223.675781 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 207.015625 223.675781 L 204.90625 223.675781 L 204.90625 219.433594 L 209.144531 219.433594 L 209.144531 223.675781 Z M 207.015625 223.675781 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 237.511719 223.675781 L 235.398438 223.675781 L 235.398438 219.433594 L 239.621094 219.433594 L 239.621094 223.675781 Z M 237.511719 223.675781 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 268.007812 223.675781 L 265.894531 223.675781 L 265.894531 219.433594 L 270.117188 219.433594 L 270.117188 223.675781 Z M 268.007812 223.675781 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 298.503906 223.675781 L 296.371094 223.675781 L 296.371094 219.433594 L 300.613281 219.433594 L 300.613281 223.675781 Z M 298.503906 223.675781 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 332.835938 223.675781 L 330.726562 223.675781 L 330.726562 219.433594 L 334.949219 219.433594 L 334.949219 223.675781 Z M 332.835938 223.675781 "
+            },
+            "transforms": []
+          }
+        ],
+        "pdfWords": [
+          "Category",
+          "Point0",
+          "Point1",
+          "Point2",
+          "Point3",
+          "Point4",
+          "Point5",
+          "Point6",
+          "Point7",
+          "Point8",
+          "Point9",
+          "Point10",
+          "Point11",
+          "Values",
+          "2",
+          "7",
+          "word",
+          "图表",
+          "pie",
+          "TRUE",
+          "FALSE",
+          "#N/A",
+          "#DIV/0!",
+          "-3",
+          "0",
+          "Point0",
+          "Point6",
+          "Point1",
+          "Point7",
+          "Point2",
+          "Point8",
+          "Point3",
+          "Point9",
+          "Point4",
+          "Point10",
+          "Point5",
+          "Point11"
+        ]
+      }
+    },
+    {
+      "kind": "column",
+      "blankAs": "gap",
+      "hidden": "rows",
+      "visibleOnly": false,
+      "observed": {
+        "references": [
+          {
+            "role": "tx",
+            "kind": "strRef",
+            "formula": "Case10!$B$1",
+            "count": 1,
+            "points": [
+              {
+                "index": 0,
+                "value": "Values"
+              }
+            ]
+          },
+          {
+            "role": "cat",
+            "kind": "strRef",
+            "formula": "Case10!$A$2:$A$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "Point0"
+              },
+              {
+                "index": 1,
+                "value": "Point1"
+              },
+              {
+                "index": 2,
+                "value": "Point2"
+              },
+              {
+                "index": 3,
+                "value": "Point3"
+              },
+              {
+                "index": 4,
+                "value": "Point4"
+              },
+              {
+                "index": 5,
+                "value": "Point5"
+              },
+              {
+                "index": 6,
+                "value": "Point6"
+              },
+              {
+                "index": 7,
+                "value": "Point7"
+              },
+              {
+                "index": 8,
+                "value": "Point8"
+              },
+              {
+                "index": 9,
+                "value": "Point9"
+              },
+              {
+                "index": 10,
+                "value": "Point10"
+              },
+              {
+                "index": 11,
+                "value": "Point11"
+              }
+            ]
+          },
+          {
+            "role": "val",
+            "kind": "numRef",
+            "formula": "Case10!$B$2:$B$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "2"
+              },
+              {
+                "index": 3,
+                "value": "1"
+              },
+              {
+                "index": 4,
+                "value": "0"
+              },
+              {
+                "index": 10,
+                "value": "-3"
+              },
+              {
+                "index": 11,
+                "value": "0"
+              }
+            ]
+          }
+        ],
+        "blueGeometry": [
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 162.125 148.191406 L 169.90625 148.191406 L 169.90625 120.027344 L 162.125 120.027344 Z M 162.125 148.191406 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 220.464844 148.191406 L 228.265625 148.191406 L 228.265625 134.097656 L 220.464844 134.097656 Z M 220.464844 148.191406 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 356.617188 148.191406 L 364.398438 148.191406 L 364.398438 105.933594 L 356.617188 105.933594 Z M 356.617188 148.191406 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 255.824219 223.675781 L 253.714844 223.675781 L 253.714844 219.433594 L 257.957031 219.433594 L 257.957031 223.675781 Z M 255.824219 223.675781 "
+            },
+            "transforms": []
+          }
+        ],
+        "pdfWords": [
+          "Category",
+          "Point0",
+          "Point2",
+          "Point4",
+          "Point5",
+          "Point6",
+          "Point7",
+          "Point8",
+          "Point9",
+          "Point11",
+          "Values",
+          "2",
+          "word",
+          "图表",
+          "column",
+          "FALSE",
+          "3",
+          "#N/A",
+          "#DIV/0!",
+          "0",
+          "2",
+          "1",
+          "0",
+          "-1",
+          "-2",
+          "0",
+          "1",
+          "t0",
+          "t1",
+          "t2",
+          "t3",
+          "t4",
+          "t5",
+          "t6",
+          "t7",
+          "t8",
+          "t9",
+          "t1",
+          "t1",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "-3",
+          "-4",
+          "Values"
+        ]
+      }
+    },
+    {
+      "kind": "column",
+      "blankAs": "gap",
+      "hidden": "rows",
+      "visibleOnly": true,
+      "observed": {
+        "references": [
+          {
+            "role": "tx",
+            "kind": "strRef",
+            "formula": "Case11!$B$1",
+            "count": 1,
+            "points": [
+              {
+                "index": 0,
+                "value": "Values"
+              }
+            ]
+          },
+          {
+            "role": "cat",
+            "kind": "strRef",
+            "formula": "Case11!$A$2:$A$13",
+            "count": 9,
+            "points": [
+              {
+                "index": 0,
+                "value": "Point0"
+              },
+              {
+                "index": 1,
+                "value": "Point2"
+              },
+              {
+                "index": 2,
+                "value": "Point4"
+              },
+              {
+                "index": 3,
+                "value": "Point5"
+              },
+              {
+                "index": 4,
+                "value": "Point6"
+              },
+              {
+                "index": 5,
+                "value": "Point7"
+              },
+              {
+                "index": 6,
+                "value": "Point8"
+              },
+              {
+                "index": 7,
+                "value": "Point9"
+              },
+              {
+                "index": 8,
+                "value": "Point11"
+              }
+            ]
+          },
+          {
+            "role": "val",
+            "kind": "numRef",
+            "formula": "Case11!$B$2:$B$13",
+            "count": 9,
+            "points": [
+              {
+                "index": 0,
+                "value": "2"
+              },
+              {
+                "index": 2,
+                "value": "0"
+              },
+              {
+                "index": 8,
+                "value": "0"
+              }
+            ]
+          }
+        ],
+        "blueGeometry": [
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 161.84375 195.511719 L 172.320312 195.511719 L 172.320312 135.808594 L 161.84375 135.808594 Z M 161.84375 195.511719 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 255.824219 223.675781 L 253.714844 223.675781 L 253.714844 219.433594 L 257.957031 219.433594 L 257.957031 223.675781 Z M 255.824219 223.675781 "
+            },
+            "transforms": []
+          }
+        ],
+        "pdfWords": [
+          "Category",
+          "Point0",
+          "Point2",
+          "Point4",
+          "Point5",
+          "Point6",
+          "Point7",
+          "Point8",
+          "Point9",
+          "Point11",
+          "Values",
+          "2",
+          "word",
+          "图表",
+          "column",
+          "FALSE",
+          "3",
+          "#N/A",
+          "#DIV/0!",
+          "0",
+          "2",
+          "1",
+          "0",
+          "Point0",
+          "Point2",
+          "Point4",
+          "Point5",
+          "Point6",
+          "Point7",
+          "Point8",
+          "Point9",
+          "Point11",
+          "Values"
+        ]
+      }
+    },
+    {
+      "kind": "column",
+      "blankAs": "gap",
+      "hidden": "values-column",
+      "visibleOnly": false,
+      "observed": {
+        "references": [
+          {
+            "role": "tx",
+            "kind": "strRef",
+            "formula": "Case12!$B$1",
+            "count": 1,
+            "points": [
+              {
+                "index": 0,
+                "value": "Values"
+              }
+            ]
+          },
+          {
+            "role": "cat",
+            "kind": "strRef",
+            "formula": "Case12!$A$2:$A$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "Point0"
+              },
+              {
+                "index": 1,
+                "value": "Point1"
+              },
+              {
+                "index": 2,
+                "value": "Point2"
+              },
+              {
+                "index": 3,
+                "value": "Point3"
+              },
+              {
+                "index": 4,
+                "value": "Point4"
+              },
+              {
+                "index": 5,
+                "value": "Point5"
+              },
+              {
+                "index": 6,
+                "value": "Point6"
+              },
+              {
+                "index": 7,
+                "value": "Point7"
+              },
+              {
+                "index": 8,
+                "value": "Point8"
+              },
+              {
+                "index": 9,
+                "value": "Point9"
+              },
+              {
+                "index": 10,
+                "value": "Point10"
+              },
+              {
+                "index": 11,
+                "value": "Point11"
+              }
+            ]
+          },
+          {
+            "role": "val",
+            "kind": "numRef",
+            "formula": "Case12!$B$2:$B$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "2"
+              },
+              {
+                "index": 3,
+                "value": "1"
+              },
+              {
+                "index": 4,
+                "value": "0"
+              },
+              {
+                "index": 10,
+                "value": "-3"
+              },
+              {
+                "index": 11,
+                "value": "0"
+              }
+            ]
+          }
+        ],
+        "blueGeometry": [
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 118.546875 160.769531 L 127.203125 160.769531 L 127.203125 129.429688 L 118.546875 129.429688 Z M 118.546875 160.769531 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 183.457031 160.769531 L 192.136719 160.769531 L 192.136719 145.089844 L 183.457031 145.089844 Z M 183.457031 160.769531 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 334.953125 160.769531 L 343.609375 160.769531 L 343.609375 113.75 L 334.953125 113.75 Z M 334.953125 160.769531 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 222.804688 244.757812 L 220.453125 244.757812 L 220.453125 240.039062 L 225.171875 240.039062 L 225.171875 244.757812 Z M 222.804688 244.757812 "
+            },
+            "transforms": []
+          }
+        ],
+        "pdfWords": [
+          "Category",
+          "Point0",
+          "Point1",
+          "Point2",
+          "Point3",
+          "Point4",
+          "Point5",
+          "Point6",
+          "Point7",
+          "Point8",
+          "Point9",
+          "Point10",
+          "Point11",
+          "图表",
+          "column",
+          "3",
+          "2",
+          "1",
+          "0",
+          "-1",
+          "-2",
+          "0",
+          "1",
+          "t0",
+          "t1",
+          "t2",
+          "t3",
+          "t4",
+          "t5",
+          "t6",
+          "t7",
+          "t8",
+          "t9",
+          "t1",
+          "t1",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "in",
+          "o",
+          "o",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "P",
+          "P",
+          "-3",
+          "-4",
+          "Values"
+        ]
+      }
+    },
+    {
+      "kind": "column",
+      "blankAs": "gap",
+      "hidden": "values-column",
+      "visibleOnly": true,
+      "observed": {
+        "references": [
+          {
+            "role": "tx",
+            "kind": "strRef",
+            "formula": "Case13!$B$1",
+            "count": 1,
+            "points": [
+              {
+                "index": 0,
+                "value": null
+              }
+            ]
+          },
+          {
+            "role": "cat",
+            "kind": "strRef",
+            "formula": "Case13!$A$2:$A$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "Point0"
+              },
+              {
+                "index": 1,
+                "value": "Point1"
+              },
+              {
+                "index": 2,
+                "value": "Point2"
+              },
+              {
+                "index": 3,
+                "value": "Point3"
+              },
+              {
+                "index": 4,
+                "value": "Point4"
+              },
+              {
+                "index": 5,
+                "value": "Point5"
+              },
+              {
+                "index": 6,
+                "value": "Point6"
+              },
+              {
+                "index": 7,
+                "value": "Point7"
+              },
+              {
+                "index": 8,
+                "value": "Point8"
+              },
+              {
+                "index": 9,
+                "value": "Point9"
+              },
+              {
+                "index": 10,
+                "value": "Point10"
+              },
+              {
+                "index": 11,
+                "value": "Point11"
+              }
+            ]
+          },
+          {
+            "role": "val",
+            "kind": "numRef",
+            "formula": "Case13!$B$2:$B$13",
+            "count": 0,
+            "points": []
+          }
+        ],
+        "blueGeometry": [],
+        "pdfWords": [
+          "Category",
+          "Point0",
+          "Point1",
+          "Point2",
+          "Point3",
+          "Point4",
+          "Point5",
+          "Point6",
+          "Point7",
+          "Point8",
+          "Point9",
+          "Point10",
+          "Point11",
+          "图表",
+          "column",
+          "12",
+          "10",
+          "8",
+          "6",
+          "4",
+          "2",
+          "0",
+          "Point0",
+          "Point1",
+          "Point2",
+          "Point3",
+          "Point4",
+          "Point5",
+          "Point6",
+          "Point7",
+          "Point8",
+          "Point9"
+        ]
+      }
+    },
+    {
+      "kind": "column",
+      "blankAs": "gap",
+      "hidden": "categories-column",
+      "visibleOnly": false,
+      "observed": {
+        "references": [
+          {
+            "role": "tx",
+            "kind": "strRef",
+            "formula": "Case14!$B$1",
+            "count": 1,
+            "points": [
+              {
+                "index": 0,
+                "value": "Values"
+              }
+            ]
+          },
+          {
+            "role": "cat",
+            "kind": "strRef",
+            "formula": "Case14!$A$2:$A$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "Point0"
+              },
+              {
+                "index": 1,
+                "value": "Point1"
+              },
+              {
+                "index": 2,
+                "value": "Point2"
+              },
+              {
+                "index": 3,
+                "value": "Point3"
+              },
+              {
+                "index": 4,
+                "value": "Point4"
+              },
+              {
+                "index": 5,
+                "value": "Point5"
+              },
+              {
+                "index": 6,
+                "value": "Point6"
+              },
+              {
+                "index": 7,
+                "value": "Point7"
+              },
+              {
+                "index": 8,
+                "value": "Point8"
+              },
+              {
+                "index": 9,
+                "value": "Point9"
+              },
+              {
+                "index": 10,
+                "value": "Point10"
+              },
+              {
+                "index": 11,
+                "value": "Point11"
+              }
+            ]
+          },
+          {
+            "role": "val",
+            "kind": "numRef",
+            "formula": "Case14!$B$2:$B$13",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "2"
+              },
+              {
+                "index": 3,
+                "value": "1"
+              },
+              {
+                "index": 4,
+                "value": "0"
+              },
+              {
+                "index": 10,
+                "value": "-3"
+              },
+              {
+                "index": 11,
+                "value": "0"
+              }
+            ]
+          }
+        ],
+        "blueGeometry": [
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 118.546875 160.769531 L 127.203125 160.769531 L 127.203125 129.429688 L 118.546875 129.429688 Z M 118.546875 160.769531 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 183.457031 160.769531 L 192.136719 160.769531 L 192.136719 145.089844 L 183.457031 145.089844 Z M 183.457031 160.769531 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 334.953125 160.769531 L 343.609375 160.769531 L 343.609375 113.75 L 334.953125 113.75 Z M 334.953125 160.769531 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 222.804688 244.757812 L 220.453125 244.757812 L 220.453125 240.039062 L 225.171875 240.039062 L 225.171875 244.757812 Z M 222.804688 244.757812 "
+            },
+            "transforms": []
+          }
+        ],
+        "pdfWords": [
+          "Values",
+          "2",
+          "7",
+          "word",
+          "图表",
+          "column",
+          "TRUE",
+          "FALSE",
+          "3",
+          "2",
+          "#N/A",
+          "1",
+          "#DIV/0!",
+          "0",
+          "0",
+          "1",
+          "-3",
+          "-1",
+          "int0",
+          "int1",
+          "int2",
+          "int3",
+          "int4",
+          "int5",
+          "int6",
+          "int7",
+          "int8",
+          "int9",
+          "t1",
+          "t1",
+          "in",
+          "in",
+          "o",
+          "o",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "Po",
+          "0",
+          "P",
+          "P",
+          "-2",
+          "-3",
+          "-4",
+          "Values"
+        ]
+      }
+    },
+    {
+      "kind": "column",
+      "blankAs": "gap",
+      "hidden": "categories-column",
+      "visibleOnly": true,
+      "observed": {
+        "references": [
+          {
+            "role": "tx",
+            "kind": "strRef",
+            "formula": "label 0",
+            "count": 1,
+            "points": [
+              {
+                "index": 0,
+                "value": "CachedSeries"
+              }
+            ]
+          },
+          {
+            "role": "cat",
+            "kind": "strRef",
+            "formula": "categories",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "Cache0"
+              },
+              {
+                "index": 1,
+                "value": "Cache1"
+              },
+              {
+                "index": 2,
+                "value": "Cache2"
+              },
+              {
+                "index": 3,
+                "value": "Cache3"
+              },
+              {
+                "index": 4,
+                "value": "Cache4"
+              },
+              {
+                "index": 5,
+                "value": "Cache5"
+              },
+              {
+                "index": 6,
+                "value": "Cache6"
+              },
+              {
+                "index": 7,
+                "value": "Cache7"
+              },
+              {
+                "index": 8,
+                "value": "Cache8"
+              },
+              {
+                "index": 9,
+                "value": "Cache9"
+              },
+              {
+                "index": 10,
+                "value": "Cache10"
+              },
+              {
+                "index": 11,
+                "value": "Cache11"
+              }
+            ]
+          },
+          {
+            "role": "val",
+            "kind": "numRef",
+            "formula": "0",
+            "count": 12,
+            "points": [
+              {
+                "index": 0,
+                "value": "999"
+              },
+              {
+                "index": 1,
+                "value": "999"
+              },
+              {
+                "index": 2,
+                "value": "999"
+              },
+              {
+                "index": 3,
+                "value": "999"
+              },
+              {
+                "index": 4,
+                "value": "999"
+              },
+              {
+                "index": 5,
+                "value": "999"
+              },
+              {
+                "index": 6,
+                "value": "999"
+              },
+              {
+                "index": 7,
+                "value": "999"
+              },
+              {
+                "index": 8,
+                "value": "999"
+              },
+              {
+                "index": 9,
+                "value": "999"
+              },
+              {
+                "index": 10,
+                "value": "999"
+              },
+              {
+                "index": 11,
+                "value": "999"
+              }
+            ]
+          }
+        ],
+        "blueGeometry": [
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 128.546875 194.296875 L 136.84375 194.296875 L 136.84375 127.238281 L 128.546875 127.238281 Z M 128.546875 194.296875 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 149.324219 194.296875 L 157.648438 194.296875 L 157.648438 127.238281 L 149.324219 127.238281 Z M 149.324219 194.296875 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 170.128906 194.296875 L 178.425781 194.296875 L 178.425781 127.238281 L 170.128906 127.238281 Z M 170.128906 194.296875 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 190.90625 194.296875 L 199.207031 194.296875 L 199.207031 127.238281 L 190.90625 127.238281 Z M 190.90625 194.296875 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 211.6875 194.296875 L 220.007812 194.296875 L 220.007812 127.238281 L 211.6875 127.238281 Z M 211.6875 194.296875 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 232.488281 194.296875 L 240.785156 194.296875 L 240.785156 127.238281 L 232.488281 127.238281 Z M 232.488281 194.296875 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 253.269531 194.296875 L 261.566406 194.296875 L 261.566406 127.238281 L 253.269531 127.238281 Z M 253.269531 194.296875 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 274.046875 194.296875 L 282.367188 194.296875 L 282.367188 127.238281 L 274.046875 127.238281 Z M 274.046875 194.296875 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 294.847656 194.296875 L 303.148438 194.296875 L 303.148438 127.238281 L 294.847656 127.238281 Z M 294.847656 194.296875 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 315.628906 194.296875 L 323.925781 194.296875 L 323.925781 127.238281 L 315.628906 127.238281 Z M 315.628906 194.296875 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 336.40625 194.296875 L 344.730469 194.296875 L 344.730469 127.238281 L 336.40625 127.238281 Z M 336.40625 194.296875 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 357.210938 194.296875 L 365.507812 194.296875 L 365.507812 127.238281 L 357.210938 127.238281 Z M 357.210938 194.296875 "
+            },
+            "transforms": []
+          },
+          {
+            "attributes": {
+              "fill-rule": "evenodd",
+              "fill": "rgb(26.66626%, 44.7052%, 76.861572%)",
+              "fill-opacity": "1",
+              "d": "M 210.433594 244.757812 L 208.085938 244.757812 L 208.085938 240.039062 L 212.804688 240.039062 L 212.804688 244.757812 Z M 210.433594 244.757812 "
+            },
+            "transforms": []
+          }
+        ],
+        "pdfWords": [
+          "Values",
+          "2",
+          "7",
+          "word",
+          "图表",
+          "column",
+          "TRUE",
+          "FALSE",
+          "1200",
+          "1000",
+          "#N/A",
+          "#DIV/0!",
+          "-3",
+          "0",
+          "800",
+          "600",
+          "400",
+          "200",
+          "0",
+          "e0",
+          "he1",
+          "he2",
+          "he3",
+          "he4",
+          "he5",
+          "he6",
+          "he7",
+          "he8",
+          "he9",
+          "e10",
+          "e11",
+          "ch",
+          "c",
+          "c",
+          "c",
+          "c",
+          "c",
+          "c",
+          "c",
+          "c",
+          "c",
+          "h",
+          "h",
+          "a",
+          "C",
+          "Ca",
+          "Ca",
+          "Ca",
+          "Ca",
+          "Ca",
+          "Ca",
+          "Ca",
+          "Ca",
+          "Ca",
+          "Cac",
+          "Cac",
+          "CachedSeries"
+        ]
+      }
+    }
+  ]
+}

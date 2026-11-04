@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import { createWorkbook, openDocument } from "@dagent-office/core";
 import type { WorkbookChart, WorkbookDocumentMetadata, WorkbookManifest, WorkbookModel } from "@dagent-office/core";
@@ -136,6 +137,21 @@ describe("bounded current-source workbook chart reads", () => {
       const values = chart.references.filter(ref => ref.role === "series-values");
       expect(values[0]!.data.kind === "cells" && values[0]!.data.areas[0]!.cells.map(cell => cell.value)).toEqual([2, 5, 8].map(value => ({ type: "number", value })));
       expect(values.every(ref => ref.data.kind === "cells" && ref.data.areas[0]!.cells.every(cell => cell.state === "constant"))).toBe(true);
+    }
+  });
+  it("reads mixed values and hidden-source coordinates independently of deliberately stale native chart caches", async () => {
+    const bytes = execFileSync('python3', ['-c', "import importlib.util,sys; s=importlib.util.spec_from_file_location('chart_values','scripts/check-xlsx-chart-values.py'); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); sys.stdout.buffer.write(m.generate(m.inputs()))"], { maxBuffer: 4 * 1024 * 1024 });
+    const evidence = JSON.parse(readFileSync('docs/evidence/xlsx-chart-value-semantics.json', 'utf8')) as { sourceSha256: string; cases: { hidden: string; visibleOnly: boolean }[] };
+    expect(createHash('sha256').update(bytes).digest('hex')).toBe(evidence.sourceSha256);
+    const { model } = projectXlsxRecords(await readXlsxRecords(bytes)), definitions = model.snapshot().metadata.workbook.charts!;
+    const response = await read(model, { chartIds: definitions.map(chart => chart.chartId) }); expect(response.charts).toHaveLength(15);
+    for (const [index, chart] of response.charts.entries()) {
+      const points = cells({ ...response, charts: [chart] });
+      expect(points.map(point => point.value)).toEqual([{ type: 'number', value: 2 }, { type: 'text', value: '7' }, { type: 'text', value: 'word' }, { type: 'boolean', value: true }, { type: 'boolean', value: false }, { type: 'blank' }, { type: 'blank' }, { type: 'text', value: '' }, { type: 'error', value: '#N/A' }, { type: 'error', value: '#DIV/0!' }, { type: 'number', value: -3 }, { type: 'number', value: 0 }]);
+      expect(points[7]!.state).toBe('imported');
+      expect(points.filter(point => point.rowHidden).map(point => point.row)).toEqual(evidence.cases[index]!.hidden === 'rows' ? [2, 4, 11] : []);
+      expect(points.every(point => point.columnHidden)).toBe(evidence.cases[index]!.hidden === 'values-column');
+      expect(definitions[index]!.series[0]!.values.cache!.points.map(point => point.value)).toEqual(Array(12).fill(999));
     }
   });
 });

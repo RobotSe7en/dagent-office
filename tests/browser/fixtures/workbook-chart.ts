@@ -38,7 +38,12 @@ export async function measureWorkbookCharts(snapshot: WorkbookSnapshot, plots: r
         if (!unchanged()) throw Error('Chart probe changed source after failure');
       }
       const exact = createWorkbookChartView(source, chart, data, 360, 220, 'exact-' + index, { ...options(), maxNodes: result.peakNodes });
-      results.push({ kind: chart.kind, nodes, reported: result.nodes, peak: result.peakNodes, exact: exact.nodes === nodes, unchanged: unchanged(), errors,
+      let negativePie = '';
+      if (chart.kind === 'pie') {
+        try { createWorkbookChartView(source, chart, { ...data, series: data.series.map(series => ({ ...series, values: [-2, ...series.values.slice(1)] })) }, 360, 220, 'negative-pie', options()); negativePie = 'accepted'; }
+        catch (error) { negativePie = (error as { code: string }).code; }
+      }
+      results.push({ kind: chart.kind, nodes, reported: result.nodes, peak: result.peakNodes, exact: exact.nodes === nodes, unchanged: unchanged(), errors, negativePie,
         sourceClasses: result.element.querySelectorAll('[class],[data-node-id]').length,
         svgSize: [svg.clientWidth, svg.clientHeight], text: text.map(node => node.textContent),
         fonts: text.map(node => surface.document.defaultView!.getComputedStyle(node).fontSize), colors: text.map(node => surface.document.defaultView!.getComputedStyle(node).fill),
