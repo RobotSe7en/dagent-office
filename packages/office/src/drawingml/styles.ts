@@ -78,9 +78,12 @@ export function fill(source: XmlNode | undefined, prefix = "--office-fill"): Css
 export function outline(source: XmlNode | undefined, prefix = "--office-line"): Css {
   if (!source) return {};
   check(source, ["noFill", "solidFill", "prstDash", "round", "bevel", "miter", "headEnd", "tailEnd"], A);
-  const css = fill(source, prefix), width = points(source, "w", 12700);
-  if (width < 0) fail(source, "A line width cannot be negative.");
-  css[prefix + "-width"] = width + "pt";
+  const css = fill(source, prefix);
+  if (value(source, "w") !== undefined) {
+    const width = points(source, "w");
+    if (width < 0) fail(source, "A line width cannot be negative.");
+    css[prefix + "-width"] = width + "pt";
+  }
   const dash = child(source, "prstDash", A);
   if (dash) {
     const kind = value(dash);

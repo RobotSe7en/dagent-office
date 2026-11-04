@@ -53,7 +53,7 @@ export function validateDrawingFill(node: XmlNode): void {
 export function validateDrawingLine(node: XmlNode): void {
   attributes(node, ["w", "cap", "cmpd", "algn"]);
   check(node, ["noFill", "solidFill", "prstDash", "round", "bevel", "miter", "headEnd", "tailEnd"], A);
-  integer(node, "w", 0, 20116800, 12700);
+  integer(node, "w", 0, 20116800, 9525);
   enumeration(node, "cap", ["rnd", "sq", "flat"]); enumeration(node, "cmpd", ["sng", "dbl", "thickThin", "thinThick", "tri"]); enumeration(node, "algn", ["ctr", "in"]);
   choice(node, ["noFill", "solidFill"]); choice(node, ["round", "bevel", "miter"]);
   for (const item of elements(node, undefined, A)) {

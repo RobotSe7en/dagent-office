@@ -44,7 +44,7 @@ export function fillXml(css: Css, prefix = "--office-fill", raw: Css = {}, place
     return result + "</a:gsLst>" + empty("a:lin", { ang: integer(((angle % 360) + 360) % 360, 60000, 0, 21600000), scaled: css[prefix + "-scaled"] === "true" ? 1 : 0 }) + "</a:gradFill>";
 }
 export function lineXml(css: Css, prefix = "--office-line", raw: Css = {}, placeholder = false, fallback = "none", tag = "a:ln"): string {
-    const width = points(css[prefix + "-width"], css, 1), kind = css[prefix + "-kind"], color = css[prefix + "-color"];
+    const width = points(css[prefix + "-width"], css, .75), kind = css[prefix + "-kind"], color = css[prefix + "-color"];
     let result = "<" + tag + attributes({ w: emu(width, 0, 2147483647), cap: css[prefix + "-cap"] ?? "flat", cmpd: css[prefix + "-cmpd"] ?? "sng", algn: css[prefix + "-algn"] ?? "ctr" }) + ">";
     if (kind === "none" || !kind && !color && fallback === "none")
         result += "<a:noFill/>";

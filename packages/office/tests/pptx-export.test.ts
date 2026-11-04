@@ -43,6 +43,19 @@ test.each([undefined, false, true])("current-source gradient scaling %s survives
         expect(appearance).toContain('--office-fill-angle:45');
     } finally { session.dispose(); }
 });
+test("unspecified and explicit-zero outline widths survive native export and reopen", () => {
+    for (const width of [undefined, 0]) {
+        const session = createDocumentSession(openDocument(createPresentation({ documentId: "line-export" })));
+        const style = '--office-line-kind:solid;--office-line-color:#123456' + (width === undefined ? '' : ';--office-line-width:0pt');
+        try {
+            session.commit(session.prepare({ protocolVersion: 1, documentId: "line-export", baseRevision: 0, operations: [{ op: "insertPresentationObject", parentNodeId: "slide-root-1", geometry: { x: 20, y: 20, width: 200, height: 100, rotation: 0, flipH: false, flipV: false }, object: { kind: "geometry", preset: "rect", style } }] }));
+            const output = exportPptx(session), native = unzipSync(output.bytes);
+            expect(strFromU8(native['ppt/slides/slide1.xml']!)).toContain(`<a:ln w="${width === 0 ? 0 : 9525}"`);
+            const target = openDocument(importPptx(output.bytes, { documentId: "line-reopen" })), object = target.snapshot().metadata.presentation!.objects.find(object => object.kind === 'geometry')!;
+            expect(target.getNode(object.nodeId)!.attributes.style).toContain('--office-line-width:' + (width ?? .75) + 'pt');
+        } finally { session.dispose(); }
+    }
+});
 test("new source, rich notes, UTF-16/variation sequences and current edits do not depend on original PPTX bytes", () => {
     const session = createDocumentSession(openDocument(createPresentation({ documentId: "new-presentation" }))), slide = session.snapshot().metadata.presentation!.slides[0]!;
     session.commit(session.prepare({ protocolVersion: 1, documentId: "new-presentation", baseRevision: 0, operations: [{ op: "insertPresentationObject", parentNodeId: slide.rootNodeId, geometry: { x: 30, y: 30, width: 400, height: 120, rotation: 0, flipH: false, flipV: false }, object: { kind: "text", text: "𠀀󠄀 新增内容" } }, { op: "insertPresentationNotes", slideId: slide.slideId, html: '<p><em>演讲者备注</em></p>' }] }));

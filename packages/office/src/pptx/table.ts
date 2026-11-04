@@ -63,7 +63,7 @@ export function importTable(context: Context, source: XmlNode, frame: Html, part
           const line = child(p, tag!, A), declarations = outline(line, "--office-cell-border-" + side);
           Object.assign(css, declarations);
           if (line) {
-            const width = points(line, "w", 12700), color = declarations["--office-cell-border-" + side + "-color"] ?? "transparent";
+            const width = points(line, "w", 9525), color = declarations["--office-cell-border-" + side + "-color"] ?? "transparent";
             css["border-" + side] = width + "pt " + (declarations["--office-cell-border-"+side+"-kind"]==="none"?"none":declarations["--office-cell-border-" + side + "-dash"]?.includes("dot") ? "dotted" : declarations["--office-cell-border-" + side + "-dash"]?.includes("ash") ? "dashed" : "solid") + " " + color;
           }
         }

@@ -62,7 +62,7 @@ export function svgFill(document: Document, style: CSSStyleDeclaration, svg: SVG
 }
 export function strokeAttributes(document: Document, style: CSSStyleDeclaration, prefix = "--office-line", fallback = "none"): Record<string, string | number> {
   const kind = property(style, prefix + "-kind"), color = kind === "none" ? "none" : property(style, prefix + "-color") ? resolvedColor(document, style, prefix) : fallback === "none" ? "none" : resolvedColor(document,style,prefix,fallback);
-  const width = numeric(style, prefix + "-width", 1), dash = property(style, prefix + "-dash", "solid");
+  const width = numeric(style, prefix + "-width", .75), dash = property(style, prefix + "-dash", "solid");
   const patterns: Record<string, readonly number[]> = { dash: [4, 3], dot: [1, 3], lgDash: [8, 3], dashDot: [4, 3, 1, 3], lgDashDot: [8, 3, 1, 3], lgDashDotDot: [8, 3, 1, 3, 1, 3], sysDash: [3, 1], sysDot: [1, 1], sysDashDot: [3, 1, 1, 1], sysDashDotDot: [3, 1, 1, 1, 1, 1] };
   const cap = property(style, prefix + "-cap", "flat");
   return { stroke: color, "stroke-width": width, "stroke-linecap": cap === "rnd" ? "round" : cap === "sq" ? "square" : "butt", "stroke-linejoin": property(style, prefix + "-join", "round"), "stroke-miterlimit": numeric(style, prefix + "-miter-limit", 8), ...(patterns[dash] ? { "stroke-dasharray": patterns[dash]!.map(n => n * width).join(" ") } : {}) };

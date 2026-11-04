@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import type { WorkbookSnapshot } from '@dagent-office/core';
 import { readXlsxRecords } from '../../packages/office/src/xlsx/read.js';
+import { readDocumentZip, writeOpcZip } from '../../packages/office/src/document-zip.js';
 import { projectXlsxRecords } from '../../packages/office/tests/helpers/xlsx-record-model.js';
 import type { measureContentSource, rejectContentSource } from './fixtures/workbook-content-source.js';
 import type { measureImageView, disposeImageView } from './fixtures/workbook-image-view.js';
@@ -21,6 +22,15 @@ test.beforeAll(async () => {
     const { model } = projectXlsxRecords(await readXlsxRecords(readFileSync(`examples/xlsx/${prefix}${name}.xlsx`))), snapshot = model.snapshot();
     const ids = [...(snapshot.metadata.workbook.stories ?? []).map(story => story.rootNodeId), ...(snapshot.metadata.workbook.objects ?? []).map(object => object.nodeId)];
     inputs.push({ name: prefix + name, snapshot, text: Object.fromEntries(ids.map(id => [id, model.getNode(id)!.text])), resources: Object.fromEntries(snapshot.manifest.assets.map(asset => [asset.path, Buffer.from(model.getAsset(asset.path)!).toString('base64')])) });
+  }
+  for (const kind of ['default', 'inherited', 'zero']) {
+    const files = new Map(readDocumentZip(readFileSync('examples/xlsx/08-images-shapes.xlsx'))), decoder = new TextDecoder(), encoder = new TextEncoder();
+    const path = 'xl/drawings/drawing1.xml', theme = 'xl/theme/theme1.xml';
+    let xml = decoder.decode(files.get(path)!).replace('<a:ln w="12700"', kind === 'zero' ? '<a:ln w="0"' : '<a:ln');
+    if (kind !== 'default') xml = xml.replace('<xdr:txBody>', '<xdr:style><a:lnRef idx="1"/><a:fillRef idx="0"/><a:effectRef idx="0"/><a:fontRef idx="none"/></xdr:style><xdr:txBody>');
+    files.set(path, encoder.encode(xml)); files.set(theme, encoder.encode(decoder.decode(files.get(theme)!).replace('<a:ln w="12700"', '<a:ln w="50800"')));
+    const { model } = projectXlsxRecords(await readXlsxRecords(writeOpcZip(files)));
+    inputs.push({ name: 'line-' + kind, snapshot: model.snapshot(), text: {}, resources: {} });
   }
 });
 
@@ -80,9 +90,17 @@ test('workbook geometry shares preset paths, native colors and bounded gradient/
   }
 });
 
+test('omitted native line widths inherit the theme before the final default, and explicit zero wins', async ({ page }) => {
+  for (const [kind, width] of [['default', '.75'], ['inherited', '4'], ['zero', '0']]) {
+    const input = inputs.find(input => input.name === 'line-' + kind)!;
+    const result = await page.evaluate(snapshot => window.workbookContentHost.measureObjectGeometry(snapshot), input.snapshot);
+    expect(Number(result.results[1]!.paths[0]!.width)).toBe(Number(width));
+  }
+});
+
 test('bounded auxiliary projections preserve native drawing and comment text without activating image paths', async ({ page }) => {
   const requests: string[] = []; page.on('request', request => requests.push(request.url()));
-  for (const input of inputs) {
+  for (const input of inputs.filter(input => !input.name.startsWith('line-'))) {
     const result = await page.evaluate(snapshot => window.workbookContentHost.measureContentSource(snapshot), input.snapshot);
     expect(result.rootTexts, input.name).toEqual(input.text);
     expect(result, input.name).toMatchObject({ isolated: true, atomic: true, secondSurvives: true, released: true, limited: input.snapshot.content ? 'ResourceLimitExceeded' : '', unknown: 'InvalidOperation', duplicated: 'InvalidOperation', disposed: 'InvalidOperation' });
