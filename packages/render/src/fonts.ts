@@ -23,6 +23,11 @@ export function resolvePreviewFonts(
   document: Document,
   selector: string = "[data-node-id]",
 ): readonly FontResolution[] {
+  return resolvePreviewFontsInScope(document, document, selector);
+}
+/** Limit private probes/window diagnostics to their owning surface. A selector
+ * in another mounted document must not participate in font substitution. */
+export function resolvePreviewFontsInScope(document: Document, scope: ParentNode, selector: string): readonly FontResolution[] {
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d")!;
   const cache = new Map<string, boolean>();
@@ -54,7 +59,7 @@ export function resolvePreviewFonts(
     cache.set(family, found);
     return found;
   };
-  const nodes = [...document.querySelectorAll<HTMLElement>(selector)];
+  const nodes = [...scope.querySelectorAll<HTMLElement>(selector)];
   // Resolve parents before children so inherited fallback and native east-Asian overrides remain distinct.
   for (const node of nodes) {
     const requested = families(

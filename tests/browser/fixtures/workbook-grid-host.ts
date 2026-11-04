@@ -8,6 +8,7 @@ import { hitWorkbookCell, WorkbookMergeIndex } from "../../../packages/render/sr
 import type { WorkbookViewport } from "../../../packages/render/src/workbook/viewport.js";
 import { measureNumberDisplay } from "../../../packages/render/src/workbook/number-layout.js";
 import { formatGeneralNumber } from "../../../packages/core/src/workbook/format-general.js";
+import { measureWorkbookColumnFont } from "../../../packages/render/src/workbook/column-font.js";
 
 const encode = (text: string) => new TextEncoder().encode(text);
 async function main() {
@@ -15,6 +16,8 @@ async function main() {
   const manifest = JSON.parse(new TextDecoder().decode(files.get('manifest.json')!)) as WorkbookManifest;
   const metadata = JSON.parse(new TextDecoder().decode(files.get(manifest.metadata)!)) as WorkbookDocumentMetadata;
   const sheet = metadata.workbook.sheets[0]!;
+  metadata.workbook.columnWidthFontCssClass = 'normal-metric';
+  files.set('styles.css', encode(new TextDecoder().decode(files.get('styles.css')!) + '.normal-metric{font-family:"Liberation Serif";font-size:20pt;font-weight:normal}'));
   sheet.frozen = { rows: 2, columns: 1 }; sheet.merges = [{ from: { row: 0, column: 0 }, to: { row: 6, column: 6 } }];
   for (const [row, column, text] of [[0, 0, '合并😀禰󠄀'], [9999, 9, '一万行'], [1_048_575, 16_383, '末格']] as const) {
     const blockRow = Math.floor(row / 256) * 256, blockColumn = Math.floor(column / 32) * 32, path = `sheets/sheet-1/${blockRow}-${blockColumn}.html`;
@@ -27,6 +30,7 @@ async function main() {
   const model = openDocument(files, { kind: 'workbook' }), before = model.serialize(), loader = new WorkbookWindowLoader(modelWindowSource(model));
   const dimensions = { rows: new AxisDimensions(1_048_576, 10, []), columns: new AxisDimensions(16_384, 20, []) }, merges = new WorkbookMergeIndex(sheet.merges);
   const container = document.createElement('div'); container.id = 'workbook-grid-probe'; container.style.cssText = 'position:absolute;left:0;top:0;background:white'; document.body.replaceChildren(container);
+  const style = document.createElement('style'); style.textContent = model.snapshot().styles.map(style => style.css).join('\n'); document.head.append(style);
   let rightToLeft = false;
   const paint = (body: HTMLElement, cell: { readonly text: string } | undefined) => {
     body.style.border = '1px solid #cbd5e1'; body.style.font = '10pt "Liberation Sans"'; body.style.whiteSpace = 'pre'; body.textContent = cell?.text ?? '';
@@ -72,7 +76,21 @@ async function main() {
       const actual = box.getBoundingClientRect().width; box.remove();
       return { rounded, scientific, actual, predicted: fitted.width, overflow: fitted.overflow, fill: fitted.parts[1] };
     },
-    dispose() { loader.dispose(); container.remove(); },
+    async columnFontMeasurement() {
+      await document.fonts.ready;
+      const unrelated = document.createElement('span'); unrelated.style.fontFamily = '"Unrelated Missing Probe Font"'; unrelated.textContent = 'outside'; container.append(unrelated);
+      const originalFamily = unrelated.style.fontFamily;
+      const book = model.snapshot().metadata.workbook, measured = measureWorkbookColumnFont(container, book, 'sheet-1');
+      const { columnWidthFontCssClass: omitted, ...legacy } = book;
+      const fallback = measureWorkbookColumnFont(container, legacy, 'sheet-1');
+      const spans = [...'0123456789'].map(digit => {
+        const span = document.createElement('span'); span.className = 'normal-metric'; span.textContent = digit; span.style.cssText = 'position:absolute;display:inline-block;white-space:pre'; container.append(span); return span;
+      });
+      const actual = Math.max(...spans.map(span => span.getBoundingClientRect().width)); for (const span of spans) span.remove();
+      const unrelatedUnchanged = unrelated.style.fontFamily === originalFamily; unrelated.remove();
+      return { measured, fallback, actual, unrelatedUnchanged, retainedProbes: container.querySelectorAll('.normal-metric').length };
+    },
+    dispose() { loader.dispose(); container.remove(); style.remove(); },
   };
   Object.assign(window, { workbookGridHost: host });
 }

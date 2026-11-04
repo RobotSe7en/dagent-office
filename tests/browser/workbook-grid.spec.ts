@@ -8,6 +8,7 @@ interface GridHost {
   inspect(): { cellCount: number; accessibleCells: number; rows: number[]; sourceUnchanged: boolean; merges: { pane?: string; text: string | null; clip: { x: number; y: number; width: number; height: number }; body: { x: number; y: number; width: number; height: number }; hit?: { row: number; column: number } }[] };
   failedPaint(): boolean; dispose(): void;
   numericMeasurement(): Promise<{ rounded: { kind: string; text?: string }; scientific: { kind: string; text?: string }; actual: number; predicted: number; overflow: boolean; fill?: { kind: string; text?: string } }>;
+  columnFontMeasurement(): Promise<{ measured: { cssClass: string; maximumDigitWidthPx: number; fonts: { requestedFamily: string; substituted: boolean }[] }; fallback: { cssClass: string; maximumDigitWidthPx: number }; actual: number; unrelatedUnchanged: boolean; retainedProbes: number }>;
 }
 declare global { interface Window { workbookGridHost: GridHost } }
 let code = '';
@@ -53,4 +54,13 @@ test('General fitting and numeric fill agree with independently laid out fixed-f
   expect(result.scientific).toMatchObject({ kind: 'text', text: '1.23457E+11' });
   expect(result.overflow).toBe(false); expect(result.fill?.text).toMatch(/^f+$/);
   expect(result.actual).toBeLessThanOrEqual(140.25); expect(Math.abs(result.actual - result.predicted)).toBeLessThan(.25);
+});
+
+test('column font metrics use their declared Normal font and keep legacy defaults isolated', async ({ page }) => {
+  const report = await page.evaluate(() => window.workbookGridHost.columnFontMeasurement());
+  expect(report.measured.cssClass).toBe('normal-metric'); expect(report.fallback.cssClass).toBe('cell-default');
+  expect(report.measured.maximumDigitWidthPx).toBeGreaterThan(report.fallback.maximumDigitWidthPx * 1.4);
+  expect(report.measured.fonts).toContainEqual(expect.objectContaining({ requestedFamily: 'Liberation Serif', substituted: false }));
+  expect(Math.abs(report.actual - report.measured.maximumDigitWidthPx)).toBeLessThan(.1); expect(report.retainedProbes).toBe(0);
+  expect(report.unrelatedUnchanged).toBe(true);
 });
