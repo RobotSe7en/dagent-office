@@ -41,9 +41,13 @@ jobs:
       - run: sudo apt-get install -y poppler-utils fonts-noto-cjk fonts-liberation2 python3-pil
       - run: pnpm build
       - run: node scripts/playwright.mjs test workspace.spec.ts interaction.spec.ts workbench.spec.ts text-editor.spec.ts pagination.spec.ts rendering.spec.ts remote-access.spec.ts word-closure.spec.ts presentation.spec.ts presentation-editor.spec.ts presentation-workbench.spec.ts presentation-closure.spec.ts
+      - run: node scripts/playwright.mjs test workbook-storage.spec.ts workbook-grid.spec.ts workbook-drawing.spec.ts --output=.cache/workbook-browser/modern
       - run: /usr/bin/python3 scripts/check-presentation-reference.py && /usr/bin/python3 scripts/check-presentation-reference.py --browser firefox && /usr/bin/python3 scripts/check-presentation-reference.py --browser webkit
       - run: node scripts/install-legacy-chromium.mjs
       - run: node scripts/playwright.mjs test workspace.spec.ts pagination.spec.ts presentation.spec.ts presentation-editor.spec.ts presentation-workbench.spec.ts presentation-closure.spec.ts --project=chromium
+        env:
+          DAGENT_OFFICE_BROWSER_EXECUTABLE: ${{ github.workspace }}/.cache/legacy-browser/chromium-1041/chrome-linux/chrome
+      - run: node scripts/playwright.mjs test workbook-storage.spec.ts workbook-grid.spec.ts workbook-drawing.spec.ts --project=chromium --output=.cache/workbook-browser/legacy
         env:
           DAGENT_OFFICE_BROWSER_EXECUTABLE: ${{ github.workspace }}/.cache/legacy-browser/chromium-1041/chrome-linux/chrome
       - uses: actions/upload-artifact@v4
@@ -51,6 +55,11 @@ jobs:
         with:
           name: presentation-preview-acceptance
           path: .cache/presentation-preview/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workbook-reading-checks
+          path: .cache/workbook-browser/
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -93,6 +102,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-writer libreoffice-impress libreoffice-calc python3-uno python3-lxml poppler-utils fonts-noto-cjk fonts-liberation2
       - run: node scripts/install-acceptance-office.mjs
       - run: pnpm check:pptx-fixtures && pnpm check:pptx-reference
+      - run: pnpm check:xlsx-fixtures && pnpm check:xlsx-reference
       - run: pnpm check:docx-export
       - run: node scripts/playwright.mjs install --with-deps chromium --only-shell
       - run: pnpm check:word-closure
@@ -113,6 +123,11 @@ jobs:
         with:
           name: independent-pptx-reference
           path: .cache/pptx-reference/result.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: independent-xlsx-reference
+          path: .cache/xlsx-reference/result.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:

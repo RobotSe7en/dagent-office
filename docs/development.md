@@ -69,6 +69,8 @@ DAGENT_OFFICE_BROWSER_CHANNEL=chrome pnpm test:browser
 
 仅运行 R1-08 交互验收使用 `node scripts/playwright.mjs test interaction.spec.ts workbench.spec.ts text-editor.spec.ts pagination.spec.ts rendering.spec.ts remote-access.spec.ts word-closure.spec.ts`；它包含普通 JavaScript 宿主及 React Playground。CI 分别执行 `pnpm check` 和浏览器交互／工作台检查，失败时上传 Playwright 结果。文档视觉夹具截图时展开滚动容器，继续核对原完整文档基线；交互滚动与缩放另有坐标验收。
 
+第三轮工作簿的当前内部检查使用 `node scripts/playwright.mjs test workbook-storage.spec.ts workbook-grid.spec.ts workbook-drawing.spec.ts`。CI 在 Chromium、Firefox、WebKit 和固定旧 Chromium 上执行，现代与旧引擎的结果分别保存在 `.cache/workbook-browser/modern`、`.cache/workbook-browser/legacy`，并上传 `workbook-reading-checks`。其中一万行 Worker 用例保留 20 万实际单元格、2 万公式、取消后旧窗口及传输大小报告；它仍是存储原型检查，不代表完整 XLSX 首屏或固定 4 vCPU／8 GiB 性能验收已经通过。
+
 ## 本地打包
 
 ```bash
@@ -88,6 +90,8 @@ pnpm pack:packages
 R1-12 的浏览器 CI 使用 Ubuntu 24.04、固定 Playwright 引擎、Poppler 和宿主 Noto 字体；另校验官方归档后安装 Chromium 109，并在 macOS 15 使用真实 SafariDriver。Safari 输出实际版本及验收结果，不能用 Linux WebKit 结果冒充 Safari。PDF 开发中间件默认只接受本机连接；远程访问可将 Vite 绑定 `0.0.0.0` 并显式配置确切同源开发地址，见 [Word 闭环](word-closure.md#远程开发访问)。正式转换认证由宿主管理。
 
 PPT 的独立 ZIP/XML 样例与参考环境见 [PPTX 样例](../examples/pptx/README.md)。`pnpm check:pptx-fixtures` 不需要 Office；`pnpm check:pptx-reference` 需要 Impress、Calc、Poppler 和上述字体，会实际打开、重存并重开。环境不同只运行内容检查并明确记录未比较像素，不自动刷新基线。
+
+Office CI 也执行 `pnpm check:xlsx-fixtures` 与 `pnpm check:xlsx-reference`，核对 [XLSX 独立来源](../examples/xlsx/README.md)的可重现字节、官方结构、负例和固定 Calc 重开。源及重存后的结构差异始终对照已记录预期；只有渲染环境完全相同时才比较页数与像素摘要。结果上传为 `independent-xlsx-reference`，环境不同会明确标为未比较像素，不更新参考文件。
 
 PPT 导出与独立闭环使用 `pnpm check:pptx-export` 和 `pnpm check:presentation-closure`，需要 `python3-uno`、`python3-lxml`、Impress/Calc、Poppler 和既定字体。普通 JS／React／Node 在工作区外安装 tarball；输出及环境见 `.cache/pptx-export-acceptance/` 和 `.cache/presentation-closure-acceptance/`。完整范围、现代批注限制及 PowerPoint/WPS 未验证项见 [PPTX 导出](pptx-export.md)。
 

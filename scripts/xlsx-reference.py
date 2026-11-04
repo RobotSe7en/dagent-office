@@ -105,13 +105,17 @@ def main():
     result = {"environment": current, "fixtures": records, "limits": ["Synthetic independent public sources; no user data.", "External feature differences are recorded, not counted as lossless success.", "PDF does not exercise comment UI, hidden sheets or cells outside selected print areas.", "Unicode text remains exact in source; emoji/variation glyph substitution is renderer and font dependent.", "Excel and WPS have not been verified."]}
     if args.record:
         (SAMPLES / "reference.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n"); status = "recorded"
-    elif current != baseline["environment"]: status = "environment-differs-pixels-not-compared"
     else:
         assert len(records) == len(baseline["fixtures"])
         for actual, saved in zip(records, baseline["fixtures"]):
-            for key in ["file", "sha256", "pages", "images", "sourceFeatures", "producerFeatures", "externalDifferences"]:
+            # Native structure must remain stable even when fallback fonts or
+            # PDF tools differ. Only pixel/pagination comparisons need the
+            # complete recorded rendering environment.
+            for key in ["file", "sha256", "sourceFeatures", "producerFeatures", "externalDifferences"]:
                 assert actual[key] == saved[key], (actual["file"], key)
-        status = "pixels-equal"
+            if current == baseline["environment"]:
+                for key in ["pages", "images"]: assert actual[key] == saved[key], (actual["file"], key)
+        status = "pixels-equal" if current == baseline["environment"] else "environment-differs-pixels-not-compared"
     (CACHE / "result.json").write_text(json.dumps({"status": status, **result}, ensure_ascii=False, indent=2) + "\n")
     print(len(records), "XLSX sources opened, resaved and reopened;", status)
 

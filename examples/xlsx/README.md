@@ -60,4 +60,4 @@ pnpm record:xlsx-reference
 pnpm check:xlsx-reference
 ```
 
-只有 `record:xlsx-reference` 更新参考。普通检查验证已保存摘要并重新打开/重存；相同环境才比较像素，不同环境明确报告未进行像素等同性比较。
+只有 `record:xlsx-reference` 更新参考。普通检查验证已保存摘要并重新打开/重存；始终比较源结构、重存结构及已记录的外部差异，相同环境才比较页数与像素，不同环境明确报告未进行像素等同性比较。Office CI 执行两项检查并上传 `.cache/xlsx-reference/result.json`，不将生产者本身已记录的丢失算作 SDK 无损验收。
