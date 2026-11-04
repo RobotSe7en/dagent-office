@@ -6,6 +6,7 @@ import { xml } from "../src/ooxml/xml.js";
 const node = xml(new TextEncoder().encode('<t xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"/>'), "text.xml", DEFAULT_DOCUMENT_READ_LIMITS, { nodes: 0 });
 it("decodes SpreadsheetML escapes once while preserving valid UTF-16 and literal escape text", () => {
   expect(spreadsheetText("_x005F_x0041_ _x0041_ _xD83D__xDE00_ 禰󠄀_x000D__x000A_", node)).toBe("_x0041_ A 😀 禰󠄀\r\n");
+  expect(spreadsheetText("_x0041_ _X0042_ _x00Af_ _x005F_x0041_", node)).toBe("A _X0042_ ¯ _x0041_");
   expect(textHtml('a\rb\n<c>&"')).toBe('a&#13;b\n&lt;c&gt;&amp;&quot;');
   for (const source of ["_xD800_", "_xDC00_", "_xD800_a", "_x0000_", "_xFFFE_"]) expect(() => spreadsheetText(source, node)).toThrow();
   expect(() => spreadsheetText("😀", node, 1)).toThrowError(expect.objectContaining({ code: "ResourceLimitExceeded" }));

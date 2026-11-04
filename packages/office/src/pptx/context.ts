@@ -33,10 +33,7 @@ export function bool(node: XmlNode, name: string, fallback = false): boolean {
 export function rootName(node: XmlNode, name: string, uri: string): void {
   if (node.uri !== uri || node.name !== name) fail(node, "An OOXML part has the wrong root.");
 }
-export function fontName(name: string): string {
-  if (/[\u0000-\u001f\u007f]/.test(name)) throw new DocumentError("InvalidDocument", "A font name contains control characters.");
-  return '"' + name.replace(/["\\]/g, "\\$&") + '"';
-}
+export { cssFontName as fontName } from "../ooxml/css-values.js";
 export class Context {
   serial = 0;
   work = 0;

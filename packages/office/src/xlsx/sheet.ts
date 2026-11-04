@@ -9,7 +9,7 @@ import type { NativeSheet } from "./workbook.js";
 export interface CellStyleReference { readonly cssClass: string; readonly numberFormatId: string }
 export interface SheetStyles {
   cell(index: number, node: XmlNode): CellStyleReference;
-  tabColor(node: XmlNode): string;
+  tabStyle(node: XmlNode): string;
 }
 
 /** Only fixed row heights are source dimensions; automatic native heights are
@@ -123,6 +123,6 @@ export function readSheet(root: XmlNode, source: NativeSheet, rows: WorkbookShee
     defaultColumnWidthUnit: nativeWidth === undefined ? "baseCharacters" : "characters", defaultRowsHidden: boolean(format, "zeroHeight"),
     defaultCssClass: defaultStyle.cssClass, defaultNumberFormatId: defaultStyle.numberFormatId,
     rowDimensions: rows, columnDimensions: columns(root, styles), merges, frozen, showGridLines: boolean(view, "showGridLines", true), rightToLeft: boolean(view, "rightToLeft"),
-    ...(tab ? { tabColor: styles.tabColor(tab) } : {}), hyperlinks: hyperlinks(root, opc), print: readPrint(root, source.printNames),
+    ...(tab ? { tabCssClass: styles.tabStyle(tab) } : {}), hyperlinks: hyperlinks(root, opc), print: readPrint(root, source.printNames),
   };
 }

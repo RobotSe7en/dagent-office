@@ -25,6 +25,7 @@ function checkMerges(ranges: readonly WorkbookRange[]): void {
 export function validateWorkbookMetadata(workbook: WorkbookMetadata, classes: ReadonlySet<string>, maxItems: number): Set<string> {
   const ids = new Set<string>(), names = new Set<string>(); let visible = 0, items = 0;
   const classExists = (name: string): void => { if (/[\t\n\f\r ]/.test(name) || !classes.has(name)) invalid("A workbook dimension style is not defined."); };
+  if (workbook.themeCssClass !== undefined) classExists(workbook.themeCssClass);
   const formats = new Set<string>();
   for (const format of workbook.numberFormats) { if (formats.has(format.formatId)) invalid("Number format identities must be unique."); formats.add(format.formatId); }
   const formatExists = (id: string | undefined): void => { if (id !== undefined && !formats.has(id)) invalid("A workbook number format is not defined."); };
@@ -32,6 +33,7 @@ export function validateWorkbookMetadata(workbook: WorkbookMetadata, classes: Re
     if (ids.has(sheet.sheetId) || names.has(sheet.name.toUpperCase()) || sheet.name.startsWith("'") || sheet.name.endsWith("'")) invalid("Worksheet identities and names must be unique and valid.");
     ids.add(sheet.sheetId); names.add(sheet.name.toUpperCase()); if (sheet.visibility === "visible") visible++;
     classExists(sheet.defaultCssClass);
+    if (sheet.tabCssClass !== undefined) { classExists(sheet.tabCssClass); if (sheet.tabColor !== undefined) invalid("A worksheet tab color must have one source."); }
     formatExists(sheet.defaultNumberFormatId);
     for (const dimensions of [sheet.rowDimensions, sheet.columnDimensions]) {
       let previous = -1;

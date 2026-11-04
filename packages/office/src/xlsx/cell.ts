@@ -1,4 +1,4 @@
-import { WorkbookErrorValueSchema } from "@dagent-office/core";
+import { DocumentError, WorkbookErrorValueSchema } from "@dagent-office/core";
 import type { SharedWorkbookFormulas, WorkbookCoordinate, WorkbookValue } from "@dagent-office/core";
 import { check, fail, S, text, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
@@ -16,6 +16,7 @@ export function cellFormula(node: XmlNode, coordinate: WorkbookCoordinate, share
   if (boolean(formula, "bx")) unsupported(formula, "Cell formulas assigning defined names are not supported.");
   for (const key of ["ca", "aca"]) if (value(formula, key) !== undefined) boolean(formula, key);
   const type = value(formula, "t") ?? "normal", source = text(formula);
+  if (source.length + 1 > 8192) throw new DocumentError("ResourceLimitExceeded", "A native formula exceeds its source length budget.");
   if (type !== "normal" && type !== "shared") unsupported(formula, "Array and data-table formulas are not supported.");
   if (type === "normal") {
     if (!source || value(formula, "si") !== undefined || value(formula, "ref") !== undefined) fail(formula, "A normal cell formula has invalid grouping attributes or empty content.");

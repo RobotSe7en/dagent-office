@@ -55,7 +55,7 @@ export function range(source: string, node: Pick<XmlNode, "part" | "name">): Wor
 /** Decode native UTF-16 escapes exactly once, including literal _xNNNN_ text. */
 export function spreadsheetText(source: string, node: XmlNode, maximum = 32767): string {
   if (source.length > maximum * 7) throw new DocumentError("ResourceLimitExceeded", "Spreadsheet text exceeds its encoded budget.");
-  const decoded = source.replace(/_x([\da-f]{4})_/gi, (_, hex: string) => String.fromCharCode(parseInt(hex, 16)));
+  const decoded = source.replace(/_x([\da-fA-F]{4})_/g, (_, hex: string) => String.fromCharCode(parseInt(hex, 16)));
   if (decoded.length > maximum) throw new DocumentError("ResourceLimitExceeded", "Spreadsheet text exceeds its UTF-16 budget.");
   for (let index = 0; index < decoded.length; index++) {
     const code = decoded.charCodeAt(index);

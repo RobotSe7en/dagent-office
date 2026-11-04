@@ -10,7 +10,7 @@ import { ImportControl } from "../src/import-control.js";
 import { S } from "../src/ooxml/xml.js";
 
 const limits = { ...DEFAULT_DOCUMENT_READ_LIMITS, maxFileBytes: 32 * 1024 * 1024, maxPackageBytes: 128 * 1024 * 1024, maxNodes: 2_000_000 };
-const styles = { cell: () => ({ cssClass: "cell-default", numberFormatId: "general" }), tabColor: () => "#4472c4" };
+const styles = { cell: () => ({ cssClass: "cell-default", numberFormatId: "general" }), tabStyle: () => "cell-default" };
 const encoder = new TextEncoder(), decoder = new TextDecoder();
 async function read(filename: string) {
   const opc = openOpc(readFileSync(filename), { limits }), source = readWorkbook(opc), sheets: WorkbookSheet[] = []; let cells = 0;

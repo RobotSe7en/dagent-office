@@ -62,7 +62,13 @@ export type WorkbookPrint = z.infer<typeof WorkbookPrintSchema>;
 export type WorkbookPrintBand = z.infer<typeof WorkbookPrintBandSchema>;
 export type WorkbookPrintRun = z.infer<typeof WorkbookPrintRunSchema>;
 
-export const WorkbookNumberFormatSchema = z.strictObject({ formatId: IdentifierSchema, code: z.string().min(1).max(2048) });
+/** Built-in identities can be locale dependent; do not freeze them into an
+ * arbitrary locale's format string during import. Custom formats have one code. */
+export const WorkbookNumberFormatSchema = z.union([
+  z.strictObject({ formatId: IdentifierSchema, code: z.string().min(1).max(2048) }),
+  z.strictObject({ formatId: IdentifierSchema, builtinId: z.number().int().min(0).max(163) }),
+]);
+export type WorkbookNumberFormat = z.infer<typeof WorkbookNumberFormatSchema>;
 export const WorkbookRowDimensionSchema = z.strictObject({
   from: WorkbookRowSchema, to: WorkbookRowSchema,
   heightPt: z.number().min(0).max(409).optional(), hidden: z.boolean().optional(), cssClass: IdentifierSchema.optional(), numberFormatId: IdentifierSchema.optional(),
@@ -88,6 +94,7 @@ export const WorkbookSheetSchema = z.strictObject({
   showGridLines: z.boolean(),
   rightToLeft: z.boolean(),
   tabColor: z.string().length(7).regex(/^#[a-fA-F0-9]{6}$/).optional(),
+  tabCssClass: IdentifierSchema.optional(),
   hyperlinks: z.array(WorkbookHyperlinkSchema).optional(),
   print: WorkbookPrintSchema.optional(),
 });
@@ -98,6 +105,7 @@ export const WorkbookMetadataSchema = z.strictObject({
   activeSheetId: IdentifierSchema,
   sheets: z.array(WorkbookSheetSchema).min(1),
   numberFormats: z.array(WorkbookNumberFormatSchema),
+  themeCssClass: IdentifierSchema.optional(),
   names: z.array(WorkbookDefinedNameSchema).optional(),
 });
 export type WorkbookMetadata = z.infer<typeof WorkbookMetadataSchema>;
