@@ -27,6 +27,8 @@ import type { NativeClassicNotes } from "./classic-comments.js";
 import { readThreadedComments } from "./threaded-comments.js";
 import type { NativeThreads } from "./threaded-comments.js";
 import { readAutoFilter } from "./filter.js";
+import { NativeCalculationChain } from "./calc-chain.js";
+import { readWorkbookProperties } from "./properties.js";
 
 type RowDimension = WorkbookSheet["rowDimensions"][number];
 /** Join identical adjacent explicit runs without expanding implicit rows. */
@@ -45,6 +47,7 @@ export interface XlsxRecords {
   readonly control: ImportControl;
   readonly limits: ReturnType<typeof xlsxLimits>;
   readonly native: NativeWorkbook;
+  readonly properties: ReturnType<typeof readWorkbookProperties>;
   readonly styles: XlsxStyles;
   readonly tableStyles: NativeTableStyles;
   readonly chunks: WorkbookChunks;
@@ -64,7 +67,9 @@ export async function readXlsxRecords(bytes: Uint8Array, options: XlsxReadOption
   await control.checkpoint({ phase: "metadata", completed: 0, total: 1 });
   const opc = openOpcFiles(files, { limits: { ...limits.xml, maxFileBytes: limits.native.maxMetadataBytes } }, budget, limits.native.maxRetainedNodes);
   auditXlsxPackage(opc);
+  const properties = readWorkbookProperties(opc);
   const native = readWorkbook(opc), styles = new XlsxStyles(opc, native.part, limits.native.maxCssCodeUnits), chunks = new WorkbookChunks(limits.source);
+  const calculationChain = new NativeCalculationChain(opc, native, limits.workbook.maxFormulas);
   const tableStyles = readTableStyles(styles);
   const stringPart = opc.related(native.part, "sharedStrings");
   if (stringPart && opc.contentType(stringPart) !== "application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml") fail({ part: stringPart, name: "sst" }, "The shared string content type is invalid.");
@@ -81,6 +86,7 @@ export async function readXlsxRecords(bytes: Uint8Array, options: XlsxReadOption
       cell(node, coordinate) {
         if (++cells > limits.workbook.maxCells || one(node, "f") && ++formulas > limits.workbook.maxFormulas) throw new DocumentError("ResourceLimitExceeded", "Native cells or formulas exceed their cumulative workbook budget.");
         cellFormula(node, coordinate, shared, 0);
+        if (one(node, "f")) calculationChain.formula(source.nativeId, coordinate);
       },
       row(node, row) { const dimension = rowDimension(node, row, styles); if (dimension) appendRow(rows, dimension); },
     });
@@ -105,9 +111,9 @@ export async function readXlsxRecords(bytes: Uint8Array, options: XlsxReadOption
     sheets.push({ source, root, metadata });
     await control.checkpoint({ phase: "worksheet", completed: sheetBytes.length * 2, total: sheetBytes.length * 2, sheetId: source.sheetId });
   }
-  chunks.finish(); strings.validateReferences();
+  chunks.finish(); strings.validateReferences(); calculationChain.finish();
   const notes = readClassicComments(opc, native.sheets, styles, limits.source.maxNodes, limits.source.maxFileBytes);
   const noteBoxes = readNoteBoxes(opc, sheets.map(sheet => ({ sheetId: sheet.source.sheetId, root: sheet.root })), notes, styles, limits.source.maxNodes);
   const threads = readThreadedComments(opc, native.part, native.sheets, limits.source.maxNodes);
-  return { opc, control, limits, native, styles, tableStyles, chunks, sheets, threads, notes, noteBoxes, counts: { cells, formulas } };
+  return { opc, control, limits, native, properties, styles, tableStyles, chunks, sheets, threads, notes, noteBoxes, counts: { cells, formulas } };
 }

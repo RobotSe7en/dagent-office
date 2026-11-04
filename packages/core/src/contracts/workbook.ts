@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DocumentPropertiesSchema } from "./properties.js";
 import { IdentifierSchema, PackagePathSchema } from "./primitives.js";
 import { WorkbookColumnSchema, WorkbookCoordinateSchema, WorkbookRangeSchema, WorkbookRowSchema } from "./workbook-coordinates.js";
 import { WorkbookConditionalRuleSchema, WorkbookDataValidationSchema } from "./workbook-rules.js";
@@ -129,7 +130,7 @@ export const WorkbookMetadataSchema = z.strictObject({
 });
 export type WorkbookMetadata = z.infer<typeof WorkbookMetadataSchema>;
 export const WorkbookDocumentMetadataSchema = z.strictObject({
-  title: z.string().optional(), locale: IdentifierSchema.optional(), workbook: WorkbookMetadataSchema,
+  title: z.string().optional(), locale: IdentifierSchema.optional(), properties: DocumentPropertiesSchema.optional(), workbook: WorkbookMetadataSchema,
 });
 export type WorkbookDocumentMetadata = z.infer<typeof WorkbookDocumentMetadataSchema> & { readonly word?: never; readonly presentation?: never };
 

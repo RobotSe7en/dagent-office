@@ -8,6 +8,7 @@ import type { PrintNames } from "./print.js";
 
 export interface NativeSheet {
   readonly part: string;
+  readonly nativeId: number;
   readonly sheetId: string;
   readonly name: string;
   readonly visibility: WorkbookSheet["visibility"];
@@ -106,7 +107,7 @@ export function readWorkbook(opc: OpcPackage): NativeWorkbook {
     if (!relation || relation.external || relation.type !== R + "/worksheet" || paths.has(relation.target)) fail(sheet, "A worksheet relationship is invalid or repeated.");
     if (opc.contentType(relation.target) !== "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml") fail(sheet, "A worksheet part has an invalid content type.");
     nativeIds.add(nativeId); paths.add(relation.target); sheetNames.add(name.toUpperCase());
-    sheets.push({ part: relation.target, sheetId: `sheet-${nativeId}`, name, visibility: visibility as NativeSheet["visibility"], printNames: { areas: [] } });
+    sheets.push({ part: relation.target, nativeId, sheetId: `sheet-${nativeId}`, name, visibility: visibility as NativeSheet["visibility"], printNames: { areas: [] } });
   }
   if (!sheets.length) fail(root, "A workbook requires worksheets.");
   if (views) { attributes(views, []); check(views, ["workbookView"], S); }

@@ -1,7 +1,9 @@
-import { DocumentError } from "@dagent-office/core";
+import { createAssetDescriptor, DocumentError } from "@dagent-office/core";
 import type { OpcPackage } from "../ooxml/package.js";
-import { check, elements, fail, PKG, R } from "../ooxml/xml.js";
-import { attributes } from "./values.js";
+import { attr, check, elements, fail, PKG, R, S } from "../ooxml/xml.js";
+import type { XlsxRecords } from "./read.js";
+import type { WorkbookDrawings } from "./drawing.js";
+import { attributes, one } from "./values.js";
 
 const prefix = "application/vnd.openxmlformats-officedocument.";
 const roles = new Map<string, string>([
@@ -68,4 +70,32 @@ export function auditXlsxPackage(opc: OpcPackage): void {
   const reached = new Set<string>(), pending = [""];
   while (pending.length) for (const part of graph.get(pending.pop()!) ?? []) if (!reached.has(part)) { reached.add(part); pending.push(part); }
   for (const path of fileRoles.keys()) if (!reached.has(path)) fail({ part: path, name: "part" }, "A native workbook part is disconnected from the package root.");
+}
+
+/** A relationship's presence is not evidence that its feature was mapped.
+ * Invoke only after the record, comment and drawing adapters all succeeded. */
+export function auditXlsxPartCoverage(records: XlsxRecords, drawings: WorkbookDrawings): void {
+  const { opc, native } = records, consumed = new Set([native.part, ...native.sheets.map(sheet => sheet.part), ...drawings.parts, ...drawings.charts.parts]);
+  const related = (owner: string, type: string): void => { const part = opc.related(owner, type); if (part) consumed.add(part); };
+  for (const type of ["styles", "sharedStrings", "theme", "calcChain", "person"]) related(native.part, type);
+  for (const type of ["metadata/core-properties", "extended-properties"]) related("", type);
+  for (const sheet of records.sheets) {
+    for (const type of ["comments", "threadedComment"]) related(sheet.source.part, type);
+    const references = [one(sheet.root, "legacyDrawing"), ...elements(one(sheet.root, "tableParts"), "tablePart", S)];
+    for (const reference of references) if (reference) {
+      const relation = opc.relationships(sheet.source.part).get(attr(reference, "id", R) ?? "");
+      if (!relation || relation.external) fail(reference, "A mapped native part has no valid relationship."); consumed.add(relation.target);
+    }
+  }
+  // A package thumbnail is a derived preview, not an independently editable
+  // image. Validate its actual container before discarding the old preview.
+  const thumbnail = opc.related("", "metadata/thumbnail");
+  if (thumbnail) {
+    const bytes = opc.files.get(thumbnail)!;
+    if (bytes.byteLength > records.limits.source.maxFileBytes) throw new DocumentError("ResourceLimitExceeded", "The native thumbnail exceeds its resource budget.");
+    createAssetDescriptor(thumbnail, opc.contentType(thumbnail)!, bytes); consumed.add(thumbnail);
+  }
+  for (const part of opc.files.keys()) if (part !== "[Content_Types].xml" && relationshipSource(part) === undefined && !consumed.has(part)) {
+    fail({ part, name: "part" }, "A native workbook part has no consumed source feature.");
+  }
 }
