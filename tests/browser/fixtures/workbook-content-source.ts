@@ -5,6 +5,7 @@ import { measureObjectGeometry } from './workbook-object-geometry.js';
 import { measureDrawingGradients } from './drawing-gradient.js';
 import { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback } from './workbook-drawing-text.js';
 import { measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } from './workbook-surface.js';
+import { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } from './workbook-shadow.js';
 
 function sourceText(root: Node): string {
   if (root.nodeType === 3) return root.textContent ?? '';
@@ -40,3 +41,4 @@ export function rejectContentSource(snapshot: WorkbookSnapshot, maxNodes?: numbe
   catch (error) { return (error as { code: string }).code; }
 }
 Object.assign(window, { workbookContentHost: { measureContentSource, rejectContentSource, measureImageView, disposeImageView, measureObjectGeometry, measureDrawingGradients, measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback, measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } });
+Object.assign(window, { workbookShadowHost: { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } });

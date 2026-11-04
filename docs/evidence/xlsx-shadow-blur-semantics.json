@@ -1,0 +1,557 @@
+{
+  "scope": "Four independent outer-shadow blur profiles at 144 dpi, normalized to source points. This is producer evidence; no SDK Gaussian mapping or Excel/WPS acceptance is implied.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "sourceSha256": "be459767c3e7a23a8b658cfad39c65e9d719494b88af04ad5b2a05a6d622c790",
+  "fontManifest": {
+    "source": "examples/xlsx/reference.json#environment.fonts",
+    "sha256": "bda037c50b31e342e0e460755840725d14dd8bfaeccca8de54269277342a5119"
+  },
+  "cases": [
+    {
+      "rotation": 0,
+      "flipH": false,
+      "flipV": false,
+      "rotateWithShape": false,
+      "direction": 0,
+      "distancePt": 60,
+      "blurPt": 0,
+      "observed": {
+        "pdfScale": 0.998535158,
+        "sampleYRelativePt": 30.008802,
+        "resavedBlurRad": "0",
+        "sharpEdgeOffsetPt": 0.416626,
+        "samples": [
+          {
+            "offsetPt": -23.868949,
+            "rgb": [
+              255,
+              0,
+              0
+            ]
+          },
+          {
+            "offsetPt": -17.860147,
+            "rgb": [
+              255,
+              0,
+              0
+            ]
+          },
+          {
+            "offsetPt": -11.851345,
+            "rgb": [
+              255,
+              0,
+              0
+            ]
+          },
+          {
+            "offsetPt": -7.845477,
+            "rgb": [
+              255,
+              0,
+              0
+            ]
+          },
+          {
+            "offsetPt": -5.842543,
+            "rgb": [
+              255,
+              0,
+              0
+            ]
+          },
+          {
+            "offsetPt": -3.839609,
+            "rgb": [
+              255,
+              0,
+              0
+            ]
+          },
+          {
+            "offsetPt": -1.836675,
+            "rgb": [
+              255,
+              0,
+              0
+            ]
+          },
+          {
+            "offsetPt": 0.166259,
+            "rgb": [
+              255,
+              0,
+              0
+            ]
+          },
+          {
+            "offsetPt": 2.169193,
+            "rgb": [
+              255,
+              255,
+              255
+            ]
+          },
+          {
+            "offsetPt": 4.172127,
+            "rgb": [
+              255,
+              255,
+              255
+            ]
+          },
+          {
+            "offsetPt": 6.175061,
+            "rgb": [
+              255,
+              255,
+              255
+            ]
+          },
+          {
+            "offsetPt": 8.177995,
+            "rgb": [
+              255,
+              255,
+              255
+            ]
+          },
+          {
+            "offsetPt": 12.183863,
+            "rgb": [
+              255,
+              255,
+              255
+            ]
+          },
+          {
+            "offsetPt": 18.192665,
+            "rgb": [
+              255,
+              255,
+              255
+            ]
+          },
+          {
+            "offsetPt": 24.201467,
+            "rgb": [
+              255,
+              255,
+              255
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "rotation": 0,
+      "flipH": false,
+      "flipV": false,
+      "rotateWithShape": false,
+      "direction": 0,
+      "distancePt": 60,
+      "blurPt": 4,
+      "observed": {
+        "pdfScale": 0.998535158,
+        "sampleYRelativePt": 30.008802,
+        "resavedBlurRad": "50760",
+        "samples": [
+          {
+            "offsetPt": -23.868949,
+            "rgb": [
+              254,
+              0,
+              0
+            ]
+          },
+          {
+            "offsetPt": -17.860147,
+            "rgb": [
+              254,
+              0,
+              0
+            ]
+          },
+          {
+            "offsetPt": -11.851345,
+            "rgb": [
+              254,
+              0,
+              0
+            ]
+          },
+          {
+            "offsetPt": -7.845477,
+            "rgb": [
+              254,
+              0,
+              0
+            ]
+          },
+          {
+            "offsetPt": -5.842543,
+            "rgb": [
+              254,
+              0,
+              0
+            ]
+          },
+          {
+            "offsetPt": -3.839609,
+            "rgb": [
+              254,
+              0,
+              0
+            ]
+          },
+          {
+            "offsetPt": -1.836675,
+            "rgb": [
+              254,
+              20,
+              20
+            ]
+          },
+          {
+            "offsetPt": 0.166259,
+            "rgb": [
+              254,
+              108,
+              108
+            ]
+          },
+          {
+            "offsetPt": 2.169193,
+            "rgb": [
+              255,
+              208,
+              208
+            ]
+          },
+          {
+            "offsetPt": 4.172127,
+            "rgb": [
+              255,
+              254,
+              254
+            ]
+          },
+          {
+            "offsetPt": 6.175061,
+            "rgb": [
+              255,
+              255,
+              255
+            ]
+          },
+          {
+            "offsetPt": 8.177995,
+            "rgb": [
+              255,
+              255,
+              255
+            ]
+          },
+          {
+            "offsetPt": 12.183863,
+            "rgb": [
+              255,
+              255,
+              255
+            ]
+          },
+          {
+            "offsetPt": 18.192665,
+            "rgb": [
+              255,
+              255,
+              255
+            ]
+          },
+          {
+            "offsetPt": 24.201467,
+            "rgb": [
+              255,
+              255,
+              255
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "rotation": 0,
+      "flipH": false,
+      "flipV": false,
+      "rotateWithShape": false,
+      "direction": 0,
+      "distancePt": 60,
+      "blurPt": 12,
+      "observed": {
+        "pdfScale": 0.998535158,
+        "sampleYRelativePt": 30.008802,
+        "resavedBlurRad": "152280",
+        "samples": [
+          {
+            "offsetPt": -23.868949,
+            "rgb": [
+              253,
+              1,
+              1
+            ]
+          },
+          {
+            "offsetPt": -17.860147,
+            "rgb": [
+              253,
+              1,
+              1
+            ]
+          },
+          {
+            "offsetPt": -11.851345,
+            "rgb": [
+              253,
+              1,
+              1
+            ]
+          },
+          {
+            "offsetPt": -7.845477,
+            "rgb": [
+              254,
+              13,
+              13
+            ]
+          },
+          {
+            "offsetPt": -5.842543,
+            "rgb": [
+              253,
+              30,
+              30
+            ]
+          },
+          {
+            "offsetPt": -3.839609,
+            "rgb": [
+              254,
+              53,
+              53
+            ]
+          },
+          {
+            "offsetPt": -1.836675,
+            "rgb": [
+              254,
+              83,
+              83
+            ]
+          },
+          {
+            "offsetPt": 0.166259,
+            "rgb": [
+              254,
+              122,
+              122
+            ]
+          },
+          {
+            "offsetPt": 2.169193,
+            "rgb": [
+              255,
+              162,
+              162
+            ]
+          },
+          {
+            "offsetPt": 4.172127,
+            "rgb": [
+              255,
+              194,
+              194
+            ]
+          },
+          {
+            "offsetPt": 6.175061,
+            "rgb": [
+              255,
+              220,
+              220
+            ]
+          },
+          {
+            "offsetPt": 8.177995,
+            "rgb": [
+              255,
+              239,
+              239
+            ]
+          },
+          {
+            "offsetPt": 12.183863,
+            "rgb": [
+              255,
+              255,
+              255
+            ]
+          },
+          {
+            "offsetPt": 18.192665,
+            "rgb": [
+              255,
+              255,
+              255
+            ]
+          },
+          {
+            "offsetPt": 24.201467,
+            "rgb": [
+              255,
+              255,
+              255
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "rotation": 0,
+      "flipH": false,
+      "flipV": false,
+      "rotateWithShape": false,
+      "direction": 0,
+      "distancePt": 60,
+      "blurPt": 24,
+      "observed": {
+        "pdfScale": 0.998535158,
+        "sampleYRelativePt": 30.008802,
+        "resavedBlurRad": "304920",
+        "samples": [
+          {
+            "offsetPt": -23.868949,
+            "rgb": [
+              254,
+              0,
+              0
+            ]
+          },
+          {
+            "offsetPt": -17.860147,
+            "rgb": [
+              254,
+              8,
+              8
+            ]
+          },
+          {
+            "offsetPt": -11.851345,
+            "rgb": [
+              254,
+              31,
+              31
+            ]
+          },
+          {
+            "offsetPt": -7.845477,
+            "rgb": [
+              254,
+              55,
+              55
+            ]
+          },
+          {
+            "offsetPt": -5.842543,
+            "rgb": [
+              254,
+              69,
+              69
+            ]
+          },
+          {
+            "offsetPt": -3.839609,
+            "rgb": [
+              254,
+              87,
+              87
+            ]
+          },
+          {
+            "offsetPt": -1.836675,
+            "rgb": [
+              254,
+              104,
+              104
+            ]
+          },
+          {
+            "offsetPt": 0.166259,
+            "rgb": [
+              254,
+              124,
+              124
+            ]
+          },
+          {
+            "offsetPt": 2.169193,
+            "rgb": [
+              255,
+              145,
+              145
+            ]
+          },
+          {
+            "offsetPt": 4.172127,
+            "rgb": [
+              255,
+              163,
+              163
+            ]
+          },
+          {
+            "offsetPt": 6.175061,
+            "rgb": [
+              255,
+              181,
+              181
+            ]
+          },
+          {
+            "offsetPt": 8.177995,
+            "rgb": [
+              255,
+              195,
+              195
+            ]
+          },
+          {
+            "offsetPt": 12.183863,
+            "rgb": [
+              255,
+              221,
+              221
+            ]
+          },
+          {
+            "offsetPt": 18.192665,
+            "rgb": [
+              255,
+              246,
+              246
+            ]
+          },
+          {
+            "offsetPt": 24.201467,
+            "rgb": [
+              255,
+              255,
+              255
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

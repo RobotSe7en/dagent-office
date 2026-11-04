@@ -182,7 +182,11 @@ SDK 对其中 22 项明确字号且语义相同的样例执行三浏览器行距
 
 隔离视图的选区适配使用明确端点设置选择；读取时优先采用支持 Shadow DOM 的 [`getComposedRanges`](https://www.w3.org/TR/selection-api/#dom-selection-getcomposedranges)，旧 Chromium 沿用其真实 DOM 范围。WebKit 的普通 `getRangeAt()` 会返回外层容器，不能直接用于 UTF-16 投影；适配层只接受两个端点都属于当前视图的单一区间，不猜测外层节点或其他视图的对应文字。反向划选、原生选择文字、精确端点、越界失败后原选择不变均有检查。此隔离层及选区适配尚未组成公开工作簿预览入口。
 
-[32 项原生阴影方向探针](evidence/xlsx-drawing-shadow-semantics.json)覆盖零模糊、形状旋转、水平／垂直翻转、两个阴影方向和 `rotWithShape` 两种值；运行 `python3 scripts/check-xlsx-drawing-effects.py` 可按固定 Office 归档和字体重核。该 Calc 版本始终保持阴影的页面方向，重存后写入 `rotWithShape="0"`。[格式定义](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.outershadow?view=openxml-3.0.1)则明确区分是否随形状旋转；因此不能把这一生产者差异作为 SDK 忽略源标志的依据。模糊核、最终阴影画面和 Excel/WPS 仍未核验。
+[32 项原生阴影方向探针](evidence/xlsx-drawing-shadow-semantics.json)覆盖零模糊、形状旋转、水平／垂直翻转、两个阴影方向和 `rotWithShape` 两种值；运行 `python3 scripts/check-xlsx-drawing-effects.py` 可按固定 Office 归档和字体重核。该 Calc 版本始终保持阴影的页面方向，重存后写入 `rotWithShape="0"`。[格式定义](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.outershadow?view=openxml-3.0.1)则明确区分是否随形状旋转；因此不能把这一生产者差异作为 SDK 忽略源标志的依据。内部阴影适配将页面方向通过对象逆变换映射到局部过滤器，包含反射；随对象模式保留局部方向。三浏览器中的实际对象变换与原生的 16 项页面方向结果相差小于 0.02pt，另外 16 项检查源标志和对象变换语义，不宣称与该 Calc 差异项一致。
+
+[四组原生模糊轮廓](evidence/xlsx-shadow-blur-semantics.json)使用 0／4／12／24pt 模糊半径、固定归档和字体，并以 144dpi PDF 栅格记录红色阴影的原始边缘像素；运行 `python3 scripts/check-xlsx-shadow-blur.py` 可重核。SDK 内部显示采用半径一半作为 CSS 高斯标准差，`approximateBlur` 明确标识非零模糊近似，保留原生参数而不改写源。原生与浏览器先各自测量锐利边缘的栅格取整位置（均小于 1pt），再对齐比较模糊轮廓；三浏览器实际页面截图的最大通道误差为 21／255，检查上限为 24／255。这不是逐像素等同或 Excel/WPS 的证明。
+
+阴影在连接显示树前检查几何及栅格预算，单对象缺省最多 16,777,216 像素，按实际像素比例和保守外扩范围计量；无阴影不占该预算。调用方需提供包含描边、文字的绘制边界，累加整个候选的像素，并将返回外扩范围接入窗格裁剪。无效单位、非有限值、非法标志和超限明确失败，查询不改源。完整绘图组合、窗口累计效果预算、最终页面与 Excel/WPS 仍未完成。
 
 原生图片、预设形状和文本框的内部适配已通过独立第 08 号来源及 Calc 重存的包重开检查：原始图片字节、矩形裁剪、旋转、三类锚点、精确 UTF-16 正文、主题引用、段落/字符样式和换行样式均进入同一来源。对象和文字超链接绑定其 HTML 节点，沿用工作簿的安全外链/内部地址校验。背景填充引用按原生 `fillRef` 的 1001 起始编号解析，依据 [FillReference](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.fillreference?view=openxml-3.0.1)。Calc 把样例文本框改存为普通矩形，读取器保留该来源差异；当前尚未完成公开原生导入及对象视觉验收。
 

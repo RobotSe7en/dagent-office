@@ -14,12 +14,18 @@ import type { measureObjectGeometry } from './fixtures/workbook-object-geometry.
 import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
 import type { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback } from './fixtures/workbook-drawing-text.js';
 import type { measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } from './fixtures/workbook-surface.js';
+import type { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } from './fixtures/workbook-shadow.js';
+
+declare global { interface Window { workbookShadowHost: { measureWorkbookShadows: typeof measureWorkbookShadows; mountWorkbookShadowPixels: typeof mountWorkbookShadowPixels; disposeWorkbookShadowPixels: typeof disposeWorkbookShadowPixels } } }
 
 declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView; measureObjectGeometry: typeof measureObjectGeometry; measureDrawingGradients: typeof measureDrawingGradients; measureDrawingText: typeof measureDrawingText; measureDrawingTextLayout: typeof measureDrawingTextLayout; measureNativeDrawingText: typeof measureNativeDrawingText; measureDrawingTextFallback: typeof measureDrawingTextFallback; measureWorkbookSurface: typeof measureWorkbookSurface; mountWorkbookSurfacePixels: typeof mountWorkbookSurfacePixels; disposeWorkbookSurfacePixels: typeof disposeWorkbookSurfacePixels } } }
 const inputs: { name: string; snapshot: WorkbookSnapshot; text: Record<string, string>; resources: Record<string, string> }[] = [];
 let code = '';
 let nativeText: WorkbookSnapshot;
+let nativeShadows: WorkbookSnapshot, nativeBlur: WorkbookSnapshot;
 const textEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-drawing-text-semantics.json', 'utf8')) as { sourceSha256: string; cases: { fontPt: number | null; endPt: number | null; paragraphs: string[]; listStyle: string; observed: { lineAdvancePt: number; words: { text: string; boundsPt: number[] }[] } }[] };
+const shadowEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-drawing-shadow-semantics.json', 'utf8')) as { sourceSha256: string; cases: { rotation: number; flipH: boolean; flipV: boolean; rotateWithShape: boolean; direction: number; distancePt: number; observed: { offsetPt: number[] } }[] };
+const blurEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-shadow-blur-semantics.json', 'utf8')) as { sourceSha256: string; cases: { blurPt: number; observed: { sharpEdgeOffsetPt?: number; samples: { offsetPt: number; rgb: number[] }[] } }[] };
 test.beforeAll(async () => {
   const bundle = await build({ configFile: false, build: { write: false, minify: false, lib: { entry: fileURLToPath(new URL('./fixtures/workbook-content-source.ts', import.meta.url)), formats: ['iife'], name: 'WorkbookDrawingProbe' } } });
   if (!Array.isArray(bundle) && !('output' in bundle)) throw Error('Unexpected drawing fixture bundle');
@@ -27,6 +33,11 @@ test.beforeAll(async () => {
   const nativeBytes = execFileSync('python3', ['-c', "import importlib.util,sys; s=importlib.util.spec_from_file_location('drawing_text_inputs','scripts/check-xlsx-drawing-text.py'); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); sys.stdout.buffer.write(m.generate(m.inputs()))"], { maxBuffer: 16 * 1024 * 1024 });
   expect(createHash('sha256').update(nativeBytes).digest('hex')).toBe(textEvidence.sourceSha256);
   nativeText = projectXlsxRecords(await readXlsxRecords(nativeBytes)).model.snapshot();
+  for (const [name, evidence] of [['drawing-effects', shadowEvidence], ['shadow-blur', blurEvidence]] as const) {
+    const bytes = execFileSync('python3', ['-c', `import importlib.util,sys; s=importlib.util.spec_from_file_location('shadow_inputs','scripts/check-xlsx-${name}.py'); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); sys.stdout.buffer.write(m.generate(m.inputs()))`], { maxBuffer: 16 * 1024 * 1024 });
+    expect(createHash('sha256').update(bytes).digest('hex')).toBe(evidence.sourceSha256);
+    const snapshot = projectXlsxRecords(await readXlsxRecords(bytes)).model.snapshot(); if (name === 'drawing-effects') nativeShadows = snapshot; else nativeBlur = snapshot;
+  }
   for (const prefix of ['', 'producer/']) for (const name of ['07-three-charts', '08-images-shapes', '09-classic-notes', '10-modern-threads']) {
     const { model } = projectXlsxRecords(await readXlsxRecords(readFileSync(`examples/xlsx/${prefix}${name}.xlsx`))), snapshot = model.snapshot();
     const ids = [...(snapshot.metadata.workbook.stories ?? []).map(story => story.rootNodeId), ...(snapshot.metadata.workbook.objects ?? []).map(object => object.nodeId)];
@@ -207,6 +218,67 @@ test('isolated workbook surfaces paint local SVG gradient references in actual p
       pixels.values[index]!.forEach((value, channel) => expect(Math.abs(value - expected[channel]!)).toBeLessThan(2));
     }
   } finally { await page.evaluate(() => window.workbookContentHost.disposeWorkbookSurfacePixels()); }
+});
+
+test('worksheet shadows preserve page offsets through native rotations and reflections with bounded raster allocation', async ({ page }) => {
+  const result = await page.evaluate(snapshot => window.workbookShadowHost.measureWorkbookShadows(snapshot), nativeShadows);
+  expect(result.errors.slice(0, 5)).toEqual(Array(5).fill('InvalidDocument'));
+  // Old Chromium saturates enormous CSS numbers before computed-style access;
+  // it must still fail admission instead of allocating an enormous filter.
+  expect(['InvalidDocument', 'ResourceLimitExceeded']).toContain(result.errors[5]);
+  expect(result.errors.slice(6)).toEqual(['ResourceLimitExceeded', 'ResourceLimitExceeded', 'UnsupportedFeature']); expect(result.restored).toBe(true);
+  expect(result.none).toMatchObject({ filter: 'none', outsetPt: 0, rasterPixels: 0, approximateBlur: false });
+  expect(result.cases).toHaveLength(shadowEvidence.cases.length);
+  result.cases.forEach((actual, index) => {
+    const source = shadowEvidence.cases[index]!;
+    expect(actual).toMatchObject({ outset: 15, approximate: false, unchanged: true, filterEnabled: true });
+    expect(actual.pixels).toBeGreaterThan(0); expect(actual.pixels).toBeLessThan(16_777_216);
+    if (!source.rotateWithShape) actual.worldOffsetPt.forEach((value, axis) => expect(Math.abs(value - source.observed.offsetPt[axis]!)).toBeLessThan(.02));
+    else {
+      // The source flag retains object-space direction. Calc's contrary
+      // producer behavior is recorded, not copied into these expected values.
+      const x = source.direction === 0 ? (source.flipH ? -15 : 15) : 0, y = source.direction === 90 ? (source.flipV ? -15 : 15) : 0;
+      const expected = source.rotation === 0 ? [x, y] : [Math.sqrt(3) / 2 * x - .5 * y, .5 * x + Math.sqrt(3) / 2 * y];
+      actual.worldOffsetPt.forEach((value, axis) => expect(value).toBeCloseTo(expected[axis]!, 4));
+    }
+  });
+});
+
+test('worksheet Gaussian shadow preview reports approximation and checks native edge profiles in actual pixels', async ({ page }) => {
+  let browserEdgePt = 0;
+  const nativeEdgePt = blurEvidence.cases[0]!.observed.sharpEdgeOffsetPt!;
+  for (const [index, reference] of blurEvidence.cases.entries()) {
+    const result = await page.evaluate(({ snapshot, index }) => window.workbookShadowHost.mountWorkbookShadowPixels(snapshot, index), { snapshot: nativeBlur, index });
+    try {
+      const png = await page.locator('#workbook-shadow-pixel-probe iframe').screenshot();
+      const raster = await page.evaluate(async ({ bytes, offsets }) => {
+        const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'image/png' })), image = new Image();
+        try {
+          image.src = url; await image.decode(); const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+          const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
+          const row = Math.round(70 / .75 - .5), values = offsets.map(offset => [...context.getImageData(Math.round((220 + offset) / .75 - .5), row, 1, 1).data].slice(0, 3));
+          let edge = NaN;
+          for (let x = Math.floor(220 / .75) - 6; x < Math.floor(220 / .75) + 6; x++) {
+            const a = context.getImageData(x, row, 1, 1).data[1]!, b = context.getImageData(x + 1, row, 1, 1).data[1]!;
+            if (a < 127.5 && b >= 127.5) { edge = (x + .5 + (127.5 - a) / (b - a)) * .75 - 220; break; }
+          }
+          return { values, edge };
+        } finally { image.removeAttribute('src'); URL.revokeObjectURL(url); }
+      // Compare the blur kernels after independently measuring each raster's
+      // sharp edge. Keep the sub-point placement error separately bounded;
+      // do not shift the renderer to reproduce a producer's pixel-grid snap.
+      }, { bytes: [...png], offsets: reference.observed.samples.map(sample => sample.offsetPt + (index ? browserEdgePt - nativeEdgePt : 0)) });
+      if (!index) { expect(Math.abs(raster.edge)).toBeLessThan(1); browserEdgePt = raster.edge; }
+      expect(result.approximate).toBe(reference.blurPt > 0);
+      const errors = raster.values.flatMap((pixel, sampleIndex) => {
+        const sample = reference.observed.samples[sampleIndex]!;
+        // Sharp vector edges have a producer/pixel-grid quantization rim.
+        if (!reference.blurPt && Math.abs(sample.offsetPt) < 1) return [];
+        return pixel.map((value, channel) => Math.abs(value - sample.rgb[channel]!));
+      });
+      expect(Math.max(...errors)).toBeLessThanOrEqual(24);
+    } finally { await page.evaluate(() => window.workbookShadowHost.disposeWorkbookShadowPixels()); }
+  }
 });
 
 test('bounded auxiliary projections preserve native drawing and comment text without activating image paths', async ({ page }) => {
