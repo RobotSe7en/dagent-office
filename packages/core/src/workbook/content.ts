@@ -53,5 +53,5 @@ export function validateWorkbookContent(workbook: WorkbookMetadata, manifest: Wo
     checkLimit(items, maxItems);
   }
   for (const id of stories.keys()) if (!usedBodies.has(id)) invalid("A workbook comment story is not owned by an annotation or reply.");
-  checkLimit(items + validateWorkbookComments(workbook, annotations, maxItems), maxItems);
+  checkLimit(items + validateWorkbookComments(workbook, annotations, maxItems, classes), maxItems);
 }

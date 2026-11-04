@@ -30,7 +30,7 @@ if (model.kind === "workbook") {
 | 元数据 | workbook 的日期系统、计算模式、活动表、表次序/名称/可见性、行列度量、冻结、合并、数字格式、作用域名称、超链接和打印定义 |
 | 样式 | 清单列出的 CSS；单元格和富文本的 class 引用必须存在；拉丁/东亚字体角色分别声明 |
 | 内容 | 每块 HTML 表格；行、列按坐标递增，原点为 256 行及 32 列的整数倍；块不能重叠或引用不存在的表 |
-| 批注/资源 | `cells` 锚点保留工作表与精确多区域；正文/回复引用有界独立 HTML story，资源校验摘要；原生备注/线程读取和绘图仍待接入 |
+| 批注/资源 | `cells` 锚点保留工作表与精确多区域；正文/回复引用有界独立 HTML story，资源校验摘要；原生备注/线程的基础读取已接入内部管线，兼容定位核对及绘图仍待完成 |
 
 空白远端位置不产生任何分块。合并、冻结和行列尺寸只保存逻辑定义；合并可跨块，不随窗口复制。至少一张表可见，活动表必须可见；表身份、大小写不敏感的表名及数字格式 ID 唯一。尺寸区间必须有序且不重叠，合并重叠通过行扫描和列区间索引检查。
 
@@ -96,12 +96,14 @@ pnpm probe:workbook-model
 
 工作簿可选 `manifest.content` 指向同一包内的辅助 HTML，使用 `data-office-kind="workbook-content"` 根节点。它仅包含有界的富文本批注 story，不拼接单元格块，也不创建另一份工作表内容。`snapshot.content` 和 `getNode` 提供正文查询；每个元素有稳定身份，复用无脚本 HTML/CSS 校验。正文和回复各自拥有一个 story；孤立正文、重复归属、未知类名、未来修订和重叠锚点区域明确拒绝。元数据和批注记录共用累计条目限额。
 
-工作表删除后，显式 `needs_reanchor` 的批注可以保留原坐标、正文和回复，等待后续事务重定位；有效批注仍必须指向现有表。Word/PPT 不接受工作簿的 `cells` 锚点，包括需要恢复的项。当前仅实现读取及保存重开；事务映射、原生批注适配和交互验收仍在对应任务内。
+工作表删除后，显式 `needs_reanchor` 的批注可以保留原坐标、正文和回复，等待后续事务重定位；有效批注仍必须指向现有表。Word/PPT 不接受工作簿的 `cells` 锚点，包括需要恢复的项。当前仅实现读取及保存重开；事务映射、完整原生批注验收和交互验收仍在对应任务内。
 
 现代批注的内部读取现在校验工作簿人员、全局 GUID、按表回复图、原生可选时间、正文及解决状态；嵌套回复的父身份保存在格式元数据中。正文仍是辅助 HTML 的唯一可编辑来源。身份、作者显示名和回复关系在打开 HTML 包时重新校验，重复、循环、跨线程父引用及未来修订不接受；导入映射按条目核算重复作者文本后的 JSON 字节，防止共享长名称放大输出。32 份内部记录链路继续通过；固定 Calc 重存的现代线程丢失仍作为外部差异记录。
 
-经典兼容占位备注的核对、缺失定位后的处理及 VML 备注外观尚未完成，不能据此宣称两类原生批注已验收。非空提及/扩展当前明确拒绝，不会触发通知或忽略其元数据；完整读取边界仍需最终复核。格式依据为 Microsoft 的 [CT_ThreadedComment](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/42f9b03d-9662-4204-9783-dbeb324a691c)、[CT_Person](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/6274371e-7c5c-46e3-b661-cbeb4abfe968) 和[兼容占位备注](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/6383f002-c90b-401c-a1d7-66b97b14cb3e)。
+经典兼容占位备注的核对、缺失定位后的处理及备注框预览尚未完成，不能据此宣称两类原生批注已验收。非空提及/扩展当前明确拒绝，不会触发通知或忽略其元数据；完整读取边界仍需最终复核。格式依据为 Microsoft 的 [CT_ThreadedComment](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/42f9b03d-9662-4204-9783-dbeb324a691c)、[CT_Person](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/6274371e-7c5c-46e3-b661-cbeb4abfe968) 和[兼容占位备注](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/6383f002-c90b-401c-a1d7-66b97b14cb3e)。
 
-经典备注的内部记录也已读取作者、单元格、富文本和兼容线程标记，保留待处理的原生几何属性。独立来源的加粗中文与 Calc 重存的普通字重分别按实际来源保存，不互相补造。VML 几何尚未接入；[固定 Calc 探针](evidence/xlsx-note-semantics.json)验证其单元格锚点优先于 VML 位置数值，验证脚本为 `python scripts/check-xlsx-note-semantics.py`，仅 `--record` 更新证据。固定 Office 归档和字体清单均检查摘要；此探针不代表 Excel/WPS 或 SDK 视觉验收。
+经典备注的内部记录也已读取作者、单元格、富文本和兼容线程标记，保留待处理的原生几何属性。独立来源的加粗中文与 Calc 重存的普通字重分别按实际来源保存，不互相补造。VML 几何与基础外观现已接入内部管线；[固定 Calc 探针](evidence/xlsx-note-semantics.json)验证其单元格锚点优先于 VML 位置数值，验证脚本为 `python scripts/check-xlsx-note-semantics.py`，仅 `--record` 更新证据。固定 Office 归档和字体清单均检查摘要；此探针不代表 Excel/WPS 或 SDK 视觉验收。
 
 绘图锚点基础契约区分绝对坐标、单端单元格加尺寸和双端单元格锚点。统一使用文档点单位，保留负偏移、超过一行的偏移以及移动/缩放标志；DrawingML EMU/通用长度和 VML 像素在适配边界转换。三类图表、图片、形状及文本框的 12 个独立源/Calc 锚点已通过定向解析检查，零尺寸保留原值；这些仅是锚点基础，不代表对象、图表或备注框已经完整映射。VML 像素解释依据 [Anchor](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.vml.spreadsheet.anchor?view=openxml-3.0.1)；坐标结构和数值界限按仓库固定的官方 Transitional XSD 检查。
+
+经典备注框将单元格锚点、显示/打印和随行列变化标志保存在 `comments[].box`，实体填充、描边、箭头样式、单层阴影、内边距及对齐映射到受校验的 CSS 类。原生 VML 不复制进 HTML。普通 `commentPr` 坐标亦可单独读取；同时存在两套几何的情况明确拒绝，等待可靠的优先关系映射。未知控件、宏字段、非备注形状、重复定位、孤立形状和矛盾的显示状态明确失败。后者的 Calc 行为另有固定探针记录，不推断 Excel/WPS 相同。两类批注共用累计输出字节核算，源包重开会复核作者、正文、回复和备注框样式引用。32 份内部记录与包投影检查已包含这些基础映射，仍不代替公开导入及只读网格验收。

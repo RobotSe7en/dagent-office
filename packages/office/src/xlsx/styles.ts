@@ -136,6 +136,7 @@ export class XlsxStyles implements SheetStyles, RichTextStyles {
     const format = this.cellFormats[index]; if (!Number.isSafeInteger(index) || index < 0 || !format) fail(node, "A cell references an unknown format.");
     return { cssClass: format.cssClass, numberFormatId: format.numberFormatId };
   }
+  objectStyle(css: Css): string | undefined { return this.sharedRule(css); }
   run(node: XmlNode): string | undefined { return this.sharedRule(fontDeclarations(node, this.colors, false)); }
   tabStyle(node: XmlNode): string { return this.sharedRule(colorDeclarations("--office-tab", this.colors.read(node)))!; }
   scaleColor(node: XmlNode): string { return this.sharedRule(colorDeclarations("--office-scale", this.colors.read(node)))!; }

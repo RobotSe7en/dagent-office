@@ -24,7 +24,8 @@ shared = importlib.util.module_from_spec(spec); spec.loader.exec_module(shared)
 def generate(destination, kind):
     changes = {"base": {}, "different-css": {
         "margin-left:80pt;margin-top:30pt;width:150pt;height:75pt": "margin-left:600pt;margin-top:700pt;width:20pt;height:10pt"},
-        "different-anchor": {"2, 10, 1, 2, 5, 20, 5, 4": "1, 40, 2, 20, 4, 80, 8, 40"}}
+        "different-anchor": {"2, 10, 1, 2, 5, 20, 5, 4": "1, 40, 2, 20, 4, 80, 8, 40"},
+        "contradictory-visibility": {"<x:Row>": "<x:Visible/><x:Row>"}}
     with ZipFile(ROOT / "examples/xlsx/09-classic-notes.xlsx") as source, ZipFile(destination, "w", ZIP_DEFLATED) as output:
         for path in source.namelist():
             data = source.read(path)
@@ -48,7 +49,7 @@ def main():
     cases = []; cache = ROOT / ".cache/xlsx-note-semantics"; cache.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(dir=cache) as temporary:
         work = Path(temporary); (work / "out").mkdir(); profile = "-env:UserInstallation=" + (work / "profile").as_uri()
-        for kind in ["base", "different-css", "different-anchor"]:
+        for kind in ["base", "different-css", "different-anchor", "contradictory-visibility"]:
             source = work / (kind + ".xlsx"); generate(source, kind)
             shared.run(["libreoffice", profile, "--headless", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", str(work / "out"), str(source)])
             with ZipFile(work / "out" / source.name) as archive:
@@ -60,7 +61,8 @@ def main():
             cases.append({"case": kind, "sourceSha256": sha256(source.read_bytes()).hexdigest(), "observed": observed})
     assert cases[0]["observed"] == cases[1]["observed"], "Calc unexpectedly prioritized VML CSS coordinates over its cell anchor"
     assert cases[2]["observed"]["geometryPt"] != cases[0]["observed"]["geometryPt"], "Changing the cell anchor did not change note geometry"
-    report = {"scope": "Classic note VML anchor precedence only; Excel/WPS and SDK visual acceptance are unverified.",
+    assert cases[3]["observed"]["visibility"] == "hidden", "Calc changed how it resolves contradictory VML visibility"
+    report = {"scope": "Classic note VML anchor precedence and contradictory visibility only; Excel/WPS and SDK visual acceptance are unverified.",
               "office": BUILD, "archiveSha256": ARCHIVE_HASH, "fontManifest": {"source": "examples/xlsx/reference.json#environment.fonts", "sha256": font_digest}, "cases": cases}
     if args.record: REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     else: assert json.loads(REPORT.read_text()) == report, "Native note geometry evidence changed"

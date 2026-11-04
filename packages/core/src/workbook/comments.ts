@@ -4,7 +4,7 @@ import { checkLimit, invalid } from "../document/validation.js";
 
 /** Validate the optional native comment bindings without requiring every host
  * annotation to adopt an Office author or export format. */
-export function validateWorkbookComments(workbook: WorkbookMetadata, annotations: readonly Annotation[], maxItems: number): number {
+export function validateWorkbookComments(workbook: WorkbookMetadata, annotations: readonly Annotation[], maxItems: number, classes: ReadonlySet<string>): number {
   const authors = new Map<string, WorkbookCommentAuthor>(), nativeAuthors = new Set<string>(), bindings = new Set<string>();
   let items = 0;
   for (const author of workbook.commentAuthors ?? []) {
@@ -32,6 +32,8 @@ export function validateWorkbookComments(workbook: WorkbookMetadata, annotations
     bindings.add(comment.annotationId); author(comment.authorId, comment.format, annotation.author); items++;
     if (comment.recoveryStatus !== undefined && annotation.status !== "needs_reanchor") invalid("Only an invalidated comment may retain a recovery status.");
     if (comment.format === "classic") {
+      if (comment.box?.cssClass !== undefined && (!classes.has(comment.box.cssClass) || /\s/.test(comment.box.cssClass))) invalid("A classic note box has an undefined appearance class.");
+      if (comment.box) items++;
       if (annotation.replies?.length) invalid("Classic notes cannot contain modern replies.");
       continue;
     }

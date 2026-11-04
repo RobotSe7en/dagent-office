@@ -5,7 +5,7 @@ import { readDocumentZip, writeOpcZip } from "../src/document-zip.js";
 import { readXlsxRecords } from "../src/xlsx/read.js";
 import type { XlsxRecords } from "../src/xlsx/read.js";
 import { WorkbookContent } from "../src/xlsx/content.js";
-import { mapThreadedComments } from "../src/xlsx/comment-mapping.js";
+import { mapWorkbookComments } from "../src/xlsx/comment-mapping.js";
 import type { XlsxReadOptions } from "../src/xlsx/options.js";
 
 const encoder = new TextEncoder(), decoder = new TextDecoder();
@@ -15,7 +15,7 @@ const source = (name: string) => readFileSync(`examples/xlsx/${name}.xlsx`);
 function model(records: XlsxRecords) {
   const files = new Map([...createWorkbook({ documentId: "native-records" }), ...records.chunks.files]);
   const manifest = JSON.parse(decoder.decode(files.get("manifest.json")!)); manifest.chunks = records.chunks.descriptors;
-  const content = new WorkbookContent(records.limits.source), comments = mapThreadedComments(records.threads, records.threads.threads, content, "native-records");
+  const content = new WorkbookContent(records.limits.source), comments = mapWorkbookComments(records.threads, records.threads.threads, records.notes, records.noteBoxes, content, "native-records");
   if (content.html()) { manifest.content = "content.html"; files.set("content.html", encoder.encode(content.html()!)); }
   files.set("annotations.json", encoder.encode(JSON.stringify(comments.annotations)));
   const metadata = { workbook: { dateSystem: records.native.dateSystem, calculationMode: records.native.calculationMode, activeSheetId: records.native.activeSheetId,

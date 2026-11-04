@@ -1,5 +1,5 @@
 import { createSharedWorkbookFormulas, DocumentError } from "@dagent-office/core";
-import type { WorkbookSheet } from "@dagent-office/core";
+import type { WorkbookSheet, WorkbookNoteBox } from "@dagent-office/core";
 import { readDocumentZipAsync } from "../document-zip.js";
 import { ImportControl } from "../import-control.js";
 import { openOpcFiles } from "../ooxml/package.js";
@@ -21,6 +21,7 @@ import { readConditionalRules, readDataValidations } from "./rules.js";
 import { auditXlsxPackage } from "./package.js";
 import { readTables, readTableStyles } from "./tables.js";
 import type { NativeTableStyles } from "./tables.js";
+import { readNoteBoxes } from "./note-boxes.js";
 import { readClassicComments } from "./classic-comments.js";
 import type { NativeClassicNotes } from "./classic-comments.js";
 import { readThreadedComments } from "./threaded-comments.js";
@@ -50,6 +51,7 @@ export interface XlsxRecords {
   readonly sheets: readonly NativeSheetRecords[];
   readonly threads: NativeThreads;
   readonly notes: NativeClassicNotes;
+  readonly noteBoxes: ReadonlyMap<string, WorkbookNoteBox>;
   readonly counts: { readonly cells: number; readonly formulas: number };
 }
 
@@ -105,6 +107,7 @@ export async function readXlsxRecords(bytes: Uint8Array, options: XlsxReadOption
   }
   chunks.finish(); strings.validateReferences();
   const notes = readClassicComments(opc, native.sheets, styles, limits.source.maxNodes, limits.source.maxFileBytes);
+  const noteBoxes = readNoteBoxes(opc, sheets.map(sheet => ({ sheetId: sheet.source.sheetId, root: sheet.root })), notes, styles, limits.source.maxNodes);
   const threads = readThreadedComments(opc, native.part, native.sheets, limits.source.maxNodes);
-  return { opc, control, limits, native, styles, tableStyles, chunks, sheets, threads, notes, counts: { cells, formulas } };
+  return { opc, control, limits, native, styles, tableStyles, chunks, sheets, threads, notes, noteBoxes, counts: { cells, formulas } };
 }
