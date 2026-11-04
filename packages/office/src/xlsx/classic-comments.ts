@@ -25,17 +25,20 @@ export interface NativeClassicNote {
 export interface NativeClassicNotes {
   readonly authors: readonly WorkbookCommentAuthor[];
   readonly notes: readonly NativeClassicNote[];
+  /** Preserve an empty compatibility part too: missing placeholders can have
+   * different recovery implications from no legacy format being present. */
+  readonly parts: ReadonlyMap<string, string>;
 }
 /** Rich note content and compatibility identities are read separately from
  * VML/object-anchor geometry. Every remaining property must be consumed by the
  * complete importer; this internal record stage does not discard it. */
 export function readClassicComments(opc: OpcPackage, sheets: readonly NativeSheet[], styles: RichTextStyles, maxItems: number, maxBodyBytes: number): NativeClassicNotes {
-  const authors: WorkbookCommentAuthor[] = [], notes: NativeClassicNote[] = [], parts = new Set<string>(), guids = new Set<string>();
+  const authors: WorkbookCommentAuthor[] = [], notes: NativeClassicNote[] = [], parts = new Set<string>(), sheetParts = new Map<string, string>(), guids = new Set<string>();
   let items = 0, bytes = 0, runs = 0;
   const count = (): void => { if (++items > maxItems) throw new DocumentError("ResourceLimitExceeded", "Classic spreadsheet comments exceed their cumulative record budget."); };
   for (const sheet of sheets) {
     const part = opc.related(sheet.part, "comments"); if (!part) continue;
-    if (parts.has(part)) fail({ part, name: "comments" }, "A classic comment part is shared between worksheets."); parts.add(part);
+    if (parts.has(part)) fail({ part, name: "comments" }, "A classic comment part is shared between worksheets."); parts.add(part); sheetParts.set(sheet.sheetId, part);
     if (opc.contentType(part) !== "application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml") fail({ part, name: "comments" }, "A classic comment part has the wrong content type.");
     const source = opc.read(part);
     if (source.uri !== S || source.name !== "comments") fail(source, "A classic comment part has an invalid root.");
@@ -67,5 +70,5 @@ export function readClassicComments(opc: OpcPackage, sheets: readonly NativeShee
         ...(placeholderId === undefined ? {} : { placeholderId }), ...(properties === undefined ? {} : { properties }) });
     }
   }
-  return { authors, notes };
+  return { authors, notes, parts: sheetParts };
 }

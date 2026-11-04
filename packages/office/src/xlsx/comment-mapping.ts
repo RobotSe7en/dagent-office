@@ -71,5 +71,20 @@ export function mapThreadedComments(native: NativeThreads, threads: readonly Nat
   const mapper = new CommentMapper(content, documentId); mapper.modern(native, threads); return mapper.records;
 }
 export function mapWorkbookComments(native: NativeThreads, threads: readonly NativeCommentThread[], notes: NativeClassicNotes, boxes: ReadonlyMap<string, WorkbookNoteBox>, content: WorkbookContent, documentId: string): WorkbookCommentRecords {
-  const mapper = new CommentMapper(content, documentId); mapper.modern(native, threads); mapper.classic(notes, boxes); return mapper.records;
+  const roots = new Map(threads.map(thread => [thread.root.id, thread])), matched = new Set<string>();
+  const classic = notes.notes.filter(note => {
+    if (note.placeholderId === undefined) return true;
+    const thread = roots.get(note.placeholderId), cell = thread?.root.cell;
+    // The legacy body is a compatibility cache, not a second annotation. Only
+    // the unambiguous correspondence is consumed here; recovery policy for
+    // deleted, moved or copied placeholders remains a separate product gate.
+    if (!thread || !cell || matched.has(note.placeholderId) || thread.sheetId !== note.sheetId || cell.row !== note.cell.row || cell.column !== note.cell.column) {
+      fail(note.source, "A legacy thread placeholder needs an explicit supported reconciliation policy.", "UnsupportedFeature");
+    }
+    matched.add(note.placeholderId); return false;
+  });
+  for (const thread of threads) if (notes.parts.has(thread.sheetId) && !matched.has(thread.root.id)) {
+    fail(thread.root.source, "A legacy thread placeholder needs an explicit supported reconciliation policy.", "UnsupportedFeature");
+  }
+  const mapper = new CommentMapper(content, documentId); mapper.modern(native, threads); mapper.classic({ ...notes, notes: classic }, boxes); return mapper.records;
 }
