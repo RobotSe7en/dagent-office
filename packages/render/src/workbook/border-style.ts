@@ -7,7 +7,7 @@ export function isWorkbookBorderKind(value: string): value is WorkbookBorderKind
 export type WorkbookBorderStyle = { readonly kind: WorkbookBorderKind }
   | { readonly kind: "css"; readonly style: "solid" | "double" | "dashed" | "dotted"; readonly widthPt: number };
 export type WorkbookBorderPaint = WorkbookBorderStyle & { readonly color: string };
-export interface WorkbookBorderStroke { readonly width: number; readonly offset: number; readonly dash?: readonly number[]; readonly cap?: "butt" | "round" }
+export interface WorkbookBorderStroke { readonly width: number; readonly offset: number; readonly dash?: readonly number[]; readonly cap?: "butt" | "round"; readonly phasePt?: number }
 const profiles: Readonly<Partial<Record<WorkbookBorderKind, readonly WorkbookBorderStroke[]>>> = {
   none: [], hair: [{ width: .1, offset: 0 }], thin: [{ width: .75, offset: 0 }], medium: [{ width: 1.75, offset: 0 }], thick: [{ width: 2.5, offset: 0 }],
   double: [{ width: .5, offset: -.625 }, { width: .5, offset: .625 }],
@@ -15,6 +15,9 @@ const profiles: Readonly<Partial<Record<WorkbookBorderKind, readonly WorkbookBor
   mediumDashed: [{ width: 1.75, offset: 0, dash: [8, 2.5] }],
   dashDot: [{ width: .75, offset: 0, dash: [8, 2.5, 2.5, 2.5] }], mediumDashDot: [{ width: 1.75, offset: 0, dash: [8, 2.5, 2.5, 2.5] }],
   dashDotDot: [{ width: .75, offset: 0, dash: [8, 2.5, 2.5, 2.5, 2.5, 2.5] }], mediumDashDotDot: [{ width: 1.75, offset: 0, dash: [8, 2.5, 2.5, 2.5, 2.5, 2.5] }],
+  // Two staggered lanes retain the slanted dash ends illustrated in ECMA-376
+  // §18.18.3, rather than treating this style as an ordinary dashed line.
+  slantDashDot: [{ width: .75, offset: -.375, dash: [8.25, .75, 3.75, .75] }, { width: .75, offset: .375, dash: [7.5, 1.5, 3, 1.5], phasePt: .75 }],
 };
 
 /** CSS point widths remain exact; they are not rounded to a native named style.

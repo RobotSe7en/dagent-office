@@ -17,8 +17,11 @@ import { workbookRasterCases } from "../workbook-image-fixture.js";
 import type { measureWorkbookFills } from "./fixtures/workbook-fill.js";
 import fillReference from "../../docs/evidence/xlsx-fill-pattern-spec.json" with { type: "json" };
 import appearanceReference from "../../docs/evidence/xlsx-cell-appearance.json" with { type: "json" };
+import borderSpec from "../../docs/evidence/xlsx-border-spec.json" with { type: "json" };
+import type { diagonalMeasurement } from "./fixtures/workbook-diagonals.js";
 
 interface GridHost {
+  diagonalMeasurement(css: string, classes: readonly string[]): ReturnType<typeof diagonalMeasurement>;
   measureWorkbookFills(css: string, classes: readonly string[]): ReturnType<typeof measureWorkbookFills>;
   assetMeasurement(base64: string, mimeType: string): ReturnType<typeof assetMeasurement>;
   borderSourceMeasurement(): ReturnType<typeof borderSourceMeasurement>;
@@ -138,6 +141,27 @@ test('native cell fills match standard patterns and preserve full-cell gradients
       }
     }
   }
+});
+
+test('native diagonal borders preserve direction, double spacing and standard slant-dash-dot strokes', async ({ page }) => {
+  const { model } = projectXlsxRecords(await readXlsxRecords(readFileSync('packages/office/tests/fixtures/xlsx-cell-appearance.xlsx')));
+  const inputs = appearanceReference.cases.map((input, index) => ({ input, cssClass: model.getCell(`sheet-${index + 1}`, 1, 1)!.cssClass! })).filter(({ input }) => input.kind === 'diagonal');
+  const report = await page.evaluate(({ css, classes }) => window.workbookGridHost.diagonalMeasurement(css, classes), { css: model.snapshot().styles.map(style => style.css).join('\n'), classes: inputs.map(input => input.cssClass) });
+  expect(report.result).toHaveLength(9); expect(report.failures).toEqual(Array(4).fill('InvalidDocument'));
+  for (const [index, actual] of report.result.entries()) {
+    const input = inputs[index]!.input, perDirection = input.style === 'thin' ? 1 : 2;
+    expect(actual.unchanged).toBe(true); expect(actual.difference, JSON.stringify(input)).toBeLessThanOrEqual(2); expect(actual.maskDifference, JSON.stringify(input)).toBeLessThanOrEqual(1);
+    expect(actual.strokes).toHaveLength((Number(input.up) + Number(input.down)) * perDirection);
+    expect(actual.strokes.filter(line => line.to[1]! < line.from[1]!)).toHaveLength(input.up ? perDirection : 0);
+    expect(actual.strokes.filter(line => line.to[1]! > line.from[1]!)).toHaveLength(input.down ? perDirection : 0);
+    for (const line of actual.strokes) { expect(line.color).toBe('rgba(0,68,170,1)'); expect(line.width).toBe(input.style === 'double' ? .5 : .75); }
+    if (input.style === 'double') {
+      const [a, b] = actual.strokes; const dx = a!.to[0]! - a!.from[0]!, dy = a!.to[1]! - a!.from[1]!;
+      expect(Math.abs((b!.from[0]! - a!.from[0]!) * dy - (b!.from[1]! - a!.from[1]!) * dx) / Math.hypot(dx, dy)).toBeCloseTo(1.25);
+    }
+  }
+  const width = borderSpec.rows[0]!.length;
+  expect(Array.from({ length: width }, (_, phase) => report.rows.every((row, y) => [...row].every((pixel, x) => pixel === borderSpec.rows[y]![(x + phase) % width]))).some(Boolean)).toBe(true);
 });
 
 test('bounded cell style projection retains source chunk selectors, rich runs and lifecycle isolation', async ({ page }) => {

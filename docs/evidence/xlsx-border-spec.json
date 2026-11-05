@@ -1,0 +1,15 @@
+{
+  "source": "https://ecma-international.org/wp-content/uploads/ECMA-376-1_5th_edition_december_2016.zip",
+  "archiveSha256": "9d0bcad9cf06054785b03762fcfadbf6bab7e54a5f9d69434e34b7fd464d4129",
+  "section": "Part 1, fifth edition, 18.18.3; PDF page 2448 (printed 2438), fourth illustration.",
+  "scope": "Functional stroke-mask measurement from the standard's 96-dpi illustration. Not an Excel/WPS runtime verification.",
+  "imageRgbSha256": "980455d07ed80bdfe317a34d2f27f7362f97441cef876b61662c12b6bdccd25f",
+  "style": "slantDashDot",
+  "dpi": 96,
+  "widthPt": 1.5,
+  "periodPt": 13.5,
+  "rows": [
+    "111111111110111110",
+    "111111111001111001"
+  ]
+}

@@ -28,6 +28,9 @@ import { projectWorkbookBorders } from "../../../packages/render/src/workbook/bo
 import { workbookCellBorders } from "../../../packages/render/src/workbook/cell-borders.js";
 import { assetMeasurement } from "./workbook-assets.js";
 import { measureWorkbookFills } from "./workbook-fill.js";
+import { diagonalMeasurement } from "./workbook-diagonals.js";
+import { workbookCellDiagonals } from "../../../packages/render/src/workbook/cell-borders.js";
+import { projectWorkbookDiagonals } from "../../../packages/render/src/workbook/diagonal-projection.js";
 
 const encode = (text: string) => new TextEncoder().encode(text);
 async function main() {
@@ -58,6 +61,7 @@ async function main() {
     borderSourceMeasurement() { return borderSourceMeasurement(container); },
     textLayoutMeasurement(cases: readonly TextLayoutCase[]) { return textLayoutMeasurement(container, cases); },
     measureWorkbookFills,
+    diagonalMeasurement,
     async render(viewport: WorkbookViewport, rtl = false) {
       const current = await loader.load('sheet-1', dimensions, viewport);
       if (current) {
@@ -77,7 +81,8 @@ async function main() {
           const borderPanes = projectWorkbookBorders(dimensions, loader.frame!.layout, merges, (row, column) => {
             const source = sources.get(row, column); return source && workbookCellBorders(document, getComputedStyle(source.element), rtl);
           }, rtl);
-          const borders = borderPanes.filter(pane => pane.edges.length).map(pane => createWorkbookBorderView(document, pane.bounds, pane.edges));
+          const diagonals = projectWorkbookDiagonals(loader.frame!.projections, loader.frame!.layout, (row, column) => workbookCellDiagonals(document, getComputedStyle(sources.get(row, column)!.element)), rtl);
+          const borders = [...borderPanes, ...diagonals].filter(pane => pane.edges.length).map(pane => createWorkbookBorderView(document, pane.bounds, pane.edges));
           let fillId = 0;
           replaceWorkbookWindow(container, loader.frame!, (body, cell, projection) => {
             const source = sources.get(projection.row, projection.column)!;
@@ -260,7 +265,7 @@ async function main() {
       for (let x = 0; x < 132; x++) if (clipped[(40 * 160 + x) * 4 + 3]! > 128) painted++;
       const doubleRows = Array.from({ length: 80 }, (_, y) => y).filter(y => double[(y * 160 + 80) * 4 + 3]! > 128);
       const failures: string[] = [], basic = { kind: 'double' as const, color: 'rgba(255,0,0,1)', from: { x: 0, y: 0 }, to: { x: 10, y: 0 } }, bounds = { x: 0, y: 0, width: 10, height: 10 };
-      for (const edge of [{ ...basic, kind: 'slantDashDot' as const }, { ...basic, color: 'url(https://example.invalid/workbook-border-injected)' }, { ...basic, to: { x: 1, y: 1 } }]) {
+      for (const edge of [{ ...basic, kind: 'invalid' as WorkbookBorderKind }, { ...basic, color: 'url(https://example.invalid/workbook-border-injected)' }, { ...basic, to: { x: Infinity, y: 1 } }]) {
         try { createWorkbookBorderView(document, bounds, [edge]); } catch (error) { failures.push((error as { code: string }).code); }
       }
       try { createWorkbookBorderView(document, bounds, [basic], 2); } catch (error) { failures.push((error as { code: string }).code); }

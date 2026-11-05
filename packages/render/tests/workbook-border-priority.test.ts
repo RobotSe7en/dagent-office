@@ -45,6 +45,6 @@ describe("regular worksheet shared-border selection", () => {
     expect(workbookBorderStrokes({ ...solid, style: "dotted" })).toEqual([{ width: 2.25, offset: 0, dash: [0, 4.5], cap: "round" }]);
     expect(workbookBorderStrokes({ ...solid, style: "dashed" })).toEqual([{ width: 2.25, offset: 0, dash: [6.75, 2.25] }]);
     expect(() => workbookBorderStrokes({ ...solid, widthPt: 1e308 })).toThrowError(expect.objectContaining({ code: "InvalidDocument" }));
-    expect(() => workbookBorderStrokes({ kind: "slantDashDot" })).toThrowError(expect.objectContaining({ code: "UnsupportedFeature" }));
+    expect(() => workbookBorderStrokes({ kind: "invalid" as "slantDashDot" })).toThrowError(expect.objectContaining({ code: "UnsupportedFeature" }));
   });
 });

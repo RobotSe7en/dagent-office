@@ -8,6 +8,19 @@ export interface WorkbookCellBorders {
   readonly before?: WorkbookBorderPaint; readonly after?: WorkbookBorderPaint;
   readonly top?: WorkbookBorderPaint; readonly bottom?: WorkbookBorderPaint;
 }
+export interface WorkbookCellDiagonals { readonly up?: WorkbookBorderPaint; readonly down?: WorkbookBorderPaint }
+export function workbookCellDiagonals(document: Document, style: CSSStyleDeclaration): WorkbookCellDiagonals {
+  const enabled = (name: string): boolean => {
+    const value = style.getPropertyValue(`--office-cell-border-diagonal-${name}`).trim();
+    if (value && value !== "true" && value !== "false") throw new DocumentError("InvalidDocument", "A worksheet diagonal direction flag is invalid.");
+    return value === "true";
+  };
+  const up = enabled("up"), down = enabled("down"), kind = style.getPropertyValue("--office-cell-border-diagonal-kind").trim();
+  if (kind && !isWorkbookBorderKind(kind)) throw new DocumentError("InvalidDocument", "A worksheet diagonal border kind is invalid.");
+  if (!kind || kind === "none" || !up && !down) return Object.freeze({});
+  const paint = Object.freeze({ kind, color: resolvedWorkbookColor(document, style, "--office-cell-border-diagonal") ?? workbookDisplayColor(document, style.color) }) as WorkbookBorderPaint;
+  return Object.freeze({ ...(up ? { up: paint } : {}), ...(down ? { down: paint } : {}) });
+}
 
 /** Read one resolved source cell, before shared-edge/merge composition. Native
  * column sides mirror with sheet columns; ordinary CSS left/right stay physical.
