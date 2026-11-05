@@ -4,6 +4,8 @@
 
 前置工作为工作台改版收尾及路线状态同步。整体路线见[实施计划](implementation-plan.md)，模块方向见[总体架构](architecture.md)，唯一来源见[数据模型](data-model.md)，事务与宿主边界见[交互协议](editing-protocol.md)。
 
+当前分支、PR、最近验证和下一步实施位置见[执行交接](workbook-reading-handoff.md)，新 session 从该记录继续；本文保留完整范围、产品决策和验收门槛。
+
 ## 目标与已定决策
 
 交付新建或打开 XLSX、人工编辑、区域批注、宿主请求、固定提案审阅应用、撤销重做、XLSX/PDF/PNG/文档包导出，以及外部实际修改后的重新导入。
