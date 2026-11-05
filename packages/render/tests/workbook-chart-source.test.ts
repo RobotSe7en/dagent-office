@@ -218,6 +218,8 @@ describe("workbook chart display binding", () => {
     expect(plot.data.categories).toEqual(["季度😀", "", "", ""]); expect(plot.data.sourceIndexes).toEqual([0, 1, 2, 3]);
     expect(plot.data.series[0]!.values).toEqual([-3, null, null, null]); expect(plot.data.series[0]!.missing).toEqual([undefined, undefined, undefined, "gap"]);
     expect(plot.valueFormats[0]![0]).toEqual({ code: "0.00" }); expect(plot.valueFormats[0]![3]).toEqual({ code: "0%" });
+    expect(Object.isFrozen(plot.valueFormats[0]![0])).toBe(true); expect(Object.isFrozen(plot.categoryNumbers)).toBe(true);
+    expect(plot.valueAxisFormat).toBe(plot.valueFormats[0]![0]);
     expect(plot.diagnostics).toContainEqual(expect.objectContaining({ code: "error-point", index: 3, detail: "#N/A" }));
     const response = await read(model), wrong = { ...response, charts: response.charts.map(chart => ({ ...chart, references: chart.references.map(ref => ({ ...ref,
       data: ref.data.kind === "literal" && ref.role === "categories" ? { ...ref.data, points: [{ index: 0, value: "other workbook" }] } : ref.data })) })) };

@@ -1,13 +1,14 @@
 import { DocumentError } from "@dagent-office/core";
 import type { DeepReadonly, WorkbookChart } from "@dagent-office/core";
 import { renderBasicChart } from "../chart.js";
-import type { BasicChartData, BasicChartLayout } from "../chart.js";
+import type { BasicChartData, BasicChartLayout, BasicChartOptions } from "../chart.js";
 import { markViewNode } from "../view-nodes.js";
 
 export interface WorkbookChartViewOptions {
   /** Required: the workbook compositor owns number formats, locale and dates.
    * This adapter must never inherit the presentation formatter's policy. */
-  readonly formatNumber: (value: number, format?: string) => string;
+  readonly formatNumber: BasicChartOptions["formatNumber"];
+  readonly formatCategory?: NonNullable<BasicChartOptions["formatCategory"]>;
   /** A fresh, already materialized title view; never a source/active view node. */
   readonly title?: HTMLElement;
   readonly layout?: BasicChartLayout;
@@ -63,7 +64,7 @@ export function createWorkbookChartView(source: HTMLElement, chart: DeepReadonly
       do { account(1); if (walker.currentNode.nodeType === 3) accountText(walker.currentNode.textContent!.length); } while (walker.nextNode());
       element.append(title);
     }
-    renderBasicChart(element, chart, data, widthPt, heightPt, id, account, { formatNumber: options.formatNumber, pieValues: "magnitude", accountText, ...(options.layout ? { layout: options.layout } : {}), ...(title ? { title } : {}), style(classes) {
+    renderBasicChart(element, chart, data, widthPt, heightPt, id, account, { formatNumber: options.formatNumber, ...(options.formatCategory ? { formatCategory: options.formatCategory } : {}), pieValues: "magnitude", accountText, ...(options.layout ? { layout: options.layout } : {}), ...(title ? { title } : {}), style(classes) {
       account(1);
       const probe = markViewNode(document.createElement("span")); probe.className = classes ?? "";
       probe.style.cssText = "position:absolute;visibility:hidden"; source.append(probe); probes.push(probe); return view.getComputedStyle(probe);

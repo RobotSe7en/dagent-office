@@ -30,7 +30,9 @@ export class WorkbookCharts {
     const normalized = format ? { ...source, content: source.content.map(node => node === format ? { ...format, attrs: new Map([...format.attrs, [" formatCode", spreadsheetText(value(format, "formatCode")!, format, 2048)]]) } : node) } : source;
     const name = labelStyle(this, normalized)!;
     const css: Css = {};
-    if (format && value(format, "sourceLinked") !== undefined) css["--office-label-number-format-source-linked"] = String(boolean(format, "sourceLinked"));
+    // A present numFmt defaults sourceLinked to true. Emit that default on
+    // every overriding label style so a point cannot inherit a parent's false.
+    if (format) css["--office-label-number-format-source-linked"] = String(boolean(format, "sourceLinked", true));
     const leader = one(source, "leaderLines", C);
     const showLeaderLines = chartLabelLeaderLines(source);
     if (showLeaderLines !== undefined) css["--office-label-show-leader-lines"] = String(showLeaderLines);
@@ -161,7 +163,7 @@ export class WorkbookCharts {
       }
       if (format) {
         const code = spreadsheetText(value(format, "formatCode")!, format, 2048), quoted = cssString(code);
-        this.rule(cssClass, { "--office-axis-number-format": quoted, ...(value(format, "sourceLinked") === undefined ? {} : { "--office-axis-number-format-source-linked": value(format, "sourceLinked") === "true" || value(format, "sourceLinked") === "1" ? "true" : "false" }) });
+        this.rule(cssClass, { "--office-axis-number-format": quoted, "--office-axis-number-format-source-linked": String(boolean(format, "sourceLinked", true)) });
       }
       for (const name of ["auto", "noMultiLvlLbl"]) if (one(axis, name, C)) this.rule(cssClass, { [`--office-axis-${name}`]: String(flag(axis, name)) });
     }

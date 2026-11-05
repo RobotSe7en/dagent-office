@@ -23,7 +23,8 @@ export interface BasicChartOptions {
   /** Resolve styles against the source ancestry, which may be outside the view.
    * The adapter owns any temporary probes and releases them even on failure. */
   readonly style: (classes?: string) => CSSStyleDeclaration;
-  readonly formatNumber: (value: number, format?: string) => string;
+  readonly formatNumber: (value: number, format?: string, context?: BasicChartNumberContext) => string;
+  readonly formatCategory?: (index: number, style: CSSStyleDeclaration) => string;
   readonly accountText?: (codeUnits: number) => void;
   readonly title?: HTMLElement;
   /** The owning compositor may reserve measured text boxes around the plot.
@@ -33,6 +34,8 @@ export interface BasicChartOptions {
    * labels keep their signed source numbers under the magnitude policy. */
   readonly pieValues?: "nonnegative" | "magnitude";
 }
+export type BasicChartNumberContext = { readonly kind: "value-axis"; readonly style: CSSStyleDeclaration }
+  | { readonly kind: "data-label"; readonly content: "value" | "percent"; readonly seriesId: string; readonly index: number; readonly style: CSSStyleDeclaration };
 export interface BasicChartRect { readonly x: number; readonly y: number; readonly width: number; readonly height: number }
 export interface BasicChartLayout { readonly plot: BasicChartRect; readonly title?: BasicChartRect; readonly legend?: BasicChartRect }
 const palette = ["#4472c4", "#ed7d31", "#a5a5a5", "#ffc000", "#5b9bd5", "#70ad47"];
@@ -96,7 +99,8 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     const seriesDefinition = seriesDefinitions.get(series.seriesId), point = pointDefinitions.get(pointKey(series.seriesId, sourceIndex(index)));
     const s = style([chart.textCssClass, chart.labelCssClass, seriesDefinition?.labelCssClass, point?.labelCssClass].filter(Boolean).join(" "));
     const contents = chart.labelContents ?? ["value"], separator = cssStringValue(property(s, "--office-label-separator", ", "));
-    const values = contents.map(kind => kind === "category" ? data.categories[index]! : kind === "series" ? series.name : kind === "percent" ? formatNumber(percent ?? 0, "0%") : formatNumber(value, cssStringValue(property(s, "--office-label-number-format", chart.numberFormat ?? "General"))));
+    const values = contents.map(kind => kind === "category" ? data.categories[index]! : kind === "series" ? series.name : kind === "percent" ? formatNumber(percent ?? 0, "0%", { kind: "data-label", content: "percent", seriesId: series.seriesId, index, style: s })
+      : formatNumber(value, cssStringValue(property(s, "--office-label-number-format", chart.numberFormat ?? "General")), { kind: "data-label", content: "value", seriesId: series.seriesId, index, style: s }));
     const position = property(s, "--office-label-position", chart.kind === "pie" ? "ctr" : "outEnd");
     let anchor = "middle";
     if (chart.kind === "column" && baseline !== undefined) {
@@ -108,7 +112,8 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     } else if (chart.kind === "pie" && ["outEnd", "inEnd"].includes(position)) {
       const cx = left + w / 2, cy = top + h / 2, factor = position === "outEnd" ? 1.7 : 1.3; x = cx + (x - cx) * factor; y = cy + (y - cy) * factor;
     }
-    text(values.join(separator), x, y, s, anchor);
+    const displayed = text(values.join(separator), x, y, s, anchor); displayed.dataset.sdkChartLabel = "data-label";
+    displayed.dataset.seriesId = series.seriesId; displayed.dataset.pointIndex = String(sourceIndex(index));
   };
   if (chart.kind === "pie") {
     const series = data.series[0]!;
@@ -157,7 +162,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
         const grid = strokeAttributes(document, gridStyle, "--office-line", "#d9d9d9");
         if (chart.gridCssClass) svg.append(svgElement(document, "line", { x1: left, y1: position, x2: right, y2: position, ...grid }));
         tick(axisX, position, false, valStyle);
-        if (property(valStyle, "--office-axis-label-position") !== "none") text(formatNumber(value, chart.numberFormat), axisX + (valueRight ? 7 : -7), position, valStyle, valueRight ? "start" : "end");
+        if (property(valStyle, "--office-axis-label-position") !== "none") text(formatNumber(value, chart.numberFormat, { kind: "value-axis", style: valStyle }), axisX + (valueRight ? 7 : -7), position, valStyle, valueRight ? "start" : "end").dataset.sdkChartLabel = "value-axis";
       }
     }
     const minorUnit = numeric(valStyle, "--office-axis-minor-unit", unit / 5);
@@ -172,7 +177,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     if (chart.showCategoryAxis !== false) {
       const skip = Math.max(1, numeric(catStyle, "--office-axis-label-skip", 1)), tickSkip = Math.max(1, numeric(catStyle, "--office-axis-tick-skip", 1));
       const offset = 6 + 10 * numeric(catStyle, "--office-axis-label-offset", 100) / 100;
-      data.categories.forEach((category, index) => { if (index % skip === 0 && property(catStyle, "--office-axis-label-position") !== "none") text(category, x(index), categoryTop ? top - offset : bottom + offset, catStyle); });
+      data.categories.forEach((category, index) => { if (index % skip === 0 && property(catStyle, "--office-axis-label-position") !== "none") text(options.formatCategory?.(index, catStyle) ?? category, x(index), categoryTop ? top - offset : bottom + offset, catStyle).dataset.sdkChartLabel = "category-axis"; });
       if (chart.kind === "line") {
         for (let n = 0; n < count; n += tickSkip) { tick(x(n), axisY, true, catStyle); if (n + 1 < count) tick((x(n) + x(n + 1)) / 2, axisY, true, catStyle, true); }
       } else for (let n = 0; n <= count; n += tickSkip) tick(left + n * group, axisY, true, catStyle);

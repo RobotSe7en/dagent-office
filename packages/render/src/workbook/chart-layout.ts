@@ -1,8 +1,8 @@
 import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookChart, WorkbookNumberFormatter } from "@dagent-office/core";
+import type { DeepReadonly, WorkbookChart, WorkbookDisplayFormat, WorkbookNumberFormatter } from "@dagent-office/core";
 import type { BasicChartLayout, BasicChartRect } from "../chart.js";
 import type { FontResolution } from "../contracts.js";
-import { property } from "../presentation/appearance.js";
+import { cssStringValue, property } from "../presentation/appearance.js";
 import { createWorkbookChartView } from "./chart-view.js";
 import type { WorkbookChartBinding, WorkbookChartDataDiagnostic } from "./chart-values.js";
 import type { WorkbookChartViewDiagnostic } from "./chart-view.js";
@@ -72,14 +72,34 @@ export function layoutWorkbookChart(scope: HTMLElement, source: HTMLElement, cha
   }
   if (axisNodes >= maxNodes || axisUnits >= maxUnits) throw new DocumentError("ResourceLimitExceeded", "Chart titles exhaust the graphic budget.");
   const main = boxes.findIndex(box => box.role === "title");
+  const seriesIndexes = new Map(binding.data.series.map((series, index) => [series.seriesId, index]));
+  const format = (value: number, definition?: WorkbookDisplayFormat): string => {
+    const display = formatter.format(value, definition);
+    if (display.kind === "overflow") return "####";
+    if (display.parts.some(part => part.kind !== "text")) throw new DocumentError("UnsupportedFeature", "Chart number-format spacing requires measured label layout.");
+    return display.parts.map(part => part.kind === "text" ? part.text : "").join("");
+  };
+  const linked = (style: CSSStyleDeclaration, kind: "axis" | "label"): boolean => {
+    const flag = property(style, `--office-${kind}-number-format-source-linked`, "true");
+    if (flag !== "true" && flag !== "false") throw new DocumentError("InvalidDocument", "Chart source-linked number-format flags are invalid.");
+    return flag === "true";
+  };
+  const explicit = (style: CSSStyleDeclaration, kind: "axis" | "label", fallback?: string): WorkbookDisplayFormat | undefined => {
+    const raw = property(style, `--office-${kind}-number-format`), code = raw ? cssStringValue(raw) : fallback;
+    return code === undefined ? undefined : { code };
+  };
   const graphics = createWorkbookChartView(source, chart, binding.data, widthPt, heightPt, id, {
     ...limits, maxNodes: maxNodes - axisNodes, maxCodeUnits: maxUnits - axisUnits, layout,
     ...(main < 0 ? {} : { title: texts.objects[main]!.element }),
-    formatNumber(value, code) {
-      const display = formatter.format(value, code === undefined ? undefined : { code });
-      if (display.kind === "overflow") return "####";
-      if (display.parts.some(part => part.kind !== "text")) throw new DocumentError("UnsupportedFeature", "Chart number-format spacing requires measured label layout.");
-      return display.parts.map(part => part.kind === "text" ? part.text : "").join("");
+    formatNumber(value, code, context) {
+      if (!context) return format(value, code === undefined ? undefined : { code });
+      if (context.kind === "value-axis") return format(value, linked(context.style, "axis") ? binding.valueAxisFormat : explicit(context.style, "axis", code));
+      const sourceFormat = context.content === "percent" ? { code: "0%" } : binding.valueFormats[seriesIndexes.get(context.seriesId)!]?.[context.index];
+      return format(value, linked(context.style, "label") ? sourceFormat : explicit(context.style, "label", context.content === "percent" ? "0%" : "General"));
+    },
+    formatCategory(index, style) {
+      const value = binding.categoryNumbers[index];
+      return value === null || value === undefined || linked(style, "axis") ? binding.data.categories[index]! : format(value, explicit(style, "axis"));
     },
   });
   for (const [index, object] of texts.objects.entries()) {

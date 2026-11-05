@@ -232,3 +232,20 @@ export async function measureWorkbookComposedChart(snapshot: WorkbookSnapshot, b
     return { results, errors, unchanged: before === source.outerHTML, cleaned: !surface.source.querySelector('[data-office-view="workbook-reference-title-source"]') && !surface.view.querySelector('[data-office-view="workbook-drawing-text-measurement"]') };
   } finally { formatter.dispose(); sources.dispose(); surface.dispose(); container.remove(); }
 }
+
+export async function measureWorkbookChartFormats(snapshot: WorkbookSnapshot, bindings: readonly WorkbookChartBinding[]) {
+  const container = document.createElement('div'); document.body.append(container);
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 600, heightPt: 400 });
+  const sources = new WorkbookContentSources(surface.document, snapshot), formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
+  try {
+    const charts = snapshot.metadata.workbook.charts!, projection = sources.project(surface.source, charts.map(chart => chart.nodeId)), before = surface.source.innerHTML;
+    return charts.map(chart => {
+      const source = projection.get(chart.nodeId)!, binding = bindings.find(item => item.chartId === chart.chartId)!;
+      if (binding.kind !== 'available') throw Error('Native formats must have current data');
+      const result = layoutWorkbookChart(surface.view, source, chart, binding, 480, 300, 'formatted-chart', formatter); surface.view.replaceChildren(result.element);
+      const labels = (role: string) => [...result.element.querySelectorAll('[data-sdk-chart-label="' + role + '"]')].map(element => element.textContent);
+      return { valueAxis: labels('value-axis'), categoryAxis: labels('category-axis'), labels: labels('data-label'),
+        unchanged: surface.source.innerHTML === before, sourceIndexes: binding.data.sourceIndexes };
+    });
+  } finally { formatter.dispose(); sources.dispose(); surface.dispose(); container.remove(); }
+}

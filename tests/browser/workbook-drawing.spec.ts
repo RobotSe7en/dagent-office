@@ -4,7 +4,8 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
-import { createWorkbookNumberFormatter } from "@dagent-office/core";
+import { importXlsx } from "@dagent-office/office";
+import { openDocument, createWorkbookNumberFormatter } from "@dagent-office/core";
 import type { WorkbookSnapshot } from '@dagent-office/core';
 import { readXlsxRecords } from '../../packages/office/src/xlsx/read.js';
 import { readDocumentZip, writeOpcZip } from '../../packages/office/src/document-zip.js';
@@ -16,12 +17,12 @@ import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
 import type { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback } from './fixtures/workbook-drawing-text.js';
 import type { measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } from './fixtures/workbook-surface.js';
 import type { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } from './fixtures/workbook-shadow.js';
-import type { measureWorkbookCharts, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart } from './fixtures/workbook-chart.js';
+import type { measureWorkbookCharts, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } from './fixtures/workbook-chart.js';
 import { bindWorkbookChartData } from "../../packages/render/src/workbook/chart-values.js";
 import type { BasicChartData } from '../../packages/render/src/chart.js';
 import { modelChartSource, DEFAULT_CHART_READ_LIMITS } from '../../packages/render/src/workbook/chart-source.js';
 
-declare global { interface Window { workbookChartHost: { measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
+declare global { interface Window { workbookChartHost: { measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
 
 declare global { interface Window { workbookShadowHost: { measureWorkbookShadows: typeof measureWorkbookShadows; mountWorkbookShadowPixels: typeof mountWorkbookShadowPixels; disposeWorkbookShadowPixels: typeof disposeWorkbookShadowPixels } } }
 
@@ -29,6 +30,7 @@ declare global { interface Window { workbookContentHost: { measureContentSource:
 const inputs: { name: string; snapshot: WorkbookSnapshot; text: Record<string, string>; resources: Record<string, string> }[] = [];
 const chartPlots = new Map<string, BasicChartData[]>();
 let referenceTitles: { snapshot: WorkbookSnapshot; bindings: ReturnType<typeof bindWorkbookChartData> };
+let formatCharts: typeof referenceTitles;
 let code = '';
 let nativeText: WorkbookSnapshot;
 let nativeShadows: WorkbookSnapshot, nativeBlur: WorkbookSnapshot;
@@ -78,6 +80,12 @@ test.beforeAll(async () => {
     const response = await modelChartSource(model).read({ ...DEFAULT_CHART_READ_LIMITS, documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, chartIds: snapshot.metadata.workbook.charts!.map(chart => chart.chartId) }, new AbortController().signal);
     const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
     referenceTitles = { snapshot, bindings: bindWorkbookChartData(snapshot, response, formatter) }; formatter.dispose();
+  }
+  {
+    const model = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-formats.xlsx'), { documentId: 'chart-formats' }), { kind: 'workbook' }), snapshot = model.snapshot();
+    const response = await modelChartSource(model).read({ ...DEFAULT_CHART_READ_LIMITS, documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, chartIds: snapshot.metadata.workbook.charts!.map(chart => chart.chartId) }, new AbortController().signal);
+    const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
+    formatCharts = { snapshot, bindings: bindWorkbookChartData(snapshot, response, formatter) }; formatter.dispose();
   }
   for (const kind of ['default', 'inherited', 'zero']) {
     const files = new Map(readDocumentZip(readFileSync('examples/xlsx/08-images-shapes.xlsx'))), decoder = new TextDecoder(), encoder = new TextEncoder();
@@ -440,4 +448,19 @@ test('composed workbook charts reserve separate title, axis and legend boxes and
     const category = item.titles.find(title => title.role === 'category-axis-title')!.rect, value = item.titles.find(title => title.role === 'value-axis-title')!.rect;
     expect(category.y < item.plot.y).toBe(item.opposite); expect(value.x > item.plot.x).toBe(item.opposite);
   }
+});
+
+
+test('chart axes and labels resolve source-linked formats from current cells and independent native formats', async ({ page }) => {
+  const results = await page.evaluate(({ snapshot, bindings }) => window.workbookChartHost.measureWorkbookChartFormats(snapshot, bindings), formatCharts);
+  expect(results).toHaveLength(20); expect(results.every(result => result.unchanged)).toBe(true);
+  for (let mode = 0; mode < 4; mode++) {
+    expect(results[mode]!.valueAxis).toEqual(mode === 0 ? ['0.00', '0.25', '0.50', '0.75', '1.00'] : ['0.0%', '25.0%', '50.0%', '75.0%', '100.0%']);
+    expect(results[4 + mode]!.categoryAxis).toEqual(mode === 0 ? ['0.10', '0.20', '0.30'] : ['10.0%', '20.0%', '30.0%']);
+    expect(results[8 + mode]!.labels).toEqual(mode === 0 ? ['0.25', '0.50', '0.75'] : ['25.0%', '50.0%', '75.0%']);
+    expect(results[12 + mode]!.labels).toEqual(mode === 0 ? ['0.17', '0.33', '0.50'] : ['17%', '33%', '50%']);
+  }
+  for (const result of results.slice(16, 19)) expect(result.valueAxis).toEqual(['0', '0.25', '0.5', '0.75', '1']);
+  expect(results[18]!.sourceIndexes).toEqual([1, 2]);
+  expect(results[19]!.labels).toEqual(['0.25', '50.0%', '0.75']);
 });

@@ -23,6 +23,11 @@ export type WorkbookChartBinding = {
   /** Same displayed positions as data.series; formats are current-cell or
    * native-literal definitions, never imported reference-cache formats. */
   readonly valueFormats: readonly (readonly (WorkbookDisplayFormat | undefined)[])[];
+  /** Numeric category source values for explicit axis-format overrides. Text
+   * categories retain their already formatted current-source strings. */
+  readonly categoryNumbers: readonly (number | null)[];
+  /** First currently plotted numeric source, in series/source order. */
+  readonly valueAxisFormat?: WorkbookDisplayFormat;
 } | { readonly kind: "unavailable" });
 interface Point {
   readonly value: DeepReadonly<WorkbookValue>;
@@ -72,7 +77,7 @@ export function bindWorkbookChartData(snapshot: WorkbookSnapshot, response: Work
         const value: WorkbookValue = point.value === null ? { type: "blank" } : typeof point.value === "number" ? { type: "number", value: point.value }
           : data.valueType === "text" ? { type: "text", value: accountText(point.value) } : { type: "error", value: accountText(point.value) as Extract<WorkbookValue, { type: "error" }>["value"] };
         const code = point.numberFormat ?? data.numberFormat;
-        result[point.index] = { value, hidden: false, state: "constant", ...(code === undefined ? {} : { format: { code: accountText(code) } }) };
+        result[point.index] = { value, hidden: false, state: "constant", ...(code === undefined ? {} : { format: Object.freeze({ code: accountText(code) }) }) };
       }
       return result;
     }
@@ -170,7 +175,14 @@ export function bindWorkbookChartData(snapshot: WorkbookSnapshot, response: Work
         })),
       }))),
     });
+    let valueAxisFormat: WorkbookDisplayFormat | undefined;
+    axisFormat: for (const item of series) for (const point of item.points) {
+      if (visibleOnly && point.hidden || point.value.type !== "number" && point.value.type !== "boolean") continue;
+      valueAxisFormat = point.format; break axisFormat;
+    }
     return Object.freeze({ kind: "available", chartId: definition.chartId, data, titles: Object.freeze(titles), diagnostics: Object.freeze(diagnostics),
+      ...(valueAxisFormat ? { valueAxisFormat } : {}),
+      categoryNumbers: Object.freeze(indexes.map(index => { const point = categories[index]; return definition.categories?.valueType === "number" && point?.value.type === "number" && !(visibleOnly && point.hidden) ? point.value.value : null; })),
       valueFormats: Object.freeze(series.map(series => Object.freeze(indexes.map(index => series.points[index]?.format)))) });
   };
   return Object.freeze(response.charts.map(source => bind(charts.get(source.chartId)!, source)));
