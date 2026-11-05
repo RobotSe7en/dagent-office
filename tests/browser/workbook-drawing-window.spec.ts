@@ -6,8 +6,9 @@ import { importXlsx } from '../../packages/office/src/xlsx-import.js';
 import type { drawingWindowMeasurement } from './fixtures/workbook-drawing-window.js';
 import type { annotationWindowMeasurement, commentTextMeasurement, windowControllerMeasurement } from './fixtures/workbook-window-controller.js';
 import type { commentPanelMeasurement } from './fixtures/workbook-comment-panel.js';
+import type { annotationControlsAction, mountAnnotationControls } from './fixtures/workbook-annotation-controls.js';
 
-declare global { interface Window { workbookDrawingWindow: { drawingWindowMeasurement: typeof drawingWindowMeasurement; windowControllerMeasurement: typeof windowControllerMeasurement; annotationWindowMeasurement: typeof annotationWindowMeasurement; commentTextMeasurement: typeof commentTextMeasurement; commentPanelMeasurement: typeof commentPanelMeasurement } } }
+declare global { interface Window { workbookDrawingWindow: { drawingWindowMeasurement: typeof drawingWindowMeasurement; windowControllerMeasurement: typeof windowControllerMeasurement; annotationWindowMeasurement: typeof annotationWindowMeasurement; commentTextMeasurement: typeof commentTextMeasurement; commentPanelMeasurement: typeof commentPanelMeasurement; annotationControlsAction: typeof annotationControlsAction; mountAnnotationControls: typeof mountAnnotationControls } } }
 let code = '';
 const inputs: { name: string; files: [string, number[]][] }[] = [];
 const comments: typeof inputs = [];
@@ -118,4 +119,25 @@ test('read-only comment candidates retain recovery state and reply parents while
     if (recovered) { expect(result.warning).toContain('位置记录不一致'); expect(result.warning).toContain('原状态：已处理'); expect(result.replyParents).toHaveLength(1); expect(result.text).toContain('回复中的纯文本'); }
     else expect(result.warning).toBeUndefined();
   }
+});
+
+for (const rtl of [false, true]) test(`annotation entries open read-only comments with pointer and keyboard in ${rtl ? 'RTL' : 'LTR'} panes`, async ({ page }) => {
+  const mounted = await page.evaluate(rtl => window.workbookDrawingWindow.mountAnnotationControls(rtl), rtl);
+  expect(mounted.groups).toEqual([['first', 'same'], ['separate']]);
+  expect(mounted).toMatchObject({ budget: 'ResourceLimitExceeded', selectionPreserved: true, sourceBlocked: true, trustedEvents: 1 });
+  expect(mounted.violations.filter(directive => directive.startsWith('script-src')).length).toBeGreaterThanOrEqual(2);
+  await page.mouse.click(mounted.x, mounted.y);
+  const clicked = await page.evaluate(() => window.workbookDrawingWindow.annotationControlsAction('inspect')) as { calls: string[][]; panel: string; highlights: { x: number; y: number; width: number; height: number; top: string; left: string; right: string; bottom: string }[]; nodes: number; actualNodes: number };
+  expect(clicked).toMatchObject({ calls: [['first', 'same']], sourceClean: true, unchanged: true, pressed: ['true', 'false'] });
+  expect(clicked.panel).toContain('批注正文 first'); expect(clicked.highlights).toHaveLength(5); expect(clicked.nodes).toBe(clicked.actualNodes);
+  // The frozen pane cut is not a border of the original source range.
+  expect(clicked.highlights[0]!.bottom).toBe(''); expect(clicked.highlights[0]![rtl ? 'left' : 'right']).toBe('');
+  await page.evaluate(() => window.workbookDrawingWindow.annotationControlsAction('fail'));
+  await page.evaluate(() => window.workbookDrawingWindow.annotationControlsAction('focus')); await page.keyboard.press('Enter');
+  const failed = await page.evaluate(() => window.workbookDrawingWindow.annotationControlsAction('inspect'));
+  expect(failed).toMatchObject({ calls: [['first', 'same'], ['first', 'same']], panel: clicked.panel, highlights: clicked.highlights, error: 'ResourceLimitExceeded', unchanged: true });
+  await page.evaluate(() => window.workbookDrawingWindow.annotationControlsAction('clear'));
+  await page.keyboard.press('Enter');
+  expect(await page.evaluate(() => window.workbookDrawingWindow.annotationControlsAction('inspect'))).toMatchObject({ calls: [['first', 'same'], ['first', 'same'], ['first', 'same']], panel: clicked.panel });
+  expect(await page.evaluate(() => window.workbookDrawingWindow.annotationControlsAction('dispose'))).toEqual({ eventsReleased: true, removed: true, sourceClean: true });
 });

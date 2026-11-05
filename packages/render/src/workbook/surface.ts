@@ -31,7 +31,10 @@ export function createWorkbookSurface(container: HTMLElement, snapshot: Workbook
   if (signal?.aborted) return Promise.reject(new DocumentError("OperationCancelled", "Workbook surface preparation was cancelled."));
   let styleText: string | undefined = snapshot.styles.map(style => style.css).join("\n");
   const frame = container.ownerDocument.createElement("iframe");
-  frame.title = "工作簿只读预览"; frame.setAttribute("sandbox", "allow-same-origin");
+  // WebKit also disables trusted parent-installed event callbacks without
+  // allow-scripts. Source scripts/handlers stay forbidden by the CSP below;
+  // only SDK listeners installed from the owning document can handle input.
+  frame.title = "工作簿只读预览"; frame.setAttribute("sandbox", "allow-same-origin allow-scripts");
   frame.style.cssText = `all:initial!important;display:block!important;position:absolute!important;left:0!important;top:0!important;border:0!important;width:${widthPt}pt!important;height:${heightPt}pt!important;visibility:hidden!important`;
   return new Promise((resolve, reject) => {
     let disposed = false, pending = true;
@@ -75,7 +78,7 @@ export function createWorkbookSurface(container: HTMLElement, snapshot: Workbook
     // No source HTML or CSS is interpolated into srcdoc. Policy precedes all
     // later DOM adoption; authorized image leases are the only resource URLs.
     try {
-      frame.srcdoc = '<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src blob:; style-src \'unsafe-inline\'; font-src \'none\'; base-uri \'none\'; form-action \'none\'"></head><body></body></html>';
+      frame.srcdoc = '<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; img-src blob:; style-src \'unsafe-inline\'; font-src \'none\'; base-uri \'none\'; form-action \'none\'"></head><body></body></html>';
       container.append(frame);
     } catch (error) { fail(error); }
   });
