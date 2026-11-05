@@ -8,6 +8,18 @@ import { invalidCases, manifest, repository, validCases } from "./fixtures.js";
 const ajv = new Ajv2020({ strict: true, allErrors: true });
 const validators = new Map(CONTRACT_NAMES.map((name) => [name, ajv.compile(getContractJsonSchema(name))]));
 
+test("unlocated workbook comments are allowed only as explicit recovery annotations in both contracts", () => {
+  const anchor = { kind: "cells", sheetId: "sheet-1", ranges: [] };
+  expect(validators.get("anchor")!(anchor)).toBe(false);
+  expect(() => parseContract("anchor", anchor)).toThrow(DocumentError);
+  for (const body of [{ instruction: "定位待确认" }, { bodyNodeId: "comment-body" }]) for (const status of ["open", "resolved", "closed", "needs_reanchor"]) {
+    const annotations = [{ annotationId: "comment", documentId: "book", baseRevision: 0, anchor, status, ...body }];
+    expect(validators.get("annotations")!(annotations)).toBe(status === "needs_reanchor");
+    if (status === "needs_reanchor") expect(parseContract("annotations", annotations)).toEqual(annotations);
+    else expect(() => parseContract("annotations", annotations)).toThrow(DocumentError);
+  }
+});
+
 test.each(validCases)("independently validates %s with JSON Schema", (name, input) => {
   const validate = validators.get(name)!;
   expect(validate(input), JSON.stringify(validate.errors)).toBe(true);

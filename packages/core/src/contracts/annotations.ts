@@ -57,14 +57,16 @@ const annotationIdentity = {
   sourceId: IdentifierSchema.optional(),
   replies: z.array(AnnotationReplySchema).optional(),
 };
-export const AnnotationSchema = z.union([z.strictObject({
-  ...annotationIdentity,
-  instruction: z.string().min(1),
-  bodyNodeId: z.never().optional(),
-}), z.strictObject({
-  ...annotationIdentity,
-  bodyNodeId: IdentifierSchema,
-  instruction: z.never().optional(),
-})]);
+const instructionBody = { instruction: z.string().min(1), bodyNodeId: z.never().optional() };
+const storedBody = { bodyNodeId: IdentifierSchema, instruction: z.never().optional() };
+// A native thread can have no recorded cell. Represent that absence only in
+// an explicitly invalidated annotation; normal anchors/requests still require
+// at least one range. Never fabricate an A1 location for an unlocated thread.
+const unlocatedCells = { ...annotationIdentity, status: z.literal("needs_reanchor"),
+  anchor: z.strictObject({ kind: z.literal("cells"), sheetId: IdentifierSchema, ranges: z.array(WorkbookRangeSchema).length(0) }) };
+export const AnnotationSchema = z.union([
+  z.strictObject({ ...annotationIdentity, ...instructionBody }), z.strictObject({ ...annotationIdentity, ...storedBody }),
+  z.strictObject({ ...unlocatedCells, ...instructionBody }), z.strictObject({ ...unlocatedCells, ...storedBody }),
+]);
 export type Annotation = z.infer<typeof AnnotationSchema>;
 export const AnnotationsSchema = z.array(AnnotationSchema);

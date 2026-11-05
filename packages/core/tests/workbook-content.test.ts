@@ -44,6 +44,16 @@ describe("workbook cell annotations and bounded HTML stories", () => {
     expect(openDocument(model.serialize()).snapshot()).toEqual(model.snapshot());
     annotation.status = "open"; set(files, "annotations.json", annotations); expect(() => openDocument(files)).toThrow();
   });
+  it("retains an unlocated native thread without fabricating a cell or losing its rich replies", () => {
+    const files = seeded(), annotations = json<Annotation[]>(files, "annotations.json");
+    const annotation = annotations[0]!; annotation.status = "needs_reanchor";
+    annotation.anchor = { kind: "cells", sheetId: "sheet-1", ranges: [] }; set(files, "annotations.json", annotations);
+    const model = openDocument(files, { kind: "workbook" });
+    expect(model.snapshot().annotations[0]?.anchor).toEqual(annotation.anchor);
+    expect(model.getNode("body-1")?.text).toBe("预算😀禰󠄀"); expect(model.getNode("body-2")?.text).toBe("已复核。");
+    expect(openDocument(model.serialize()).snapshot()).toEqual(model.snapshot());
+    annotation.status = "open"; set(files, "annotations.json", annotations); expect(() => openDocument(files)).toThrow();
+  });
   it("rejects overlapping regions, future revisions, missing worksheets and duplicate reply/body ownership", () => {
     const edits: ((annotations: Annotation[]) => void)[] = [
       a => { a[0]!.baseRevision = 1; },

@@ -31,12 +31,17 @@ export function validateWorkbookComments(workbook: WorkbookMetadata, annotations
     if (!annotation || bindings.has(comment.annotationId)) invalid("A workbook native comment must bind a unique existing annotation.");
     bindings.add(comment.annotationId); author(comment.authorId, comment.format, annotation.author); items++;
     if (comment.recoveryStatus !== undefined && annotation.status !== "needs_reanchor") invalid("Only an invalidated comment may retain a recovery status.");
+    if (comment.recoveryReasons && (annotation.status !== "needs_reanchor" || comment.recoveryStatus === undefined || new Set(comment.recoveryReasons).size !== comment.recoveryReasons.length)) invalid("Comment recovery reasons require an invalidated annotation, its original status and unique reasons.");
     if (comment.format === "classic") {
+      if (comment.compatibilityThreadId !== undefined && (!/^\{[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}\}$/i.test(comment.compatibilityThreadId) || !comment.recoveryReasons?.includes("orphan-placeholder"))) invalid("An orphan compatibility note must retain its missing thread identity and recovery reason.");
+      if (comment.recoveryReasons && (comment.recoveryReasons.length !== 1 || comment.recoveryReasons[0] !== "orphan-placeholder" || comment.compatibilityThreadId === undefined)) invalid("Classic comment recovery reasons describe an orphaned compatibility placeholder.");
       if (comment.box?.cssClass !== undefined && (!classes.has(comment.box.cssClass) || /\s/.test(comment.box.cssClass))) invalid("A classic note box has an undefined appearance class.");
       if (comment.box) items++;
       if (annotation.replies?.length) invalid("Classic notes cannot contain modern replies.");
       continue;
     }
+    if (comment.recoveryReasons?.includes("orphan-placeholder")) invalid("An existing modern thread is not an orphaned compatibility placeholder.");
+    if (comment.recoveryReasons?.includes("missing-location") && (annotation.anchor.kind !== "cells" || annotation.anchor.ranges.length)) invalid("A missing native location must not invent a cell range.");
     nativeIdentity(annotation.sourceId);
     const replies = new Map(annotation.replies?.map(reply => [reply.replyId, reply]) ?? []), links = new Map<string, string | undefined>();
     for (const binding of comment.replies) {
