@@ -4,11 +4,12 @@ import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { importXlsx } from '../../packages/office/src/xlsx-import.js';
 import type { drawingWindowMeasurement } from './fixtures/workbook-drawing-window.js';
-import type { windowControllerMeasurement } from './fixtures/workbook-window-controller.js';
+import type { annotationWindowMeasurement, commentTextMeasurement, windowControllerMeasurement } from './fixtures/workbook-window-controller.js';
 
-declare global { interface Window { workbookDrawingWindow: { drawingWindowMeasurement: typeof drawingWindowMeasurement; windowControllerMeasurement: typeof windowControllerMeasurement } } }
+declare global { interface Window { workbookDrawingWindow: { drawingWindowMeasurement: typeof drawingWindowMeasurement; windowControllerMeasurement: typeof windowControllerMeasurement; annotationWindowMeasurement: typeof annotationWindowMeasurement; commentTextMeasurement: typeof commentTextMeasurement } } }
 let code = '';
 const inputs: { name: string; files: [string, number[]][] }[] = [];
+const comments: typeof inputs = [];
 test.beforeAll(async () => {
   const bundle = await build({ configFile: false, build: { write: false, minify: false, lib: { entry: fileURLToPath(new URL('./fixtures/workbook-drawing-window.ts', import.meta.url)), formats: ['iife'], name: 'WorkbookDrawingWindow' } } });
   if (!Array.isArray(bundle) && !('output' in bundle)) throw Error('Unexpected drawing-window bundle');
@@ -16,6 +17,10 @@ test.beforeAll(async () => {
   for (const prefix of ['', 'producer/']) for (const name of ['07-three-charts', '08-images-shapes']) {
     const files = await importXlsx(readFileSync(`examples/xlsx/${prefix}${name}.xlsx`), { documentId: 'drawing-window' });
     inputs.push({ name: prefix + name, files: [...files].map(([path, bytes]) => [path, [...bytes]]) });
+  }
+  for (const prefix of ['', 'producer/']) for (const name of ['09-classic-notes', '10-modern-threads']) {
+    const files = await importXlsx(readFileSync(`examples/xlsx/${prefix}${name}.xlsx`), { documentId: 'comment-window' });
+    comments.push({ name: prefix + name, files: [...files].map(([path, bytes]) => [path, [...bytes]]) });
   }
 });
 test.beforeEach(async ({ page }) => { await page.goto('/'); await page.addScriptTag({ content: code }); });
@@ -64,5 +69,38 @@ test('whole workbook windows commit atomically across scrolling, sheet changes, 
     expect(result.nodes).toBe(result.actualNodes);
     expect(result.races).toHaveLength(2);
     for (const race of result.races) expect(race).toMatchObject({ cancelled: true, aborted: true, preserved: true });
+  }
+});
+
+test('native classic notes and modern threads retain source content and pane locations in complete windows', async ({ page }) => {
+  for (const input of comments) {
+    const result = await page.evaluate(files => window.workbookDrawingWindow.annotationWindowMeasurement(files), input.files);
+    expect(result.visible.map(item => item.id), input.name).toEqual(result.expected);
+    // The pinned Calc producer drops modern threads; its output contains none.
+    expect(result.visible.length).toBe(input.name === 'producer/10-modern-threads' ? 0 : input.name === '10-modern-threads' ? 2 : 1);
+    expect(result.recovery).toEqual(result.expectedRecovery); expect(result.unchanged).toBe(true);
+    for (const item of result.visible) { expect(item.body?.length).toBeGreaterThan(0); expect(item.ranges.length).toBeGreaterThan(0); }
+    // These independent sources have no frozen comments: scrolling to the
+    // last row/column must remove their geometry from the published window.
+    expect(result.offscreen).toBe(0);
+  }
+});
+
+test('comment body flow preserves native run styles, paragraph offsets and UTF-16 selection without source identities', async ({ page }) => {
+  for (const input of comments.filter(input => input.name !== 'producer/10-modern-threads')) for (const rich of input.name === '09-classic-notes' ? [false, true] : [false]) {
+    const result = await page.evaluate(({ files, rich }) => window.workbookDrawingWindow.commentTextMeasurement(files, rich), { files: input.files, rich });
+    expect(result.unchanged).toBe(true); expect(result.results.length).toBeGreaterThan(0);
+    for (const body of result.results) {
+      expect(body).toMatchObject({ detached: true, unchangedSource: true, canonicalIds: 0, selected: true, errors: ['ResourceLimitExceeded', 'ResourceLimitExceeded'] });
+      expect(body.nodes).toBe(body.actualNodes); expect(body.fonts).toBeGreaterThan(0);
+      for (const piece of body.offsets) { expect(piece.text).toBe(piece.expected); expect(piece.to - piece.from).toBe(piece.text.length); expect(piece.sourceNodeId).toBe(body.id); }
+      if (!rich) expect(body.text).toBe(body.expected);
+      else {
+        const start = body.expected.indexOf('混排😀禰󠄀'), runs = body.formats.filter(run => run.from >= start && run.from < start + '混排😀禰󠄀'.length);
+        expect(runs.map(run => run.text).join('')).toBe('混排😀禰󠄀');
+        for (const run of runs) expect(run).toMatchObject({ underline: 'underline', style: 'double', strike: 'line-through', color: 'rgb(255, 0, 0)' });
+        expect(body.formats.find(run => run.text === 'No underline')).toMatchObject({ underline: 'none', strike: '' });
+      }
+    }
   }
 });

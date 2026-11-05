@@ -2,6 +2,8 @@ import { DocumentError } from "@dagent-office/core";
 import type { WorkbookNumberFormatter, WorkbookSnapshot } from "@dagent-office/core";
 import type { FontResolution } from "../contracts.js";
 import type { WorkbookAssetSource } from "./assets.js";
+import { projectWorkbookAnnotations } from "./annotation-projection.js";
+import type { WorkbookAnnotationProjectionLimits, WorkbookAnnotationWindow } from "./annotation-projection.js";
 import type { WorkbookChartSource } from "./chart-source.js";
 import { measureWorkbookColumnFont } from "./column-font.js";
 import type { WorkbookColumnFont } from "./column-font.js";
@@ -29,6 +31,7 @@ export interface WorkbookWindowControllerOptions {
   readonly read?: Partial<WorkbookViewportReadLimits>;
   readonly cells?: Omit<WorkbookWindowLayoutOptions, "normalSpaceWidthPx">;
   readonly drawings?: WorkbookDrawingLayoutLimits;
+  readonly annotations?: WorkbookAnnotationProjectionLimits;
 }
 export interface WorkbookRenderedWindow {
   readonly frame: WorkbookWindowFrame;
@@ -37,6 +40,7 @@ export interface WorkbookRenderedWindow {
   readonly dimensions: ReturnType<typeof worksheetDimensions>;
   readonly cells: WorkbookWindowLayout["cells"];
   readonly objects: WorkbookDrawingLayout["objects"];
+  readonly annotations: WorkbookAnnotationWindow;
   readonly fonts: readonly FontResolution[];
   readonly diagnostics: WorkbookDrawingLayout["diagnostics"];
   readonly usedFallbackLineMetrics: boolean;
@@ -59,12 +63,12 @@ export class WorkbookWindowController {
   constructor(private readonly surface: WorkbookSurface, private readonly providers: WorkbookWindowProviders,
     private readonly formatter: WorkbookNumberFormatter, input: WorkbookWindowControllerOptions = {}) {
     this.maxNodes = input.maxNodes ?? 50_000;
-    if (!Number.isSafeInteger(this.maxNodes) || this.maxNodes < 1 || Object.keys(input).some(key => !["maxNodes", "read", "cells", "drawings"].includes(key))
+    if (!Number.isSafeInteger(this.maxNodes) || this.maxNodes < 1 || Object.keys(input).some(key => !["maxNodes", "read", "cells", "drawings", "annotations"].includes(key))
       || !surface.source.isConnected || !surface.view.isConnected || surface.source.ownerDocument !== surface.document || surface.view.ownerDocument !== surface.document
       || surface.view.childNodes.length) throw new DocumentError("InvalidOperation", "A workbook controller requires its own empty connected surface and supported node budget.");
     this.snapshot = providers.cells.snapshot;
     checkWindowIdentity(providers.assets.snapshot.manifest, this.snapshot); checkWindowIdentity(providers.charts.snapshot.manifest, this.snapshot);
-    this.options = Object.freeze({ ...input, read: Object.freeze({ ...input.read }), cells: Object.freeze({ ...input.cells }),
+    this.options = Object.freeze({ ...input, read: Object.freeze({ ...input.read }), cells: Object.freeze({ ...input.cells }), annotations: Object.freeze({ ...input.annotations }),
       drawings: Object.freeze({ ...input.drawings, ...(input.drawings?.assets ? { assets: Object.freeze({ ...input.drawings.assets }) } : {}) }) });
     // Validate read limits before retaining auxiliary content or starting work.
     const probe = new WorkbookWindowLoader(providers.cells, this.options.read); probe.dispose();
@@ -99,6 +103,7 @@ export class WorkbookWindowController {
       const { normal, dimensions } = metrics;
       if (!await Promise.race([loader.load(sheetId, dimensions, viewport), cancelled]) || !current()) return false;
       const frame = loader.frame!;
+      const annotations = projectWorkbookAnnotations(this.snapshot, frame, dimensions, this.options.annotations);
       const cells = layoutWorkbookWindow(this.surface, this.snapshot, frame, dimensions, this.formatter,
         { ...this.options.cells, normalSpaceWidthPx: normal.spaceWidthPx, maxNodes: Math.min(this.maxNodes, this.options.cells?.maxNodes ?? this.maxNodes) });
       const walker = this.surface.document.createTreeWalker(cells.element, 0xffff_ffff); let nodes = 1;
@@ -108,7 +113,7 @@ export class WorkbookWindowController {
         this.formatter, abort.signal, { ...this.options.drawings, maxNodes: Math.min(this.maxNodes - nodes, this.options.drawings?.maxNodes ?? this.maxNodes) });
       if (!current()) return false;
       nodes += drawings.nodes; cells.element.append(drawings.element);
-      const state: WorkbookRenderedWindow = Object.freeze({ frame, element: cells.element, nodes, dimensions, cells: cells.cells, objects: drawings.objects,
+      const state: WorkbookRenderedWindow = Object.freeze({ frame, element: cells.element, nodes, dimensions, cells: cells.cells, objects: drawings.objects, annotations,
         fonts: Object.freeze([...normal.fonts, ...cells.fonts, ...drawings.fonts]), diagnostics: drawings.diagnostics,
         usedFallbackLineMetrics: cells.usedFallbackLineMetrics || drawings.usedFallbackLineMetrics });
       const previous = this.active;

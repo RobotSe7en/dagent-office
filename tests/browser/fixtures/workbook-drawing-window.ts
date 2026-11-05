@@ -13,7 +13,7 @@ import type { WorkbookChartReadResponse } from '../../../packages/render/src/wor
 import { layoutWorkbookWindow } from '../../../packages/render/src/workbook/window-layout.js';
 import { layoutWorkbookDrawings } from '../../../packages/render/src/workbook/drawing-layout.js';
 import type { WorkbookDrawingLayout } from '../../../packages/render/src/workbook/drawing-layout.js';
-import { windowControllerMeasurement } from './workbook-window-controller.js';
+import { annotationWindowMeasurement, commentTextMeasurement, windowControllerMeasurement } from './workbook-window-controller.js';
 
 export async function drawingWindowMeasurement(entries: readonly [string, number[]][], rtl: boolean, overflow = false) {
   const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), decoder = new TextDecoder(), encoder = new TextEncoder();
@@ -126,4 +126,4 @@ export async function drawingWindowMeasurement(entries: readonly [string, number
     URL.createObjectURL = originalCreate; URL.revokeObjectURL = originalRevoke; window.removeEventListener('unhandledrejection', rejection);
   }
 }
-Object.assign(window, { workbookDrawingWindow: { drawingWindowMeasurement, windowControllerMeasurement } });
+Object.assign(window, { workbookDrawingWindow: { drawingWindowMeasurement, windowControllerMeasurement, annotationWindowMeasurement, commentTextMeasurement } });

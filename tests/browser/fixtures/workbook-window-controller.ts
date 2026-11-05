@@ -5,6 +5,10 @@ import { modelWindowSource } from '../../../packages/render/src/workbook/window-
 import { modelAssetSource } from '../../../packages/render/src/workbook/assets.js';
 import { modelChartSource } from '../../../packages/render/src/workbook/chart-source.js';
 import { WorkbookWindowController } from '../../../packages/render/src/workbook/window-controller.js';
+import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';
+import { createWorkbookCommentText } from '../../../packages/render/src/workbook/comment-text.js';
+import { resolvePreviewFontsInScope } from '../../../packages/render/src/fonts.js';
+import { readWorkbookViewRange, selectWorkbookView } from '../../../packages/render/src/workbook/selection.js';
 
 export async function windowControllerMeasurement(entries: readonly [string, number[]][]) {
   const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), decoder = new TextDecoder(), encoder = new TextEncoder();
@@ -105,4 +109,73 @@ export async function windowControllerMeasurement(entries: readonly [string, num
     controller.dispose(); formatter.dispose(); surface.dispose(); container.remove();
     URL.createObjectURL = originalCreate; URL.revokeObjectURL = originalRevoke; window.removeEventListener('unhandledrejection', rejection);
   }
+}
+
+export async function annotationWindowMeasurement(entries: readonly [string, number[]][]) {
+  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)]));
+  const model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot(), initial = model.serialize(), sheet = snapshot.metadata.workbook.sheets[0]!;
+  const container = document.createElement('div'); document.body.append(container);
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 420, heightPt: 300 });
+  const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
+  const controller = new WorkbookWindowController(surface, { cells: modelWindowSource(model), assets: modelAssetSource(model), charts: modelChartSource(model) }, formatter);
+  try {
+    const viewport = { widthPt: 420, heightPt: 300, scrollLeftPt: 0, scrollTopPt: 0 };
+    await controller.render(sheet.sheetId, viewport);
+    const current = controller.current!, visible = current.annotations.visible.map(item => ({ id: item.annotation.annotationId, status: item.annotation.status,
+      format: item.native?.format, ranges: item.regions.map(region => region.rangeIndex),
+      body: item.annotation.bodyNodeId ? model.getNode(item.annotation.bodyNodeId)!.text : item.annotation.instruction,
+      replies: item.annotation.replies?.map(reply => reply.bodyNodeId ? model.getNode(reply.bodyNodeId)!.text : reply.instruction) ?? [] }));
+    const expected = snapshot.annotations.filter(annotation => annotation.status !== 'needs_reanchor').map(annotation => annotation.annotationId);
+    const recovery = current.annotations.recovery.map(item => item.annotation.annotationId);
+    await controller.render(sheet.sheetId, { ...viewport, scrollLeftPt: current.frame.layout.maxScrollLeftPt, scrollTopPt: current.frame.layout.maxScrollTopPt });
+    const offscreen = controller.current!.annotations.visible.length, after = model.serialize();
+    return { visible, expected, recovery, expectedRecovery: snapshot.annotations.filter(annotation => annotation.status === 'needs_reanchor').map(annotation => annotation.annotationId), offscreen,
+      unchanged: [...initial].every(([path, bytes]) => bytes.length === after.get(path)!.length && bytes.every((byte, index) => byte === after.get(path)![index])) };
+  } finally { controller.dispose(); formatter.dispose(); surface.dispose(); container.remove(); }
+}
+
+export async function commentTextMeasurement(entries: readonly [string, number[]][], rich = false) {
+  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), encoder = new TextEncoder(), decoder = new TextDecoder();
+  if (rich) {
+    const manifest = JSON.parse(decoder.decode(files.get('manifest.json')!)) as { content: string; styles: string[] };
+    const template = document.createElement('template'); template.innerHTML = decoder.decode(files.get(manifest.content)!);
+    const story = template.content.querySelector('[data-office-kind="comment"]')!;
+    story.append(document.createTextNode(' \n'));
+    const paragraph = document.createElement('p'); paragraph.dataset.nodeId = 'review-comment-paragraph'; paragraph.style.whiteSpace = 'pre-wrap';
+    const span = document.createElement('span'); span.dataset.nodeId = 'review-comment-run';
+    span.style.cssText = '--office-font-underline:double;--office-font-strike:true;--office-cell-foreground-color:#ff0000;--office-cell-foreground-tint:0;font-size:14pt';
+    span.textContent = '混排😀禰󠄀';
+    const line = document.createElement('br'); line.dataset.nodeId = 'review-comment-break';
+    const tail = document.createElement('span'); tail.dataset.nodeId = 'review-comment-tail'; tail.style.cssText = '--office-font-underline:none;--office-font-strike:false'; tail.textContent = 'No underline';
+    paragraph.append(span, line, tail); story.append(paragraph);
+    files.set(manifest.content, encoder.encode('<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="' + manifest.styles[0]! + '"></head><body>' + template.content.querySelector('[data-office-kind="workbook-content"]')!.outerHTML + '</body></html>'));
+  }
+  const model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot(), initial = model.serialize();
+  const container = document.createElement('div'); document.body.append(container);
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 420, heightPt: 300 }), sources = new WorkbookContentSources(surface.document, snapshot);
+  const ids = snapshot.metadata.workbook.stories!.map(story => story.rootNodeId), projection = sources.project(surface.source, ids);
+  try {
+    const results = [];
+    for (const id of ids) {
+      const source = projection.get(id)!, before = source.outerHTML, rendered = createWorkbookCommentText(source);
+      const detached = !rendered.element.isConnected; surface.view.append(rendered.element);
+      const fonts = resolvePreviewFontsInScope(surface.document, rendered.element, '[data-office-text-style],[data-office-script]');
+      const expected = model.getNode(id)!.text, walker = surface.document.createTreeWalker(rendered.element, 0xffff_ffff); let count = 1; while (walker.nextNode()) count++;
+      const offsets = rendered.projections.map(piece => ({ from: piece.from, to: piece.to, text: piece.node.data, expected: expected.slice(piece.from, piece.to), sourceNodeId: piece.sourceNodeId }));
+      const pieces = rendered.projections, first = pieces[0]!, last = pieces.at(-1)!;
+      selectWorkbookView(surface.view, { node: first.node, offset: 0 }, { node: last.node, offset: last.node.length });
+      const selected = readWorkbookViewRange(surface.view);
+      const formats = [...rendered.element.querySelectorAll<HTMLElement>('[data-office-script]')].map(node => ({ text: node.textContent, from: rendered.projections.find(piece => node.contains(piece.node))!.from, underline: node.style.textDecorationLine, style: node.style.textDecorationStyle,
+        strike: node.firstElementChild instanceof surface.document.defaultView!.HTMLElement ? (node.firstElementChild as HTMLElement).style.textDecorationLine : '', color: surface.document.defaultView!.getComputedStyle(node).color }));
+      const errors = [];
+      for (const [nodes, text] of [[rendered.nodes - 1, 8 * 1024 * 1024], [50_000, 1]]) {
+        try { createWorkbookCommentText(source, nodes, text); errors.push('accepted'); } catch (error) { errors.push((error as { code: string }).code); }
+      }
+      results.push({ id, detached, unchangedSource: source.outerHTML === before, text: rendered.element.textContent, expected, offsets, nodes: rendered.nodes, actualNodes: count, formats, fonts: fonts.length, errors,
+        canonicalIds: rendered.element.querySelectorAll('[data-node-id]').length, selected: selected?.startContainer === first.node && selected.endContainer === last.node });
+      surface.document.defaultView!.getSelection()!.removeAllRanges(); rendered.element.remove();
+    }
+    const after = model.serialize();
+    return { results, unchanged: [...initial].every(([path, bytes]) => bytes.length === after.get(path)!.length && bytes.every((byte, index) => byte === after.get(path)![index])) };
+  } finally { projection.dispose(); sources.dispose(); surface.dispose(); container.remove(); }
 }
