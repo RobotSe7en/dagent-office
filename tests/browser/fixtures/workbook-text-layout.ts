@@ -6,6 +6,8 @@ export interface TextLayoutCase {
   text: string; type: WorkbookValue["type"]; family: string; sizePt: number; widthPt: number; heightPt: number;
   horizontal: string; vertical: string; readingOrder: string; indent: number; rightToLeft: boolean;
   wrap?: boolean; shrink?: boolean;
+  rotation?: number;
+  splitOffsets?: readonly number[];
 }
 export async function textLayoutMeasurement(scope: HTMLElement, cases: readonly TextLayoutCase[]) {
   await document.fonts.ready;
@@ -14,10 +16,15 @@ export async function textLayoutMeasurement(scope: HTMLElement, cases: readonly 
   gallery.style.cssText = 'position:absolute;left:0;top:0;display:flex;flex-wrap:wrap;align-items:flex-start;width:850px;gap:4px;background:white;color:black';
   const inputs = cases.map(item => {
     const table = document.createElement('table'), cell = table.insertRow().insertCell(); cell.textContent = item.text; cell.dir = item.rightToLeft ? 'rtl' : 'ltr';
+    if (item.splitOffsets) {
+      cell.replaceChildren(); let from = 0;
+      for (const to of [...item.splitOffsets, item.text.length]) { const span = document.createElement('span'); span.textContent = item.text.slice(from, to); cell.append(span); from = to; }
+    }
     cell.style.fontFamily = item.family; cell.style.fontSize = `${item.sizePt}pt`; cell.style.fontWeight = 'normal'; cell.style.fontStyle = 'normal'; cell.style.lineHeight = 'normal';
     cell.style.setProperty('--office-cell-horizontal', item.horizontal); cell.style.setProperty('--office-cell-vertical', item.vertical);
     cell.style.setProperty('--office-cell-reading-order', item.readingOrder); cell.style.setProperty('--office-cell-indent', String(item.indent));
     cell.style.setProperty('--office-cell-wrap', String(item.wrap ?? false)); cell.style.setProperty('--office-cell-shrink-to-fit', String(item.shrink ?? false));
+    cell.style.setProperty('--office-cell-text-rotation', String(item.rotation ?? 0));
     sources.append(table); const source = { element: cell, format: { cssClass: '' } };
     return { source, text: createWorkbookTextView(source), valueType: item.type, widthPt: item.widthPt, heightPt: item.heightPt };
   });
@@ -35,6 +42,7 @@ export async function textLayoutMeasurement(scope: HTMLElement, cases: readonly 
         const range = document.createRange(), offset = end ? node.length - 1 : 0; range.setStart(node, offset); range.setEnd(node, offset + 1); return (range.getBoundingClientRect().x - cell.x) * .75;
       };
       return { scale: item.scale, requiredHeightPt: item.requiredHeightPt, horizontal: item.text.element.style.textAlign, direction: item.text.element.style.direction,
+        transform: item.text.element.style.transform, breaks: item.text.element.querySelectorAll('br').length,
         firstX: characterX(first, false), lastX: characterX(last, true),
         gapsPt: [(text.left - cell.left) * .75, (text.top - cell.top) * .75, (cell.right - text.right) * .75, (cell.bottom - text.bottom) * .75],
         widthPt: text.width * .75, heightPt: text.height * .75, text: item.text.projections.map(projection => projection.node.textContent).join(''),
@@ -51,6 +59,14 @@ export async function textLayoutMeasurement(scope: HTMLElement, cases: readonly 
       try { layoutWorkbookTexts(scope, [{ ...input, text: createWorkbookTextView(source) }], space); } catch (error) { failures.push((error as { code: string }).code); }
     }
     try { layoutWorkbookTexts(scope, [{ ...inputs[0]!, text: createWorkbookTextView(source) }], space, 1); } catch (error) { failures.push((error as { code: string }).code); }
+    const stackFailures: string[] = [], extra = source.element.cloneNode(false) as HTMLTableCellElement; extra.textContent = 'A'.repeat(1000); sources.append(extra);
+    for (const rotation of [181, 254, 255]) {
+      extra.style.setProperty('--office-cell-text-rotation', String(rotation)); const candidate = { element: extra, format: { cssClass: '' } }, text = createWorkbookTextView(candidate);
+      try { layoutWorkbookTexts(scope, [{ source: candidate, text, valueType: 'text', widthPt: 50, heightPt: 50 }], space, 20); }
+      catch (error) { stackFailures.push((error as { code: string }).code); }
+      if (text.element.parentNode) throw new Error('Failed stacked text candidate remained mounted');
+    }
+    extra.remove();
     // A later invalid item must clean up earlier private views without moving
     // the accepted gallery or retaining any source text in measurement DOM.
     const valid = { ...inputs[0]!, text: createWorkbookTextView(source) }, badSource = inputs.at(-1)!.source;
@@ -58,8 +74,8 @@ export async function textLayoutMeasurement(scope: HTMLElement, cases: readonly 
     try { layoutWorkbookTexts(scope, [valid, { ...inputs.at(-1)!, text: createWorkbookTextView(badSource) }], space); }
     catch (error) { failures.push((error as { code: string }).code); }
     finally { badSource.element.style.setProperty('--office-cell-horizontal', old); }
-    return { measurements, spacePt: space * .75, fonts: layouts.fonts, unchanged: original === sources.innerHTML,
+    return { measurements, spacePt: space * .75, fonts: layouts.fonts, usedFallbackLineMetrics: layouts.usedFallbackLineMetrics, unchanged: original === sources.innerHTML,
       retained: scope.querySelectorAll('[data-office-view="workbook-text-measurement"],[data-office-view="workbook-direction-measurement"]').length,
-      failures, atomic: gallery.isConnected && !valid.text.element.parentNode, frozen: Object.isFrozen(layouts) && Object.isFrozen(layouts.cells) };
+      failures, stackFailures, atomic: gallery.isConnected && !valid.text.element.parentNode, frozen: Object.isFrozen(layouts) && Object.isFrozen(layouts.cells) };
   } finally { sources.remove(); }
 }

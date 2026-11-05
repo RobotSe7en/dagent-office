@@ -34,7 +34,7 @@ def inputs():
     return result
 
 
-def generate(cases):
+def generate(cases, row_height=60):
     book = native.fixture.Book(); styles = ET.fromstring(book.parts["xl/styles.xml"])
     fonts, fills, borders, formats = [styles.find(N + name) for name in ["fonts", "fills", "borders", "cellXfs"]]
     fonts.clear(); fills.clear(); borders.clear(); formats.clear()
@@ -44,7 +44,7 @@ def generate(cases):
     base = {"fontId": "0", "fillId": "0", "borderId": "0", "numFmtId": "0", "xfId": "0"}
     ET.SubElement(formats, N + "xf", base)
     for index, case in enumerate(cases, 1):
-        sheet = book.sheet("Case" + str(index)); sheet.print_area = "$A$1:$C$3"; sheet.add("A1", "Case" + str(index)); sheet.row_props[2] = {"ht": 60, "customHeight": 1}
+        sheet = book.sheet("Case" + str(index)); sheet.print_area = "$A$1:$C$3"; sheet.add("A1", "Case" + str(index)); sheet.row_props[2] = {"ht": row_height, "customHeight": 1}
         props = {**base, "applyFont": "1", "applyFill": "1", "applyBorder": "1", "applyAlignment": "1"}
         if case["kind"] in ["pattern", "gradient"]:
             props["fillId"] = str(len(fills)); fill = ET.SubElement(fills, N + "fill")
@@ -59,9 +59,13 @@ def generate(cases):
         for side in ["left", "right", "top", "bottom"]:
             ET.SubElement(ET.SubElement(border, N + side, {"style": "thin"}), N + "color", {"rgb": "FFCC00CC"})
         if case["kind"] == "diagonal": ET.SubElement(ET.SubElement(border, N + "diagonal", {"style": case["style"]}), N + "color", {"rgb": "FF0044AA"})
+        if case.get("border") is False: props["borderId"] = "0"
         format = ET.SubElement(formats, N + "xf", props)
-        ET.SubElement(format, N + "alignment", {"horizontal": "center", "vertical": "center", "textRotation": str(case.get("rotation", 0))})
-        sheet.add("B2", "预算 Ab" if case["kind"] == "rotation" else "", style=index)
+        alignment = {"horizontal": case.get("horizontal", "center"), "vertical": case.get("vertical", "center"), "textRotation": str(case.get("rotation", 0))}
+        for name in ["wrapText", "shrinkToFit"]:
+            if name in case: alignment[name] = str(int(case[name]))
+        ET.SubElement(format, N + "alignment", alignment)
+        sheet.add("B2", case.get("text", "预算 Ab") if case["kind"] == "rotation" else "", style=index)
     for table in [fonts, fills, borders, formats]: table.set("count", str(len(table)))
     book.parts["xl/styles.xml"] = ET.tostring(styles, encoding="unicode"); return native.fixture.zipped(book.finish())
 

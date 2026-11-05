@@ -1,4 +1,5 @@
 import { DocumentError, evaluatePresentationPreset } from "@dagent-office/core";
+import { measuredFontLineHeight } from "../font-line-height.js";
 import type { DeepReadonly, DrawingTextProperties, PresentationPresetGeometry, WorkbookChart, WorkbookObject } from "@dagent-office/core";
 import type { FontResolution } from "../contracts.js";
 import { resolvePreviewFontsInScope } from "../fonts.js";
@@ -110,18 +111,8 @@ function layoutTextBodies<T>(scope: HTMLElement, inputs: readonly T[], limits: W
       // Measure scalable font bounds at a fixed large size: browser pixel
       // rounding at the actual 14–18pt size otherwise adds a full pixel to
       // every line in some engines. No large canvas bitmap is allocated.
-      let acceptedFont = false;
-      if (lineContext) {
-        // Invalid Canvas font shorthand is silently ignored. CSS font-variant
-        // supports values (for example all-small-caps) outside that shorthand;
-        // never measure the previous run's font when this assignment fails.
-        lineContext.font = "1px monospace";
-        const sentinel = lineContext.font;
-        lineContext.font = `${computed.fontStyle} ${computed.fontVariant} ${computed.fontWeight} 1024px ${computed.fontFamily}`;
-        acceptedFont = lineContext.font !== sentinel;
-      }
-      const metrics = acceptedFont ? lineContext!.measureText("M") : undefined, height = metrics ? (metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent) * parseFloat(computed.fontSize) / 1024 : NaN;
-      if (Number.isFinite(height) && height > 0) { normalLines.set(key, height); return height; }
+      const height = measuredFontLineHeight(lineContext, computed);
+      if (height !== undefined) { normalLines.set(key, height); return height; }
       // Legacy engines do not expose font bounds. Keep a measured DOM fallback
       // and report its use; do not silently claim native normal-leading parity.
       usedFallbackLineMetrics = true;

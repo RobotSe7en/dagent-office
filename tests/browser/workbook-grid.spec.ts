@@ -19,6 +19,7 @@ import fillReference from "../../docs/evidence/xlsx-fill-pattern-spec.json" with
 import appearanceReference from "../../docs/evidence/xlsx-cell-appearance.json" with { type: "json" };
 import borderSpec from "../../docs/evidence/xlsx-border-spec.json" with { type: "json" };
 import type { diagonalMeasurement } from "./fixtures/workbook-diagonals.js";
+import rotationReference from "../../docs/evidence/xlsx-rotation-semantics.json" with { type: "json" };
 
 interface GridHost {
   diagonalMeasurement(css: string, classes: readonly string[]): ReturnType<typeof diagonalMeasurement>;
@@ -272,6 +273,47 @@ test('worksheet text layout measures native alignment, Normal indentation and lo
   }
   expect(result.fonts.every(font => !font.substituted)).toBe(true);
   await page.locator('#workbook-text-layout-probe').screenshot({ path: testInfo.outputPath('workbook-text-alignment.png') });
+});
+
+test('rotated and stacked text matches native ink bounds while retaining complete graphemes', async ({ page }, testInfo) => {
+  const cases: TextLayoutCase[] = rotationReference.cases.map(item => ({ text: item.text, type: 'text', family: rotationReference.font.family, sizePt: rotationReference.font.sizePt,
+    widthPt: item.cellSizePt[0]!, heightPt: item.cellSizePt[1]!, horizontal: 'center', vertical: 'center', indent: 0, readingOrder: 'context', rightToLeft: false, rotation: item.rotation }));
+  cases.push({ ...cases[12]!, splitOffsets: [1, 3, 4, 5] });
+  const report = await page.evaluate(cases => window.workbookGridHost.textLayoutMeasurement(cases), cases);
+  expect(report).toMatchObject({ unchanged: true, retained: 0, atomic: true, frozen: true, usedFallbackLineMetrics: false,
+    stackFailures: ['InvalidDocument', 'InvalidDocument', 'ResourceLimitExceeded'] });
+  const inks = [];
+  for (const [index, input] of cases.entries()) {
+    const measured = report.measurements[index]!;
+    expect(measured.text).toBe(input.text); expect(measured.scale).toBe(1); expect(measured.offsets[0]![0]).toBe(0); expect(measured.offsets.at(-1)![1]).toBe(input.text.length);
+    for (let i = 1; i < measured.offsets.length; i++) expect(measured.offsets[i]![0]).toBe(measured.offsets[i - 1]![1]);
+    if (input.rotation === 255) expect(measured.breaks).toBe(index >= 12 ? 2 : index === 10 ? 2 : 4);
+    else if (input.rotation) expect(measured.transform).toBe(`rotate(${input.rotation <= 90 ? -input.rotation : input.rotation - 90}deg) scale(1)`);
+    const bytes = await page.locator('#workbook-text-layout-probe > div').nth(index).screenshot();
+    const ink = await page.evaluate(async base64 => {
+      const image = new Image(); image.src = 'data:image/png;base64,' + base64; await image.decode();
+      const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height; const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
+      const pixels = context.getImageData(0, 0, image.width, image.height).data;
+      return [64, 224].map(threshold => {
+        let left = Infinity, top = Infinity, right = 0, bottom = 0;
+        for (let y = 0; y < image.height; y++) for (let x = 0; x < image.width; x++) {
+          const offset = (y * image.width + x) * 4;
+          // Include LCD subpixel antialiasing. The gallery's pure-red outline
+          // already lies outside the intensity threshold; filtering colored
+          // edge pixels would remove real glyph coverage in Chromium.
+          const maximum = Math.max(pixels[offset]!, pixels[offset + 1]!, pixels[offset + 2]!);
+          if (pixels[offset + 3]! >= 128 && maximum < threshold) { left = Math.min(left, x); top = Math.min(top, y); right = Math.max(right, x + 1); bottom = Math.max(bottom, y + 1); }
+        }
+        return [left, top, right, bottom].map(value => value * .75);
+      });
+    }, bytes.toString('base64'));
+    inks.push(ink);
+    // The producer splits UTF-16 units in the last case, including surrogates
+    // and combining marks. Its corrupted glyph boxes are not a reference.
+    if (index < 12) for (let side = 0; side < 4; side++) expect.soft(Math.abs(ink[1]![side]! - rotationReference.cases[index]!.coverageBoundsPt[side]!), `rotation ${input.rotation}, case ${index}, side ${side}: ${JSON.stringify(ink)}`).toBeLessThanOrEqual(2);
+  }
+  await testInfo.attach('rotation-measurements', { body: JSON.stringify({ report, inks }, null, 2), contentType: 'application/json' });
+  await testInfo.attach('rotation-gallery', { body: await page.locator('#workbook-text-layout-probe').screenshot(), contentType: 'image/png' });
 });
 
 test('worksheet wrapping and shrink preserve text offsets and report missing fonts without changing source', async ({ page }) => {

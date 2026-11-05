@@ -15,6 +15,17 @@ const fill = (body: string) => fillDeclarations(node(`<fill xmlns="${S}">${body}
 const border = (attributes: string, body: string) => borderDeclarations(node(`<border xmlns="${S}" ${attributes}>${body}</border>`), colors, true);
 type Case = { kind: string; pattern?: string; type?: string; degree?: number; left?: number; right?: number; top?: number; bottom?: number; rotation?: number; style?: string; up?: boolean; down?: boolean };
 describe("native advanced cell appearance sources", () => {
+  it("preserves independent rotated and stacked text through native reading and package reopen", async () => {
+    const bytes = readFileSync("packages/office/tests/fixtures/xlsx-rotation.xlsx"), evidence = JSON.parse(readFileSync("docs/evidence/xlsx-rotation-semantics.json", "utf8")) as { sourceSha256: string; cases: { rotation: number; text: string }[] };
+    const regenerated = execFileSync("python3", ["-c", "import importlib.util,sys;s=importlib.util.spec_from_file_location('rotation','scripts/check-xlsx-rotation.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);sys.stdout.buffer.write(m.source.generate(m.inputs(),180))"]);
+    expect(regenerated).toEqual(bytes); expect(createHash("sha256").update(bytes).digest("hex")).toBe(evidence.sourceSha256);
+    const { model } = projectXlsxRecords(await readXlsxRecords(bytes));
+    for (const [index, input] of evidence.cases.entries()) {
+      const cell = model.getCell(`sheet-${index + 1}`, 1, 1)!; expect(cell.value).toEqual({ type: "text", value: input.text });
+      expect(model.snapshot().styles[0]!.css.split(`.${cell.cssClass}{`)[1]!.split("}")[0]!).toContain(`--office-cell-text-rotation:${input.rotation};`);
+    }
+    expect(openDocument(model.serialize(), { kind: "workbook" }).snapshot()).toEqual(model.snapshot());
+  });
   it("keeps all 42 independent appearances through native reading and package reopen", async () => {
     const bytes = readFileSync("packages/office/tests/fixtures/xlsx-cell-appearance.xlsx");
     const regenerated = execFileSync("python3", ["-c", "import importlib.util,sys;s=importlib.util.spec_from_file_location('appearance','scripts/check-xlsx-cell-appearance.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);sys.stdout.buffer.write(m.generate(m.inputs()))"]);

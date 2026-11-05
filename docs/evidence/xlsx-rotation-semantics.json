@@ -1,0 +1,683 @@
+{
+  "scope": "Native fixed-font PDF positions for borderless rotated and stacked text. Cell bounds come from the identical unrotated first sheet. Rotated-border geometry is separate. Producer Unicode splitting is recorded, not adopted as SDK behavior. Not Excel/WPS acceptance.",
+  "sourceSha256": "fe0c782180d1183322af168d9a4f5ebcba91f8f3c9539108e59b58f79a9c94f5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "environment": {
+    "libreOffice": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+    "poppler": "pdfinfo version 25.03.0\nCopyright 2005-2025 The Poppler Developers - http://poppler.freedesktop.org\nCopyright 1996-2011, 2022 Glyph & Cog, LLC",
+    "fontconfig": "fontconfig version 2.15.0",
+    "dpi": 96,
+    "fontManifestSha256": "c69980066d071afe8f248c7774f5265a6eb82990db1f2f78843580df8d2325b4",
+    "fontCount": 424
+  },
+  "pixelThresholds": {
+    "darkInk": 64,
+    "visibleCoverage": 224,
+    "maximumChannelSpread": 32
+  },
+  "localeEnvironment": {
+    "LC_ALL": "C.UTF-8",
+    "LANG": "C.UTF-8",
+    "TZ": "UTC"
+  },
+  "font": {
+    "family": "Noto Sans CJK SC",
+    "sizePt": 12
+  },
+  "cases": [
+    {
+      "kind": "rotation",
+      "rotation": 0,
+      "text": "预算 Ab",
+      "border": true,
+      "cellSizePt": [
+        79.699209,
+        179.789043
+      ],
+      "pdfWords": [
+        {
+          "text": "预算",
+          "boundsPt": [
+            19.3532,
+            80.930368,
+            43.323209,
+            98.293336
+          ]
+        },
+        {
+          "text": "Ab",
+          "boundsPt": [
+            46.0272,
+            80.930368,
+            60.716175,
+            98.293336
+          ]
+        }
+      ],
+      "inkBoundsPt": [
+        20.1172,
+        84.406164,
+        59.8672,
+        94.906164
+      ],
+      "coverageBoundsPt": [
+        19.3672,
+        83.656164,
+        60.6172,
+        95.656164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "rotation": 1,
+      "text": "预算 Ab",
+      "border": false,
+      "cellSizePt": [
+        79.699209,
+        179.789043
+      ],
+      "pdfWords": [
+        {
+          "text": "预算",
+          "boundsPt": [
+            19.4102,
+            81.241368,
+            43.389374,
+            98.604336
+          ]
+        },
+        {
+          "text": "Ab",
+          "boundsPt": [
+            46.0842,
+            80.788368,
+            60.778509,
+            98.151336
+          ]
+        }
+      ],
+      "inkBoundsPt": [
+        20.8672,
+        85.156164,
+        59.8672,
+        95.656164
+      ],
+      "coverageBoundsPt": [
+        19.3672,
+        84.406164,
+        60.6172,
+        96.406164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "rotation": 45,
+      "text": "预算 Ab",
+      "border": false,
+      "cellSizePt": [
+        79.699209,
+        179.789043
+      ],
+      "pdfWords": [
+        {
+          "text": "预",
+          "boundsPt": [
+            15.13764,
+            99.45701,
+            32.500608,
+            107.935928
+          ]
+        },
+        {
+          "text": "算",
+          "boundsPt": [
+            23.61364,
+            90.98101,
+            40.976608,
+            99.459928
+          ]
+        },
+        {
+          "text": "Ab",
+          "boundsPt": [
+            33.98864,
+            78.714957,
+            56.510608,
+            89.113928
+          ]
+        }
+      ],
+      "inkBoundsPt": [
+        22.3672,
+        75.406164,
+        56.1172,
+        106.906164
+      ],
+      "coverageBoundsPt": [
+        22.3672,
+        74.656164,
+        56.1172,
+        107.656164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "rotation": 89,
+      "text": "预算 Ab",
+      "border": false,
+      "cellSizePt": [
+        79.699209,
+        179.789043
+      ],
+      "pdfWords": [
+        {
+          "text": "预算",
+          "boundsPt": [
+            30.92664,
+            86.421754,
+            48.289608,
+            110.401928
+          ]
+        },
+        {
+          "text": "Ab",
+          "boundsPt": [
+            31.40864,
+            69.061618,
+            48.771608,
+            83.755928
+          ]
+        }
+      ],
+      "inkBoundsPt": [
+        35.1172,
+        69.406164,
+        45.6172,
+        108.406164
+      ],
+      "coverageBoundsPt": [
+        34.3672,
+        69.406164,
+        46.3672,
+        109.906164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "rotation": 90,
+      "text": "预算 Ab",
+      "border": false,
+      "cellSizePt": [
+        79.699209,
+        179.789043
+      ],
+      "pdfWords": [
+        {
+          "text": "预算",
+          "boundsPt": [
+            30.30364,
+            86.391928,
+            47.666608,
+            110.373928
+          ]
+        },
+        {
+          "text": "Ab",
+          "boundsPt": [
+            30.30364,
+            69.00349,
+            47.666608,
+            83.699928
+          ]
+        }
+      ],
+      "inkBoundsPt": [
+        34.3672,
+        69.406164,
+        44.8672,
+        108.406164
+      ],
+      "coverageBoundsPt": [
+        33.6172,
+        69.406164,
+        45.6172,
+        109.906164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "rotation": 91,
+      "text": "预算 Ab",
+      "border": false,
+      "cellSizePt": [
+        79.699209,
+        179.789043
+      ],
+      "pdfWords": [
+        {
+          "text": "预算",
+          "boundsPt": [
+            19.2392,
+            80.533368,
+            43.219374,
+            97.896336
+          ]
+        },
+        {
+          "text": "Ab",
+          "boundsPt": [
+            45.8852,
+            81.015368,
+            60.579509,
+            98.378336
+          ]
+        }
+      ],
+      "inkBoundsPt": [
+        20.1172,
+        84.406164,
+        59.8672,
+        94.906164
+      ],
+      "coverageBoundsPt": [
+        19.3672,
+        83.656164,
+        59.8672,
+        95.656164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "rotation": 135,
+      "text": "预算 Ab",
+      "border": false,
+      "cellSizePt": [
+        79.699209,
+        179.789043
+      ],
+      "pdfWords": [
+        {
+          "text": "算",
+          "boundsPt": [
+            26.756792,
+            87.128928,
+            44.11976,
+            95.607845
+          ]
+        },
+        {
+          "text": "预",
+          "boundsPt": [
+            18.280792,
+            78.653928,
+            35.64376,
+            87.132845
+          ]
+        },
+        {
+          "text": "Ab",
+          "boundsPt": [
+            37.102792,
+            97.503928,
+            59.62476,
+            107.902899
+          ]
+        }
+      ],
+      "inkBoundsPt": [
+        22.3672,
+        72.406164,
+        53.8672,
+        106.156164
+      ],
+      "coverageBoundsPt": [
+        21.6172,
+        72.406164,
+        54.6172,
+        106.156164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "rotation": 179,
+      "text": "预算 Ab",
+      "border": false,
+      "cellSizePt": [
+        79.699209,
+        179.789043
+      ],
+      "pdfWords": [
+        {
+          "text": "预算",
+          "boundsPt": [
+            31.036792,
+            69.015928,
+            48.39976,
+            92.996101
+          ]
+        },
+        {
+          "text": "Ab",
+          "boundsPt": [
+            31.489792,
+            95.689928,
+            48.85276,
+            110.384237
+          ]
+        }
+      ],
+      "inkBoundsPt": [
+        33.6172,
+        70.156164,
+        44.1172,
+        109.156164
+      ],
+      "coverageBoundsPt": [
+        32.8672,
+        68.656164,
+        44.8672,
+        109.156164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "rotation": 180,
+      "text": "预算 Ab",
+      "border": false,
+      "cellSizePt": [
+        79.699209,
+        179.789043
+      ],
+      "pdfWords": [
+        {
+          "text": "预算",
+          "boundsPt": [
+            30.384792,
+            68.930928,
+            47.74776,
+            92.912928
+          ]
+        },
+        {
+          "text": "Ab",
+          "boundsPt": [
+            30.384792,
+            95.604928,
+            47.74776,
+            110.300366
+          ]
+        }
+      ],
+      "inkBoundsPt": [
+        32.8672,
+        70.156164,
+        43.3672,
+        109.156164
+      ],
+      "coverageBoundsPt": [
+        32.1172,
+        68.656164,
+        44.1172,
+        109.156164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "rotation": 255,
+      "text": "预算 Ab",
+      "border": false,
+      "cellSizePt": [
+        79.699209,
+        179.789043
+      ],
+      "pdfWords": [
+        {
+          "text": "预",
+          "boundsPt": [
+            33.0162,
+            46.120368,
+            45.0072,
+            63.483336
+          ]
+        },
+        {
+          "text": "算",
+          "boundsPt": [
+            33.0162,
+            63.525368,
+            45.0072,
+            80.888336
+          ]
+        },
+        {
+          "text": "A",
+          "boundsPt": [
+            35.3692,
+            98.334368,
+            42.659728,
+            115.697336
+          ]
+        },
+        {
+          "text": "b",
+          "boundsPt": [
+            35.3122,
+            115.739368,
+            42.722638,
+            133.102336
+          ]
+        }
+      ],
+      "inkBoundsPt": [
+        33.6172,
+        50.656164,
+        44.1172,
+        129.406164
+      ],
+      "coverageBoundsPt": [
+        32.8672,
+        49.906164,
+        44.8672,
+        130.156164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "rotation": 255,
+      "text": "ABC",
+      "border": false,
+      "cellSizePt": [
+        79.699209,
+        179.789043
+      ],
+      "pdfWords": [
+        {
+          "text": "A",
+          "boundsPt": [
+            35.3692,
+            63.525368,
+            42.659728,
+            80.888336
+          ]
+        },
+        {
+          "text": "B",
+          "boundsPt": [
+            35.0852,
+            80.930368,
+            42.963287,
+            98.293336
+          ]
+        },
+        {
+          "text": "C",
+          "boundsPt": [
+            35.1982,
+            98.334368,
+            42.848458,
+            115.697336
+          ]
+        }
+      ],
+      "inkBoundsPt": [
+        35.8672,
+        68.656164,
+        41.8672,
+        112.156164
+      ],
+      "coverageBoundsPt": [
+        35.1172,
+        67.906164,
+        42.6172,
+        112.156164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "rotation": 255,
+      "text": "预算\nAb",
+      "border": false,
+      "cellSizePt": [
+        79.699209,
+        179.789043
+      ],
+      "pdfWords": [
+        {
+          "text": "预",
+          "boundsPt": [
+            33.0162,
+            46.120368,
+            45.0072,
+            63.483336
+          ]
+        },
+        {
+          "text": "算",
+          "boundsPt": [
+            33.0162,
+            63.525368,
+            45.0072,
+            80.888336
+          ]
+        },
+        {
+          "text": "A",
+          "boundsPt": [
+            35.3692,
+            98.334368,
+            42.659728,
+            115.697336
+          ]
+        },
+        {
+          "text": "b",
+          "boundsPt": [
+            35.3122,
+            115.739368,
+            42.722638,
+            133.102336
+          ]
+        }
+      ],
+      "inkBoundsPt": [
+        33.6172,
+        50.656164,
+        44.1172,
+        129.406164
+      ],
+      "coverageBoundsPt": [
+        32.8672,
+        49.906164,
+        44.8672,
+        130.156164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "rotation": 255,
+      "text": "禰󠄀Á😀",
+      "border": false,
+      "cellSizePt": [
+        79.699209,
+        179.789043
+      ],
+      "pdfWords": [
+        {
+          "text": "禰",
+          "boundsPt": [
+            33.0162,
+            28.716368,
+            45.0072,
+            46.079336
+          ]
+        },
+        {
+          "text": "�",
+          "boundsPt": [
+            39.0252,
+            48.90228,
+            51.315975,
+            62.847813
+          ]
+        },
+        {
+          "text": "�",
+          "boundsPt": [
+            32.8742,
+            66.30728,
+            45.164975,
+            80.252813
+          ]
+        },
+        {
+          "text": "A",
+          "boundsPt": [
+            35.3692,
+            80.930368,
+            42.659728,
+            98.293336
+          ]
+        },
+        {
+          "text": "́",
+          "boundsPt": [
+            39.0252,
+            98.334368,
+            39.0252,
+            115.697336
+          ]
+        },
+        {
+          "text": "�",
+          "boundsPt": [
+            31.5702,
+            118.52128,
+            43.860975,
+            132.466813
+          ]
+        },
+        {
+          "text": "�",
+          "boundsPt": [
+            32.8742,
+            135.92628,
+            45.164975,
+            149.871813
+          ]
+        }
+      ],
+      "inkBoundsPt": [
+        32.1172,
+        32.656164,
+        50.8672,
+        147.406164
+      ],
+      "coverageBoundsPt": [
+        31.3672,
+        31.906164,
+        50.8672,
+        147.406164
+      ]
+    }
+  ]
+}
