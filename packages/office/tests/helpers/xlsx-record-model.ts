@@ -5,9 +5,9 @@ import { WorkbookDrawings } from "../../src/xlsx/drawing.js";
 import { mapWorkbookComments } from "../../src/xlsx/comment-mapping.js";
 import { auditXlsxPartCoverage } from "../../src/xlsx/package.js";
 
-/** Test projection of the completed record adapters. Full native-part coverage,
- * appearance/format rendering and full read acceptance still gate
- * the public importer; this helper does not expose a partial SDK import API. */
+/** Test-only record projection exposes adapter details for focused assertions.
+ * Public importXlsx additionally owns host control, cumulative package budgets
+ * and final validation. Complete preview acceptance still gates stage delivery. */
 export function projectXlsxRecords(records: XlsxRecords) {
   const encoder = new TextEncoder(), decoder = new TextDecoder(), documentId = "native-records";
   const files = new Map([...createWorkbook({ documentId }), ...records.chunks.files]);

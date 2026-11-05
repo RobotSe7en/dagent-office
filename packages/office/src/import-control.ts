@@ -1,7 +1,7 @@
 import { DocumentError } from "@dagent-office/core";
 
 export interface OfficeImportProgress {
-  readonly phase: "zip" | "metadata" | "worksheet" | "validate";
+  readonly phase: "zip" | "metadata" | "worksheet" | "content" | "validate";
   readonly completed: number;
   readonly total: number;
   readonly sheetId?: string;
@@ -14,9 +14,13 @@ export interface OfficeImportControl {
 
 /** Cooperative import work; an unfinished package is never exposed to the host. */
 export class ImportControl {
-  constructor(readonly options: OfficeImportControl = {}) {
+  readonly options: OfficeImportControl;
+  constructor(options: OfficeImportControl = {}) {
     if (options.signal !== undefined && (options.signal === null || typeof options.signal !== "object" || typeof options.signal.aborted !== "boolean")
       || options.onProgress !== undefined && typeof options.onProgress !== "function") throw new DocumentError("InvalidOperation", "Invalid import control options.");
+    // Keep the live signal, but capture its identity and callback before the
+    // first yield. Mutating a host options object cannot redirect an import.
+    this.options = Object.freeze({ ...(options.signal ? { signal: options.signal } : {}), ...(options.onProgress ? { onProgress: options.onProgress } : {}) });
   }
   check(): void {
     if (this.options.signal?.aborted) throw new DocumentError("OperationCancelled", "Document import was cancelled.");

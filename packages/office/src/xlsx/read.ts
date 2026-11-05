@@ -66,6 +66,8 @@ export async function readXlsxRecords(bytes: Uint8Array, options: XlsxReadOption
   const files = await readDocumentZipAsync(bytes, { limits: limits.xml, maxZipBytes: limits.native.maxZipBytes }, control);
   await control.checkpoint({ phase: "metadata", completed: 0, total: 1 });
   const opc = openOpcFiles(files, { limits: { ...limits.xml, maxFileBytes: limits.native.maxMetadataBytes } }, budget, limits.native.maxRetainedNodes);
+  const main = opc.related("", "officeDocument");
+  if (main && opc.contentType(main) !== "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml") throw new DocumentError("UnsupportedFormat", "The input is not an ordinary XLSX workbook.");
   auditXlsxPackage(opc);
   const properties = readWorkbookProperties(opc);
   const native = readWorkbook(opc), styles = new XlsxStyles(opc, native.part, limits.native.maxCssCodeUnits), chunks = new WorkbookChunks(limits.source);
