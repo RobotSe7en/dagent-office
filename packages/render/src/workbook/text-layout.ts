@@ -131,6 +131,13 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
     const cells = prepared.map(({ input, textView, alignment, element, available, left, shape, naturalHeightPx }, index): WorkbookTextLayout => {
       const text = textView.element, { width, height } = dimensions[index]!;
       if (![width, height].every(value => Number.isFinite(value) && value >= 0)) throw new DocumentError("UnsupportedFeature", "This browser cannot measure worksheet text geometry.");
+      // This immutable display already has its measured line box. Leaving
+      // max-content/auto here would repeat intrinsic sizing when every virtual
+      // window is attached, especially in older layout engines.
+      // Keep the declared wrap width: serialized computed widths can round
+      // below a layout unit and change a borderline line break when reapplied.
+      if (text.style.width === "max-content") text.style.width = `${width}px`;
+      text.style.height = `${height}px`;
       const angle = alignment.rotationDegrees * Math.PI / 180, cosine = Math.cos(angle), sine = Math.sin(angle);
       const rotatedWidth = Math.abs(width * cosine) + Math.abs(height * sine), rotatedHeight = Math.abs(width * sine) + Math.abs(height * cosine);
       const minimumX = Math.min(0, width * cosine, -height * sine, width * cosine - height * sine), minimumY = Math.min(0, width * sine, height * cosine, width * sine + height * cosine);

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { build } from 'vite';
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type * as fixture from './fixtures/workbook-reading-budget.js';
 declare global { interface Window { workbookBudget: typeof fixture } }
@@ -27,7 +27,10 @@ test('pinned-resource native reading, actual selection and wheel feedback, DOM a
   try {
     await page.evaluate(({ worker, bytes }) => window.workbookBudget.openBudget(worker, bytes), { worker, bytes: [...bytes] });
     const profile = process.env.DAGENT_WORKBOOK_CPU_PROFILE && browserName === 'chromium' ? await page.context().newCDPSession(page) : undefined;
-    if (profile) { await profile.send('Profiler.enable'); await profile.send('Profiler.start'); }
+    if (profile) {
+      await profile.send('Profiler.enable'); await profile.send('Profiler.start');
+      await profile.send('Tracing.start', { categories: 'devtools.timeline,disabled-by-default-devtools.timeline.frame,blink.user_timing,input,latencyInfo', transferMode: 'ReturnAsStream' });
+    }
     for (let index = 0; index < 30; index++) {
       const point = await page.evaluate(index => window.workbookBudget.budgetPoint(index), index); await page.mouse.click(point.x, point.y);
       await page.evaluate(index => window.workbookBudget.budgetSample('selection', index), index);
@@ -36,7 +39,15 @@ test('pinned-resource native reading, actual selection and wheel feedback, DOM a
       const point = await page.evaluate(() => window.workbookBudget.budgetPoint(3)); await page.mouse.move(point.x, point.y); await page.mouse.wheel(0, index < 20 ? 80 : -80);
       await page.evaluate(index => window.workbookBudget.budgetSample('wheel', index), index);
     }
-    if (profile) { writeFileSync(info.outputPath('workbook-wheel.cpuprofile'), JSON.stringify((await profile.send('Profiler.stop')).profile)); await profile.detach(); }
+    if (profile) {
+      writeFileSync(info.outputPath('workbook-wheel.cpuprofile'), JSON.stringify((await profile.send('Profiler.stop')).profile));
+      const complete = new Promise<{ stream?: string }>(resolve => profile.once('Tracing.tracingComplete', resolve)); await profile.send('Tracing.end');
+      const { stream } = await complete; if (!stream) throw Error('The browser did not return its diagnostic trace.');
+      const path = info.outputPath('workbook-wheel-trace.json'); writeFileSync(path, ''); let size = 0;
+      try { for (;;) { const part = await profile.send('IO.read', { handle: stream, size: 1024 * 1024 }); const bytes = Buffer.from(part.data, part.base64Encoded ? 'base64' : 'utf8');
+        size += bytes.length; if (size > 32 * 1024 * 1024) throw Error('The diagnostic trace exceeded its output budget.'); appendFileSync(path, bytes); if (part.eof) break;
+      } } finally { await profile.send('IO.close', { handle: stream }); await profile.detach(); }
+    }
     const measured = await page.evaluate(() => window.workbookBudget.budgetState()) as { firstScreenMs: number; maxFragments: number; selections: number[]; wheels: number[]; errors: unknown[]; [key: string]: unknown };
     const counts = await page.evaluate(() => window.workbookBudget.budgetAudit());
     const cancellation = await page.evaluate(() => window.workbookBudget.budgetCancel());

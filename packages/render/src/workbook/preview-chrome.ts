@@ -43,13 +43,15 @@ export function createWorkbookPreviewChrome(container: HTMLElement, title: strin
   const validation = document.createElement("div"); validation.className = "status"; validation.setAttribute("role", "note"); validation.setAttribute("aria-live", "polite"); validation.setAttribute("aria-label", "数据验证"); validation.hidden = true;
   status.className = "status"; status.setAttribute("role", "status"); root.append(toolbar, board, tabs, validation, status); shadow.append(style, root); container.append(element);
   let horizontal: WorkbookScrollAxis | undefined, vertical: WorkbookScrollAxis | undefined, left = 0, top = 0, trackLeft = 0, trackTop = 0, busy = false;
+  let columnSignature: string | undefined, tabSignature: string | undefined;
   x.addEventListener("scroll", () => { if (x.scrollLeft === trackLeft) return; trackLeft = x.scrollLeft; if (!busy && horizontal) actions.scroll(horizontal.fromTrack(trackLeft), top); }, { signal: controls.signal });
   y.addEventListener("scroll", () => { if (y.scrollTop === trackTop) return; trackTop = y.scrollTop; if (!busy && vertical) actions.scroll(left, vertical.fromTrack(trackTop)); }, { signal: controls.signal });
   tabs.addEventListener("click", event => { const button = (event.target as Element).closest<HTMLButtonElement>("button[data-sheet-id]"); if (!busy && button && tabs.contains(button)) actions.sheet(button.dataset.sheetId!); }, { signal: controls.signal });
   return Object.freeze({ element, canvas,
     prepare(window: WorkbookRenderedWindow, snapshot: WorkbookSnapshot): () => void {
       const layout = window.frame.layout, sheet = snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === window.frame.sheetId)!;
-      const rowNodes = document.createDocumentFragment(), columnNodes = document.createDocumentFragment(), tabNodes = document.createDocumentFragment();
+      const rowNodes = document.createDocumentFragment();
+      const columnPlans: [number, number, number, number, number][] = [];
       const seenRows = new Set<string>(), seenColumns = new Set<string>();
       const header = (parent: DocumentFragment, index: number, start: number, size: number, clipStart: number, clipSize: number, column: boolean): void => {
         const node = document.createElement("div"), inner = document.createElement("div"); node.className = "header"; node.setAttribute("role", column ? "columnheader" : "rowheader");
@@ -66,15 +68,25 @@ export function createWorkbookPreviewChrome(container: HTMLElement, title: strin
           const position = cell.startPt - source + start, clipped = Math.max(start, position), size = Math.min(end, position + cell.sizePt) - clipped;
           const key = `${cell.index}:${clipped}:${size}`, seen = column ? seenColumns : seenRows; if (seen.has(key)) continue;
           if (seenRows.size + seenColumns.size >= 10_000) throw new DocumentError("ResourceLimitExceeded", "Workbook headers exceed their visible-label budget.");
-          seen.add(key); header(column ? columnNodes : rowNodes, cell.index, position, cell.sizePt, clipped, size, column);
+          seen.add(key);
+          if (column) columnPlans.push([cell.index, position, cell.sizePt, clipped, size]);
+          else header(rowNodes, cell.index, position, cell.sizePt, clipped, size, false);
         }
       }
       const shown = snapshot.metadata.workbook.sheets.filter(item => item.visibility === "visible" || item.sheetId === sheet.sheetId);
       if (shown.length > 1000) throw new DocumentError("ResourceLimitExceeded", "Workbook navigation exceeds its worksheet-tab budget.");
-      for (const item of shown) {
-        const button = document.createElement("button"); button.type = "button"; button.dataset.sheetId = item.sheetId; button.textContent = item.name + (item.visibility !== "visible" ? "（隐藏）" : "");
-        button.setAttribute("role", "tab"); button.setAttribute("aria-selected", String(item.sheetId === sheet.sheetId)); tabNodes.append(button);
-      }
+      const nextColumns = JSON.stringify([layout.widthPt, sheet.rightToLeft, columnPlans]);
+      const nextTabs = JSON.stringify([sheet.sheetId, shown.map(item => [item.sheetId, item.name, item.visibility])]);
+      const makeColumns = (): DocumentFragment => { const fragment = document.createDocumentFragment(); for (const plan of columnPlans) header(fragment, ...plan, true); return fragment; };
+      const makeTabs = (): DocumentFragment => {
+        const fragment = document.createDocumentFragment();
+        for (const item of shown) {
+          const button = document.createElement("button"); button.type = "button"; button.dataset.sheetId = item.sheetId; button.textContent = item.name + (item.visibility !== "visible" ? "（隐藏）" : "");
+          button.setAttribute("role", "tab"); button.setAttribute("aria-selected", String(item.sheetId === sheet.sheetId)); fragment.append(button);
+        }
+        return fragment;
+      };
+      const columnNodes = columnSignature === nextColumns ? undefined : makeColumns(), tabNodes = tabSignature === nextTabs ? undefined : makeTabs();
       const nextX = new WorkbookScrollAxis(layout.maxScrollLeftPt + layout.widthPt, layout.widthPt), nextY = new WorkbookScrollAxis(layout.maxScrollTopPt + layout.heightPt, layout.heightPt);
       return () => {
         // The board excludes the root's two one-pixel borders (1.5 pt).
@@ -82,21 +94,27 @@ export function createWorkbookPreviewChrome(container: HTMLElement, title: strin
         board.style.width = layout.widthPt + 48 + "pt"; board.style.height = layout.heightPt + 30 + "pt";
         canvas.style.width = columns.style.width = x.style.width = layout.widthPt + "pt"; canvas.style.height = rows.style.height = y.style.height = layout.heightPt + "pt";
         x.style.top = layout.heightPt + 18 + "pt"; y.style.left = layout.widthPt + 36 + "pt";
-        rows.replaceChildren(rowNodes); columns.replaceChildren(columnNodes); tabs.replaceChildren(tabNodes);
+        rows.replaceChildren(rowNodes);
+        // Vertical scrolling does not replace identical column labels or tabs.
+        // Compare again at commit so prepared candidates may be discarded or
+        // committed after another candidate without retaining stale chrome.
+        if (columnSignature !== nextColumns) { columns.replaceChildren(columnNodes ?? makeColumns()); columnSignature = nextColumns; }
+        if (tabSignature !== nextTabs) { tabs.replaceChildren(tabNodes ?? makeTabs()); tabSignature = nextTabs; }
         horizontal = nextX; vertical = nextY; left = layout.scrollLeftPt; top = layout.scrollTopPt;
         xTrack.style.width = nextX.trackSizePx + "px"; yTrack.style.height = nextY.trackSizePx + "px";
         x.scrollLeft = nextX.toTrack(left); y.scrollTop = nextY.toTrack(top); trackLeft = x.scrollLeft; trackTop = y.scrollTop;
         for (const button of tabs.querySelectorAll("button")) button.disabled = busy;
       };
     },
-    cell(nextAddress: string, nextValue: string) { address.value = nextAddress; value.value = nextValue; },
-    validation(message: string) { validation.textContent = message; validation.hidden = !message; },
-    status(message: string, error = false) { status.textContent = message; status.style.color = error ? "#a12d22" : "#596273"; },
+    cell(nextAddress: string, nextValue: string) { if (address.value !== nextAddress) address.value = nextAddress; if (value.value !== nextValue) value.value = nextValue; },
+    validation(message: string) { if (validation.textContent !== message) validation.textContent = message; validation.hidden = !message; },
+    status(message: string, error = false) { if (status.textContent !== message) status.textContent = message; status.style.color = error ? "#a12d22" : "#596273"; },
     busy(value: boolean) { busy = value; element.setAttribute("aria-busy", String(value)); comments.disabled = value; for (const button of tabs.querySelectorAll("button")) button.disabled = value; },
     dispose() {
       controls.abort(); element.remove(); element.removeAttribute("aria-label");
       address.value = value.value = ""; status.textContent = validation.textContent = "";
       rows.replaceChildren(); columns.replaceChildren(); tabs.replaceChildren(); canvas.replaceChildren(); root.replaceChildren(); shadow.replaceChildren();
+      columnSignature = tabSignature = undefined;
     },
   });
 }
