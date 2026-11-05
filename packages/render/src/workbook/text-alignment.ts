@@ -11,6 +11,11 @@ export interface WorkbookTextAlignment {
   readonly rotationDegrees: number;
   readonly stacked: boolean;
 }
+export function workbookTextGutters(alignment: WorkbookTextAlignment, normalSpaceWidthPx: number): { readonly left: number; readonly right: number } {
+  const indent = alignment.indentSpaces * normalSpaceWidthPx;
+  if (!Number.isFinite(normalSpaceWidthPx) || normalSpaceWidthPx < 0 || !Number.isFinite(indent)) throw new DocumentError("InvalidOperation", "Worksheet indentation requires finite nonnegative font metrics.");
+  return { left: 1.5 + (alignment.horizontal === "left" ? indent : 0), right: 1.5 + (alignment.horizontal === "right" ? indent : 0) };
+}
 const invalid = (): never => { throw new DocumentError("InvalidDocument", "Worksheet text alignment has an invalid value."); };
 function choice<T extends string>(style: CSSStyleDeclaration, name: string, values: readonly T[], fallback: T): T {
   const value = style.getPropertyValue(`--office-cell-${name}`).trim();

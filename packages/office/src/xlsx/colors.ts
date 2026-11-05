@@ -1,18 +1,10 @@
+import { DEFAULT_WORKBOOK_INDEXED_COLORS } from "@dagent-office/core";
 import { check, elements, fail, S, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import type { Css } from "../ooxml/styles.js";
 import { attributes, boolean, integer, number, one, value } from "./values.js";
 
 export const themeSlots: readonly string[] = ["lt1", "dk1", "lt2", "dk2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink"];
-// ISO/IEC 29500 indexedColors default palette; 0–7 repeat 8–15.
-const defaultPalette = ("000000 FFFFFF FF0000 00FF00 0000FF FFFF00 FF00FF 00FFFF "
-  + "000000 FFFFFF FF0000 00FF00 0000FF FFFF00 FF00FF 00FFFF "
-  + "800000 008000 000080 808000 800080 008080 C0C0C0 808080 "
-  + "9999FF 993366 FFFFCC CCFFFF 660066 FF8080 0066CC CCCCFF "
-  + "000080 FF00FF FFFF00 00FFFF 800080 800000 008080 0000FF "
-  + "00CCFF CCFFFF CCFFCC FFFF99 99CCFF FF99CC CC99FF FFCC99 "
-  + "3366FF 33CCCC 99CC00 FFCC00 FF9900 FF6600 666699 969696 "
-  + "003366 339966 003300 333300 993300 993366 333399 333333").split(" ");
 export interface SpreadsheetColor { readonly css: string; readonly tint: number; readonly nativeAlpha?: number }
 function argb(source: string | undefined, node: XmlNode): { css: string; nativeAlpha: number } {
   if (!source || !/^[0-9a-f]{8}$/i.test(source)) fail(node, "A SpreadsheetML ARGB color is invalid.");
@@ -35,7 +27,7 @@ export class SpreadsheetColors {
       });
       if (!this.indexed.length || this.indexed.length > 64) fail(indexed, "An indexed color palette has an invalid size.");
     } else {
-      this.indexed = defaultPalette.map(rgb => "#" + rgb.toLowerCase());
+      this.indexed = DEFAULT_WORKBOOK_INDEXED_COLORS;
       this.indexed.forEach((color, index) => { this.css[`--office-indexed-${index}`] = color; this.css[`--office-indexed-${index}-native-alpha`] = "0"; });
     }
     const recent = one(colors, "mruColors");

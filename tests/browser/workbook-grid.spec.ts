@@ -20,8 +20,10 @@ import appearanceReference from "../../docs/evidence/xlsx-cell-appearance.json" 
 import borderSpec from "../../docs/evidence/xlsx-border-spec.json" with { type: "json" };
 import type { diagonalMeasurement } from "./fixtures/workbook-diagonals.js";
 import rotationReference from "../../docs/evidence/xlsx-rotation-semantics.json" with { type: "json" };
+import type { numberTextMeasurement, NumberTextCase } from "./fixtures/workbook-number-text.js";
 
 interface GridHost {
+  numberTextMeasurement(cases: readonly NumberTextCase[], locale?: string): ReturnType<typeof numberTextMeasurement>;
   diagonalMeasurement(css: string, classes: readonly string[]): ReturnType<typeof diagonalMeasurement>;
   measureWorkbookFills(css: string, classes: readonly string[]): ReturnType<typeof measureWorkbookFills>;
   assetMeasurement(base64: string, mimeType: string): ReturnType<typeof assetMeasurement>;
@@ -87,6 +89,67 @@ test('General fitting and numeric fill agree with independently laid out fixed-f
   expect(result.scientific).toMatchObject({ kind: 'text', text: '1.23457E+11' });
   expect(result.overflow).toBe(false); expect(result.fill?.text).toMatch(/^f+$/);
   expect(result.actual).toBeLessThanOrEqual(140.25); expect(Math.abs(result.actual - result.predicted)).toBeLessThan(.25);
+});
+
+test('virtual grid renders formatted scalar values instead of imported display text in both directions', async ({ page }) => {
+  for (const rtl of [false, true]) {
+    const result = await page.evaluate(async rtl => {
+      await window.workbookGridHost.render({ widthPt: 320, heightPt: 100, scrollLeftPt: 0, scrollTopPt: 4970 }, rtl);
+      return window.workbookGridHost.inspect();
+    }, rtl);
+    await expect(page.locator('[data-office-view="workbook-cell"][data-row="500"][data-column="8"]')).toHaveText('12,345.68');
+    expect(result.sourceUnchanged).toBe(true); expect(result.cellCount).toBeLessThanOrEqual(5000);
+  }
+});
+
+test('numeric cell layouts format current values, fit real fonts and retain cell-based projection', async ({ page }) => {
+  const cases: NumberTextCase[] = [
+    { value: 1234.5, format: { code: '#,##0.00' }, widthPt: 90 },
+    { value: -1.005, format: { code: '0.00;[Red](0.00)' }, widthPt: 80 },
+    { value: 60, format: { builtinId: 14 }, widthPt: 100 },
+    { value: 12.5, format: { code: '[$-407]0.00' }, widthPt: 80 },
+    { value: .125, format: { code: '0.0%' }, widthPt: 80 },
+    { value: 25.76, widthPt: 16 },
+    { value: 12345.678, format: { code: '#,##0.00' }, widthPt: 20 },
+    { value: -1, format: { builtinId: 14 }, widthPt: 80 },
+    { value: 5, format: { code: '[>10]0;[<0]0' }, widthPt: 80 },
+    { value: 12.5, format: { code: '"¥"* 0.00_)' }, widthPt: 100 },
+    { value: 1.2345, widthPt: 15, styles: { '--office-cell-shrink-to-fit': 'true' } },
+    { value: 12.5, widthPt: 75, heightPt: 75, styles: { '--office-cell-text-rotation': '45' } },
+    { value: 12345, widthPt: 30, heightPt: 120, styles: { '--office-cell-text-rotation': '255' } },
+    { value: 1, widthPt: 75, format: { code: '[Green]0.00' } },
+    { value: 1, widthPt: 75, format: { code: '[Color3]0.00' }, styles: { '--office-indexed-10': '#123456' } },
+    { value: 12.5, widthPt: 160, format: { code: '"预算 "0.0' } },
+    { value: 1, widthPt: 75, format: { code: ';;' } },
+  ];
+  const report = await page.evaluate(cases => window.workbookGridHost.numberTextMeasurement(cases), cases), items = report.measurements;
+  expect(items.slice(0, 6).map(item => item.text)).toEqual(['1,234.50', '(1.01)', '1900/2/29', '12,50', '12.5%', '26']);
+  expect(items[1]!.color).toBe('rgb(255, 0, 0)'); expect(items[3]!.locale).toBe('de-DE');
+  for (const index of [6, 7, 8]) expect(items[index]!.text).toMatch(/^#+$/);
+  expect(items.slice(6, 9).map(item => item.overflow)).toEqual(['width', 'invalidDate', 'unmatchedCondition']);
+  expect(items[9]!.text).toMatch(/^¥ +12\.50$/); expect(items[9]!.spaces).toHaveLength(1);
+  expect(Math.abs(items[9]!.spaces[0]!.actualWidth - items[9]!.spaces[0]!.sourceWidth)).toBeLessThan(.1);
+  expect(items[10]!.text).toBe('1.2345'); expect(items[10]!.scale).toBeLessThan(1);
+  expect(items[11]!.transform).toContain('rotate(-45deg)'); expect(items[12]!.text).toBe('12345'); expect(items[12]!.breaks).toBe(4);
+  expect(items[13]!.color).toBe('rgb(0, 255, 0)'); expect(items[14]!.color).toBe('rgb(18, 52, 86)');
+  expect(items[15]!.text).toBe('预算 12.5'); expect(items[15]!.fonts).toContainEqual(expect.objectContaining({ role: 'east-asia', family: expect.stringMatching(/^"?Noto Sans CJK SC"?$/) }));
+  expect(items[16]!.text).toBe('');
+  for (const [index, item] of items.entries()) {
+    expect(item.projections).toBe(0);
+    if (![11, 12].includes(index)) { expect(item.widthPt).toBeLessThanOrEqual(cases[index]!.widthPt - 2.25 + .1); expect(Math.abs(item.rightGapPt - 1.125)).toBeLessThan(.1); }
+  }
+  expect(report.unchanged).toBe(true); expect(report.atomic).toBe(true); expect(report.retained).toBe(0);
+  expect(report.failures).toEqual(['ResourceLimitExceeded', 'ResourceLimitExceeded', 'UnsupportedFeature', 'InvalidOperation', 'InvalidOperation']);
+});
+
+test('system date and time patterns share explicit locale semantics across runtime versions', async ({ page }) => {
+  const report = await page.evaluate(() => window.workbookGridHost.numberTextMeasurement([
+    { value: 45351.5, format: { code: '[$-F800]yyyy-mm-dd' }, widthPt: 240 },
+    { value: .5, format: { code: '[$-F400]h:mm' }, widthPt: 100 },
+    { value: .5, format: { code: 'h:mm"\u202f"AM/PM' }, widthPt: 100 },
+  ], 'en-US'));
+  expect(report.measurements.map(item => item.text)).toEqual(['Thursday, February 29, 2024', '12:00:00 PM', '12:00\u202fPM']);
+  expect(report.unchanged).toBe(true); expect(report.retained).toBe(0);
 });
 
 test('column font metrics use their declared Normal font and keep legacy defaults isolated', async ({ page }) => {

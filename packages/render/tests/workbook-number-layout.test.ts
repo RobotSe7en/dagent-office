@@ -19,12 +19,17 @@ describe('measured workbook numeric display parts', () => {
     expect(result.width).toBe(10); expect(result.parts[0]).toEqual({ kind: 'text', text: '', width: 0 });
     expect(measureNumberDisplay([{ kind: 'fill', character: ' ' }, { kind: 'text', text: '123' }], 2, text => text.length).overflow).toBe(true);
   });
+  it('keeps temporary shaping strings close to the visible fill width', () => {
+    let longest = 0;
+    const result = measureNumberDisplay([{ kind: 'fill', character: '.' }], 17, text => { longest = Math.max(longest, text.length); return text.length; });
+    expect(result.width).toBe(17); expect(longest).toBeLessThanOrEqual(34);
+  });
   it('bounds expanded fill before publishing, including supplementary Unicode characters', () => {
     expect(() => measureNumberDisplay([{ kind: 'fill', character: 'x' }], 32768, text => text.length)).toThrowError(expect.objectContaining({ code: 'ResourceLimitExceeded' }));
     const exact = measureNumberDisplay([{ kind: 'text', text: '1' }, { kind: 'fill', character: '😀' }], 16384, text => [...text].length);
     expect(exact.width).toBe(16384); expect(exact.parts[1]?.kind === 'text' && exact.parts[1].text.length).toBe(32766);
     expect(() => measureNumberDisplay([{ kind: 'text', text: '1' }, { kind: 'fill', character: '😀' }], 16385, text => [...text].length)).toThrowError(expect.objectContaining({ code: 'ResourceLimitExceeded' }));
-    expect(() => measureNumberDisplay([{ kind: 'fill', character: ' ' }, { kind: 'fill', character: '.' }], 10, text => text.length)).toThrowError(expect.objectContaining({ code: 'UnsupportedFeature' }));
+    expect(measureNumberDisplay([{ kind: 'fill', character: ' ' }, { kind: 'fill', character: '.' }], 10, text => text.length).parts).toEqual([{ kind: 'text', text: '..........', width: 10 }]);
     expect(() => measureNumberDisplay([{ kind: 'text', text: '1' }], 10, () => Infinity)).toThrow();
   });
 });

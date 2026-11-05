@@ -1,4 +1,4 @@
-import { createWorkbook, openDocument } from "@dagent-office/core";
+import { createWorkbook, createWorkbookNumberFormatter, openDocument } from "@dagent-office/core";
 import type { WorkbookDocumentMetadata, WorkbookManifest } from "@dagent-office/core";
 import { AxisDimensions } from "../../../packages/render/src/workbook/dimensions.js";
 import { WorkbookWindowLoader } from "../../../packages/render/src/workbook/window-loader.js";
@@ -31,6 +31,10 @@ import { measureWorkbookFills } from "./workbook-fill.js";
 import { diagonalMeasurement } from "./workbook-diagonals.js";
 import { workbookCellDiagonals } from "../../../packages/render/src/workbook/cell-borders.js";
 import { projectWorkbookDiagonals } from "../../../packages/render/src/workbook/diagonal-projection.js";
+import { numberTextMeasurement } from "./workbook-number-text.js";
+import type { NumberTextCase } from "./workbook-number-text.js";
+import { layoutWorkbookNumbers } from "../../../packages/render/src/workbook/number-text-layout.js";
+import type { WorkbookNumberLayoutInput } from "../../../packages/render/src/workbook/number-text-layout.js";
 
 const encode = (text: string) => new TextEncoder().encode(text);
 async function main() {
@@ -42,6 +46,8 @@ async function main() {
   metadata.workbook.themeCssClass = 'grid-theme';
   files.set('styles.css', encode(new TextDecoder().decode(files.get('styles.css')!) + '.normal-metric{font-family:"Liberation Serif";font-size:20pt;font-weight:normal}.grid-theme{--office-theme-accent1:#4472c4}.cell-highlight{font-family:"Liberation Serif";font-size:13pt;font-style:italic}.rich-style{font-weight:bold;color:#993355}table[data-row="9984"] tr[data-row="9999"] td[data-column="9"]{background-color:var(--office-theme-accent1)}'));
   sheet.frozen = { rows: 2, columns: 1 }; sheet.merges = [{ from: { row: 0, column: 0 }, to: { row: 6, column: 6 } }];
+  sheet.merges.push({ from: { row: 500, column: 8 }, to: { row: 500, column: 13 } });
+  metadata.workbook.numberFormats.push({ formatId: 'financial', code: '#,##0.00' });
   files.set('styles.css', encode(new TextDecoder().decode(files.get('styles.css')!) + '.cell-default{--office-cell-border-left-kind:thin;--office-cell-border-right-kind:thin;--office-cell-border-top-kind:thin;--office-cell-border-bottom-kind:thin;--office-cell-border-left-color:#777;--office-cell-border-right-color:#777;--office-cell-border-top-color:#777;--office-cell-border-bottom-color:#777}'));
   for (const [row, column, text] of [[0, 0, '合并😀禰󠄀'], [9999, 9, '一万行'], [1_048_575, 16_383, '末格']] as const) {
     const blockRow = Math.floor(row / 256) * 256, blockColumn = Math.floor(column / 32) * 32, path = `sheets/sheet-1/${blockRow}-${blockColumn}.html`;
@@ -50,13 +56,19 @@ async function main() {
     manifest.chunks.push({ sheetId: 'sheet-1', row: blockRow, column: blockColumn, path, sha256: [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('') });
     files.set(path, bytes);
   }
+  const numericBytes = encode('<!doctype html><html><head></head><body><table data-sheet-id="sheet-1" data-row="256" data-column="0"><tbody><tr data-row="500"><td data-column="8" data-value-type="number" data-value="12345.678" data-format-id="financial">STALE CACHE TEXT</td></tr></tbody></table></body></html>');
+  const numericDigest = await crypto.subtle.digest('SHA-256', numericBytes), numericPath = 'sheets/sheet-1/256-0.html';
+  manifest.chunks.push({ sheetId: 'sheet-1', row: 256, column: 0, path: numericPath, sha256: [...new Uint8Array(numericDigest)].map(byte => byte.toString(16).padStart(2, '0')).join('') }); files.set(numericPath, numericBytes);
   files.set('manifest.json', encode(JSON.stringify(manifest))); files.set(manifest.metadata, encode(JSON.stringify(metadata)));
   const model = openDocument(files, { kind: 'workbook' }), before = model.serialize(), loader = new WorkbookWindowLoader(modelWindowSource(model));
+  const formatter = createWorkbookNumberFormatter({ dateSystem: metadata.workbook.dateSystem, ...(metadata.locale === undefined ? {} : { documentLocale: metadata.locale }) });
+  const formats = new Map(metadata.workbook.numberFormats.map(format => [format.formatId, format]));
   const dimensions = { rows: new AxisDimensions(1_048_576, 10, []), columns: new AxisDimensions(16_384, 20, []) }, merges = new WorkbookMergeIndex(sheet.merges);
   const container = document.createElement('div'); container.id = 'workbook-grid-probe'; container.style.cssText = 'position:absolute;left:0;top:0;background:white;color:black'; document.body.replaceChildren(container);
   const style = document.createElement('style'); style.textContent = model.snapshot().styles.map(style => style.css).join('\n'); document.head.append(style);
   let rightToLeft = false;
   const host = {
+    numberTextMeasurement(cases: readonly NumberTextCase[], locale?: string) { return numberTextMeasurement(container, cases, locale); },
     assetMeasurement(base64: string, mimeType: string) { return assetMeasurement(container, base64, mimeType); },
     borderSourceMeasurement() { return borderSourceMeasurement(container); },
     textLayoutMeasurement(cases: readonly TextLayoutCase[]) { return textLayoutMeasurement(container, cases); },
@@ -69,15 +81,22 @@ async function main() {
         try {
           await document.fonts.ready;
           let remainingNodes = 50_000;
-          const textInputs: WorkbookTextLayoutInput[] = [], texts = new Map();
+          const textInputs: WorkbookTextLayoutInput[] = [], texts = new Map(), numberInputs: WorkbookNumberLayoutInput[] = [], numbers = new Map();
           for (const projection of loader.frame!.projections) {
             const cell = loader.frame!.getCell(projection.row, projection.column);
+            if (cell?.value.type === 'number') {
+              const source = sources.get(projection.row, projection.column)!;
+              const format = source.format.numberFormatId ? formats.get(source.format.numberFormatId) : undefined;
+              numbers.set(projection, numberInputs.length); numberInputs.push({ source, value: cell.value.value,
+                ...(format ? { format } : {}), widthPt: projection.rect.width, heightPt: projection.rect.height });
+            }
             if (cell?.value.type !== 'text') continue;
             const source = sources.get(projection.row, projection.column)!, text = createWorkbookTextView(source, remainingNodes); remainingNodes -= text.nodes;
             texts.set(projection, textInputs.length); textInputs.push({ source, text, valueType: cell.value.type, widthPt: projection.rect.width, heightPt: projection.rect.height });
           }
           const normal = measureWorkbookColumnFont(container, model.snapshot().metadata.workbook, 'sheet-1');
           const laidOut = layoutWorkbookTexts(container, textInputs, normal.spaceWidthPx);
+          const numeric = layoutWorkbookNumbers(container, numberInputs, formatter, normal.spaceWidthPx);
           const borderPanes = projectWorkbookBorders(dimensions, loader.frame!.layout, merges, (row, column) => {
             const source = sources.get(row, column); return source && workbookCellBorders(document, getComputedStyle(source.element), rtl);
           }, rtl);
@@ -90,6 +109,7 @@ async function main() {
             if (fill.kind === 'solid') body.style.backgroundColor = fill.color;
             else body.prepend(createWorkbookFillView(document, fill, projection.rect.width, projection.rect.height, 'fill-' + ++fillId).element);
             if (cell?.value.type === 'text') body.append(laidOut.cells[texts.get(projection)]!.element);
+            if (cell?.value.type === 'number') body.append(numeric.cells[numbers.get(projection)]!.element);
           }, rtl, borders);
         } finally { sources.dispose(); }
       }
@@ -289,7 +309,7 @@ async function main() {
         return { values, explicit, wholeStringDirection, retainedText, failures, remaining: scope.childNodes.length, ownerDirection: getComputedStyle(scope).direction };
       } finally { direction.dispose(); scope.remove(); }
     },
-    dispose() { loader.dispose(); container.remove(); style.remove(); },
+    dispose() { loader.dispose(); formatter.dispose(); container.remove(); style.remove(); },
   };
   Object.assign(window, { workbookGridHost: host });
 }

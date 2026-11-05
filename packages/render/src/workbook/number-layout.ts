@@ -15,8 +15,14 @@ export function measureNumberDisplay(source: readonly WorkbookNumberDisplayPart[
     if (!Number.isFinite(width) || width < 0) throw new DocumentError("InvalidOperation", "Number display measurements must be finite and nonnegative.");
     return width;
   };
-  const normalized: WorkbookNumberDisplayPart[] = []; let units = 0;
-  for (const part of source) {
+  const normalized: WorkbookNumberDisplayPart[] = []; let units = 0, lastFill = -1;
+  for (let index = 0; index < source.length; index++) if (source[index]!.kind === "fill") lastFill = index;
+  for (const [index, part] of source.entries()) {
+    if (part.kind === "fill") {
+      if ([...part.character].length !== 1) throw new DocumentError("InvalidOperation", "A numeric fill field needs one Unicode character.");
+      // ECMA-376 §18.8.31 uses only the final repetition marker in a section.
+      if (index !== lastFill) continue;
+    }
     units += part.kind === "text" ? part.text.length : part.kind === "space" ? part.character.length : 0;
     if (units > 32767) throw new DocumentError("ResourceLimitExceeded", "Number display exceeds its text budget.");
     const previous = normalized.at(-1);
@@ -26,8 +32,6 @@ export function measureNumberDisplay(source: readonly WorkbookNumberDisplayPart[
   const parts: MeasuredNumberPart[] = []; let fixedWidth = 0, fill: { index: number; character: string } | undefined;
   for (const part of normalized) {
     if (part.kind === "fill") {
-      if (fill) throw new DocumentError("UnsupportedFeature", "Multiple fill fields in one numeric display are not implemented.");
-      if ([...part.character].length !== 1) throw new DocumentError("InvalidOperation", "A numeric fill field needs one Unicode character.");
       fill = { index: parts.length, character: part.character };
       parts.push({ kind: "text", text: "", width: 0 }); continue;
     }
@@ -42,7 +46,13 @@ export function measureNumberDisplay(source: readonly WorkbookNumberDisplayPart[
     // At most one extra Unicode character is measured to distinguish an exact
     // budget fit from truncating a fill that would need more output characters.
     // Temporary shaping strings therefore remain bounded by 32769 code units.
-    let low = 0, high = maximum + 1;
+    // Find a nearby upper bound before binary search. A normal narrow cell
+    // must not shape thousands of temporary characters just because the
+    // global output budget permits that many.
+    let low = 0, high = 1;
+    while (high <= maximum && measured(fill.character.repeat(high)) <= remaining) {
+      low = high; high = Math.min(maximum + 1, high * 2);
+    }
     while (low < high) {
       const middle = Math.ceil((low + high) / 2), sample = fill.character.repeat(middle);
       if (measured(sample) <= remaining) low = middle; else high = middle - 1;

@@ -7,10 +7,11 @@ interface Candidate { readonly text: string; readonly notation: "decimal" | "sci
 /** General uses the native eleven-position display envelope (excluding the
  * negative sign). Candidate precision is bounded, independent of cell width.
  * Fonts/measurement belong to the caller; no source scalar is rounded in place. */
-export function formatGeneralNumber(value: number, decimal: string, availableWidth: number, measure: (text: string) => number): GeneralNumberDisplay {
-  if (!Number.isFinite(value) || !Number.isFinite(availableWidth) || availableWidth < 0 || !decimal || decimal.length > 8 || /[\u0000-\u001f]/.test(decimal)) invalid("Invalid General number-format scalar, width or decimal symbol.");
+export function formatGeneralNumber(value: number, decimal: string, availableWidth: number, measure: (text: string) => number, powerAdjustment = 0): GeneralNumberDisplay {
+  if (!Number.isFinite(value) || !Number.isFinite(availableWidth) || availableWidth < 0 || !decimal || decimal.length > 8 || /[\u0000-\u001f]/.test(decimal)
+    || !Number.isSafeInteger(powerAdjustment) || Math.abs(powerAdjustment) > 8192) invalid("Invalid General number-format scalar, width, decimal symbol or scale.");
   for (const character of decimal) { const point = character.codePointAt(0)!; if (point >= 0xd800 && point <= 0xdfff) invalid("A General decimal symbol must be well-formed Unicode."); }
-  const source = decimalComponents(value), leading = value === 0 ? 0 : source.digits.length + source.exponent - 1;
+  const original = decimalComponents(value), source = { ...original, exponent: original.exponent + powerAdjustment }, leading = value === 0 ? 0 : source.digits.length + source.exponent - 1;
   const significant = Math.max(1, source.digits.replace(/0+$/, "").length), sign = value < 0 ? "-" : "";
   const candidates: Candidate[] = [], seen = new Set<string>();
   const add = (integer: string, fraction: string, suffix: string, notation: Candidate["notation"], precision: number): void => {
@@ -23,14 +24,14 @@ export function formatGeneralNumber(value: number, decimal: string, availableWid
   if (leading < 11) {
     const integerPlaces = Math.max(1, leading + 1), maximum = Math.min(Math.max(0, -source.exponent), Math.max(0, 10 - integerPlaces));
     for (let places = maximum; places >= 0; places--) {
-      const rounded = decimalMagnitude(value, places);
+      const rounded = decimalMagnitude(value, places, powerAdjustment);
       if (value !== 0 && rounded.integer === "0" && !/[1-9]/.test(rounded.fraction)) continue;
       add(rounded.integer, rounded.fraction, "", "decimal", Math.max(1, leading + 1 + places));
     }
   }
   if (value !== 0) for (let precision = 15; precision >= 1; precision--) {
-    let exponent = leading, rounded = decimalMagnitude(value, precision - 1, -exponent);
-    if (rounded.integer.length > 1) { exponent++; rounded = decimalMagnitude(value, precision - 1, -exponent); }
+    let exponent = leading, rounded = decimalMagnitude(value, precision - 1, powerAdjustment - exponent);
+    if (rounded.integer.length > 1) { exponent++; rounded = decimalMagnitude(value, precision - 1, powerAdjustment - exponent); }
     const suffix = "E" + (exponent < 0 ? "-" : "+") + Math.abs(exponent).toString().padStart(2, "0");
     add(rounded.integer, rounded.fraction, suffix, "scientific", precision);
   }

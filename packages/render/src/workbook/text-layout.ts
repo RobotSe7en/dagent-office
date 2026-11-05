@@ -6,7 +6,7 @@ import { markViewNode } from "../view-nodes.js";
 import type { WorkbookSourceCell } from "./cell-source.js";
 import type { WorkbookTextView } from "./text-view.js";
 import { WorkbookTextDirection } from "./text-direction.js";
-import { workbookReadingOrder, workbookTextAlignment } from "./text-alignment.js";
+import { workbookReadingOrder, workbookTextAlignment, workbookTextGutters } from "./text-alignment.js";
 import { stackWorkbookText } from "./stacked-text.js";
 import { measuredFontLineHeight } from "../font-line-height.js";
 
@@ -64,8 +64,7 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
       element.style.cssText = `position:relative;overflow:hidden;direction:ltr;width:${input.widthPt}pt;height:${input.heightPt}pt`;
       // Gutter is part of cell content geometry, independent of border stroke
       // width. Borders are a separate shared-edge layer, not CSS box borders.
-      const indent = alignment.indentSpaces * normalSpaceWidthPx, left = 1.5 + (alignment.horizontal === "left" ? indent : 0), right = 1.5 + (alignment.horizontal === "right" ? indent : 0);
-      if (!Number.isFinite(indent)) throw new DocumentError("InvalidOperation", "Worksheet indentation exceeds its numeric range.");
+      const { left, right } = workbookTextGutters(alignment, normalSpaceWidthPx);
       const available = Math.max(0, input.widthPt / .75 - left - right), text = textView.element;
       Object.assign(text.style, { display: "block", position: "absolute", left: "0", top: "0", margin: "0", padding: "0", border: "0", boxSizing: "content-box", direction: textDirection,
         // Spreadsheet reference advances do not apply pair kerning. Explicit

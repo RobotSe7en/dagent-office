@@ -73,6 +73,7 @@ export function compileNumberFormat(code: string): readonly NumberFormatSection[
         if (currency[2]) {
           if (section.locale !== undefined) invalid("A number-format section has competing locale declarations.");
           section.locale = parseInt(currency[2], 16);
+          if ([0xf800, 0xf400].includes(section.locale & 0xffff) && (section.tokens.length || currency[1])) unsupported("A native system date/time marker must precede content and cannot contain a currency symbol.");
         }
         literal(currency[1]!);
       } else unsupported("This number-format calendar, digit system or bracket extension is not implemented.");

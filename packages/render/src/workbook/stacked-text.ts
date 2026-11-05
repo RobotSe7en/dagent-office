@@ -6,7 +6,18 @@ import type { WorkbookTextProjection, WorkbookTextView } from "./text-view.js";
  * Derived breaks add no source units; original text and UTF-16 offsets remain. */
 export function stackWorkbookText(text: WorkbookTextView, maxNodes: number): WorkbookTextView {
   if (typeof Intl.Segmenter !== "function") throw new DocumentError("UnsupportedFeature", "Stacked worksheet text requires Unicode grapheme segmentation.");
-  const content = text.projections.map(projection => projection.node.data).join(""), boundaries: number[] = [];
+  let source = text.projections;
+  const mapped = source.length > 0;
+  if (!mapped) {
+    const derived: WorkbookTextProjection[] = [], document = text.element.ownerDocument;
+    const walker = document.createTreeWalker(text.element, document.defaultView!.NodeFilter.SHOW_TEXT); let offset = 0;
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (derived.length >= maxNodes) throw new DocumentError("ResourceLimitExceeded", "Stacked numeric text exceeds its node budget.");
+      const next = offset + (node as Text).length; derived.push({ node: node as Text, from: offset, to: next }); offset = next;
+    }
+    source = derived;
+  }
+  const content = source.map(projection => projection.node.data).join(""), boundaries: number[] = [];
   let nodes = text.nodes;
   for (const item of new Intl.Segmenter("und", { granularity: "grapheme" }).segment(content)) {
     const end = item.index + item.segment.length;
@@ -18,7 +29,7 @@ export function stackWorkbookText(text: WorkbookTextView, maxNodes: number): Wor
   const projections: WorkbookTextProjection[] = [], document = text.element.ownerDocument;
   const account = (): void => { if (++nodes > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Stacked worksheet text exceeds its node budget."); };
   let index = 0;
-  for (const projection of text.projections) {
+  for (const projection of source) {
     let node = projection.node, from = projection.from;
     while (from < projection.to) {
       const boundary = boundaries[index], end = Math.min(boundary ?? projection.to, projection.to);
@@ -36,5 +47,5 @@ export function stackWorkbookText(text: WorkbookTextView, maxNodes: number): Wor
       from = end; if (next) node = next;
     }
   }
-  return Object.freeze({ element: text.element, projections: Object.freeze(projections), nodes });
+  return Object.freeze({ element: text.element, projections: Object.freeze(mapped ? projections : []), nodes });
 }

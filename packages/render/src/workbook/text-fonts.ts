@@ -12,6 +12,14 @@ export interface WorkbookTextFontRun {
   readonly role: OfficeFontRole; readonly font: WorkbookTextFont;
 }
 
+export function workbookComputedTextFont(computed: CSSStyleDeclaration, role: OfficeFontRole, view: Window & typeof globalThis): WorkbookTextFont {
+  const family = computed.getPropertyValue(`--office-font-${role}`).trim() || computed.getPropertyValue(`--office-minor-${role}`).trim() || computed.fontFamily;
+  if (!view.CSS.supports("font-family", family)) throw new DocumentError("InvalidDocument", "Workbook text has an invalid source font family.");
+  const sizePx = Number.parseFloat(computed.fontSize);
+  if (!Number.isFinite(sizePx) || sizePx < 0) throw new DocumentError("InvalidDocument", "Workbook text has an invalid computed font size.");
+  return Object.freeze({ family, sizePx, weight: computed.fontWeight, style: computed.fontStyle, variant: computed.fontVariant, letterSpacing: computed.letterSpacing, wordSpacing: computed.wordSpacing });
+}
+
 /** Read source CSS before adding any derived script wrappers. This keeps
  * source selectors and run inheritance intact while producing exact source
  * offsets for width measurement and later view projection. No font is loaded
@@ -34,11 +42,7 @@ export function workbookRichTextFonts(element: HTMLElement, maxRuns = 50_000): r
       if (runs.length >= maxRuns) throw new DocumentError("ResourceLimitExceeded", "Workbook text font runs exceed their budget.");
       let font = variants.get(segment.role);
       if (!font) {
-        const family = computed.getPropertyValue(`--office-font-${segment.role}`).trim() || computed.getPropertyValue(`--office-minor-${segment.role}`).trim() || computed.fontFamily;
-        if (!view.CSS.supports("font-family", family)) throw new DocumentError("InvalidDocument", "Workbook text has an invalid source font family.");
-        const sizePx = Number.parseFloat(computed.fontSize);
-        if (!Number.isFinite(sizePx) || sizePx < 0) throw new DocumentError("InvalidDocument", "Workbook text has an invalid computed font size.");
-        font = Object.freeze({ family, sizePx, weight: computed.fontWeight, style: computed.fontStyle, variant: computed.fontVariant, letterSpacing: computed.letterSpacing, wordSpacing: computed.wordSpacing });
+        font = workbookComputedTextFont(computed, segment.role, view);
         variants.set(segment.role, font);
       }
       runs.push(Object.freeze({ from: offset + segment.from, to: offset + segment.to, text: segment.text, role: segment.role, font }));
