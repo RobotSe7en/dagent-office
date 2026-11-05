@@ -104,6 +104,7 @@ jobs:
       - run: pnpm check:pptx-fixtures && pnpm check:pptx-reference
       - run: pnpm check:xlsx-fixtures && pnpm check:xlsx-reference
       - run: python3 scripts/check-xlsx-chart-formulas.py
+      - run: python3 scripts/check-xlsx-row-appearance.py
       - run: pnpm check:docx-export
       - run: node scripts/playwright.mjs install --with-deps chromium --only-shell
       - run: pnpm check:word-closure

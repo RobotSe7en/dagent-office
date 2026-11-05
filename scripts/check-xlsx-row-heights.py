@@ -16,6 +16,8 @@ flow = importlib.util.module_from_spec(spec); spec.loader.exec_module(flow)
 native = flow.native
 FIXTURE = ROOT / 'packages/office/tests/fixtures/xlsx-row-heights.xlsx'
 REPORT = ROOT / 'docs/evidence/xlsx-row-heights.json'
+FLOOR_FIXTURE = ROOT / 'packages/office/tests/fixtures/xlsx-row-font-floor.xlsx'
+FLOOR_REPORT = ROOT / 'docs/evidence/xlsx-row-font-floor.json'
 
 
 def cases():
@@ -39,10 +41,17 @@ def cases():
     ]]
 
 
-def generate(inputs):
+def floor_cases():
+    return [dict(group='auto-height', name=f'normal20-small{size}-{kind}-default{height}', rtl=False, value=value, size=size,
+                 horizontal='general', vertical='bottom', wrap=False, defaultHeight=height)
+            for height in [15, 30] for size in [5, 8, 11] for kind, value in [('value', 'Ab'), ('blank', None)]]
+
+
+def generate(inputs, normal_size=11):
     data = flow.generate(inputs); ns = '{' + native.fixture.S + '}'
     with ZipFile(BytesIO(data)) as source: parts = {name: source.read(name) for name in source.namelist()}
     styles = ET.fromstring(parts['xl/styles.xml']); xfs = styles.find(ns + 'cellXfs')
+    styles.find(ns + 'fonts')[0].find(ns + 'sz').set('val', str(normal_size))
     for index, case in enumerate(inputs, 1):
         path = 'xl/worksheets/sheet' + str(index) + '.xml'; root = ET.fromstring(parts[path]); fmt = root.find(ns + 'sheetFormatPr')
         fmt.set('defaultRowHeight', str(case.get('defaultHeight', 15)))
@@ -79,22 +88,27 @@ def main():
     os.environ.update({'LC_ALL': 'C.UTF-8', 'LANG': 'C.UTF-8', 'TZ': 'UTC'})
     environment = native.shared.environment(); assert environment['libreOffice'] == native.BUILD
     fonts = environment.pop('fonts'); environment['fontCount'] = len(fonts); environment['fontManifestSha256'] = sha256(json.dumps(fonts, sort_keys=True).encode()).hexdigest()
-    inputs = cases(); data = generate(inputs)
-    if args.record: FIXTURE.write_bytes(data)
-    else: assert FIXTURE.read_bytes() == data
-    with TemporaryDirectory(dir=ROOT / '.cache') as temporary:
-        work = Path(temporary); source = work / 'rows.xlsx'; source.write_bytes(data); output = work / 'producer'; output.mkdir()
-        native.shared.run(['libreoffice', '-env:UserInstallation=' + (work / 'profile').as_uri(), '--headless', '--convert-to', 'xlsx:Calc MS Excel 2007 XML', '--outdir', str(output), str(source)])
-        with ZipFile(output / 'rows.xlsx') as producer:
-            ns = '{' + native.fixture.S + '}'
-            for index, case in enumerate(inputs, 1):
-                root = ET.fromstring(producer.read('xl/worksheets/sheet' + str(index) + '.xml'))
-                case['producerFormat'] = root.find(ns + 'sheetFormatPr').attrib if root.find(ns + 'sheetFormatPr') is not None else None
-                case['producerRows'] = [node.attrib for node in root.findall(ns + 'sheetData/' + ns + 'row')]
-    report = {'scope': __doc__, 'archiveSha256': native.ARCHIVE_HASH, 'environment': environment, 'sourceSha256': sha256(data).hexdigest(), 'cases': inputs}
-    if args.record: REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n')
-    else: assert json.loads(REPORT.read_text()) == report
-    print('Verified', len(inputs), 'independent native row-height sources and Calc observations')
+    for inputs, normal_size, fixture, report_path in [(cases(), 11, FIXTURE, REPORT), (floor_cases(), 20, FLOOR_FIXTURE, FLOOR_REPORT)]:
+        data = generate(inputs, normal_size)
+        if args.record: fixture.write_bytes(data)
+        else: assert fixture.read_bytes() == data
+        with TemporaryDirectory(dir=ROOT / '.cache') as temporary:
+            work = Path(temporary); source = work / 'rows.xlsx'; source.write_bytes(data); output = work / 'producer'; output.mkdir()
+            native.shared.run(['libreoffice', '-env:UserInstallation=' + (work / 'profile').as_uri(), '--headless', '--convert-to', 'xlsx:Calc MS Excel 2007 XML', '--outdir', str(output), str(source)])
+            with ZipFile(output / 'rows.xlsx') as producer:
+                ns = '{' + native.fixture.S + '}'
+                for index, case in enumerate(inputs, 1):
+                    root = ET.fromstring(producer.read('xl/worksheets/sheet' + str(index) + '.xml'))
+                    case['producerFormat'] = root.find(ns + 'sheetFormatPr').attrib if root.find(ns + 'sheetFormatPr') is not None else None
+                    case['producerRows'] = [node.attrib for node in root.findall(ns + 'sheetData/' + ns + 'row')]
+                    if normal_size == 20:
+                        row = next(row for row in case['producerRows'] if row['r'] == '2')
+                        assert float(row['ht']) == case['defaultHeight'], (case, row)
+        report = {'scope': __doc__, 'archiveSha256': native.ARCHIVE_HASH, 'environment': environment, 'sourceSha256': sha256(data).hexdigest(), 'cases': inputs}
+        if normal_size == 20: report['normalFontPt'] = normal_size
+        if args.record: report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n')
+        else: assert json.loads(report_path.read_text()) == report
+        print('Verified', len(inputs), 'independent native row-height sources and Calc observations')
 
 
 if __name__ == '__main__': main()

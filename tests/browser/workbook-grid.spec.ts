@@ -935,6 +935,31 @@ test('automatic row indexing respects native fixed defaults, exceptions, hidden 
 });
 
 
+test('automatic row fonts retain explicit sheet defaults independently of a larger Normal font and smaller explicit cells', async ({ page }) => {
+  const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-row-font-floor.xlsx'), { documentId: 'native-row-font-floor' });
+  const report = await page.evaluate(entries => window.workbookGridHost.autoRowMeasurement(entries, Array.from({ length: 12 }, (_, index) => 'sheet-' + (index + 1))),
+    [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  expect(report.unchanged).toBe(true); expect(report.retained).toBe(0);
+  for (const [index, result] of report.results.entries()) {
+    expect(result.heights[1]).toBe(index < 6 ? 15 : 30);
+    expect(result.heights[0]).toBe(index < 6 ? report.results[0]!.heights[0] : 30);
+    expect(result.heights[0]).toBeGreaterThanOrEqual(21);
+  }
+});
+
+test('automatic rows discover implicit table and conditional fonts and validation-only current formula text', async ({ page }) => {
+  const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-row-appearance.xlsx'), { documentId: 'native-row-appearance' });
+  const report = await page.evaluate(entries => window.workbookGridHost.autoRowMeasurement(entries, Array.from({ length: 9 }, (_, index) => 'sheet-' + (index + 1))),
+    [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  expect(report.unchanged).toBe(true); expect(report.retained).toBe(0);
+  const heights = report.results.map(result => result.heights[1]!);
+  for (const index of [0, 2, 3, 4, 8]) { expect(heights[index]).toBeGreaterThan(21); expect(heights[index]).toBeLessThan(29); }
+  expect(heights[1]).toBe(15); expect(report.results[2]!.heights[2]).toBe(heights[2]);
+  expect(report.results[3]!.heights[3]).toBe(heights[3]); expect(heights[5]).toBeGreaterThan(32);
+  expect(heights[6]).toBeGreaterThan(30); expect(heights[7]).toBe(15);
+  expect(report.reads).toBeLessThan(50); expect(report.errors).toEqual(['ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'OperationCancelled']);
+});
+
 test('automatic row prototypes validate every source and release all nodes on malformed replies and in-flight cancellation', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-row-heights.xlsx'), { documentId: 'row-prototype-validation' });
   const report = await page.evaluate(entries => window.workbookGridHost.autoRowSourceSafety(entries), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));

@@ -12,7 +12,7 @@ import { checkedWorkbookRules } from "./rule-response.js";
 import type { WorkbookRuleSource } from "./rule-source.js";
 import { cellSourceUnits, checkWindowCancellation, checkWindowIdentity } from "./window-source.js";
 import type { WorkbookWindowSource } from "./window-source.js";
-import { implicitWorkbookRowSources } from "./implicit-row-sources.js";
+import { implicitWorkbookFontRegions, implicitWorkbookRowSources } from "./implicit-row-sources.js";
 import { WorkbookRowSourcePrototypes } from "./row-source-prototypes.js";
 import type { WorkbookSourceCell } from "./cell-source.js";
 import { workbookRowFontKey, workbookRowMetricKey } from "./row-metric-cache.js";
@@ -20,6 +20,7 @@ import type { WorkbookRowTypography } from "./row-metric-cache.js";
 
 export interface WorkbookAutoRowLimits {
   readonly maxCells: number;
+  /** Queried slots, implicit coordinates and per-row appearance-region checks. */
   readonly maxReadCells: number;
   readonly maxCodeUnits: number;
 }
@@ -63,7 +64,8 @@ export async function measureWorkbookAutoRows(surface: Pick<WorkbookSurface, "so
   const metricCache = new Map<string, number>(); let metricCacheUnits = 0;
   const fontCache = new Map<string, number>();
   const columnFonts = sheet.columnDimensions.some(run => run.cssClass && !run.hidden);
-  const implicitFonts = columnFonts || sheet.rowDimensions.some(run => run.cssClass);
+  const fontRegions = implicitWorkbookFontRegions(snapshot, sheet, simpleClasses);
+  const implicitFonts = columnFonts || sheet.rowDimensions.some(run => run.cssClass) || fontRegions.length > 0;
   const occupied = new Map<number, Set<number>>(); let lastUsedRow = -1;
   let visited = 0, units = 0, measuredCells = 0, usedFallbackLineMetrics = false, checkpoint = performance.now();
   const chunks = snapshot.manifest.chunks.filter(chunk => chunk.sheetId === sheetId);
@@ -93,7 +95,7 @@ export async function measureWorkbookAutoRows(surface: Pick<WorkbookSurface, "so
     const fontState = probes.watch(surface.source.ownerDocument.fonts);
     if (!fontState.ready || fontState.epoch !== fontEpoch) throw new DocumentError("InvalidOperation", "Worksheet fonts changed during automatic row measurement.");
     let current;
-    if (sheet.conditionalRules?.length) {
+    if (sheet.conditionalRules?.length || sheet.dataValidations?.length) {
       if (!rules) throw new DocumentError("InvalidOperation", "Automatic rule appearance requires an authorized current-value provider.");
       const request = Object.freeze({ ...identity, sheetId, ...rules.limits, coordinates: Object.freeze(coordinates) });
       current = checkedWorkbookRules(await rules.source.read(request, signal), request, snapshot); checkWindowCancellation(signal);
@@ -170,10 +172,10 @@ export async function measureWorkbookAutoRows(surface: Pick<WorkbookSurface, "so
     }
     let implicit: Readonly<WorkbookCoordinate>[] = [];
     const admit = (): void => {
-      if (++visited > limits.maxReadCells) throw new DocumentError("ResourceLimitExceeded", "Automatic row discovery exceeds its cumulative query and implicit-coordinate budget.");
+      if (++visited > limits.maxReadCells) throw new DocumentError("ResourceLimitExceeded", "Automatic row discovery exceeds its cumulative query and implicit-discovery budget.");
     };
     for await (const point of implicitWorkbookRowSources(sheet, dimensions.columns, occupied, lastUsedRow,
-      simpleClasses && !sheet.conditionalRules?.length && !sheet.tables?.length, row => automatic(sheet, row), (row, column) => merges.at(row, column)?.to.column, admit, signal)) {
+      simpleClasses && !sheet.conditionalRules?.length && !sheet.tables?.length, row => automatic(sheet, row), (row, column) => merges.at(row, column)?.to.column, admit, signal, fontRegions)) {
       implicit.push(point);
       if (implicit.length === 128) { await measure(implicit, new Map()); implicit = []; }
     }
