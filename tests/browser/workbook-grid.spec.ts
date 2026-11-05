@@ -192,6 +192,18 @@ test('system date and time patterns share explicit locale semantics across runti
   expect(report.unchanged).toBe(true); expect(report.retained).toBe(0);
 });
 
+test('numeric displays retain requested-font substitutions after fitting unchanged text and narrowing to hashes', async ({ page }) => {
+  const styles = { 'font-family': '"MissingNumericFont", "Liberation Sans"', '--office-font-ascii': '"MissingNumericFont", "Liberation Sans"' };
+  const result = await page.evaluate(styles => window.workbookGridHost.numberTextMeasurement([
+    { value: 12.5, widthPt: 80, styles },
+    { value: 12345.678, widthPt: 8, format: { code: '0.000' }, styles },
+    { value: 12.5, widthPt: 160, format: { code: '"预算 "0.0' }, styles },
+  ]), styles);
+  expect(result.measurements[0]!.text).toBe('12.5'); expect(result.measurements[1]!.text).toMatch(/^#+$/); expect(result.measurements[2]!.text).toBe('预算 12.5');
+  expect(result.fonts).toContainEqual(expect.objectContaining({ requestedFamily: 'MissingNumericFont', selectedFamily: 'Liberation Sans', substituted: true }));
+  expect(result).toMatchObject({ unchanged: true, atomic: true, retained: 0 });
+});
+
 test('column font metrics use their declared Normal font and keep legacy defaults isolated', async ({ page }) => {
   const report = await page.evaluate(() => window.workbookGridHost.columnFontMeasurement());
   expect(report.measured.cssClass).toBe('normal-metric'); expect(report.fallback.cssClass).toBe('cell-default');

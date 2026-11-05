@@ -9,6 +9,7 @@ import { createWorkbookNumberText } from "./number-text.js";
 import { workbookTextAlignment, workbookTextGutters } from "./text-alignment.js";
 import { layoutWorkbookTexts } from "./text-layout.js";
 import type { WorkbookTextLayoutInput, WorkbookTextLayouts } from "./text-layout.js";
+import type { WorkbookTextView } from "./text-view.js";
 import { workbookAsciiWidth } from "./ascii-width.js";
 
 export interface WorkbookNumberLayoutInput {
@@ -56,7 +57,11 @@ export function layoutWorkbookNumbers(scope: HTMLElement, inputs: readonly Workb
       if (initialUnits > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Numeric measurement exceeds its cumulative text budget.");
       const text = createWorkbookNumberText(input.source, parts, display.color, remainingNodes()); liveNodes += text.nodes;
       const general = generalFormat(input.format); if (general && batchGeneral) text.element.style.cssText += probeStyle;
-      root.append(text.element); return { input, text, general };
+      // Font resolution mutates only these private family declarations. Keep
+      // their requested values so a reused candidate still reports the source
+      // family/substitution during the final shared layout and glyph audit.
+      const fontFamilies = [text.element, ...text.element.querySelectorAll<HTMLElement>('[data-office-script]')].map(node => ({ node, family: node.style.fontFamily }));
+      root.append(text.element); return { input, text, general, parts, color: display.color, fontFamilies };
     });
     scope.append(root);
     resolvePreviewFontsInScope(document, root, "[data-office-text-style],[data-office-script]", probes);
@@ -115,8 +120,15 @@ export function layoutWorkbookNumbers(scope: HTMLElement, inputs: readonly Workb
       const parts = measured!.parts;
       outputUnits += parts.reduce((sum, part) => sum + (part.kind === "text" ? part.text.length : 0), 0);
       if (outputUnits > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Numeric display exceeds its cumulative text budget.");
-      text.element.remove(); liveNodes -= text.nodes;
-      const final = createWorkbookNumberText(input.source, parts, display.color, remainingNodes()); liveNodes += final.nodes;
+      text.element.remove();
+      const unchanged = parts.length === 1 && parts[0]!.kind === "text" && item.parts.length === 1 && item.parts[0]!.kind === "text"
+        && parts[0]!.text === item.parts[0]!.text && JSON.stringify(display.color) === JSON.stringify(item.color);
+      let final: WorkbookTextView;
+      if (unchanged) {
+        final = text; for (const { node, family } of item.fontFamilies) node.style.fontFamily = family;
+      } else {
+        liveNodes -= text.nodes; final = createWorkbookNumberText(input.source, parts, display.color, remainingNodes()); liveNodes += final.nodes;
+      }
       finals.push({ source: input.source, text: final, valueType: "number", widthPt: input.widthPt, heightPt: input.heightPt,
         ...(input.bordered === undefined ? {} : { bordered: input.bordered }) }); overflow.push(reason); locales.push(display.locale);
     }
