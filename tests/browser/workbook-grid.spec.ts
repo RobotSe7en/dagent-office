@@ -14,6 +14,7 @@ import borderReference from "../../docs/evidence/xlsx-border-semantics.json" wit
 import alignmentReference from "../../docs/evidence/xlsx-alignment-semantics.json" with { type: "json" };
 import type { TextLayoutCase, textLayoutMeasurement } from "./fixtures/workbook-text-layout.js";
 import type { borderSourceMeasurement } from "./fixtures/workbook-border-source.js";
+import type { gridLineMeasurement } from "./fixtures/workbook-grid-lines.js";
 import type { assetMeasurement } from "./fixtures/workbook-assets.js";
 import { workbookRasterCases } from "../workbook-image-fixture.js";
 import type { measureWorkbookFills } from "./fixtures/workbook-fill.js";
@@ -44,6 +45,7 @@ interface GridHost {
   measureWorkbookFills(css: string, classes: readonly string[]): ReturnType<typeof measureWorkbookFills>;
   assetMeasurement(base64: string, mimeType: string): ReturnType<typeof assetMeasurement>;
   borderSourceMeasurement(): ReturnType<typeof borderSourceMeasurement>;
+  gridLineMeasurement(): ReturnType<typeof gridLineMeasurement>;
   textLayoutMeasurement(cases: readonly TextLayoutCase[], limits?: { readonly maxNodes?: number; readonly maxTextUnits?: number }): ReturnType<typeof textLayoutMeasurement>;
   render(viewport: WorkbookViewport, rtl?: boolean): Promise<boolean>;
   inspect(): { cellCount: number; borderLines: number; accessibleCells: number; rows: number[]; sourceUnchanged: boolean; merges: { pane?: string; text: string | null; clip: { x: number; y: number; width: number; height: number }; body: { x: number; y: number; width: number; height: number }; hit?: { row: number; column: number } }[] };
@@ -105,6 +107,37 @@ test('General fitting and numeric fill agree with independently laid out fixed-f
   expect(result.scientific).toMatchObject({ kind: 'text', text: '1.23457E+11' });
   expect(result.overflow).toBe(false); expect(result.fill?.text).toMatch(/^f+$/);
   expect(result.actual).toBeLessThanOrEqual(140.25); expect(Math.abs(result.actual - result.predicted)).toBeLessThan(.25);
+});
+
+test('whole grid lines preserve clipped hidden-axis and frozen-pane pixels while removing only segment seams', async ({ page }, info) => {
+  const cases = await page.evaluate(() => window.workbookGridHost.gridLineMeasurement());
+  const png = await page.locator('#workbook-grid-line-probe').screenshot({ path: info.outputPath('uniform-grid-lines.png') });
+  const compared = await page.evaluate(async ({ bytes, cases }) => {
+    const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'image/png' })), image = new Image();
+    try {
+      image.src = url; await image.decode(); const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+      const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0); const data = context.getImageData(0, 0, image.width, image.height).data;
+      return cases.map((item, index) => {
+        let max = 0, awayFromJoin = 0, changed = 0;
+        for (let y = 0; y < 150; y++) for (let x = 0; x < 240; x++) {
+          const first = ((index * 150 + y) * image.width + x) * 4, second = first + 240 * 4;
+          const difference = Math.max(...[0, 1, 2].map(channel => Math.abs(data[first + channel]! - data[second + channel]!)));
+          max = Math.max(max, difference);
+          if (difference > 1) {
+            changed++;
+            if (!item.endpoints.some(point => Math.abs(point.x / .75 - x) <= 1.5 && Math.abs(point.y / .75 - y) <= 1.5)) awayFromJoin++;
+          }
+        }
+        return { max, awayFromJoin, changed };
+      });
+    } finally { image.removeAttribute('src'); URL.revokeObjectURL(url); }
+  }, { bytes: [...png], cases });
+  for (const [index, item] of cases.entries()) {
+    expect(item.full).toBeLessThan(item.original / 2);
+    // Joining solid segments removes their butt-end antialiasing seam. Every
+    // other pixel must retain the previous uniform grid's geometry and color.
+    expect(compared[index]!.max).toBeLessThanOrEqual(12); expect(compared[index]!.awayFromJoin).toBe(0);
+  }
 });
 
 test('cached text keeps independent live UTF-16 projections, ownership, font invalidation and complete window budgets', async ({ page }) => {

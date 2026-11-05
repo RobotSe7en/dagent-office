@@ -24,6 +24,7 @@ import type { TextLayoutCase } from "./workbook-text-layout.js";
 import { layoutWorkbookTexts } from "../../../packages/render/src/workbook/text-layout.js";
 import type { WorkbookTextLayoutInput } from "../../../packages/render/src/workbook/text-layout.js";
 import { borderSourceMeasurement } from "./workbook-border-source.js";
+import { gridLineMeasurement } from "./workbook-grid-lines.js";
 import { projectWorkbookBorders } from "../../../packages/render/src/workbook/border-projection.js";
 import { workbookCellBorders } from "../../../packages/render/src/workbook/cell-borders.js";
 import { assetMeasurement } from "./workbook-assets.js";
@@ -80,6 +81,7 @@ async function main() {
     shapedFillMeasurement,
     assetMeasurement(base64: string, mimeType: string) { return assetMeasurement(container, base64, mimeType); },
     borderSourceMeasurement() { return borderSourceMeasurement(container); },
+    gridLineMeasurement() { return gridLineMeasurement(container); },
     textLayoutMeasurement(cases: readonly TextLayoutCase[], limits?: { readonly maxNodes?: number; readonly maxTextUnits?: number }) { return textLayoutMeasurement(container, cases, limits); },
     measureWorkbookFills,
     diagonalMeasurement,

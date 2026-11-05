@@ -13,6 +13,7 @@ import { workbookTextRotation } from "./text-alignment.js";
 import { projectWorkbookBorders } from "./border-projection.js";
 import { projectWorkbookDiagonals } from "./diagonal-projection.js";
 import { createWorkbookBorderView } from "./border-view.js";
+import { projectWorkbookGridLines, WORKBOOK_GRID_PAINT } from "./grid-projection.js";
 import type { AxisDimensions } from "./dimensions.js";
 import { WorkbookMergeIndex } from "./projection.js";
 import type { WorkbookGridCell } from "./projection.js";
@@ -137,9 +138,9 @@ export function layoutWorkbookWindow(surface: Pick<WorkbookSurface, "source" | "
       const element = createWorkbookBorderView(document, pane.bounds, pane.edges, remaining()); textNodes += 1 + element.querySelectorAll("*").length; return element;
     });
     const views = materialize([...projectedBorders, ...diagonals]);
-    const gridPaint = { kind: "css" as const, style: "solid" as const, widthPt: .75, color: "rgb(220, 224, 230)" };
-    const gridLines = sheet.showGridLines ? materialize(projectWorkbookBorders(dimensions, frame.layout, merges,
-      () => ({ before: gridPaint, after: gridPaint, top: gridPaint, bottom: gridPaint }), sheet.rightToLeft, maxNodes)) : [];
+    const gridPaint = WORKBOOK_GRID_PAINT;
+    const gridLines = sheet.showGridLines ? materialize(sheet.merges.length ? projectWorkbookBorders(dimensions, frame.layout, merges,
+      () => ({ before: gridPaint, after: gridPaint, top: gridPaint, bottom: gridPaint }), sheet.rightToLeft, maxNodes) : projectWorkbookGridLines(frame.layout, sheet.rightToLeft, maxNodes)) : [];
     for (const grid of gridLines) grid.dataset.officeView = "workbook-gridlines";
     const element = paintWorkbookWindow(document, frame, prepared, sheet.rightToLeft, views, maxNodes, gridLines, overflow);
     return Object.freeze({ element, fonts: textLayout.fonts, usedFallbackLineMetrics: textLayout.usedFallbackLineMetrics,
