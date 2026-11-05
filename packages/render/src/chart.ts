@@ -198,7 +198,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
         }
         label(series, index, value, chart.kind === "column" ? px - total / 2 + seriesIndex * bar * (1 - overlap) + bar / 2 : px, py, undefined, baseline);
       });
-      if (chart.kind === "line") svg.append(svgElement(document, "path", { d: segments.join(" "), fill: "none", ...strokeAttributes(document, s, "--office-line", palette[seriesIndex % palette.length]!) }));
+      if (chart.kind === "line") svg.append(svgElement(document, "path", { d: segments.join(" "), fill: "none", ...strokeAttributes(document, s, "--office-line", palette[seriesIndexes.get(series.seriesId)! % palette.length]!) }));
     });
   }
   if (chart.legend !== "none") {
@@ -210,7 +210,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
       const x = horizontal ? cursor : chart.legend === "left" ? 12 : right + 12; cursor += widths[index]!;
       const y = horizontal ? chart.legend === "top" ? top - 14 : height - 14 : top + h / 2 + (index - (entries.length - 1) / 2) * slot;
       const s = entry.index >= 0 ? pointStyle(entry.series.seriesId, entry.index) : seriesStyle.get(entry.series.seriesId)!;
-      if (chart.kind === "line") svg.append(svgElement(document, "line", { x1: x, y1: y, x2: x + keyWidth, y2: y, ...strokeAttributes(document, s, "--office-line", palette[index % palette.length]!) }));
+      if (chart.kind === "line") svg.append(svgElement(document, "line", { x1: x, y1: y, x2: x + keyWidth, y2: y, ...strokeAttributes(document, s, "--office-line", palette[seriesIndexes.get(entry.series.seriesId)! % palette.length]!) }));
       else svg.append(svgElement(document, "rect", { x, y: y - 3, width: keyWidth, height: 7, fill: fill(entry.series.seriesId, Math.max(0, entry.index), s, { x, y: y - 3, width: keyWidth, height: 7 }) }));
       text(entry.name, x + keyWidth + 3, y + 1, legendStyle, "start");
     });

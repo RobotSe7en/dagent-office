@@ -140,10 +140,14 @@ export async function measureWorkbookChartPositions(snapshot: WorkbookSnapshot) 
     const missing: BasicChartData = { ...plain, series: [{ ...plain.series[0]!, missing: [undefined, 'gap', undefined, 'span', undefined] }] };
     const path = (data: BasicChartData) => [...createWorkbookChartView(source, { ...chart, showLabels: false }, data, 360, 220, 'gaps', options).element.querySelectorAll('svg > path')].map(node => node.getAttribute('d')).join(' ');
     const hidden = createWorkbookChartView(source, { ...chart, kind: 'pie' }, { ...compact, series: [{ ...compact.series[0]!, hidden: true, values: [-2, 8] }] }, 360, 220, 'hidden', options);
+    const second = { ...series, seriesId: 'second-series' };
+    const masked = createWorkbookChartView(source, { ...chart, series: [series, second], legend: 'right', seriesStyles: [], showLabels: false },
+      { ...compact, series: [{ ...compact.series[0]!, hidden: true }, { ...compact.series[0]!, seriesId: second.seriesId }] }, 360, 220, 'masked-series', options);
+    const maskedColors = [...masked.element.querySelectorAll('svg > path,svg > line')].filter(node => node.localName === 'path' || node.getAttribute('x2') !== node.getAttribute('x1') && Number(node.getAttribute('x2')) - Number(node.getAttribute('x1')) === 22).map(node => node.getAttribute('stroke'));
     const errors: string[] = [];
     for (const data of [{ ...compact, sourceIndexes: [2, 2] }, { ...compact, sourceIndexes: [0] }, { ...compact, series: [{ ...compact.series[0]!, missing: ['gap' as const, undefined] }] }]) {
       try { createWorkbookChartView(source, chart, data, 360, 220, 'invalid', options); errors.push('accepted'); } catch (error) { errors.push((error as { code: string }).code); }
     }
-    return { colors, plain: path(plain), missing: path(missing), hiddenPaths: hidden.element.querySelectorAll('svg > path').length, hiddenDiagnostics: hidden.diagnostics, errors, unchanged: source.outerHTML === before };
+    return { colors, maskedColors, plain: path(plain), missing: path(missing), hiddenPaths: hidden.element.querySelectorAll('svg > path').length, hiddenDiagnostics: hidden.diagnostics, errors, unchanged: source.outerHTML === before };
   } finally { sources.dispose(); surface.dispose(); container.remove(); }
 }

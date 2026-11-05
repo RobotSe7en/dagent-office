@@ -390,6 +390,7 @@ test('auxiliary parsing rejects active content, foreign nodes, repeated identiti
 test('workbook chart compaction preserves original point styles and distinguishes errors from skipped points', async ({ page }) => {
   const input = inputs.find(input => input.name === '07-three-charts')!;
   const result = await page.evaluate(snapshot => window.workbookChartHost.measureWorkbookChartPositions(snapshot), input.snapshot);
+  expect(result.maskedColors).toEqual(['rgba(237,125,49,1)', 'rgba(237,125,49,1)']);
   expect(result.colors).toEqual(['rgb(0, 0, 255)', 'rgb(255, 0, 0)']);
   expect(result.plain.match(/M/g)).toHaveLength(1); expect(result.plain.match(/L/g)).toHaveLength(4);
   expect(result.missing.match(/M/g)).toHaveLength(2); expect(result.missing.match(/L/g)).toHaveLength(1);
