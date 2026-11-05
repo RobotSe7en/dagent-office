@@ -9,7 +9,7 @@
     "fontCount": 424,
     "fontManifestSha256": "c69980066d071afe8f248c7774f5265a6eb82990db1f2f78843580df8d2325b4"
   },
-  "sourceSha256": "88c7d7a0c77094ae55b3c1ff83238c2e59c8ed355b187f3653936fc79f91ec5e",
+  "sourceSha256": "d8d7cd8ae7dbc333207d5ec68e930674e0af6c6aaf2a819b3083391906e9f339",
   "cases": [
     {
       "group": "auto-height",
@@ -676,6 +676,341 @@
           "r": "300",
           "customFormat": "false",
           "ht": "64.9",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": null,
+      "size": 20,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": false,
+      "name": "blank-font",
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "24.45",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": null,
+      "size": 20,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": false,
+      "name": "row-font",
+      "rowStyle": true,
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "s": "6",
+          "customFormat": "true",
+          "ht": "24.45",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": null,
+      "size": 20,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": false,
+      "name": "column-font",
+      "columnStyle": true,
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "24.45",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "24.45",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "24.45",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "",
+      "size": 20,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": false,
+      "name": "empty-string-font",
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "24.45",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 20,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": false,
+      "name": "shrunk-font",
+      "shrink": true,
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "24.45",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "A",
+      "size": 20,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": false,
+      "name": "rotated-short-font",
+      "rotation": 45,
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "26.1",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": 12,
+      "size": 20,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": false,
+      "name": "hidden-display-font",
+      "hideDisplay": true,
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "24.45",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
           "hidden": "false",
           "customHeight": "false",
           "outlineLevel": "0",

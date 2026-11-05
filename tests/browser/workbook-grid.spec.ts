@@ -891,7 +891,7 @@ test('stable automatic row heights use all actual columns, native wrapping and f
 
 test('automatic row indexing respects native fixed defaults, exceptions, hidden rows, merges and distant content', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-row-heights.xlsx'), { documentId: 'native-auto-height-cases' });
-  const report = await page.evaluate(entries => window.workbookGridHost.autoRowMeasurement(entries, Array.from({ length: 14 }, (_, i) => 'sheet-' + (i + 1))),
+  const report = await page.evaluate(entries => window.workbookGridHost.autoRowMeasurement(entries, Array.from({ length: 21 }, (_, i) => 'sheet-' + (i + 1))),
     [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
   expect(report.unchanged).toBe(true); expect(report.retained).toBe(0);
   const heights = report.results.map(result => result.heights[1]);
@@ -900,4 +900,7 @@ test('automatic row indexing respects native fixed defaults, exceptions, hidden 
   expect(heights[6]).toBe(15); expect(heights[7]).toBe(15); expect(heights[8]).toBeGreaterThan(90);
   expect(heights[9]).toBeGreaterThan(30); expect(heights[10]).toBeGreaterThan(21); expect(heights[11]).toBeGreaterThan(30);
   expect(heights[12]).toBe(15); expect(heights[13]).toBe(15); expect(report.results[13]!.farHeight).toBe(heights[0]);
+  for (const index of [14, 15, 16, 17, 18, 20]) { expect(heights[index]).toBeGreaterThan(21); expect(heights[index]).toBeLessThan(29); }
+  expect(heights[19]).toBeGreaterThanOrEqual(heights[18]!);
+  expect(report.results[16]!.heights.slice(0, 3)).toEqual([heights[16], heights[16], heights[16]]);
 });

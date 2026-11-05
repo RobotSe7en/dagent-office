@@ -27,9 +27,11 @@ it('imports independent fixed-default, automatic-exception and far-row sources w
   const regenerated = execFileSync('python3', ['-c', "import importlib.util,sys;s=importlib.util.spec_from_file_location('rows','scripts/check-xlsx-row-heights.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);sys.stdout.buffer.write(m.generate(m.cases()))"]);
   expect(regenerated).toEqual(bytes); expect(createHash('sha256').update(bytes).digest('hex')).toBe(evidence.sourceSha256);
   const model = openDocument(await importXlsx(bytes, { documentId: 'native-auto-rows' }), { kind: 'workbook' }), snapshot = model.snapshot(), sheets = snapshot.metadata.workbook.sheets;
-  expect(sheets).toHaveLength(14); expect(sheets[1]).toMatchObject({ defaultRowHeightCustom: true, defaultRowHeightPt: 18, rowDimensions: [] });
+  expect(sheets).toHaveLength(21); expect(sheets[1]).toMatchObject({ defaultRowHeightCustom: true, defaultRowHeightPt: 18, rowDimensions: [] });
   expect(sheets[2]).toMatchObject({ defaultRowHeightCustom: true, rowDimensions: [{ from: 1, to: 1, autoHeight: true }] });
   expect(sheets[3]?.rowDimensions).toEqual([{ from: 1, to: 1, heightPt: 12 }]); expect(sheets[4]?.rowDimensions).toEqual([{ from: 1, to: 1, hidden: true }]);
+  expect(model.getCell('sheet-15', 1, 1)?.value).toEqual({ type: 'blank' });
+  expect(sheets[15]?.rowDimensions[0]?.cssClass).toBeDefined(); expect(sheets[16]?.columnDimensions[0]?.cssClass).toBeDefined();
   expect(model.getCell('sheet-14', 299, 1)?.value).toEqual({ type: 'text', value: evidence.cases[13].value });
   expect(openDocument(model.serialize(), { kind: 'workbook' }).snapshot()).toEqual(snapshot);
 });

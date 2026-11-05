@@ -29,6 +29,13 @@ def cases():
         dict(name='vertical', wrap=False, rotation=255, value='ABC'), dict(name='large-font', value='Ab', size=20, wrap=False),
         dict(name='explicit-lines', value='Alpha\nbeta\ngamma', wrap=True),
         dict(name='hidden-column', hiddenColumn=True), dict(name='far-row', row=300),
+        dict(name='blank-font', value=None, size=20, wrap=False),
+        dict(name='row-font', value=None, size=20, wrap=False, rowStyle=True),
+        dict(name='column-font', value=None, size=20, wrap=False, columnStyle=True),
+        dict(name='empty-string-font', value='', size=20, wrap=False),
+        dict(name='shrunk-font', value='Alpha beta gamma delta epsilon', size=20, wrap=False, shrink=True),
+        dict(name='rotated-short-font', value='A', size=20, wrap=False, rotation=45),
+        dict(name='hidden-display-font', value=12, size=20, wrap=False, hideDisplay=True),
     ]]
 
 
@@ -50,6 +57,13 @@ def generate(inputs):
             merge = ET.Element(ns + 'mergeCells', {'count': '1'}); ET.SubElement(merge, ns + 'mergeCell', {'ref': case['merge']}); root.insert(list(root).index(rows) + 1, merge)
         if case.get('hiddenColumn'):
             columns = ET.Element(ns + 'cols'); ET.SubElement(columns, ns + 'col', {'min': '2', 'max': '2', 'hidden': '1'}); root.insert(list(root).index(rows), columns)
+        if case.get('shrink'): xfs[int(cell.get('s'))].find(ns + 'alignment').set('shrinkToFit', '1')
+        if case.get('hideDisplay'):
+            formats = styles.find(ns + 'numFmts'); ET.SubElement(formats, ns + 'numFmt', {'numFmtId': '9000', 'formatCode': ';;;'}); formats.set('count', str(len(formats))); xfs[int(cell.get('s'))].set('numFmtId', '9000'); xfs[int(cell.get('s'))].set('applyNumberFormat', '1')
+        if case.get('rowStyle'):
+            row.set('s', cell.get('s')); row.set('customFormat', '1'); row.remove(cell)
+        if case.get('columnStyle'):
+            columns = ET.Element(ns + 'cols'); ET.SubElement(columns, ns + 'col', {'min': '2', 'max': '2', 'style': cell.get('s')}); root.insert(list(root).index(rows), columns); row.remove(cell)
         if case.get('row'):
             row.set('r', str(case['row'])); cell.set('r', 'B' + str(case['row'])); rows.remove(row); rows.append(row)
         parts[path] = ET.tostring(root, encoding='unicode')
