@@ -6,6 +6,36 @@ import { createWorkbookSurface } from '../../../packages/render/src/workbook/sur
 import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';
 import { createWorkbookChartText } from '../../../packages/render/src/workbook/drawing-text.js';
 import type { WorkbookChartTextRole } from '../../../packages/render/src/workbook/drawing-text.js';
+
+export async function measureWorkbookChartColors(snapshot: WorkbookSnapshot, plots: readonly BasicChartData[]) {
+  const container = document.createElement('div'); document.body.append(container);
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 520, heightPt: 340 }), sources = new WorkbookContentSources(surface.document, snapshot);
+  const charts = snapshot.metadata.workbook.charts!, projected = sources.project(surface.source, charts.map(chart => chart.nodeId)), before = surface.source.innerHTML;
+  const read = (index: number, data = plots[index]!) => {
+    const chart = charts[index]!, source = projected.get(chart.nodeId)!;
+    const result = createWorkbookChartView(source, chart, data, 480, 300, 'chart-colors-' + index, { formatNumber: value => String(value) });
+    surface.view.append(result.element); const svg = result.element.querySelector('svg')!, visible = data.series.filter(series => !series.hidden);
+    const varied = (chart.varyColors ?? chart.kind === 'pie') && chart.series.length === 1;
+    const entries = chart.kind === 'pie' || varied && visible.length === 1 ? data.categories.length : visible.length;
+    const color = (node: Element) => surface.document.defaultView!.getComputedStyle(node).getPropertyValue('fill');
+    const points = chart.kind === 'column' ? [...svg.querySelectorAll('rect')].slice(1, 1 + visible.length * data.categories.length)
+      : chart.kind === 'line' ? [...svg.querySelectorAll('circle')] : [...svg.querySelectorAll('path,circle')].filter(node => node.getAttribute('fill') !== 'none');
+    const keys = chart.kind === 'line' ? [...svg.querySelectorAll('line')].slice(-entries).map(node => surface.document.defaultView!.getComputedStyle(node).stroke)
+      : [...svg.querySelectorAll('rect')].slice(-entries).map(color);
+    const text = [...svg.querySelectorAll('text')].slice(-entries).map(node => node.textContent);
+    const words: Record<string, number> = {};
+    for (const node of svg.querySelectorAll('text')) if (['One', 'Two', 'Three', 'Series1', 'Series2'].includes(node.textContent ?? '')) words[node.textContent!] = (words[node.textContent!] ?? 0) + 1;
+    const value = { points: points.map(color), keys, text, words, nodes: result.nodes, actualNodes: result.element.querySelectorAll('*').length + [...svg.querySelectorAll('text')].reduce((sum, node) => sum + (node.textContent ? 1 : 0), 0) + 1 };
+    result.element.remove(); return value;
+  };
+  try {
+    const normal = charts.map((_, index) => read(index)), multiple = charts.findIndex(chart => chart.kind === 'column' && chart.varyColors && chart.series.length === 2);
+    const hidden = read(multiple, { ...plots[multiple]!, series: plots[multiple]!.series.map((series, index) => ({ ...series, hidden: index > 0 })) });
+    const pie = charts.findIndex(chart => chart.kind === 'pie' && chart.varyColors), source = plots[pie]!;
+    const compacted = read(pie, { ...source, categories: [source.categories[0]!, source.categories[2]!], sourceIndexes: [0, 2], series: source.series.map(series => ({ ...series, values: [series.values[0]!, series.values[2]!], ...(series.missing ? { missing: [series.missing[0], series.missing[2]] } : {}) })) });
+    return { normal, hidden, compacted, unchanged: surface.source.innerHTML === before };
+  } finally { sources.dispose(); surface.dispose(); container.remove(); }
+}
 import { layoutWorkbookChartTexts, layoutWorkbookChartTitleContents } from '../../../packages/render/src/workbook/drawing-text-layout.js';
 import type { WorkbookChartTitleContentInput } from '../../../packages/render/src/workbook/drawing-text-layout.js';
 import type { WorkbookChartBinding } from '../../../packages/render/src/workbook/chart-values.js';

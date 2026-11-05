@@ -17,12 +17,12 @@ import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
 import type { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback, measureDrawingTextOverflow, measureDrawingOverflowEdges } from './fixtures/workbook-drawing-text.js';
 import type { measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } from './fixtures/workbook-surface.js';
 import type { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } from './fixtures/workbook-shadow.js';
-import type { measureWorkbookCharts, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } from './fixtures/workbook-chart.js';
+import type { measureWorkbookCharts, measureWorkbookChartColors, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } from './fixtures/workbook-chart.js';
 import { bindWorkbookChartData } from "../../packages/render/src/workbook/chart-values.js";
 import type { BasicChartData } from '../../packages/render/src/chart.js';
 import { modelChartSource, DEFAULT_CHART_READ_LIMITS } from '../../packages/render/src/workbook/chart-source.js';
 
-declare global { interface Window { workbookChartHost: { measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
+declare global { interface Window { workbookChartHost: { measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartColors: typeof measureWorkbookChartColors; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
 
 declare global { interface Window { workbookShadowHost: { measureWorkbookShadows: typeof measureWorkbookShadows; mountWorkbookShadowPixels: typeof mountWorkbookShadowPixels; disposeWorkbookShadowPixels: typeof disposeWorkbookShadowPixels } } }
 
@@ -32,6 +32,7 @@ const chartPlots = new Map<string, BasicChartData[]>();
 let referenceTitles: { snapshot: WorkbookSnapshot; bindings: ReturnType<typeof bindWorkbookChartData> };
 let formatCharts: typeof referenceTitles;
 let code = '';
+const colorCharts: { theme: string; snapshot: WorkbookSnapshot; plots: BasicChartData[] }[] = [];
 let nativeText: WorkbookSnapshot;
 let overflowText: WorkbookSnapshot;
 let anchoredText: WorkbookSnapshot;
@@ -41,6 +42,13 @@ const textEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-drawing-text-se
 const shadowEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-drawing-shadow-semantics.json', 'utf8')) as { sourceSha256: string; cases: { rotation: number; flipH: boolean; flipV: boolean; rotateWithShape: boolean; direction: number; distancePt: number; observed: { offsetPt: number[] } }[] };
 const blurEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-shadow-blur-semantics.json', 'utf8')) as { sourceSha256: string; cases: { blurPt: number; observed: { sharpEdgeOffsetPt?: number; samples: { offsetPt: number; rgb: number[] }[] } }[] };
 test.beforeAll(async () => {
+  for (const theme of ['default', 'alternate']) {
+    const model = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-colors-' + theme + '.xlsx'), { documentId: 'chart-colors-' + theme }), { kind: 'workbook' }), snapshot = model.snapshot();
+    const response = await modelChartSource(model).read({ ...DEFAULT_CHART_READ_LIMITS, documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, chartIds: snapshot.metadata.workbook.charts!.map(chart => chart.chartId) }, new AbortController().signal);
+    const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
+    const plots = bindWorkbookChartData(snapshot, response, formatter).map(binding => { if (binding.kind !== 'available') throw Error('Independent color source is unavailable'); return binding.data; });
+    formatter.dispose(); colorCharts.push({ theme, snapshot, plots });
+  }
   overflowText = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-text-overflow.xlsx'), { documentId: 'text-overflow' }), { kind: 'workbook' }).snapshot();
   const bundle = await build({ configFile: false, build: { write: false, minify: false, lib: { entry: fileURLToPath(new URL('./fixtures/workbook-content-source.ts', import.meta.url)), formats: ['iife'], name: 'WorkbookDrawingProbe' } } });
   if (!Array.isArray(bundle) && !('output' in bundle)) throw Error('Unexpected drawing fixture bundle');
@@ -542,5 +550,32 @@ test('text overflow preserves cross-span graphemes, RTL and reflections even whe
   for (const result of results) {
     expect(result, JSON.stringify(result)).toMatchObject({ splitGraphemes: 0, unchanged: true, marker: '…', inside: true });
     expect(result.text).toBe('A禰󠄀é😀WXYZ אבג ABCSecond lineHidden tail'); expect(result.nodes).toBe(result.declared);
+  }
+});
+
+
+test('native automatic chart colors follow document themes, single-series variation, explicit overrides and source point indexes', async ({ page }) => {
+  const report = JSON.parse(readFileSync('docs/evidence/xlsx-chart-colors.json', 'utf8')) as { workbooks: { cases: { kind: string; vary: boolean; series: number; fill?: string; producer: { pdfWords: Record<string, number>; pdfFillColors: string[] } }[] }[] };
+  const rgb = (hex: string) => 'rgb(' + [0, 2, 4].map(offset => parseInt(hex.slice(offset, offset + 2), 16)).join(', ') + ')';
+  for (const input of colorCharts) {
+    const actual = await page.evaluate(({ snapshot, plots }) => window.workbookChartHost.measureWorkbookChartColors(snapshot, plots), input);
+    const palette = (input.theme === 'alternate' ? ['aa5500', '008877', '5544aa'] : ['4472c4', 'ed7d31', 'a5a5a5']).map(rgb);
+    expect(actual.unchanged).toBe(true);
+    for (const [index, item] of actual.normal.entries()) {
+      const source = report.workbooks[0]!.cases[index]!, varied = source.vary && source.series === 1;
+      const colors = Array.from({ length: source.series }, (_, series) => Array.from({ length: 3 }, (_, point) => source.fill === 'series' ? rgb('112233') : source.fill === 'point' && point === 1 ? rgb('123456') : palette[varied ? point : series]!)).flat();
+      expect(item.points, input.theme + ' case ' + index).toEqual(colors);
+      expect(item.text).toEqual(source.kind === 'pie' || varied ? ['One', 'Two', 'Three'] : Array.from({ length: source.series }, (_, i) => 'Series' + (i + 1)));
+      expect(item.keys).toEqual(source.kind === 'pie' || varied ? colors : Array.from({ length: source.series }, (_, i) => palette[i]!));
+      expect(item.nodes).toBe(item.actualNodes);
+      expect(item.words).toEqual(source.producer.pdfWords);
+      if (source.kind !== 'line' && source.fill !== 'series') {
+        const hex = (color: string) => color.match(/\d+/g)!.slice(0, 3).map(value => Number(value).toString(16).padStart(2, '0')).join('');
+        const reference = report.workbooks[input.theme === 'alternate' ? 1 : 0]!.cases[index]!.producer.pdfFillColors;
+        expect([...new Set([...item.points, ...item.keys].map(hex))].sort()).toEqual(reference);
+      }
+    }
+    expect(actual.hidden).toMatchObject({ points: [palette[0], palette[0], palette[0]], keys: [palette[0]], text: ['Series1'] });
+    expect(actual.compacted).toMatchObject({ points: [palette[0], palette[2]], keys: [palette[0], palette[2]], text: ['One', 'Three'] });
   }
 });

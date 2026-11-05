@@ -33,12 +33,14 @@ export interface BasicChartOptions {
   /** The owning format selects negative-value semantics explicitly. Value
    * labels keep their signed source numbers under the magnitude policy. */
   readonly pieValues?: "nonnegative" | "magnitude";
+  /** The owning adapter applies native single-series/default semantics. */
+  readonly varyColors?: boolean;
 }
 export type BasicChartNumberContext = { readonly kind: "value-axis"; readonly style: CSSStyleDeclaration }
   | { readonly kind: "data-label"; readonly content: "value" | "percent"; readonly seriesId: string; readonly index: number; readonly style: CSSStyleDeclaration };
 export interface BasicChartRect { readonly x: number; readonly y: number; readonly width: number; readonly height: number }
 export interface BasicChartLayout { readonly plot: BasicChartRect; readonly title?: BasicChartRect; readonly legend?: BasicChartRect }
-const palette = ["#4472c4", "#ed7d31", "#a5a5a5", "#ffc000", "#5b9bd5", "#70ad47"];
+const defaultPalette = ["#4472c4", "#ed7d31", "#a5a5a5", "#ffc000", "#5b9bd5", "#70ad47"];
 export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartAppearance>, data: BasicChartData, width: number, height: number, serial: string, account: (amount: number) => void, options: BasicChartOptions): void {
   const svgElement: typeof createSvgElement = (document, tag, attributes) => { account(1); return createSvgElement(document, tag, attributes); };
   const document = node.ownerDocument, formatNumber = options.formatNumber, styles = new Map<string, CSSStyleDeclaration>();
@@ -60,6 +62,11 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
   svg.style.cssText = "position:absolute;inset:0;overflow:visible;pointer-events:none";
   node.prepend(svg);
   const base = style(chart.textCssClass), legendStyle = style([chart.textCssClass, chart.legendCssClass].filter(Boolean).join(" "));
+  const palette = defaultPalette.map((fallback, index) => {
+    const name = "--office-theme-accent" + (index + 1);
+    return resolvedColor(document, base, name, property(base, name, fallback));
+  });
+  const varyColors = options.varyColors ?? chart.kind === "pie";
   const font = (s: CSSStyleDeclaration): Record<string, string> => ({ "font-family": s.fontFamily, "font-size": String(parseFloat(s.fontSize) * 0.75), "font-weight": s.fontWeight, "font-style": s.fontStyle, fill: property(s, "--office-text-color") ? resolvedColor(document, s, "--office-text") : s.color });
   const text = (value: string, x: number, y: number, s = base, anchor = "middle"): SVGTextElement => {
     options.accountText?.(value.length);
@@ -80,7 +87,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     const rect = options.layout?.title;
     title.style.cssText += `;position:absolute;${rect ? `left:${rect.x}pt;top:${rect.y}pt;width:${rect.width}pt;height:${rect.height}pt` : `left:6pt;right:6pt;top:20pt;height:${titleHeight}pt`};margin:0;text-align:center;${chart.titleVisible === false ? "display:none" : ""}`;
   }
-  const entries = chart.kind === "pie" ? data.categories.map((name, i) => ({ name, series: data.series[0]!, index: i })) : data.series.map(series => ({ name: series.name, series, index: -1 }));
+  const entries = chart.kind === "pie" || varyColors && data.series.length === 1 ? data.categories.map((name, i) => ({ name, series: data.series[0]!, index: i })) : data.series.map(series => ({ name: series.name, series, index: -1 }));
   const legendBand = chart.legend === "none" ? 0 : chart.legend === "bottom" || chart.legend === "top" ? 28 : Math.min(width * 0.25, 100);
   const left = options.layout?.plot.x ?? (chart.kind === "pie" || valueRight ? 12 : 28) + (chart.legend === "left" ? legendBand : 0);
   const top = options.layout?.plot.y ?? titleHeight + (chart.kind === "pie" ? 15 : 18) + (chart.legend === "top" ? legendBand : 0) + (categoryTop ? 16 : 0);
@@ -93,7 +100,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     const series = seriesDefinitions.get(seriesId), point = pointDefinitions.get(pointKey(seriesId, sourceIndex(index)));
     return point ? style([series?.cssClass, point.cssClass].filter(Boolean).join(" ")) : seriesStyle.get(seriesId)!;
   };
-  const fill = (seriesId: string, index: number, s: CSSStyleDeclaration, bounds: DrawingGradientBounds): string => svgFill(document, s, svg, serial + "-paint-" + ++paintSerial, bounds, "--office-fill", palette[(chart.kind === "pie" ? sourceIndex(index) : seriesIndexes.get(seriesId)!) % palette.length]!, account);
+  const fill = (seriesId: string, index: number, s: CSSStyleDeclaration, bounds: DrawingGradientBounds): string => svgFill(document, s, svg, serial + "-paint-" + ++paintSerial, bounds, "--office-fill", palette[(varyColors ? sourceIndex(index) : seriesIndexes.get(seriesId)!) % palette.length]!, account);
   const label = (series: BasicChartData["series"][number], index: number, value: number, x: number, y: number, percent?: number, baseline?: number): void => {
     if (!chart.showLabels) return;
     const seriesDefinition = seriesDefinitions.get(series.seriesId), point = pointDefinitions.get(pointKey(series.seriesId, sourceIndex(index)));
@@ -225,7 +232,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
       const y = horizontal ? legend ? legend.y + legend.height / 2 : chart.legend === "top" ? top - 14 : height - 14
         : (legend ? legend.y + legend.height / 2 : top + h / 2) + (index - (entries.length - 1) / 2) * slot;
       const s = entry.index >= 0 ? pointStyle(entry.series.seriesId, entry.index) : seriesStyle.get(entry.series.seriesId)!;
-      if (chart.kind === "line") svg.append(svgElement(document, "line", { x1: x, y1: y, x2: x + keyWidth, y2: y, ...strokeAttributes(document, s, "--office-line", palette[seriesIndexes.get(entry.series.seriesId)! % palette.length]!) }));
+      if (chart.kind === "line") svg.append(svgElement(document, "line", { x1: x, y1: y, x2: x + keyWidth, y2: y, ...strokeAttributes(document, s, "--office-line", palette[(varyColors && entry.index >= 0 ? sourceIndex(entry.index) : seriesIndexes.get(entry.series.seriesId)!) % palette.length]!) }));
       else svg.append(svgElement(document, "rect", { x, y: y - 3, width: keyWidth, height: 7, fill: fill(entry.series.seriesId, Math.max(0, entry.index), s, { x, y: y - 3, width: keyWidth, height: 7 }) }));
       text(entry.name, x + keyWidth + 3, y + 1, legendStyle, "start");
     });

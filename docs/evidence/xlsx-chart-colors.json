@@ -1,0 +1,1222 @@
+{
+  "scope": "Independent native chart color variation and legend observations.\n\nSource ZIP/XML is generated without the SDK. Producer color/marker properties\nand PDF word counts are evidence; no font geometry or Excel/WPS run is claimed.\n",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "workbooks": [
+    {
+      "theme": "default",
+      "sourceSha256": "ad6671bcbc0b08bba81d87c973a48f919df086170bf0ed2a1c0a514bda160f95",
+      "cases": [
+        {
+          "kind": "column",
+          "vary": false,
+          "series": 1,
+          "producer": {
+            "vary": [
+              {
+                "val": "0"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "4472c4",
+                "points": []
+              }
+            ],
+            "pdfWords": {
+              "One": 1,
+              "Series1": 1,
+              "Three": 1,
+              "Two": 1
+            },
+            "pdfFillColors": [
+              "4472c4"
+            ]
+          }
+        },
+        {
+          "kind": "column",
+          "vary": false,
+          "series": 2,
+          "producer": {
+            "vary": [
+              {
+                "val": "0"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "4472c4",
+                "points": []
+              },
+              {
+                "index": "1",
+                "fill": "ed7d31",
+                "points": []
+              }
+            ],
+            "pdfWords": {
+              "One": 1,
+              "Series1": 1,
+              "Series2": 1,
+              "Three": 1,
+              "Two": 1
+            },
+            "pdfFillColors": [
+              "4472c4",
+              "ed7d31"
+            ]
+          }
+        },
+        {
+          "kind": "column",
+          "vary": true,
+          "series": 1,
+          "producer": {
+            "vary": [
+              {
+                "val": "1"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "4472c4",
+                "points": [
+                  {
+                    "index": "0",
+                    "colors": [
+                      {
+                        "val": "4472c4"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "1",
+                    "colors": [
+                      {
+                        "val": "ed7d31"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "2",
+                    "colors": [
+                      {
+                        "val": "a5a5a5"
+                      }
+                    ],
+                    "marker": null
+                  }
+                ]
+              }
+            ],
+            "pdfWords": {
+              "One": 2,
+              "Three": 2,
+              "Two": 2
+            },
+            "pdfFillColors": [
+              "4472c4",
+              "a5a5a5",
+              "ed7d31"
+            ]
+          }
+        },
+        {
+          "kind": "column",
+          "vary": true,
+          "series": 2,
+          "producer": {
+            "vary": [
+              {
+                "val": "0"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "4472c4",
+                "points": []
+              },
+              {
+                "index": "1",
+                "fill": "ed7d31",
+                "points": []
+              }
+            ],
+            "pdfWords": {
+              "One": 1,
+              "Series1": 1,
+              "Series2": 1,
+              "Three": 1,
+              "Two": 1
+            },
+            "pdfFillColors": [
+              "4472c4",
+              "ed7d31"
+            ]
+          }
+        },
+        {
+          "kind": "line",
+          "vary": false,
+          "series": 1,
+          "producer": {
+            "vary": [
+              {
+                "val": "0"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "4472c4",
+                "points": []
+              }
+            ],
+            "pdfWords": {
+              "One": 1,
+              "Series1": 1,
+              "Three": 1,
+              "Two": 1
+            },
+            "pdfFillColors": [
+              "4472c4"
+            ]
+          }
+        },
+        {
+          "kind": "line",
+          "vary": false,
+          "series": 2,
+          "producer": {
+            "vary": [
+              {
+                "val": "0"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "4472c4",
+                "points": []
+              },
+              {
+                "index": "1",
+                "fill": "ed7d31",
+                "points": []
+              }
+            ],
+            "pdfWords": {
+              "One": 1,
+              "Series1": 1,
+              "Series2": 1,
+              "Three": 1,
+              "Two": 1
+            },
+            "pdfFillColors": [
+              "4472c4",
+              "ed7d31"
+            ]
+          }
+        },
+        {
+          "kind": "line",
+          "vary": true,
+          "series": 1,
+          "producer": {
+            "vary": [
+              {
+                "val": "1"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "4472c4",
+                "points": [
+                  {
+                    "index": "0",
+                    "colors": [
+                      {
+                        "val": "000000"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "1",
+                    "colors": [
+                      {
+                        "val": "000000"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "2",
+                    "colors": [
+                      {
+                        "val": "000000"
+                      }
+                    ],
+                    "marker": null
+                  }
+                ]
+              }
+            ],
+            "pdfWords": {
+              "One": 2,
+              "Three": 2,
+              "Two": 2
+            },
+            "pdfFillColors": [
+              "004586",
+              "4472c4",
+              "ff420e",
+              "ffd320"
+            ]
+          }
+        },
+        {
+          "kind": "line",
+          "vary": true,
+          "series": 2,
+          "producer": {
+            "vary": [
+              {
+                "val": "0"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "4472c4",
+                "points": []
+              },
+              {
+                "index": "1",
+                "fill": "ed7d31",
+                "points": []
+              }
+            ],
+            "pdfWords": {
+              "One": 1,
+              "Series1": 1,
+              "Series2": 1,
+              "Three": 1,
+              "Two": 1
+            },
+            "pdfFillColors": [
+              "4472c4",
+              "ed7d31"
+            ]
+          }
+        },
+        {
+          "kind": "pie",
+          "vary": false,
+          "series": 1,
+          "producer": {
+            "vary": [
+              {
+                "val": "0"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "4472c4",
+                "points": [
+                  {
+                    "index": "0",
+                    "colors": [
+                      {
+                        "val": "4472c4"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "1",
+                    "colors": [
+                      {
+                        "val": "4472c4"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "2",
+                    "colors": [
+                      {
+                        "val": "4472c4"
+                      }
+                    ],
+                    "marker": null
+                  }
+                ]
+              }
+            ],
+            "pdfWords": {
+              "One": 1,
+              "Three": 1,
+              "Two": 1
+            },
+            "pdfFillColors": [
+              "4472c4"
+            ]
+          }
+        },
+        {
+          "kind": "pie",
+          "vary": true,
+          "series": 1,
+          "producer": {
+            "vary": [
+              {
+                "val": "1"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "4472c4",
+                "points": [
+                  {
+                    "index": "0",
+                    "colors": [
+                      {
+                        "val": "4472c4"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "1",
+                    "colors": [
+                      {
+                        "val": "ed7d31"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "2",
+                    "colors": [
+                      {
+                        "val": "a5a5a5"
+                      }
+                    ],
+                    "marker": null
+                  }
+                ]
+              }
+            ],
+            "pdfWords": {
+              "One": 1,
+              "Three": 1,
+              "Two": 1
+            },
+            "pdfFillColors": [
+              "4472c4",
+              "a5a5a5",
+              "ed7d31"
+            ]
+          }
+        },
+        {
+          "kind": "column",
+          "vary": true,
+          "series": 1,
+          "fill": "series",
+          "producer": {
+            "vary": [
+              {
+                "val": "1"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "112233",
+                "points": [
+                  {
+                    "index": "0",
+                    "colors": [
+                      {
+                        "val": "000000"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "1",
+                    "colors": [
+                      {
+                        "val": "000000"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "2",
+                    "colors": [
+                      {
+                        "val": "000000"
+                      }
+                    ],
+                    "marker": null
+                  }
+                ]
+              }
+            ],
+            "pdfWords": {
+              "One": 2,
+              "Three": 2,
+              "Two": 2
+            },
+            "pdfFillColors": [
+              "004586",
+              "112233",
+              "ff420e",
+              "ffd320"
+            ]
+          }
+        },
+        {
+          "kind": "column",
+          "vary": true,
+          "series": 1,
+          "fill": "point",
+          "producer": {
+            "vary": [
+              {
+                "val": "1"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "4472c4",
+                "points": [
+                  {
+                    "index": "0",
+                    "colors": [
+                      {
+                        "val": "4472c4"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "1",
+                    "colors": [
+                      {
+                        "val": "123456"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "2",
+                    "colors": [
+                      {
+                        "val": "a5a5a5"
+                      }
+                    ],
+                    "marker": null
+                  }
+                ]
+              }
+            ],
+            "pdfWords": {
+              "One": 2,
+              "Three": 2,
+              "Two": 2
+            },
+            "pdfFillColors": [
+              "123456",
+              "4472c4",
+              "a5a5a5"
+            ]
+          }
+        },
+        {
+          "kind": "pie",
+          "vary": true,
+          "series": 1,
+          "fill": "point",
+          "producer": {
+            "vary": [
+              {
+                "val": "1"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "4472c4",
+                "points": [
+                  {
+                    "index": "0",
+                    "colors": [
+                      {
+                        "val": "4472c4"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "1",
+                    "colors": [
+                      {
+                        "val": "123456"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "2",
+                    "colors": [
+                      {
+                        "val": "a5a5a5"
+                      }
+                    ],
+                    "marker": null
+                  }
+                ]
+              }
+            ],
+            "pdfWords": {
+              "One": 1,
+              "Three": 1,
+              "Two": 1
+            },
+            "pdfFillColors": [
+              "123456",
+              "4472c4",
+              "a5a5a5"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "theme": "alternate",
+      "sourceSha256": "dc21b2d0e872cbfbd7ab09496ecc5937b697d0b0e52b9b214b67a523aa9cbc4f",
+      "cases": [
+        {
+          "kind": "column",
+          "vary": false,
+          "series": 1,
+          "producer": {
+            "vary": [
+              {
+                "val": "0"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "aa5500",
+                "points": []
+              }
+            ],
+            "pdfWords": {
+              "One": 1,
+              "Series1": 1,
+              "Three": 1,
+              "Two": 1
+            },
+            "pdfFillColors": [
+              "aa5500"
+            ]
+          }
+        },
+        {
+          "kind": "column",
+          "vary": false,
+          "series": 2,
+          "producer": {
+            "vary": [
+              {
+                "val": "0"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "aa5500",
+                "points": []
+              },
+              {
+                "index": "1",
+                "fill": "008877",
+                "points": []
+              }
+            ],
+            "pdfWords": {
+              "One": 1,
+              "Series1": 1,
+              "Series2": 1,
+              "Three": 1,
+              "Two": 1
+            },
+            "pdfFillColors": [
+              "008877",
+              "aa5500"
+            ]
+          }
+        },
+        {
+          "kind": "column",
+          "vary": true,
+          "series": 1,
+          "producer": {
+            "vary": [
+              {
+                "val": "1"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "aa5500",
+                "points": [
+                  {
+                    "index": "0",
+                    "colors": [
+                      {
+                        "val": "aa5500"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "1",
+                    "colors": [
+                      {
+                        "val": "008877"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "2",
+                    "colors": [
+                      {
+                        "val": "5544aa"
+                      }
+                    ],
+                    "marker": null
+                  }
+                ]
+              }
+            ],
+            "pdfWords": {
+              "One": 2,
+              "Three": 2,
+              "Two": 2
+            },
+            "pdfFillColors": [
+              "008877",
+              "5544aa",
+              "aa5500"
+            ]
+          }
+        },
+        {
+          "kind": "column",
+          "vary": true,
+          "series": 2,
+          "producer": {
+            "vary": [
+              {
+                "val": "0"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "aa5500",
+                "points": []
+              },
+              {
+                "index": "1",
+                "fill": "008877",
+                "points": []
+              }
+            ],
+            "pdfWords": {
+              "One": 1,
+              "Series1": 1,
+              "Series2": 1,
+              "Three": 1,
+              "Two": 1
+            },
+            "pdfFillColors": [
+              "008877",
+              "aa5500"
+            ]
+          }
+        },
+        {
+          "kind": "line",
+          "vary": false,
+          "series": 1,
+          "producer": {
+            "vary": [
+              {
+                "val": "0"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "aa5500",
+                "points": []
+              }
+            ],
+            "pdfWords": {
+              "One": 1,
+              "Series1": 1,
+              "Three": 1,
+              "Two": 1
+            },
+            "pdfFillColors": [
+              "aa5500"
+            ]
+          }
+        },
+        {
+          "kind": "line",
+          "vary": false,
+          "series": 2,
+          "producer": {
+            "vary": [
+              {
+                "val": "0"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "aa5500",
+                "points": []
+              },
+              {
+                "index": "1",
+                "fill": "008877",
+                "points": []
+              }
+            ],
+            "pdfWords": {
+              "One": 1,
+              "Series1": 1,
+              "Series2": 1,
+              "Three": 1,
+              "Two": 1
+            },
+            "pdfFillColors": [
+              "008877",
+              "aa5500"
+            ]
+          }
+        },
+        {
+          "kind": "line",
+          "vary": true,
+          "series": 1,
+          "producer": {
+            "vary": [
+              {
+                "val": "1"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "aa5500",
+                "points": [
+                  {
+                    "index": "0",
+                    "colors": [
+                      {
+                        "val": "000000"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "1",
+                    "colors": [
+                      {
+                        "val": "000000"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "2",
+                    "colors": [
+                      {
+                        "val": "000000"
+                      }
+                    ],
+                    "marker": null
+                  }
+                ]
+              }
+            ],
+            "pdfWords": {
+              "One": 2,
+              "Three": 2,
+              "Two": 2
+            },
+            "pdfFillColors": [
+              "004586",
+              "aa5500",
+              "ff420e",
+              "ffd320"
+            ]
+          }
+        },
+        {
+          "kind": "line",
+          "vary": true,
+          "series": 2,
+          "producer": {
+            "vary": [
+              {
+                "val": "0"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "aa5500",
+                "points": []
+              },
+              {
+                "index": "1",
+                "fill": "008877",
+                "points": []
+              }
+            ],
+            "pdfWords": {
+              "One": 1,
+              "Series1": 1,
+              "Series2": 1,
+              "Three": 1,
+              "Two": 1
+            },
+            "pdfFillColors": [
+              "008877",
+              "aa5500"
+            ]
+          }
+        },
+        {
+          "kind": "pie",
+          "vary": false,
+          "series": 1,
+          "producer": {
+            "vary": [
+              {
+                "val": "0"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "aa5500",
+                "points": [
+                  {
+                    "index": "0",
+                    "colors": [
+                      {
+                        "val": "aa5500"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "1",
+                    "colors": [
+                      {
+                        "val": "aa5500"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "2",
+                    "colors": [
+                      {
+                        "val": "aa5500"
+                      }
+                    ],
+                    "marker": null
+                  }
+                ]
+              }
+            ],
+            "pdfWords": {
+              "One": 1,
+              "Three": 1,
+              "Two": 1
+            },
+            "pdfFillColors": [
+              "aa5500"
+            ]
+          }
+        },
+        {
+          "kind": "pie",
+          "vary": true,
+          "series": 1,
+          "producer": {
+            "vary": [
+              {
+                "val": "1"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "aa5500",
+                "points": [
+                  {
+                    "index": "0",
+                    "colors": [
+                      {
+                        "val": "aa5500"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "1",
+                    "colors": [
+                      {
+                        "val": "008877"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "2",
+                    "colors": [
+                      {
+                        "val": "5544aa"
+                      }
+                    ],
+                    "marker": null
+                  }
+                ]
+              }
+            ],
+            "pdfWords": {
+              "One": 1,
+              "Three": 1,
+              "Two": 1
+            },
+            "pdfFillColors": [
+              "008877",
+              "5544aa",
+              "aa5500"
+            ]
+          }
+        },
+        {
+          "kind": "column",
+          "vary": true,
+          "series": 1,
+          "fill": "series",
+          "producer": {
+            "vary": [
+              {
+                "val": "1"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "112233",
+                "points": [
+                  {
+                    "index": "0",
+                    "colors": [
+                      {
+                        "val": "000000"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "1",
+                    "colors": [
+                      {
+                        "val": "000000"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "2",
+                    "colors": [
+                      {
+                        "val": "000000"
+                      }
+                    ],
+                    "marker": null
+                  }
+                ]
+              }
+            ],
+            "pdfWords": {
+              "One": 2,
+              "Three": 2,
+              "Two": 2
+            },
+            "pdfFillColors": [
+              "004586",
+              "112233",
+              "ff420e",
+              "ffd320"
+            ]
+          }
+        },
+        {
+          "kind": "column",
+          "vary": true,
+          "series": 1,
+          "fill": "point",
+          "producer": {
+            "vary": [
+              {
+                "val": "1"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "aa5500",
+                "points": [
+                  {
+                    "index": "0",
+                    "colors": [
+                      {
+                        "val": "aa5500"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "1",
+                    "colors": [
+                      {
+                        "val": "123456"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "2",
+                    "colors": [
+                      {
+                        "val": "5544aa"
+                      }
+                    ],
+                    "marker": null
+                  }
+                ]
+              }
+            ],
+            "pdfWords": {
+              "One": 2,
+              "Three": 2,
+              "Two": 2
+            },
+            "pdfFillColors": [
+              "123456",
+              "5544aa",
+              "aa5500"
+            ]
+          }
+        },
+        {
+          "kind": "pie",
+          "vary": true,
+          "series": 1,
+          "fill": "point",
+          "producer": {
+            "vary": [
+              {
+                "val": "1"
+              }
+            ],
+            "series": [
+              {
+                "index": "0",
+                "fill": "aa5500",
+                "points": [
+                  {
+                    "index": "0",
+                    "colors": [
+                      {
+                        "val": "aa5500"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "1",
+                    "colors": [
+                      {
+                        "val": "123456"
+                      }
+                    ],
+                    "marker": null
+                  },
+                  {
+                    "index": "2",
+                    "colors": [
+                      {
+                        "val": "5544aa"
+                      }
+                    ],
+                    "marker": null
+                  }
+                ]
+              }
+            ],
+            "pdfWords": {
+              "One": 1,
+              "Three": 1,
+              "Two": 1
+            },
+            "pdfFillColors": [
+              "123456",
+              "5544aa",
+              "aa5500"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "No font geometry or pixel equivalence is claimed by these structural colors, PDF vector fill colors and words.",
+    "PDF fill colors are normalized as sets, independent of a PDF-to-SVG tool's subdivision of one colored shape into paths.",
+    "Calc varied lines add per-point markers outside the current explicit point-override reading profile; producer reopen is not claimed here.",
+    "Calc varied-line marker colors and explicit-series-color legend keys differ from the source-themed point colors; these cases are not color-fidelity acceptance.",
+    "Excel/WPS unverified."
+  ]
+}
