@@ -86,6 +86,26 @@ describe("strict structural contracts", () => {
     expectTypeOf<Extract<DocumentContentOperation, { op: "addAnnotation" }>>().toEqualTypeOf<never>();
   });
 
+  test.each(["open", "resolved", "closed", "needs_reanchor"] as const)("keeps text-set annotations distinct from unlocated workbook annotations in state %s", status => {
+    const anchor = { kind: "text-set", ranges: [{ nodeId: "p1", from: 1, to: 3, quote: "😀" }, { nodeId: "p2", from: 0, to: 2, quote: "正文" }] };
+    for (const body of [{ instruction: "保留范围" }, { bodyNodeId: "comment-body" }]) {
+      const input = { annotationId: "comment", documentId: "document", baseRevision: 0, status, anchor, ...body };
+      expect(parseContract("annotation", input)).toEqual(input);
+      expect(parseContract("annotations", [input])).toEqual([input]);
+      expect(parseContract("document-transaction", { protocolVersion: 1, documentId: "document", baseRevision: 0,
+        operations: [{ op: "addAnnotation", annotation: input }] }).operations).toEqual([{ op: "addAnnotation", annotation: input }]);
+    }
+  });
+
+  test("permits empty cell ranges only in invalidated workbook annotations", () => {
+    const annotation = { annotationId: "thread", documentId: "book", baseRevision: 0, status: "needs_reanchor", instruction: "保留无定位线程",
+      anchor: { kind: "cells", sheetId: "sheet", ranges: [] } };
+    expect(parseContract("annotations", [annotation])).toEqual([annotation]);
+    for (const status of ["open", "resolved", "closed"]) failure("annotations", [{ ...annotation, status }], "InvalidDocument");
+    failure("anchor", annotation.anchor, "InvalidDocument");
+    failure("annotations", [{ ...annotation, anchor: { kind: "text-set", ranges: [] } }], "InvalidDocument");
+  });
+
   test("infers the selected output type and preserves optional metadata without defaults", () => {
     expectTypeOf(parseContract("document-manifest", manifest)).toEqualTypeOf<DocumentManifest>();
     expectTypeOf(parseContract("edit-proposal", proposal)).toEqualTypeOf<EditProposal>();

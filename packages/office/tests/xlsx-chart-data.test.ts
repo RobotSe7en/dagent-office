@@ -37,7 +37,7 @@ describe("native worksheet chart references and imported caches", () => {
     const inferred = readChartReference(node(`<c:strRef xmlns:c="${C}"><c:f>A1:A3</c:f><c:strCache><c:pt idx="2"><c:v>末项</c:v></c:pt></c:strCache></c:strRef>`), budget());
     expect(inferred.cache?.count).toBe(3);
   });
-  it("rejects malformed or external references, duplicate cache points, unknown metadata and unsupported literal vectors", () => {
+  it("rejects malformed or external references, duplicate cache points, unknown metadata and ambiguous vectors", () => {
     for (const content of [
       '<c:f>[External.xlsx]Sheet1!A1</c:f>', '<c:f>=A1</c:f>', '<c:f>SUM(A1:A3)</c:f>',
       '<c:f>A1</c:f><c:numCache><c:ptCount val="1"/><c:pt idx="1"><c:v>2</c:v></c:pt></c:numCache>',
@@ -45,7 +45,9 @@ describe("native worksheet chart references and imported caches", () => {
       '<c:f>A1</c:f><c:numCache><c:ptCount val="1"/><c:pt idx="0"><c:v>oops</c:v></c:pt></c:numCache>',
       '<c:f>A1</c:f><c:extLst/>',
     ]) expect(() => readChartReference(node(`<c:numRef xmlns:c="${C}">${content}</c:numRef>`), budget())).toThrow();
-    expect(() => readChartVector(node(`<c:val xmlns:c="${C}"><c:numLit><c:ptCount val="1"/><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:val>`), budget(), true)).toThrowError(expect.objectContaining({ code: "UnsupportedFeature" }));
+    const literal = '<c:numLit><c:ptCount val="1"/><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit>';
+    expect(readChartVector(node(`<c:val xmlns:c="${C}">${literal}</c:val>`), budget(), true)).toEqual({ kind: "literal", valueType: "number", count: 1, points: [{ index: 0, value: 1 }] });
+    expect(() => readChartVector(node(`<c:val xmlns:c="${C}">${literal}<c:numRef><c:f>A1</c:f></c:numRef></c:val>`), budget(), true)).toThrowError(expect.objectContaining({ code: "InvalidDocument" }));
   });
   it("enforces cumulative declared-point and metadata-byte budgets before expanding cache records", () => {
     const source = node(`<c:numRef xmlns:c="${C}"><c:f>A1:A3</c:f><c:numCache><c:ptCount val="3"/></c:numCache></c:numRef>`), count = { ...budget(), maxItems: 7 };

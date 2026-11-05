@@ -63,7 +63,10 @@ const storedBody = { bodyNodeId: IdentifierSchema, instruction: z.never().option
 // an explicitly invalidated annotation; normal anchors/requests still require
 // at least one range. Never fabricate an A1 location for an unlocated thread.
 const unlocatedCells = { ...annotationIdentity, status: z.literal("needs_reanchor"),
-  anchor: z.strictObject({ kind: z.literal("cells"), sheetId: IdentifierSchema, ranges: z.array(WorkbookRangeSchema).length(0) }) };
+  // Keep the kind dispatch even for this one permitted variant. Bounded array
+  // preflight must not interpret a Word/PPT text-set's ranges as coordinates
+  // while examining this alternative of the enclosing annotation union.
+  anchor: z.discriminatedUnion("kind", [z.strictObject({ kind: z.literal("cells"), sheetId: IdentifierSchema, ranges: z.array(WorkbookRangeSchema).length(0) })]) };
 export const AnnotationSchema = z.union([
   z.strictObject({ ...annotationIdentity, ...instructionBody }), z.strictObject({ ...annotationIdentity, ...storedBody }),
   z.strictObject({ ...unlocatedCells, ...instructionBody }), z.strictObject({ ...unlocatedCells, ...storedBody }),
