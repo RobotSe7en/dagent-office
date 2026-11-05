@@ -5,8 +5,9 @@ import { build } from 'vite';
 import { importXlsx } from '../../packages/office/src/xlsx-import.js';
 import type { drawingWindowMeasurement } from './fixtures/workbook-drawing-window.js';
 import type { annotationWindowMeasurement, commentTextMeasurement, windowControllerMeasurement } from './fixtures/workbook-window-controller.js';
+import type { commentPanelMeasurement } from './fixtures/workbook-comment-panel.js';
 
-declare global { interface Window { workbookDrawingWindow: { drawingWindowMeasurement: typeof drawingWindowMeasurement; windowControllerMeasurement: typeof windowControllerMeasurement; annotationWindowMeasurement: typeof annotationWindowMeasurement; commentTextMeasurement: typeof commentTextMeasurement } } }
+declare global { interface Window { workbookDrawingWindow: { drawingWindowMeasurement: typeof drawingWindowMeasurement; windowControllerMeasurement: typeof windowControllerMeasurement; annotationWindowMeasurement: typeof annotationWindowMeasurement; commentTextMeasurement: typeof commentTextMeasurement; commentPanelMeasurement: typeof commentPanelMeasurement } } }
 let code = '';
 const inputs: { name: string; files: [string, number[]][] }[] = [];
 const comments: typeof inputs = [];
@@ -102,5 +103,19 @@ test('comment body flow preserves native run styles, paragraph offsets and UTF-1
         expect(body.formats.find(run => run.text === 'No underline')).toMatchObject({ underline: 'none', strike: '' });
       }
     }
+  }
+});
+
+test('read-only comment candidates retain recovery state and reply parents while failed replacements preserve the active panel', async ({ page }) => {
+  for (const name of ['09-classic-notes', '10-modern-threads']) for (const recovered of name === '10-modern-threads' ? [false, true] : [false]) {
+    const input = comments.find(input => input.name === name)!;
+    const result = await page.evaluate(({ files, recovered }) => window.workbookDrawingWindow.commentPanelMeasurement(files, recovered), { files: input.files, recovered });
+    expect(result).toMatchObject({ detached: true, editable: 0, released: true, empty: true, unchanged: true, plain: { elements: 0, bodies: 0 } });
+    expect(result.nodes).toBe(result.actualNodes); expect(result.fonts).toBeGreaterThan(0);
+    expect(result.errors).toEqual([...Array(recovered ? 4 : 3).fill('ResourceLimitExceeded'), 'RevisionConflict', 'InvalidOperation']);
+    expect(result.plain.text).toContain('<script>author</script>'); expect(result.plain.text).toContain('<img src="https://invalid.example/private">仅作为文字');
+    for (const body of result.bodies) { expect(body.text?.length).toBeGreaterThan(0); expect(body.projections).toBeGreaterThan(0); }
+    if (recovered) { expect(result.warning).toContain('位置记录不一致'); expect(result.warning).toContain('原状态：已处理'); expect(result.replyParents).toHaveLength(1); expect(result.text).toContain('回复中的纯文本'); }
+    else expect(result.warning).toBeUndefined();
   }
 });

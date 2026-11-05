@@ -20,6 +20,7 @@ function invalid(): never { throw new DocumentError("InvalidDocument", "Workbook
  * the owning preview surface supplies that validated stylesheet separately.
  * Only requested object/story subtrees are connected for CSS measurement. */
 export class WorkbookContentSources {
+  readonly identity: Readonly<{ documentId: string; revision: number }>;
   private root: HTMLElement | undefined;
   private readonly roots = new Map<string, HTMLElement>();
   private readonly images = new Map<string, string>();
@@ -27,6 +28,7 @@ export class WorkbookContentSources {
   private readonly themeCssClass: string;
   private disposed = false;
   constructor(private readonly document: Document, snapshot: WorkbookSnapshot, maxNodes: number = 100_000, maxCodeUnits: number = 8 * 1024 * 1024) {
+    this.identity = Object.freeze({ documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision });
     this.themeCssClass = snapshot.metadata.workbook.themeCssClass ?? "";
     if (![maxNodes, maxCodeUnits].every(value => Number.isSafeInteger(value) && value > 0)) throw new DocumentError("InvalidOperation", "Auxiliary source budgets must be positive safe integers.");
     const content = snapshot.content;

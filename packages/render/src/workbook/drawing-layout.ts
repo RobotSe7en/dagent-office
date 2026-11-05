@@ -68,6 +68,7 @@ export async function layoutWorkbookDrawings(surface: Pick<WorkbookSurface, "sou
     || !Number.isFinite(limits.maxExtentPt) || limits.maxExtentPt <= 0 || limits.maxExtentPt > 1_000_000)
     throw new DocumentError("InvalidOperation", "Drawing composition requires one connected surface and supported finite budgets.");
   checkWindowCancellation(signal); checkWindowIdentity(frame, snapshot);
+  checkWindowIdentity(sources.identity, snapshot);
   checkWindowIdentity(assetSource.snapshot.manifest, snapshot); checkWindowIdentity(chartSource.snapshot.manifest, snapshot);
   const sheet = snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === frame.sheetId);
   if (!sheet) throw new DocumentError("InvalidOperation", "Drawing composition requires its owning worksheet.");

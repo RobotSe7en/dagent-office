@@ -6,6 +6,7 @@ import { copyWorkbookTextStyle, decorateWorkbookText } from "./text-style.js";
 export interface WorkbookCommentText {
   readonly element: HTMLElement;
   readonly nodes: number;
+  readonly sourceCodeUnits: number;
   readonly projections: readonly { readonly node: Text; readonly sourceNodeId: string; readonly from: number; readonly to: number }[];
 }
 
@@ -66,5 +67,5 @@ export function createWorkbookCommentText(source: HTMLElement, maxNodes: number 
     if (runIndex !== runs.length) throw new DocumentError("InvalidDocument", "Comment text did not consume its source font runs.");
     root.append(target);
   }
-  return Object.freeze({ element: root, nodes, projections: Object.freeze(projections) });
+  return Object.freeze({ element: root, nodes, sourceCodeUnits: offset, projections: Object.freeze(projections) });
 }
