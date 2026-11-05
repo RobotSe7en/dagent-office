@@ -1,4 +1,4 @@
-import type { WorkbookChart, WorkbookChartReference } from "@dagent-office/core";
+import type { WorkbookChart, WorkbookChartVector } from "@dagent-office/core";
 import { parseWorkbookFormula, printWorkbookFormula } from "@dagent-office/core";
 import type { OpcPackage } from "../ooxml/package.js";
 import type { Css } from "../ooxml/styles.js";
@@ -7,7 +7,7 @@ import type { XmlNode } from "../ooxml/xml.js";
 import type { Html } from "../drawingml/html.js";
 import { appearance, axisStyle, cssString, decimal, flag, labels, labelStyle, noLayout, style, val } from "../drawingml/chart-style.js";
 import { attributes, boolean, integer, one, spreadsheetText, value } from "./values.js";
-import { readChartLabel, readChartVector } from "./chart-data.js";
+import { readChartLabel, readChartReference, readChartVector } from "./chart-data.js";
 import type { ChartDataBudget } from "./chart-data.js";
 import { drawingTextStyle, readDrawingText } from "./drawing-text.js";
 import { chartLabelLeaderLines, validateWorksheetChart } from "./chart-validation.js";
@@ -69,17 +69,19 @@ export class WorkbookCharts {
     const indices = new Set<number>(), orders = new Set<number>(), globalLabels = one(native, "dLbls", C), globalContents = labels(globalLabels), globalStyle = this.labelStyle(globalLabels);
     if (globalStyle) definition.labelCssClass = globalStyle;
     let categoryKey: string | undefined, labelKey: string | undefined;
-    const referenceKey = (source: WorkbookChartReference): string => source.valueType + ":" + printWorkbookFormula(parseWorkbookFormula(source.expression, { row: 0, column: 0 }), { row: 0, column: 0 });
+    const vectorKey = (source: WorkbookChartVector): string => "expression" in source
+      ? source.valueType + ":" + printWorkbookFormula(parseWorkbookFormula(source.expression, { row: 0, column: 0 }), { row: 0, column: 0 })
+      : JSON.stringify(source);
     for (const [position, entry] of ordered.entries()) {
       const s = entry.source, indexNode = one(s, "idx", C); if (!indexNode) fail(s, "A chart series has no native identity.");
       const index = integer(indexNode, "val");
       if (indices.has(index) || orders.has(entry.order)) fail(s, "Native series identities or order are duplicated."); indices.add(index); orders.add(entry.order);
       if (flag(s, "smooth") || (decimal(s, "explosion") ?? 0) !== 0) unsupported(s, "Smoothed lines and exploded slices are not supported.");
       const categories = one(s, "cat", C), values = one(s, "val", C), name = one(s, "tx", C);
-      if (!values) fail(s, "A chart series has no value reference.");
-      const category = categories ? readChartVector(categories, this.budget) : undefined, key = category ? referenceKey(category) : "automatic";
+      if (!values) fail(s, "A chart series has no value source.");
+      const category = categories ? readChartVector(categories, this.budget) : undefined, key = category ? vectorKey(category) : "automatic";
       if (!position) { categoryKey = key; if (category) definition.categories = category; }
-      else if (categoryKey !== key) unsupported(s, "Basic chart series must share one category reference.");
+      else if (categoryKey !== key) unsupported(s, "Basic chart series must share one category source.");
       const seriesId = `series-${position}`;
       definition.series.push({ seriesId, nativeIndex: index, values: readChartVector(values, this.budget, true), ...(name ? { name: readChartLabel(name, this.budget) } : {}) });
       const marker = one(s, "marker", C), symbol = val(marker, "symbol", "none")!;
@@ -121,7 +123,8 @@ export class WorkbookCharts {
         body.attrs.class = [body.attrs.class, cssClass].filter(Boolean).join(" "); frame.children.push(body);
         return { cssClass, text, nodeId: body.attrs["data-node-id"]! };
       }
-      return { cssClass, reference: readChartVector(tx, this.budget) };
+      attributes(tx, []);
+      return { cssClass, reference: readChartReference(one(tx, "strRef", C)!, this.budget) };
     };
     const title = one(chart, "title", C);
     if (title) {

@@ -1,4 +1,4 @@
-import type { WorkbookChartReference, WorkbookMetadata, WorkbookObject } from "../contracts/workbook.js";
+import type { WorkbookChartVector, WorkbookMetadata, WorkbookObject } from "../contracts/workbook.js";
 import { WorkbookErrorValueSchema } from "../contracts/workbook.js";
 import type { ParsedHtml } from "../document/html.js";
 import { checkLimit, invalid } from "../document/validation.js";
@@ -16,15 +16,16 @@ export function chartReferenceExpression(expression: string): FormulaExpression 
 }
 export function validateWorkbookCharts(workbook: WorkbookMetadata, objects: ReadonlyMap<string, WorkbookObject>, html: ParsedHtml | undefined, classes: ReadonlySet<string>, maxItems: number): number {
   const charts = new Map<string, string>(); let items = 0;
-  const reference = (source: WorkbookChartReference): void => {
-    chartReferenceExpression(source.expression); checkLimit(++items, maxItems);
-    const cache = source.cache; if (!cache) return;
+  const vector = (source: WorkbookChartVector): void => {
+    if ("expression" in source) chartReferenceExpression(source.expression);
+    checkLimit(++items, maxItems);
+    const cache = "expression" in source ? source.cache : source; if (!cache) return;
     items += cache.count; checkLimit(items, maxItems);
-    if (cache.points.length > cache.count || source.valueType === "text" && cache.numberFormat !== undefined) invalid("A chart cache has an inconsistent point count or number format.");
+    if (cache.points.length > cache.count || source.valueType === "text" && cache.numberFormat !== undefined) invalid("A chart vector has an inconsistent point count or number format.");
     let previous = -1;
     for (const point of cache.points) {
-      if (point.index <= previous || point.index >= cache.count) invalid("Chart cache indexes must be unique, increasing and within their declared vector."); previous = point.index;
-      if (source.valueType === "text" && (typeof point.value !== "string" || point.numberFormat !== undefined) || source.valueType === "number" && typeof point.value === "string" && !WorkbookErrorValueSchema.safeParse(point.value).success) invalid("A chart cache point does not match its declared value type.");
+      if (point.index <= previous || point.index >= cache.count) invalid("Chart vector indexes must be unique, increasing and within their declared vector."); previous = point.index;
+      if (source.valueType === "text" && (typeof point.value !== "string" || point.numberFormat !== undefined) || source.valueType === "number" && typeof point.value === "string" && !WorkbookErrorValueSchema.safeParse(point.value).success) invalid("A chart vector point does not match its declared value type.");
     }
   };
   const style = (name: string | undefined): void => { if (name !== undefined && !classes.has(name)) invalid("A chart style refers to an undefined CSS class."); };
@@ -35,18 +36,18 @@ export function validateWorkbookCharts(workbook: WorkbookMetadata, objects: Read
     if (chart.kind === "pie" && chart.series.length !== 1 || chart.kind !== "pie" && chart.firstSliceAngle !== undefined || chart.kind !== "column" && (chart.gapWidth !== undefined || chart.overlap !== undefined)) invalid("Chart options do not match the selected basic chart kind.");
     if (chart.minimum !== undefined && chart.maximum !== undefined && chart.minimum >= chart.maximum) invalid("Chart axis bounds must be increasing.");
     const series = new Set<string>(), native = new Set<number>();
-    if (chart.categories) reference(chart.categories);
+    if (chart.categories) vector(chart.categories);
     for (const item of chart.series) {
       if (series.has(item.seriesId) || item.nativeIndex !== undefined && native.has(item.nativeIndex)) invalid("Chart series identities must be unique."); series.add(item.seriesId); if (item.nativeIndex !== undefined) native.add(item.nativeIndex);
       if (item.values.valueType !== "number") invalid("A chart series requires numeric source values.");
-      reference(item.values); if (item.name?.kind === "reference") reference(item.name.reference);
+      vector(item.values); if (item.name?.kind === "reference") vector(item.name.reference);
     }
     const titleIds = new Set<string>();
     const titles = [{ nodeId: chart.titleNodeId, reference: chart.titleReference, cssClass: chart.titleCssClass, text: chart.titleText }, chart.categoryAxisTitle, chart.valueAxisTitle];
     if (chart.kind === "pie" && (chart.categoryAxisTitle || chart.valueAxisTitle)) invalid("A pie chart has no axis titles.");
     for (const title of titles) {
       if (!title) continue;
-      if (title.reference) reference(title.reference);
+      if (title.reference) vector(title.reference);
       if (title.reference && title.nodeId) invalid("A chart title cannot have competing rich-text and cell-reference sources.");
       if (title.text && !title.nodeId) invalid("Chart title text-body properties require a rich source title.");
       if (title !== titles[0] && !title.reference && !title.nodeId) invalid("An axis title requires a text or reference source.");

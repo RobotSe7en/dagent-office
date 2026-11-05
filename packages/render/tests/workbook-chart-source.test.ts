@@ -44,12 +44,33 @@ function cells(response: WorkbookChartReadResponse, role = "series-values") {
 }
 
 describe("bounded current-source workbook chart reads", () => {
+  it("returns immutable sparse literals without resolving formulas or reading worksheet cells", async () => {
+    const model = seeded(chart => {
+      chart.categories = { kind: "literal", valueType: "text", count: 4, points: [{ index: 0, value: "季度😀" }] };
+      chart.series[0]!.values = { kind: "literal", valueType: "number", count: 4, numberFormat: "0.00", points: [{ index: 0, value: -3 }, { index: 2, value: null }, { index: 3, value: "#N/A", numberFormat: "0%" }] };
+    });
+    const provider = { ...model, resolveReference() { throw new Error("No literal has a reference"); }, readWindow() { throw new Error("No literal owns cells"); } };
+    const response = await read(provider, { maxPoints: 8 });
+    expect(response.charts[0]!.references.map(ref => ref.data)).toEqual([model.snapshot().metadata.workbook.charts![0]!.categories, model.snapshot().metadata.workbook.charts![0]!.series[0]!.values]);
+    expect(structuredClone(response)).toEqual(response); expect(Object.isFrozen(response.charts[0]!.references[0]!.data)).toBe(true);
+    await expect(read(provider, { maxPoints: 7 })).rejects.toMatchObject({ code: "ResourceLimitExceeded" });
+    await expect(read(provider, { maxCodeUnits: 24 })).rejects.toMatchObject({ code: "ResourceLimitExceeded" });
+  });
+  it("preflights literal counts before reading any referenced cells and yields during literal text admission", async () => {
+    let queried = 0;
+    const model = seeded(chart => { chart.series[0]!.values = { kind: "literal", valueType: "number", count: 1024, points: Array.from({ length: 1024 }, (_, index) => ({ index, value: index })) }; });
+    const provider = { ...model, readWindow(window: Parameters<WorkbookModel["readWindow"]>[0]) { queried++; return model.readWindow(window); } };
+    await expect(read(provider, { maxPoints: 1025 })).rejects.toMatchObject({ code: "ResourceLimitExceeded" }); expect(queried).toBe(0);
+    const controller = new AbortController(), pending = read(provider, {}, controller.signal); controller.abort();
+    await expect(pending).rejects.toMatchObject({ code: "OperationCancelled" }); expect(queried).toBe(0);
+    const response = await read(provider); expect(cells(response, "categories")).toHaveLength(2); expect(response.charts[0]!.references[1]!.data.kind).toBe("literal");
+  });
   it("keeps typed values, formula states and sparse blanks distinct from imported chart caches", async () => {
     const model = seeded(), source = model.serialize(), response = await read(model);
     expect(cells(response).map(cell => cell.state)).toEqual(["constant", "imported", "valid", "stale", "unavailable", "constant"]);
     expect(cells(response).map(cell => cell.value)).toEqual([{ type: "number", value: 12 }, { type: "number", value: 23 }, { type: "number", value: 34 }, { type: "number", value: 45 }, { type: "blank" }, { type: "error", value: "#N/A" }]);
     expect(cells(response, "categories").map(cell => cell.value)).toEqual([{ type: "text", value: "中文😀" }, { type: "boolean", value: true }]);
-    expect(model.snapshot().metadata.workbook.charts![0]!.series[0]!.values.cache!.points[0]!.value).toBe(999);
+    expect(model.snapshot().metadata.workbook.charts![0]!.series[0]!.values).toMatchObject({ cache: { points: [{ index: 0, value: 999 }] } });
     expect(model.serialize()).toEqual(source); expect(Object.isFrozen(response.charts[0]?.references)).toBe(true); expect(Object.isFrozen(cells(response)[0]?.value)).toBe(true);
     expect(structuredClone(response)).toEqual(response);
   });
@@ -151,7 +172,7 @@ describe("bounded current-source workbook chart reads", () => {
       expect(points[7]!.state).toBe('imported');
       expect(points.filter(point => point.rowHidden).map(point => point.row)).toEqual(evidence.cases[index]!.hidden === 'rows' ? [2, 4, 11] : []);
       expect(points.every(point => point.columnHidden)).toBe(evidence.cases[index]!.hidden === 'values-column');
-      expect(definitions[index]!.series[0]!.values.cache!.points.map(point => point.value)).toEqual(Array(12).fill(999));
+      expect(definitions[index]!.series[0]!.values).toMatchObject({ cache: { points: Array.from({ length: 12 }, (_, index) => ({ index, value: 999 })) } });
     }
   });
 });

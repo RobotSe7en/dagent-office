@@ -1,5 +1,5 @@
 import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookChart, WorkbookChartReference, WorkbookFormulaSource, WorkbookModel, WorkbookReferenceArea, WorkbookReferenceResult, WorkbookSheet, WorkbookSnapshot, WorkbookValue } from "@dagent-office/core";
+import type { DeepReadonly, WorkbookChart, WorkbookChartLiteral, WorkbookChartVector, WorkbookFormulaSource, WorkbookModel, WorkbookReferenceArea, WorkbookReferenceResult, WorkbookSheet, WorkbookSnapshot, WorkbookValue } from "@dagent-office/core";
 import { workbookCellFormat } from "./cell-format.js";
 
 export interface WorkbookChartReadLimits {
@@ -19,6 +19,7 @@ export interface WorkbookChartCell {
  * hiding, numeric coercion and display formatting belong to the chart adapter. */
 export type WorkbookChartReferenceData =
   | { readonly kind: "cells"; readonly areas: readonly { readonly range: DeepReadonly<WorkbookReferenceArea>; readonly cells: readonly WorkbookChartCell[] }[] }
+  | DeepReadonly<WorkbookChartLiteral>
   | Exclude<WorkbookReferenceResult, { kind: "ranges" }>;
 export type WorkbookChartReferenceSlot =
   | { readonly role: "categories" | "title" | "category-axis-title" | "value-axis-title" }
@@ -48,7 +49,7 @@ function hidden(runs: readonly { readonly from: number; readonly to: number; rea
   while (low < high) { const mid = (low + high) >>> 1; if (runs[mid]!.to < index) low = mid + 1; else high = mid; }
   const run = runs[low]; return run && run.from <= index ? run.hidden ?? fallback : fallback;
 }
-function references(chart: DeepReadonly<WorkbookChart>, add: (slot: WorkbookChartReferenceSlot, reference: DeepReadonly<WorkbookChartReference>) => void): void {
+function references(chart: DeepReadonly<WorkbookChart>, add: (slot: WorkbookChartReferenceSlot, reference: DeepReadonly<WorkbookChartVector>) => void): void {
   if (chart.categories) add({ role: "categories" }, chart.categories);
   if (chart.titleReference) add({ role: "title" }, chart.titleReference);
   if (chart.categoryAxisTitle?.reference) add({ role: "category-axis-title" }, chart.categoryAxisTitle.reference);
@@ -82,22 +83,34 @@ export function modelChartSource(model: WorkbookModel): WorkbookChartSource {
     };
     const selected = ids.map(chartId => {
       const chart = charts.get(chartId)!, sheetId = owners.get(chartId)!;
-      const entries: { slot: WorkbookChartReferenceSlot; reference: DeepReadonly<WorkbookChartReference> }[] = [];
+      const entries: { slot: WorkbookChartReferenceSlot; reference: DeepReadonly<WorkbookChartVector> }[] = [];
       account(chartId.length + sheetId.length);
       references(chart, (slot, reference) => {
         if (++count > budget.maxReferences) throw new DocumentError("ResourceLimitExceeded", "The chart batch exceeds its reference budget.");
-        account(reference.expression.length + ("seriesId" in slot ? slot.seriesId.length : 0));
+        account(("expression" in reference ? reference.expression.length : 0) + ("seriesId" in slot ? slot.seriesId.length : 0));
         entries.push({ slot, reference });
       });
       return { chartId, sheetId, entries };
     });
-    const pending: { chartId: string; sheetId: string; entries: { slot: WorkbookChartReferenceSlot; resolved: WorkbookReferenceResult }[] }[] = [];
+    type ResolvedVector = WorkbookReferenceResult | DeepReadonly<WorkbookChartLiteral>;
+    const pending: { chartId: string; sheetId: string; entries: { slot: WorkbookChartReferenceSlot; resolved: ResolvedVector }[] }[] = [];
     let admitted = 0;
     for (const chart of selected) {
-      const entries: { slot: WorkbookChartReferenceSlot; resolved: WorkbookReferenceResult }[] = [];
+      const entries: { slot: WorkbookChartReferenceSlot; resolved: ResolvedVector }[] = [];
       for (const { slot, reference } of chart.entries) {
         cancelled(signal);
-        const resolved = model.resolveReference(reference.expression, { sheetId: chart.sheetId, row: 0, column: 0 });
+        const resolved = "expression" in reference ? model.resolveReference(reference.expression, { sheetId: chart.sheetId, row: 0, column: 0 }) : reference;
+        if (resolved.kind === "literal") {
+          points += resolved.count;
+          if (points > budget.maxPoints) throw new DocumentError("ResourceLimitExceeded", "Chart literals exceed their cumulative point budget.");
+          account(resolved.numberFormat?.length ?? 0);
+          for (let i = 0; i < resolved.points.length; i++) {
+            cancelled(signal);
+            const point = resolved.points[i]!;
+            account((typeof point.value === "string" ? point.value.length : 0) + (point.numberFormat?.length ?? 0));
+            if (i % 256 === 255 && i + 1 < resolved.points.length) await new Promise<void>(resolve => setTimeout(resolve, 0));
+          }
+        }
         if (resolved.kind === "ranges") for (const area of resolved.areas) {
           points += (area.to.row - area.from.row + 1) * (area.to.column - area.from.column + 1);
           if (points > budget.maxPoints) throw new DocumentError("ResourceLimitExceeded", "Chart references exceed their cumulative cell budget.");

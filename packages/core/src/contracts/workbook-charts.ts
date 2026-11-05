@@ -17,6 +17,14 @@ export const WorkbookChartReferenceSchema = z.strictObject({
   expression: z.string().min(2).max(8192).startsWith("="), valueType: z.enum(["text", "number"]), cache: WorkbookChartCacheSchema.optional(),
 });
 export type WorkbookChartReference = z.infer<typeof WorkbookChartReferenceSchema>;
+/** Native literal vectors own their values. They have neither a formula nor a
+ * calculation/cache state, and never fabricate worksheet cells. */
+export const WorkbookChartLiteralSchema = WorkbookChartCacheSchema.omit({ state: true }).extend({
+  kind: z.literal("literal"), valueType: z.enum(["text", "number"]),
+});
+export type WorkbookChartLiteral = z.infer<typeof WorkbookChartLiteralSchema>;
+export const WorkbookChartVectorSchema = z.union([WorkbookChartReferenceSchema, WorkbookChartLiteralSchema]);
+export type WorkbookChartVector = z.infer<typeof WorkbookChartVectorSchema>;
 export const WorkbookChartLabelSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("text"), text: z.string().max(32767) }),
   z.strictObject({ kind: z.literal("reference"), reference: WorkbookChartReferenceSchema }),
@@ -28,8 +36,8 @@ const axisTitle = z.strictObject({
 });
 export const WorkbookChartSchema = ChartAppearanceSchema.extend({
   chartId: IdentifierSchema, nodeId: IdentifierSchema,
-  categories: WorkbookChartReferenceSchema.optional(),
-  series: z.array(z.strictObject({ seriesId: IdentifierSchema, nativeIndex: index.optional(), name: WorkbookChartLabelSchema.optional(), values: WorkbookChartReferenceSchema })).min(1),
+  categories: WorkbookChartVectorSchema.optional(),
+  series: z.array(z.strictObject({ seriesId: IdentifierSchema, nativeIndex: index.optional(), name: WorkbookChartLabelSchema.optional(), values: WorkbookChartVectorSchema })).min(1),
   titleReference: WorkbookChartReferenceSchema.optional(),
   titleCssClass: IdentifierSchema.optional(), titleText: DrawingTextPropertiesSchema.optional(), categoryGridCssClass: IdentifierSchema.optional(),
   categoryAxisTitle: axisTitle.optional(), valueAxisTitle: axisTitle.optional(),

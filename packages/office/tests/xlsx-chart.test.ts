@@ -12,15 +12,36 @@ function variant(edit: (source: string) => string, part = "xl/charts/chart1.xml"
   expect(changed).not.toBe(source); files.set(part, encoder.encode(changed)); return writeOpcZip(files);
 }
 describe("worksheet chart object and style mapping", () => {
+  it("preserves native literal categories and numeric values, including sparse holes, errors and point formats", async () => {
+    const categories = '<c:cat><c:strLit><c:ptCount val="4"/><c:pt idx="3"><c:v>末项禰󠄀</c:v></c:pt><c:pt idx="0"><c:v>季度😀</c:v></c:pt></c:strLit></c:cat>';
+    const values = '<c:val><c:numLit><c:formatCode>0.00</c:formatCode><c:ptCount val="4"/><c:pt idx="3"><c:v>#N/A</c:v></c:pt><c:pt idx="1"><c:v/></c:pt><c:pt idx="0" formatCode="0%"><c:v>-3</c:v></c:pt></c:numLit></c:val>';
+    const literal = (xml: string) => xml.replace(/<c:cat>[\s\S]*?<\/c:cat>/g, categories).replace(/<c:val>[\s\S]*?<\/c:val>/g, values);
+    const { model } = await read(variant(literal)), snapshot = model.snapshot(), chart = snapshot.metadata.workbook.charts![0]!;
+    expect(chart.categories).toEqual({ kind: 'literal', valueType: 'text', count: 4, points: [{ index: 0, value: '季度😀' }, { index: 3, value: '末项禰󠄀' }] });
+    for (const series of chart.series) expect(series.values).toEqual({ kind: 'literal', valueType: 'number', count: 4, numberFormat: '0.00', points: [{ index: 0, value: -3, numberFormat: '0%' }, { index: 1, value: null }, { index: 3, value: '#N/A' }] });
+    expect(model.getCell('sheet-1', 1, 1)?.value).toEqual({ type: 'number', value: 2 });
+    expect(openDocument(model.serialize(), { kind: 'workbook' }).snapshot()).toEqual(snapshot);
+    for (const change of [
+      (xml: string) => xml.replace('<c:numLit>', '<c:numRef><c:f>Data!A1</c:f></c:numRef><c:numLit>'),
+      (xml: string) => xml.replace('<c:strLit>', '<c:strLit unknown="1">'),
+      (xml: string) => xml.replace('<c:numLit>', '<c:numLit><c:f>Data!A1</c:f>'),
+      (xml: string) => xml.replace('<c:ptCount val="4"/>', '<c:ptCount val="3"/>'),
+      (xml: string) => xml.replace('<c:v>-3</c:v>', '<c:v>word</c:v>'),
+      (xml: string) => xml.replace('<c:v>-3</c:v>', '<c:v>1e999</c:v>'),
+      (xml: string) => xml.replace('idx="1"', 'idx="0"'),
+      (xml: string) => xml.replace('末项禰󠄀', '不同分类'),
+    ]) await expect(read(variant(xml => change(literal(xml))))).rejects.toBeDefined();
+  });
   it.each([path, "examples/xlsx/producer/07-three-charts.xlsx"])("reopens three chart types from %s with current-source references and imported caches", async path => {
     const { model } = await read(readFileSync(path)), snapshot = model.snapshot(), charts = snapshot.metadata.workbook.charts!;
     expect(charts.map(chart => chart.kind)).toEqual(["column", "line", "pie"]); expect(snapshot.metadata.workbook.objects?.map(object => object.kind)).toEqual(["chart", "chart", "chart"]);
     expect(charts.map(chart => chart.series.length)).toEqual([2, 2, 1]); expect(charts.every(chart => chart.visibleCellsOnly)).toBe(true);
-    expect(charts[0]?.categories?.expression).toBe("=Data!$A$2:$A$4");
+    expect(charts[0]?.categories).toMatchObject({ expression: "=Data!$A$2:$A$4" });
     expect(charts[0]?.series[0]?.name).toMatchObject({ kind: "reference", reference: { expression: "=Data!$B$1" } });
     expect(charts[0]?.series[0]?.values).toMatchObject({ expression: "=Data!$B$2:$B$4", valueType: "number", cache: { state: "imported" } });
     const sheetId = snapshot.metadata.workbook.activeSheetId;
-    const bound = model.resolveReference(charts[0]!.series[0]!.values.expression, { sheetId, row: 0, column: 0 });
+    const values = charts[0]!.series[0]!.values; if (!("expression" in values)) throw new Error("Expected a reference fixture");
+    const bound = model.resolveReference(values.expression, { sheetId, row: 0, column: 0 });
     expect(bound).toEqual({ kind: "ranges", areas: [{ sheetId, from: { row: 1, column: 1 }, to: { row: 3, column: 1 } }] });
     expect(model.readWindow({ sheetId, row: 1, column: 1, rows: 3, columns: 1 }).map(cell => cell.value)).toEqual([2, 5, 8].map(value => ({ type: "number", value })));
     for (const chart of charts) { expect(model.getNode(chart.titleNodeId!)?.text).toBe("图表 " + chart.kind); expect(chart.legend).toBe("bottom"); }

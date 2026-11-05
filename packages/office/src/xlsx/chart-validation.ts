@@ -12,7 +12,7 @@ const children: Readonly<Record<string, readonly string[]>> = {
   lineChart: ["grouping", "varyColors", "ser", "dLbls", "hiLowLines", "marker", "smooth", "axId"],
   pieChart: ["varyColors", "ser", "dLbls", "firstSliceAng"],
   ser: ["idx", "order", "tx", "spPr", "invertIfNegative", "marker", "dPt", "dLbls", "cat", "val", "smooth", "explosion"],
-  tx: ["strRef", "rich", "v"], cat: ["strRef", "numRef"], val: ["numRef"],
+  tx: ["strRef", "rich", "v"], cat: ["strRef", "numRef", "strLit", "numLit"], val: ["numRef", "numLit"],
   marker: ["symbol", "size", "spPr"], dPt: ["idx", "invertIfNegative", "marker", "bubble3D", "explosion", "spPr"],
   dLbls: ["dLbl", "delete", "numFmt", "spPr", "txPr", "dLblPos", "showLegendKey", "showVal", "showCatName", "showSerName", "showPercent", "showBubbleSize", "separator", "showLeaderLines", "leaderLines", "extLst"],
   dLbl: ["idx", "delete", "numFmt", "spPr", "txPr", "dLblPos", "showLegendKey", "showVal", "showCatName", "showSerName", "showPercent", "showBubbleSize", "separator"],
@@ -61,7 +61,7 @@ export function chartLabelLeaderLines(source: XmlNode): boolean | undefined {
 export function validateWorksheetChart(source: XmlNode): XmlNode {
   const visit = (node: XmlNode, parent?: XmlNode): XmlNode => {
     if (node.uri !== C) unsupported(node);
-    if (["strRef", "numRef", "rich"].includes(node.name)) return node; // Consumed by reference/text readers, including cache budgets.
+    if (["strRef", "numRef", "strLit", "numLit", "rich"].includes(node.name)) return node; // Consumed by vector/text readers, including cumulative budgets.
     if (node.name === "txPr") { drawingTextStyle(node); return node; }
     if (node.name === "spPr") {
       attributes(node, ["bwMode"]); check(node, ["noFill", "solidFill", "gradFill", "ln", "effectLst"], A);

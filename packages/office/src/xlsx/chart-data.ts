@@ -1,5 +1,5 @@
 import { DocumentError, parseWorkbookFormula, WorkbookErrorValueSchema } from "@dagent-office/core";
-import type { WorkbookChartCache, WorkbookChartLabel, WorkbookChartReference, WorkbookFormulaExpression } from "@dagent-office/core";
+import type { WorkbookChartCache, WorkbookChartLabel, WorkbookChartReference, WorkbookChartVector, WorkbookFormulaExpression } from "@dagent-office/core";
 import { C, check, elements, fail, text, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import { attributes, finite, integer, one, spreadsheetText, value } from "./values.js";
@@ -14,14 +14,14 @@ function account(budget: ChartDataBudget, items: number, bytes = 0): void {
 function sourceText(node: XmlNode, maximum: number): string {
   const result = spreadsheetStringText(node); if (result.length > maximum) throw new DocumentError("ResourceLimitExceeded", "A chart source string exceeds its text budget."); return result;
 }
-function cache(source: XmlNode, numeric: boolean, budget: ChartDataBudget): WorkbookChartCache {
+function vectorData(source: XmlNode, numeric: boolean, budget: ChartDataBudget): Omit<WorkbookChartCache, "state"> {
   attributes(source, []); check(source, numeric ? ["formatCode", "ptCount", "pt"] : ["ptCount", "pt"], C);
   const count = one(source, "ptCount", C), format = one(source, "formatCode", C), points = elements(source, "pt", C);
   if (count) { attributes(count, ["val"]); check(count, [], C); }
   let size = count ? integer(count, "val") : 0;
   if (!count) for (const point of points) size = Math.max(size, integer(point, "idx") + 1);
   account(budget, size, 64);
-  const result: WorkbookChartCache = { state: "imported", count: size, points: [] }, indexes = new Set<number>();
+  const result: Omit<WorkbookChartCache, "state"> = { count: size, points: [] }, indexes = new Set<number>();
   if (format) { result.numberFormat = sourceText(format, 2048); account(budget, 0, utf8Bytes(JSON.stringify(result.numberFormat))); }
   for (const point of points) {
     attributes(point, numeric ? ["idx", "formatCode"] : ["idx"]); check(point, ["v"], C);
@@ -49,12 +49,17 @@ export function readChartReference(source: XmlNode, budget: ChartDataBudget): Wo
     || node.kind === "call" && ["INDEX", "OFFSET", "INDIRECT"].includes(node.name);
   if (!reference(parsed)) unsupported(formula, "A chart formula must produce a worksheet reference.");
   account(budget, 1, utf8Bytes(JSON.stringify(expression)) + 64);
-  return { expression, valueType: numeric ? "number" : "text", ...(cached ? { cache: cache(cached, numeric, budget) } : {}) };
+  return { expression, valueType: numeric ? "number" : "text", ...(cached ? { cache: { state: "imported", ...vectorData(cached, numeric, budget) } } : {}) };
 }
-export function readChartVector(source: XmlNode, budget: ChartDataBudget, numericOnly = false): WorkbookChartReference {
-  attributes(source, []); check(source, numericOnly ? ["numRef"] : ["strRef", "numRef"], C);
-  const references = elements(source, undefined, C); if (references.length !== 1) fail(source, "A chart vector requires exactly one worksheet data reference.");
-  return readChartReference(references[0]!, budget);
+export function readChartVector(source: XmlNode, budget: ChartDataBudget, numericOnly = false): WorkbookChartVector {
+  attributes(source, []); check(source, numericOnly ? ["numRef", "numLit"] : ["strRef", "numRef", "strLit", "numLit"], C);
+  const references = elements(source, undefined, C); if (references.length !== 1) fail(source, "A chart vector requires exactly one reference or literal source.");
+  const item = references[0]!;
+  if (item.name === "numLit" || item.name === "strLit") {
+    account(budget, 1, 64);
+    return { kind: "literal", valueType: item.name === "numLit" ? "number" : "text", ...vectorData(item, item.name === "numLit", budget) };
+  }
+  return readChartReference(item, budget);
 }
 export function readChartLabel(source: XmlNode, budget: ChartDataBudget): WorkbookChartLabel {
   attributes(source, []); check(source, ["strRef", "v"], C);
