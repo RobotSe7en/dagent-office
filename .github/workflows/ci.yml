@@ -107,6 +107,7 @@ jobs:
       - run: python3 scripts/check-xlsx-row-appearance.py
       - run: python3 scripts/check-xlsx-comment-mentions.py
       - run: python3 scripts/check-xlsx-comment-uids.py
+      - run: python3 scripts/check-xlsx-text-overflow.py
       - run: pnpm check:docx-export
       - run: node scripts/playwright.mjs install --with-deps chromium --only-shell
       - run: pnpm check:word-closure

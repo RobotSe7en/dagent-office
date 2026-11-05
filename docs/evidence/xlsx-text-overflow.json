@@ -1,0 +1,1272 @@
+{
+  "scope": "Pinned Calc observations of DrawingML horizontal/vertical overflow, wrapping and top/bottom anchors; PDF text extraction can include clipped glyphs. Excel/WPS unverified.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "sourceSha256": "cfae12008b5a61ca6fb41810f2b26bab73e90f023be0b0cce1d15c8b81eeab5f",
+  "fontManifest": {
+    "source": "examples/xlsx/reference.json#environment.fonts",
+    "sha256": "bda037c50b31e342e0e460755840725d14dd8bfaeccca8de54269277342a5119"
+  },
+  "cases": [
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "overflow",
+      "vertical": "overflow",
+      "wrap": "none",
+      "anchor": "t",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHIJKLMN",
+            "bounds": [
+              136.006,
+              136.005049,
+              299.266977,
+              151.632397
+            ]
+          },
+          {
+            "text": "Beta0123456789",
+            "bounds": [
+              136.006,
+              151.652049,
+              242.596836,
+              167.279397
+            ]
+          },
+          {
+            "text": "Gamma",
+            "bounds": [
+              136.006,
+              167.300049,
+              185.758659,
+              182.927397
+            ]
+          },
+          {
+            "text": "Delta",
+            "bounds": [
+              136.006,
+              182.947049,
+              168.660996,
+              198.574397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 48,
+        "resaved": {
+          "horzOverflow": "overflow",
+          "vertOverflow": null,
+          "wrap": "none",
+          "anchor": "t"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "overflow",
+      "vertical": "overflow",
+      "wrap": "none",
+      "anchor": "b",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHIJKLMN",
+            "bounds": [
+              136.006,
+              113.413049,
+              299.266977,
+              129.040397
+            ]
+          },
+          {
+            "text": "Beta0123456789",
+            "bounds": [
+              136.006,
+              129.060049,
+              242.596836,
+              144.687397
+            ]
+          },
+          {
+            "text": "Gamma",
+            "bounds": [
+              136.006,
+              144.708049,
+              185.758659,
+              160.335397
+            ]
+          },
+          {
+            "text": "Delta",
+            "bounds": [
+              136.006,
+              160.355049,
+              168.660996,
+              175.982397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 48,
+        "resaved": {
+          "horzOverflow": "overflow",
+          "vertOverflow": null,
+          "wrap": "none",
+          "anchor": "b"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "overflow",
+      "vertical": "overflow",
+      "wrap": "square",
+      "anchor": "t",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHI",
+            "bounds": [
+              136.006,
+              136.005049,
+              253.393149,
+              151.632397
+            ]
+          },
+          {
+            "text": "JKLMN",
+            "bounds": [
+              136.006,
+              151.652049,
+              181.865825,
+              167.279397
+            ]
+          },
+          {
+            "text": "Beta0123456789",
+            "bounds": [
+              136.006,
+              167.300049,
+              242.596836,
+              182.927397
+            ]
+          },
+          {
+            "text": "Gamma",
+            "bounds": [
+              136.006,
+              182.947049,
+              185.758659,
+              198.574397
+            ]
+          },
+          {
+            "text": "Delta",
+            "bounds": [
+              136.006,
+              198.594049,
+              168.660996,
+              214.221397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 48,
+        "resaved": {
+          "horzOverflow": "overflow",
+          "vertOverflow": null,
+          "wrap": null,
+          "anchor": "t"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "overflow",
+      "vertical": "overflow",
+      "wrap": "square",
+      "anchor": "b",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHI",
+            "bounds": [
+              136.006,
+              97.766049,
+              253.393149,
+              113.393397
+            ]
+          },
+          {
+            "text": "JKLMN",
+            "bounds": [
+              136.006,
+              113.413049,
+              181.865825,
+              129.040397
+            ]
+          },
+          {
+            "text": "Beta0123456789",
+            "bounds": [
+              136.006,
+              129.060049,
+              242.596836,
+              144.687397
+            ]
+          },
+          {
+            "text": "Gamma",
+            "bounds": [
+              136.006,
+              144.708049,
+              185.758659,
+              160.335397
+            ]
+          },
+          {
+            "text": "Delta",
+            "bounds": [
+              136.006,
+              160.355049,
+              168.660996,
+              175.982397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 48,
+        "resaved": {
+          "horzOverflow": "overflow",
+          "vertOverflow": null,
+          "wrap": null,
+          "anchor": "b"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "overflow",
+      "vertical": "clip",
+      "wrap": "none",
+      "anchor": "t",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHIJKLMN",
+            "bounds": [
+              136.006,
+              136.005049,
+              299.266977,
+              151.632397
+            ]
+          },
+          {
+            "text": "Beta0123456789",
+            "bounds": [
+              136.006,
+              151.652049,
+              242.596836,
+              167.279397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 38,
+        "resaved": {
+          "horzOverflow": "overflow",
+          "vertOverflow": "clip",
+          "wrap": "none",
+          "anchor": "t"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "overflow",
+      "vertical": "clip",
+      "wrap": "none",
+      "anchor": "b",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHIJKLMN",
+            "bounds": [
+              136.006,
+              136.005049,
+              299.266977,
+              151.632397
+            ]
+          },
+          {
+            "text": "Beta0123456789",
+            "bounds": [
+              136.006,
+              151.652049,
+              242.596836,
+              167.279397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 38,
+        "resaved": {
+          "horzOverflow": "overflow",
+          "vertOverflow": "clip",
+          "wrap": "none",
+          "anchor": "b"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "overflow",
+      "vertical": "clip",
+      "wrap": "square",
+      "anchor": "t",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHI",
+            "bounds": [
+              136.006,
+              136.005049,
+              253.393149,
+              151.632397
+            ]
+          },
+          {
+            "text": "JKLMN",
+            "bounds": [
+              136.006,
+              151.652049,
+              181.865825,
+              167.279397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 24,
+        "resaved": {
+          "horzOverflow": "overflow",
+          "vertOverflow": "clip",
+          "wrap": null,
+          "anchor": "t"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "overflow",
+      "vertical": "clip",
+      "wrap": "square",
+      "anchor": "b",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHI",
+            "bounds": [
+              136.006,
+              136.005049,
+              253.393149,
+              151.632397
+            ]
+          },
+          {
+            "text": "JKLMN",
+            "bounds": [
+              136.006,
+              151.652049,
+              181.865825,
+              167.279397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 24,
+        "resaved": {
+          "horzOverflow": "overflow",
+          "vertOverflow": "clip",
+          "wrap": null,
+          "anchor": "b"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "overflow",
+      "vertical": "ellipsis",
+      "wrap": "none",
+      "anchor": "t",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHIJKLMN",
+            "bounds": [
+              136.006,
+              136.005049,
+              299.266977,
+              151.632397
+            ]
+          },
+          {
+            "text": "Beta0123456789",
+            "bounds": [
+              136.006,
+              151.652049,
+              242.596836,
+              167.279397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 38,
+        "resaved": {
+          "horzOverflow": "overflow",
+          "vertOverflow": "ellipsis",
+          "wrap": "none",
+          "anchor": "t"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "overflow",
+      "vertical": "ellipsis",
+      "wrap": "none",
+      "anchor": "b",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHIJKLMN",
+            "bounds": [
+              136.006,
+              136.005049,
+              299.266977,
+              151.632397
+            ]
+          },
+          {
+            "text": "Beta0123456789",
+            "bounds": [
+              136.006,
+              151.652049,
+              242.596836,
+              167.279397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 39,
+        "resaved": {
+          "horzOverflow": "overflow",
+          "vertOverflow": "ellipsis",
+          "wrap": "none",
+          "anchor": "b"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "overflow",
+      "vertical": "ellipsis",
+      "wrap": "square",
+      "anchor": "t",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHI",
+            "bounds": [
+              136.006,
+              136.005049,
+              253.393149,
+              151.632397
+            ]
+          },
+          {
+            "text": "JKLMN",
+            "bounds": [
+              136.006,
+              151.652049,
+              181.865825,
+              167.279397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 25,
+        "resaved": {
+          "horzOverflow": "overflow",
+          "vertOverflow": "ellipsis",
+          "wrap": null,
+          "anchor": "t"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "overflow",
+      "vertical": "ellipsis",
+      "wrap": "square",
+      "anchor": "b",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHI",
+            "bounds": [
+              136.006,
+              136.005049,
+              253.393149,
+              151.632397
+            ]
+          },
+          {
+            "text": "JKLMN",
+            "bounds": [
+              136.006,
+              151.652049,
+              181.865825,
+              167.279397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 25,
+        "resaved": {
+          "horzOverflow": "overflow",
+          "vertOverflow": "ellipsis",
+          "wrap": null,
+          "anchor": "b"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "clip",
+      "vertical": "overflow",
+      "wrap": "none",
+      "anchor": "t",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHIJKLMN",
+            "bounds": [
+              136.006,
+              136.005049,
+              299.266977,
+              151.632397
+            ]
+          },
+          {
+            "text": "Beta0123456789",
+            "bounds": [
+              136.006,
+              151.652049,
+              242.596836,
+              167.279397
+            ]
+          },
+          {
+            "text": "Gamma",
+            "bounds": [
+              136.006,
+              167.300049,
+              185.758659,
+              182.927397
+            ]
+          },
+          {
+            "text": "Delta",
+            "bounds": [
+              136.006,
+              182.947049,
+              168.660996,
+              198.574397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 49,
+        "resaved": {
+          "horzOverflow": "clip",
+          "vertOverflow": null,
+          "wrap": "none",
+          "anchor": "t"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "clip",
+      "vertical": "overflow",
+      "wrap": "none",
+      "anchor": "b",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHIJKLMN",
+            "bounds": [
+              136.006,
+              113.413049,
+              299.266977,
+              129.040397
+            ]
+          },
+          {
+            "text": "Beta0123456789",
+            "bounds": [
+              136.006,
+              129.060049,
+              242.596836,
+              144.687397
+            ]
+          },
+          {
+            "text": "Gamma",
+            "bounds": [
+              136.006,
+              144.708049,
+              185.758659,
+              160.335397
+            ]
+          },
+          {
+            "text": "Delta",
+            "bounds": [
+              136.006,
+              160.355049,
+              168.660996,
+              175.982397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 49,
+        "resaved": {
+          "horzOverflow": "clip",
+          "vertOverflow": null,
+          "wrap": "none",
+          "anchor": "b"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "clip",
+      "vertical": "overflow",
+      "wrap": "square",
+      "anchor": "t",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHI",
+            "bounds": [
+              136.006,
+              136.005049,
+              253.393149,
+              151.632397
+            ]
+          },
+          {
+            "text": "JKLMN",
+            "bounds": [
+              136.006,
+              151.652049,
+              181.865825,
+              167.279397
+            ]
+          },
+          {
+            "text": "Beta0123456789",
+            "bounds": [
+              136.006,
+              167.300049,
+              242.596836,
+              182.927397
+            ]
+          },
+          {
+            "text": "Gamma",
+            "bounds": [
+              136.006,
+              182.947049,
+              185.758659,
+              198.574397
+            ]
+          },
+          {
+            "text": "Delta",
+            "bounds": [
+              136.006,
+              198.594049,
+              168.660996,
+              214.221397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 49,
+        "resaved": {
+          "horzOverflow": "clip",
+          "vertOverflow": null,
+          "wrap": null,
+          "anchor": "t"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "clip",
+      "vertical": "overflow",
+      "wrap": "square",
+      "anchor": "b",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHI",
+            "bounds": [
+              136.006,
+              97.766049,
+              253.393149,
+              113.393397
+            ]
+          },
+          {
+            "text": "JKLMN",
+            "bounds": [
+              136.006,
+              113.413049,
+              181.865825,
+              129.040397
+            ]
+          },
+          {
+            "text": "Beta0123456789",
+            "bounds": [
+              136.006,
+              129.060049,
+              242.596836,
+              144.687397
+            ]
+          },
+          {
+            "text": "Gamma",
+            "bounds": [
+              136.006,
+              144.708049,
+              185.758659,
+              160.335397
+            ]
+          },
+          {
+            "text": "Delta",
+            "bounds": [
+              136.006,
+              160.355049,
+              168.660996,
+              175.982397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 49,
+        "resaved": {
+          "horzOverflow": "clip",
+          "vertOverflow": null,
+          "wrap": null,
+          "anchor": "b"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "clip",
+      "vertical": "clip",
+      "wrap": "none",
+      "anchor": "t",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHIJKLMN",
+            "bounds": [
+              136.006,
+              136.005049,
+              299.266977,
+              151.632397
+            ]
+          },
+          {
+            "text": "Beta0123456789",
+            "bounds": [
+              136.006,
+              151.652049,
+              242.596836,
+              167.279397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 39,
+        "resaved": {
+          "horzOverflow": "clip",
+          "vertOverflow": "clip",
+          "wrap": "none",
+          "anchor": "t"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "clip",
+      "vertical": "clip",
+      "wrap": "none",
+      "anchor": "b",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHIJKLMN",
+            "bounds": [
+              136.006,
+              136.005049,
+              299.266977,
+              151.632397
+            ]
+          },
+          {
+            "text": "Beta0123456789",
+            "bounds": [
+              136.006,
+              151.652049,
+              242.596836,
+              167.279397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 39,
+        "resaved": {
+          "horzOverflow": "clip",
+          "vertOverflow": "clip",
+          "wrap": "none",
+          "anchor": "b"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "clip",
+      "vertical": "clip",
+      "wrap": "square",
+      "anchor": "t",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHI",
+            "bounds": [
+              136.006,
+              136.005049,
+              253.393149,
+              151.632397
+            ]
+          },
+          {
+            "text": "JKLMN",
+            "bounds": [
+              136.006,
+              151.652049,
+              181.865825,
+              167.279397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 25,
+        "resaved": {
+          "horzOverflow": "clip",
+          "vertOverflow": "clip",
+          "wrap": null,
+          "anchor": "t"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "clip",
+      "vertical": "clip",
+      "wrap": "square",
+      "anchor": "b",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHI",
+            "bounds": [
+              136.006,
+              136.005049,
+              253.393149,
+              151.632397
+            ]
+          },
+          {
+            "text": "JKLMN",
+            "bounds": [
+              136.006,
+              151.652049,
+              181.865825,
+              167.279397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 25,
+        "resaved": {
+          "horzOverflow": "clip",
+          "vertOverflow": "clip",
+          "wrap": null,
+          "anchor": "b"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "clip",
+      "vertical": "ellipsis",
+      "wrap": "none",
+      "anchor": "t",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHIJKLMN",
+            "bounds": [
+              136.006,
+              136.005049,
+              299.266977,
+              151.632397
+            ]
+          },
+          {
+            "text": "Beta0123456789",
+            "bounds": [
+              136.006,
+              151.652049,
+              242.596836,
+              167.279397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 39,
+        "resaved": {
+          "horzOverflow": "clip",
+          "vertOverflow": "ellipsis",
+          "wrap": "none",
+          "anchor": "t"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "clip",
+      "vertical": "ellipsis",
+      "wrap": "none",
+      "anchor": "b",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHIJKLMN",
+            "bounds": [
+              136.006,
+              136.005049,
+              299.266977,
+              151.632397
+            ]
+          },
+          {
+            "text": "Beta0123456789",
+            "bounds": [
+              136.006,
+              151.652049,
+              242.596836,
+              167.279397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 39,
+        "resaved": {
+          "horzOverflow": "clip",
+          "vertOverflow": "ellipsis",
+          "wrap": "none",
+          "anchor": "b"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "clip",
+      "vertical": "ellipsis",
+      "wrap": "square",
+      "anchor": "t",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHI",
+            "bounds": [
+              136.006,
+              136.005049,
+              253.393149,
+              151.632397
+            ]
+          },
+          {
+            "text": "JKLMN",
+            "bounds": [
+              136.006,
+              151.652049,
+              181.865825,
+              167.279397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 25,
+        "resaved": {
+          "horzOverflow": "clip",
+          "vertOverflow": "ellipsis",
+          "wrap": null,
+          "anchor": "t"
+        }
+      }
+    },
+    {
+      "fontPt": 14,
+      "endPt": 14,
+      "paragraphs": [
+        "AlphaABCDEFGHIJKLMN",
+        "Beta0123456789",
+        "Gamma",
+        "Delta"
+      ],
+      "insets": "zero",
+      "listStyle": "none",
+      "horizontal": "clip",
+      "vertical": "ellipsis",
+      "wrap": "square",
+      "anchor": "b",
+      "observed": {
+        "words": [
+          {
+            "text": "AlphaABCDEFGHI",
+            "bounds": [
+              136.006,
+              136.005049,
+              253.393149,
+              151.632397
+            ]
+          },
+          {
+            "text": "JKLMN",
+            "bounds": [
+              136.006,
+              151.652049,
+              181.865825,
+              167.279397
+            ]
+          }
+        ],
+        "paintedGlyphUses": 25,
+        "resaved": {
+          "horzOverflow": "clip",
+          "vertOverflow": "ellipsis",
+          "wrap": null,
+          "anchor": "b"
+        }
+      }
+    }
+  ]
+}

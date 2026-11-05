@@ -1,5 +1,6 @@
 import { DocumentError, evaluatePresentationPreset } from "@dagent-office/core";
 import { measuredFontLineHeight } from "../font-line-height.js";
+import { applyDrawingTextOverflow } from "./drawing-text-overflow.js";
 import type { DeepReadonly, DrawingTextProperties, PresentationPresetGeometry, WorkbookChart, WorkbookObject } from "@dagent-office/core";
 import type { FontResolution } from "../contracts.js";
 import { resolvePreviewFontsInScope } from "../fonts.js";
@@ -159,13 +160,15 @@ function layoutTextBodies<T>(scope: HTMLElement, inputs: readonly T[], limits: W
     const prepared = bodies.map(input => {
       const computed = view.getComputedStyle(input.source), text = input.text.element, element = markViewNode(document.createElement("div"));
       const anchor = property(computed, "--office-text-anchor", "t"), centered = property(computed, "--office-text-anchor-center", "false");
+      const horizontal = property(computed, "--office-text-horizontal-overflow", "overflow"), vertical = property(computed, "--office-text-vertical-overflow", "overflow");
       if (!["t", "ctr", "b", "just", "dist"].includes(anchor) || !["false", "true"].includes(centered)) throw new DocumentError("InvalidDocument", "A drawing text anchor is invalid.");
+      if (!["overflow", "clip"].includes(horizontal) || !["overflow", "clip", "ellipsis"].includes(vertical)) throw new DocumentError("InvalidDocument", "A drawing text overflow mode is invalid.");
       element.style.cssText = "position:relative;direction:ltr";
       Object.assign(text.style, { position: "absolute", display: "flex", flexDirection: "column", boxSizing: "border-box", margin: "0", overflow: "visible", justifyContent: "flex-start",
-        whiteSpace: input.properties?.wrap === false ? "pre" : "pre-wrap", overflowWrap: input.properties?.wrap === false ? "normal" : "anywhere", transformOrigin: "50% 50%", transform: `scale(${input.flipH ? -1 : 1},${input.flipV ? -1 : 1})` });
+        whiteSpace: input.properties?.wrap === false ? "pre" : "pre-wrap", overflowWrap: input.properties?.wrap === false ? "normal" : "anywhere", transformOrigin: "50% 50%", transform: "none" });
       for (const side of ["left", "right", "top", "bottom"]) text.style.setProperty("padding-" + side, computed.getPropertyValue("padding-" + side));
       element.append(text); root.append(element);
-      const state = { input, element, text, anchor, centered: centered === "true", nodes: input.text.nodes + 1, width: input.widthPt, height: input.heightPt, geometry: input.geometry(input.widthPt, input.heightPt),
+      const state = { input, element, text, anchor, horizontal: horizontal as "overflow" | "clip", vertical: vertical as "overflow" | "clip" | "ellipsis", centered: centered === "true", nodes: input.text.nodes + 1, width: input.widthPt, height: input.heightPt, geometry: input.geometry(input.widthPt, input.heightPt),
         resize(width: number, height: number) {
           if (![width, height].every(n => Number.isFinite(n) && n >= 0 && n <= maxExtent)) throw new DocumentError("ResourceLimitExceeded", "Drawing text auto-fit exceeds its extent budget.");
           this.width = width; this.height = height; this.geometry = input.geometry(width, height);
@@ -181,7 +184,7 @@ function layoutTextBodies<T>(scope: HTMLElement, inputs: readonly T[], limits: W
     });
     scope.append(root);
     for (const item of prepared) decorateDrawingLists(item.text, amount => { account(amount); item.nodes += amount; });
-    const fonts = resolvePreviewFontsInScope(document, root, "[data-office-text-style],[data-office-script],.sdk-ppt-marker");
+    const fonts = [...resolvePreviewFontsInScope(document, root, "[data-office-text-style],[data-office-script],.sdk-ppt-marker")];
     const normalLines = new Map<string, number>(), lineContext = document.createElement("canvas").getContext("2d");
     let usedFallbackLineMetrics = false;
     const lineHeight = (computed: CSSStyleDeclaration): number => {
@@ -238,6 +241,13 @@ function layoutTextBodies<T>(scope: HTMLElement, inputs: readonly T[], limits: W
         const rect = item.geometry.textRect, width = text.getBoundingClientRect().width * .75;
         text.style.left = rect.x + (rect.width - width) / 2 + "pt";
       }
+      if (item.geometry.textRect && (item.horizontal !== "overflow" || item.vertical !== "overflow")) {
+        const rect = item.geometry.textRect, left = (rect.x - parseFloat(text.style.left)) / .75, top = (rect.y - parseFloat(text.style.top)) / .75;
+        applyDrawingTextOverflow(text, { left, top, right: left + rect.width / .75, bottom: top + rect.height / .75 }, item.horizontal, item.vertical,
+          amount => { account(amount); item.nodes += amount; });
+        fonts.push(...resolvePreviewFontsInScope(document, text, '[data-office-view="workbook-drawing-ellipsis"]'));
+      }
+      text.style.transform = `scale(${item.input.flipH ? -1 : 1},${item.input.flipV ? -1 : 1})`;
       const origin = item.element.getBoundingClientRect();
       let left = 0, top = 0, right = item.width, bottom = item.height;
       // Element rectangles include paragraph/run backgrounds and reflected
@@ -257,8 +267,14 @@ function layoutTextBodies<T>(scope: HTMLElement, inputs: readonly T[], limits: W
       }
       if (![left, top, right, bottom].every(Number.isFinite) || Math.max(Math.abs(left), Math.abs(top), Math.abs(right), Math.abs(bottom)) > maxExtent)
         throw new DocumentError("ResourceLimitExceeded", "Drawing text overflow exceeds its measurable extent budget.");
+      if (item.geometry.textRect) {
+        const rect = item.geometry.textRect;
+        if (item.horizontal === "clip") { left = Math.max(left, Math.min(0, rect.x)); right = Math.min(right, Math.max(item.width, rect.x + rect.width)); }
+        if (item.vertical !== "overflow") { top = Math.max(top, Math.min(0, rect.y)); bottom = Math.min(bottom, Math.max(item.height, rect.y + rect.height)); }
+      }
       const paintBounds = Object.freeze({ x: left, y: top, width: right - left, height: bottom - top });
-      item.element.remove(); return Object.freeze({ element: item.element, text: item.input.text, widthPt: item.width, heightPt: item.height, geometry: item.geometry, scale, overflow: exceeded, paintBounds, nodes: item.nodes });
+      const displayedText = Object.freeze({ ...item.input.text, nodes: item.nodes - 1 });
+      item.element.remove(); return Object.freeze({ element: item.element, text: displayedText, widthPt: item.width, heightPt: item.height, geometry: item.geometry, scale, overflow: exceeded, paintBounds, nodes: item.nodes });
     });
     complete = true;
     return Object.freeze({ objects: Object.freeze(objects), fonts, usedFallbackLineMetrics });

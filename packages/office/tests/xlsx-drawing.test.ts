@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import { openDocument } from "@dagent-office/core";
+import { importXlsx } from "../src/xlsx-import.js";
 import { writeOpcZip, readDocumentZip } from "../src/document-zip.js";
 import { readXlsxRecords } from "../src/xlsx/read.js";
 import { WorkbookDrawings } from "../src/xlsx/drawing.js";
@@ -22,6 +23,26 @@ function variant(edit: (xml: string) => string, relationships?: string): Uint8Ar
   return writeOpcZip(files);
 }
 describe("native worksheet images and text drawings", () => {
+  it("imports all independent text overflow modes without changing source text on reopen", async () => {
+    const bytes = readFileSync('packages/office/tests/fixtures/xlsx-text-overflow.xlsx');
+    const regenerated = execFileSync('python3', ['-c', "import importlib.util,sys;s=importlib.util.spec_from_file_location('overflow','scripts/check-xlsx-text-overflow.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);sys.stdout.buffer.write(m.generate(m.inputs()))"]);
+    expect(regenerated).toEqual(bytes);
+    const evidence = JSON.parse(readFileSync('docs/evidence/xlsx-text-overflow.json', 'utf8')) as { sourceSha256: string; cases: { horizontal: string; vertical: string; wrap: string; paragraphs: string[] }[] };
+    expect(createHash('sha256').update(bytes).digest('hex')).toBe(evidence.sourceSha256);
+    const model = openDocument(await importXlsx(bytes, { documentId: 'text-overflow' }), { kind: 'workbook' }), snapshot = model.snapshot();
+    expect(snapshot.metadata.workbook.objects).toHaveLength(24);
+    for (const [index, object] of snapshot.metadata.workbook.objects!.entries()) {
+      const source = model.getNode(object.nodeId)!, expected = evidence.cases[index]!;
+      expect(source.text).toBe(expected.paragraphs.join(''));
+      expect(source.attributes.style).toContain('--office-text-horizontal-overflow:' + expected.horizontal);
+      expect(source.attributes.style).toContain('--office-text-vertical-overflow:' + expected.vertical);
+      expect(object).toMatchObject({ text: { wrap: expected.wrap === 'square', autoFit: 'none' } });
+    }
+    expect(openDocument(model.serialize(), { kind: 'workbook' }).snapshot()).toEqual(snapshot);
+  });
+  it.each(['horzOverflow="ellipsis"', 'vertOverflow="hidden"', 'horzOverflow="CLIP"', 'vertOverflow=""'])("rejects invalid native overflow %s atomically", async attribute => {
+    await expect(read(variant(xml => xml.replace('<a:bodyPr wrap="square"/>', `<a:bodyPr wrap="square" ${attribute}/>`)))).rejects.toMatchObject({ code: 'InvalidDocument' });
+  });
   it("retains all independent text anchoring cases and their source styles on package reopen", async () => {
     const bytes = readFileSync('packages/office/tests/fixtures/xlsx-text-anchoring.xlsx');
     const regenerated = execFileSync('python3', ['-c', "import importlib.util,sys;s=importlib.util.spec_from_file_location('anchoring','scripts/check-xlsx-text-anchoring.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);sys.stdout.buffer.write(m.generate(m.inputs()))"]);

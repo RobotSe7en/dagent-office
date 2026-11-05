@@ -14,7 +14,7 @@ import type { measureContentSource, rejectContentSource } from './fixtures/workb
 import type { measureImageView, disposeImageView } from './fixtures/workbook-image-view.js';
 import type { measureObjectGeometry } from './fixtures/workbook-object-geometry.js';
 import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
-import type { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback } from './fixtures/workbook-drawing-text.js';
+import type { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback, measureDrawingTextOverflow, measureDrawingOverflowEdges } from './fixtures/workbook-drawing-text.js';
 import type { measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } from './fixtures/workbook-surface.js';
 import type { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } from './fixtures/workbook-shadow.js';
 import type { measureWorkbookCharts, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } from './fixtures/workbook-chart.js';
@@ -26,13 +26,14 @@ declare global { interface Window { workbookChartHost: { measureWorkbookCharts: 
 
 declare global { interface Window { workbookShadowHost: { measureWorkbookShadows: typeof measureWorkbookShadows; mountWorkbookShadowPixels: typeof mountWorkbookShadowPixels; disposeWorkbookShadowPixels: typeof disposeWorkbookShadowPixels } } }
 
-declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView; measureObjectGeometry: typeof measureObjectGeometry; measureDrawingGradients: typeof measureDrawingGradients; measureDrawingText: typeof measureDrawingText; measureDrawingTextLayout: typeof measureDrawingTextLayout; measureNativeDrawingText: typeof measureNativeDrawingText; measureDrawingTextFallback: typeof measureDrawingTextFallback; measureWorkbookSurface: typeof measureWorkbookSurface; mountWorkbookSurfacePixels: typeof mountWorkbookSurfacePixels; disposeWorkbookSurfacePixels: typeof disposeWorkbookSurfacePixels } } }
+declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView; measureObjectGeometry: typeof measureObjectGeometry; measureDrawingGradients: typeof measureDrawingGradients; measureDrawingText: typeof measureDrawingText; measureDrawingTextLayout: typeof measureDrawingTextLayout; measureNativeDrawingText: typeof measureNativeDrawingText; measureDrawingTextFallback: typeof measureDrawingTextFallback; measureDrawingTextOverflow: typeof measureDrawingTextOverflow; measureDrawingOverflowEdges: typeof measureDrawingOverflowEdges; measureWorkbookSurface: typeof measureWorkbookSurface; mountWorkbookSurfacePixels: typeof mountWorkbookSurfacePixels; disposeWorkbookSurfacePixels: typeof disposeWorkbookSurfacePixels } } }
 const inputs: { name: string; snapshot: WorkbookSnapshot; text: Record<string, string>; resources: Record<string, string> }[] = [];
 const chartPlots = new Map<string, BasicChartData[]>();
 let referenceTitles: { snapshot: WorkbookSnapshot; bindings: ReturnType<typeof bindWorkbookChartData> };
 let formatCharts: typeof referenceTitles;
 let code = '';
 let nativeText: WorkbookSnapshot;
+let overflowText: WorkbookSnapshot;
 let anchoredText: WorkbookSnapshot;
 const anchoringEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-text-anchoring.json', 'utf8')) as { sourceSha256: string; cases: { paragraphs: string[]; anchorCenter: boolean; observed: { words: { text: string; boundsPt: number[] }[] } }[] };
 let nativeShadows: WorkbookSnapshot, nativeBlur: WorkbookSnapshot;
@@ -40,6 +41,7 @@ const textEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-drawing-text-se
 const shadowEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-drawing-shadow-semantics.json', 'utf8')) as { sourceSha256: string; cases: { rotation: number; flipH: boolean; flipV: boolean; rotateWithShape: boolean; direction: number; distancePt: number; observed: { offsetPt: number[] } }[] };
 const blurEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-shadow-blur-semantics.json', 'utf8')) as { sourceSha256: string; cases: { blurPt: number; observed: { sharpEdgeOffsetPt?: number; samples: { offsetPt: number; rgb: number[] }[] } }[] };
 test.beforeAll(async () => {
+  overflowText = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-text-overflow.xlsx'), { documentId: 'text-overflow' }), { kind: 'workbook' }).snapshot();
   const bundle = await build({ configFile: false, build: { write: false, minify: false, lib: { entry: fileURLToPath(new URL('./fixtures/workbook-content-source.ts', import.meta.url)), formats: ['iife'], name: 'WorkbookDrawingProbe' } } });
   if (!Array.isArray(bundle) && !('output' in bundle)) throw Error('Unexpected drawing fixture bundle');
   const output = Array.isArray(bundle) ? bundle.flatMap(part => part.output) : bundle.output; code = output.filter(part => part.type === 'chunk').map(part => part.code).join('\n');
@@ -280,6 +282,50 @@ test('explicit native drawing text follows independent fixed-font line advances 
   }
 });
 
+test('native text overflow clips actual ink independently by axis and keeps complete source offsets behind derived ellipses', async ({ page }, info) => {
+  const reference = JSON.parse(readFileSync('docs/evidence/xlsx-text-overflow.json', 'utf8')) as { cases: { horizontal: string; vertical: string; anchor: string; paragraphs: string[] }[] };
+  const actual = await page.evaluate(snapshot => window.workbookContentHost.measureDrawingTextOverflow(snapshot), overflowText);
+  expect(actual).toMatchObject({ invalid: 'InvalidDocument', limited: 'ResourceLimitExceeded', geometryLimited: 'ResourceLimitExceeded', cleaned: true });
+  expect(actual.results).toHaveLength(24);
+  const image = await page.locator('#workbook-overflow-probe').screenshot({ path: info.outputPath('overflow-ink.png') });
+  await info.attach('native-text-overflow', { body: image, contentType: 'image/png' });
+  const ink = await page.evaluate(async bytes => {
+    const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'image/png' })), image = new Image();
+    try {
+      image.src = url; await image.decode(); const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+      const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
+      const pixels = context.getImageData(0, 0, image.width, image.height).data;
+      return Array.from({ length: 24 }, (_, index) => {
+        const x0 = index % 4 * 300, y0 = Math.floor(index / 4) * 180;
+        let left = 300, top = 180, right = -1, bottom = -1, count = 0;
+        for (let y = 0; y < 180; y++) for (let x = 0; x < 300; x++) {
+          const offset = ((y0 + y) * image.width + x0 + x) * 4;
+          if (Math.max(pixels[offset]!, pixels[offset + 1]!, pixels[offset + 2]!) < 180) {
+            left = Math.min(left, x); right = Math.max(right, x); top = Math.min(top, y); bottom = Math.max(bottom, y); count++;
+          }
+        }
+        return [left, top, right, bottom, count];
+      });
+    } finally { image.removeAttribute('src'); URL.revokeObjectURL(url); }
+  }, [...image]);
+  for (const [index, result] of actual.results.entries()) {
+    const expected = reference.cases[index]!, bounds = ink[index]!;
+    expect(result.unchanged).toBe(true); expect(result.sourceText).toBe(expected.paragraphs.join(''));
+    expect(result.nodes).toBe(result.declared); expect(result.markerSourceIds).toBe(false); expect(result.overflow).toBe(true);
+    expect(result.markerCount).toBe(expected.vertical === 'ellipsis' ? 1 : 0);
+    if (expected.vertical === 'ellipsis' && expected.anchor === 't') {
+      expect(result.markerBounds[0]!.top).toBeGreaterThan(12); expect(result.markerBounds[0]!.top).toBeLessThan(34);
+      expect(result.markerBounds[0]!.left).toBeGreaterThan(20);
+    }
+    for (const [from, to, length] of result.offsets) expect(to! - from!).toBe(length);
+    if (expected.horizontal === 'clip') { expect(bounds[0]).toBeGreaterThanOrEqual(40); expect(bounds[2]).toBeLessThan(201); expect(result.paintBounds.width).toBe(120); }
+    if (expected.vertical !== 'overflow') { expect(bounds[1]).toBeGreaterThanOrEqual(60); expect(bounds[3]).toBeLessThan(114); expect(result.paintBounds).toMatchObject({ y: 0, height: 40 }); }
+    if (expected.vertical === 'overflow') expect(expected.anchor === 'b' ? bounds[1]! < 60 : bounds[3]! >= 114).toBe(true);
+  }
+  // A real derived glyph and its reserved gap must change visible ink.
+  for (const start of [0, 12]) for (let offset = 0; offset < 4; offset++) expect(ink[start + 8 + offset]).not.toEqual(ink[start + 4 + offset]);
+});
+
 test('native drawing block centering preserves paragraph alignment and vertical anchoring', async ({ page }) => {
   const actual = await page.evaluate(snapshot => window.workbookContentHost.measureNativeDrawingText(snapshot), anchoredText);
   expect(actual).toHaveLength(anchoringEvidence.cases.length);
@@ -487,4 +533,14 @@ test('chart axes and labels resolve source-linked formats from current cells and
   for (const result of results.slice(16, 19)) expect(result.valueAxis).toEqual(['0', '0.25', '0.5', '0.75', '1']);
   expect(results[18]!.sourceIndexes).toEqual([1, 2]);
   expect(results[19]!.labels).toEqual(['0.25', '50.0%', '0.75']);
+});
+
+
+test('text overflow preserves cross-span graphemes, RTL and reflections even when no full line fits', async ({ page }) => {
+  const results = await page.evaluate(snapshot => window.workbookContentHost.measureDrawingOverflowEdges(snapshot), overflowText);
+  expect(results).toHaveLength(24);
+  for (const result of results) {
+    expect(result, JSON.stringify(result)).toMatchObject({ splitGraphemes: 0, unchanged: true, marker: '…', inside: true });
+    expect(result.text).toBe('A禰󠄀é😀WXYZ אבג ABCSecond lineHidden tail'); expect(result.nodes).toBe(result.declared);
+  }
 });

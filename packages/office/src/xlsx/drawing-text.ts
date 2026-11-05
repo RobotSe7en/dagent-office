@@ -10,7 +10,7 @@ import type { WorkbookContent } from "./content.js";
 import type { XlsxStyles } from "./styles.js";
 
 const attributesByTag: Readonly<Record<string, readonly string[]>> = {
-  txBody: [], bodyPr: ["rot", "vert", "wrap", "lIns", "rIns", "tIns", "bIns", "numCol", "spcCol", "rtlCol", "anchor", "anchorCtr"],
+  txBody: [], bodyPr: ["rot", "vert", "wrap", "lIns", "rIns", "tIns", "bIns", "numCol", "spcCol", "rtlCol", "anchor", "anchorCtr", "horzOverflow", "vertOverflow"],
   lstStyle: [], p: [], r: [], br: [],
   rPr: ["lang", "sz", "b", "i", "u", "strike", "cap", "spc", "baseline", "dirty", "err", "smtClean", "smtId", "noProof"],
   pPr: ["marL", "marR", "lvl", "indent", "algn", "defTabSz", "rtl"],
@@ -21,6 +21,18 @@ const attributesByTag: Readonly<Record<string, readonly string[]>> = {
   buClrTx: [], buSzTx: [], buFontTx: [], buNone: [], buClr: [], buSzPct: ["val"], buSzPts: ["val"],
   buFont: ["typeface", "panose", "pitchFamily", "charset"], buAutoNum: ["type", "startAt"], buChar: ["char"], tabLst: [], tab: ["pos", "algn"],
 };
+function textOverflowStyle(properties: XmlNode): Css {
+  const css: Css = {};
+  for (const [attribute, property, allowed] of [["horzOverflow", "--office-text-horizontal-overflow", ["overflow", "clip"]],
+    ["vertOverflow", "--office-text-vertical-overflow", ["overflow", "clip", "ellipsis"]]] as const) {
+    const mode = value(properties, attribute);
+    if (mode !== undefined) {
+      if (!(allowed as readonly string[]).includes(mode)) fail(properties, "A drawing text overflow mode is invalid.");
+      css[property] = mode;
+    }
+  }
+  return css;
+}
 function validateTextTree(body: XmlNode): void {
   const walk = (node: XmlNode, root = false, parent?: XmlNode): void => {
     if (!root && node.uri !== A) unsupported(node);
@@ -61,7 +73,7 @@ export function drawingTextStyle(source: XmlNode | undefined): Css {
   if (!properties || !paragraph) fail(source, "A chart text style requires body and paragraph properties.");
   if (list && elements(list, undefined, A).length) unsupported(list, "Chart text style lists are not supported.");
   check(paragraph, ["pPr", "endParaRPr"], A);
-  const body = textBodyProperties(properties), css = { ...body.css, ...paragraphProperties(one(paragraph, "pPr", A)), ...runProperties(one(paragraph, "endParaRPr", A)) };
+  const body = textBodyProperties(properties), css = { ...body.css, ...textOverflowStyle(properties), ...paragraphProperties(one(paragraph, "pPr", A)), ...runProperties(one(paragraph, "endParaRPr", A)) };
   if (body.text.wrap !== undefined) css["--office-text-wrap"] = String(body.text.wrap);
   if (body.text.autoFit !== undefined) css["--office-text-auto-fit"] = body.text.autoFit;
   if (body.text.fontScale !== undefined) css["--office-text-font-scale"] = String(body.text.fontScale);
@@ -70,8 +82,11 @@ export function drawingTextStyle(source: XmlNode | undefined): Css {
 }
 export function readDrawingText(body: XmlNode, target: Html, content: WorkbookContent, styles: XlsxStyles, hyperlink: (source: XmlNode | undefined, target: Html, part: string) => void): DrawingTextProperties {
   validateTextTree(body);
+  const properties = one(body, "bodyPr", A);
+  if (!properties) fail(body, "A drawing text body requires body properties.");
+  const overflow = textOverflowStyle(properties);
   target.attrs.class = ["xlsx-drawing-text", target.attrs.class].filter(Boolean).join(" ");
-  return importText({
+  const result = importText({
     id(prefix) {
       const id = content.id();
       // The common mapper refers to every level, including implicit defaults.
@@ -84,4 +99,6 @@ export function readDrawingText(body: XmlNode, target: Html, content: WorkbookCo
     content(node, text) { content.reserve(text.length * 6); node.children.push(text); },
     hyperlink, field: source => unsupported(source, "Worksheet drawing fields are not supported."),
   }, body, target, body.part);
+  target.attrs.style = [target.attrs.style, ...Object.entries(overflow).map(([key, value]) => key + ":" + value)].filter(Boolean).join(";");
+  return result;
 }

@@ -4,6 +4,7 @@ import { createWorkbookDrawingText } from '../../../packages/render/src/workbook
 import { resolvePreviewFontsInScope } from '../../../packages/render/src/fonts.js';
 import { layoutWorkbookDrawingTexts } from '../../../packages/render/src/workbook/drawing-text-layout.js';
 import { createWorkbookDrawingFragment, workbookDrawingOrientation } from '../../../packages/render/src/workbook/drawing-view.js';
+import { applyDrawingTextOverflow } from '../../../packages/render/src/workbook/drawing-text-overflow.js';
 
 function surface(snapshot: WorkbookSnapshot) {
   const host = document.createElement('div'), scope = document.createElement('div'), style = document.createElement('style');
@@ -11,6 +12,83 @@ function surface(snapshot: WorkbookSnapshot) {
   style.textContent = ':host{all:initial;display:block}' + snapshot.styles.map(style => style.css).join('\n');
   root.append(style, scope); document.body.append(host);
   return { scope, dispose: () => host.remove() };
+}
+
+export async function measureDrawingTextOverflow(snapshot: WorkbookSnapshot) {
+  await document.fonts.ready;
+  const { scope, dispose } = surface(snapshot), sources = new WorkbookContentSources(document, snapshot);
+  const objects = snapshot.metadata.workbook.objects!, projection = sources.project(scope, objects.map(object => object.nodeId));
+  const gallery = document.createElement('div'); gallery.id = 'workbook-overflow-probe';
+  gallery.style.cssText = 'display:grid;grid-template-columns:repeat(4,300px);width:1200px;background:white;color:black';
+  const results = [];
+  try {
+    for (const object of objects) {
+      const source = projection.get(object.nodeId)!, before = source.outerHTML, text = createWorkbookDrawingText(source, object);
+      const result = layoutWorkbookDrawingTexts(scope, [{ source, object, text, widthPt: 120, heightPt: 40 }]).objects[0]!;
+      const cell = document.createElement('div'); cell.style.cssText = 'position:relative;width:300px;height:180px;overflow:hidden';
+      result.element.style.position = 'absolute'; result.element.style.left = '40px'; result.element.style.top = '60px';
+      const border = document.createElement('div'); border.style.cssText = 'position:absolute;left:40px;top:60px;width:160px;height:53.333333px;outline:1px solid lime';
+      scope.append(result.element);
+      const walker = document.createTreeWalker(result.element, NodeFilter.SHOW_ALL); let nodes = 1; while (walker.nextNode()) nodes++;
+      const markers = [...text.element.querySelectorAll<HTMLElement>('[data-office-view="workbook-drawing-ellipsis"]')];
+      const box = text.element.getBoundingClientRect(), markerBounds = markers.map(marker => {
+        const rect = marker.getBoundingClientRect(); return { left: rect.left - box.left, top: rect.top - box.top, bottom: rect.bottom - box.top };
+      });
+      results.push({ unchanged: source.outerHTML === before, sourceText: text.projections.map(part => part.node.data).join(''),
+        offsets: text.projections.map(part => [part.from, part.to, part.node.data.length]), nodes, declared: result.nodes,
+        markerCount: markers.length, markerSourceIds: markers.some(node => node.hasAttribute('data-source-node-id') || node.hasAttribute('data-node-id')),
+        paintBounds: result.paintBounds, overflow: result.overflow, markerBounds });
+      cell.append(border, result.element); gallery.append(cell);
+    }
+    document.querySelector('#workbook-overflow-probe')?.remove(); document.body.append(gallery);
+    const source = projection.get(objects[0]!.nodeId)!, text = createWorkbookDrawingText(source, objects[0]!);
+    source.style.setProperty('--office-text-vertical-overflow', 'bad');
+    let invalid = 'accepted';
+    try { layoutWorkbookDrawingTexts(scope, [{ source, object: objects[0]!, text, widthPt: 120, heightPt: 40 }]); } catch (e) { invalid = (e as { code: string }).code; }
+    source.style.setProperty('--office-text-vertical-overflow', 'ellipsis');
+    const failed = createWorkbookDrawingText(source, objects[0]!);
+    let limited = 'accepted';
+    try { layoutWorkbookDrawingTexts(scope, [{ source, object: objects[0]!, text: failed, widthPt: 120, heightPt: 40 }], { maxNodes: failed.nodes + 2 }); } catch (e) { limited = (e as { code: string }).code; }
+    const inspection = document.createElement('div'); inspection.textContent = 'ABCD'; scope.append(inspection);
+    let geometryLimited = 'accepted';
+    try { applyDrawingTextOverflow(inspection, { left: 0, top: 0, right: 1, bottom: 1 }, 'clip', 'ellipsis', () => {}, 1); } catch (e) { geometryLimited = (e as { code: string }).code; }
+    inspection.remove();
+    return { results, invalid, limited, geometryLimited, cleaned: !text.element.parentNode && !failed.element.parentNode && !scope.querySelector('[data-office-view="workbook-drawing-text-measurement"]') };
+  } catch (error) { gallery.remove(); throw error; }
+  finally { sources.dispose(); dispose(); }
+}
+
+export async function measureDrawingOverflowEdges(snapshot: WorkbookSnapshot) {
+  await document.fonts.ready;
+  const { scope, dispose } = surface(snapshot), sources = new WorkbookContentSources(document, snapshot), object = snapshot.metadata.workbook.objects![0]!;
+  const projection = sources.project(scope, [object.nodeId]), source = projection.get(object.nodeId)!, results = [];
+  try {
+    source.innerHTML = '<p data-node-id="overflow-p1"><span data-node-id="overflow-base">A禰</span><span data-node-id="overflow-vs">󠄀e</span><span data-node-id="overflow-accent">́😀</span><span data-node-id="overflow-tail">WXYZ אבג ABC</span></p><p data-node-id="overflow-p2">Second line</p><p data-node-id="overflow-p3">Hidden tail</p>';
+    for (const rtl of [false, true]) for (const flipH of [false, true]) for (const flipV of [false, true]) for (const heightPt of [5, 24, 40]) {
+      source.style.setProperty('--office-text-horizontal-overflow', 'clip'); source.style.setProperty('--office-text-vertical-overflow', 'ellipsis');
+      source.style.setProperty('--office-text-anchor', 't'); source.dataset.officeFlipH = String(flipH); source.dataset.officeFlipV = String(flipV);
+      for (const p of source.querySelectorAll<HTMLElement>('p')) { p.style.direction = rtl ? 'rtl' : 'ltr'; p.style.textAlign = rtl ? 'right' : 'left'; }
+      const before = source.outerHTML, text = createWorkbookDrawingText(source, object), result = layoutWorkbookDrawingTexts(scope, [{ source, object, text, widthPt: 90, heightPt }]).objects[0]!;
+      scope.append(result.element);
+      const marker = text.element.querySelector<HTMLElement>('[data-office-view="workbook-drawing-ellipsis"]')!, bounds = text.element.getBoundingClientRect(), cut = marker.getBoundingClientRect();
+      const edge = rtl !== flipH ? cut.right : cut.left;
+      const first = text.projections.filter(part => part.sourceNodeId !== 'overflow-p2' && part.sourceNodeId !== 'overflow-p3');
+      const textValue = first.map(part => part.node.data).join(''), segmenter = new Intl.Segmenter('und', { granularity: 'grapheme' });
+      let splitGraphemes = 0; const splits: { text: string; left: number; right: number; edge: number }[] = [];
+      for (const segment of segmenter.segment(textValue)) {
+        const start = first.find(part => part.to > segment.index)!, end = first.find(part => part.to >= segment.index + segment.segment.length)!;
+        if (getComputedStyle(start.node.parentElement!).visibility === 'hidden') continue;
+        const range = document.createRange(); range.setStart(start.node, segment.index - start.from); range.setEnd(end.node, segment.index + segment.segment.length - end.from);
+        const rect = range.getBoundingClientRect();
+        if (heightPt > 5 && rect.top < cut.bottom - 1 && rect.bottom > cut.top + 1 && rect.left < edge - 1 && rect.right > edge + 1) { splitGraphemes++; splits.push({ text: segment.segment, left: rect.left - bounds.left, right: rect.right - bounds.left, edge: edge - bounds.left }); }
+      }
+      const walker = document.createTreeWalker(result.element, NodeFilter.SHOW_ALL); let nodes = 1; while (walker.nextNode()) nodes++;
+      results.push({ rtl, flipH, flipV, heightPt, splitGraphemes, splits, markerStyle: marker.style.cssText, text: text.projections.map(part => part.node.data).join(''), unchanged: source.outerHTML === before,
+        nodes, declared: result.nodes, marker: marker.textContent, inside: cut.left >= bounds.left - .1 && cut.right <= bounds.right + .1 });
+      result.element.remove();
+    }
+    return results;
+  } finally { sources.dispose(); dispose(); }
 }
 
 export function measureDrawingText(snapshot: WorkbookSnapshot) {
