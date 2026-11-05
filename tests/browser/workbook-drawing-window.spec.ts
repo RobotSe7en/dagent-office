@@ -4,8 +4,9 @@ import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { importXlsx } from '../../packages/office/src/xlsx-import.js';
 import type { drawingWindowMeasurement } from './fixtures/workbook-drawing-window.js';
+import type { windowControllerMeasurement } from './fixtures/workbook-window-controller.js';
 
-declare global { interface Window { workbookDrawingWindow: { drawingWindowMeasurement: typeof drawingWindowMeasurement } } }
+declare global { interface Window { workbookDrawingWindow: { drawingWindowMeasurement: typeof drawingWindowMeasurement; windowControllerMeasurement: typeof windowControllerMeasurement } } }
 let code = '';
 const inputs: { name: string; files: [string, number[]][] }[] = [];
 test.beforeAll(async () => {
@@ -52,4 +53,16 @@ test('offscreen object anchors still project visible hanging text outside the an
   expect(result.overflowParts.some(part => part.visible)).toBe(true);
   expect(result.diagnostics).toContain('drawing-text-overflow');
   expect(result).toMatchObject({ unchanged: true, preserved: true, released: true, cleaned: true });
+});
+
+test('whole workbook windows commit atomically across scrolling, sheet changes, late providers and disposal', async ({ page }) => {
+  for (const input of inputs.filter(input => !input.name.includes('/'))) {
+    const result = await page.evaluate(files => window.workbookDrawingWindow.windowControllerMeasurement(files), input.files);
+    expect(result, input.name).toMatchObject({ first: true, errors: ['RevisionConflict', 'InvalidDocument'], retainedWhilePending: true, switched: true,
+      obsoleteCancelled: true, empty: { sheetId: 'controller-empty', objects: 0, width: 380, height: 260 }, lateCellIgnored: true, releasedOld: true,
+      budget: 'ResourceLimitExceeded', failedMountEmpty: true, cancelledOnDispose: true, released: true, imagesCleared: true, emptyAfterDispose: true, formatterStillOwned: true, unhandled: [], unchanged: true });
+    expect(result.nodes).toBe(result.actualNodes);
+    expect(result.races).toHaveLength(2);
+    for (const race of result.races) expect(race).toMatchObject({ cancelled: true, aborted: true, preserved: true });
+  }
 });
