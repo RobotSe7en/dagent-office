@@ -9,6 +9,8 @@ export interface WorkbookReadTransportLimits {
   readonly maxCharts: number;
   readonly maxReferences: number;
   readonly maxPoints: number;
+  readonly maxChartFormulaCells: number;
+  readonly maxChartFormulaSteps: number;
   readonly maxRules: number;
   readonly maxRuleValues: number;
   readonly maxRuleSteps: number;
@@ -28,7 +30,7 @@ export interface WorkbookReadTransportConfig {
   readonly readLimits: WorkbookReadTransportLimits;
 }
 const readDefaults: WorkbookReadTransportLimits = Object.freeze({ maxCells: 25_000, maxCodeUnits: 8 * 1024 * 1024, maxAssetBytes: 8 * 1024 * 1024, maxCharts: 128, maxReferences: 5000, maxPoints: 50_000,
-  maxRules: 256, maxRuleValues: 250_000, maxRuleSteps: 5_000_000 });
+  maxRules: 256, maxRuleValues: 250_000, maxRuleSteps: 5_000_000, maxChartFormulaCells: 250_000, maxChartFormulaSteps: 5_000_000 });
 export function transportConfig(input: WorkbookReadTransportOptions): WorkbookReadTransportConfig {
   const { readLimits, ...own } = input;
   const config = { maxPendingRequests: 8, requestTimeoutMs: 60_000, maxSnapshotNodes: 500_000, maxSnapshotCodeUnits: 32 * 1024 * 1024, ...own };
@@ -104,9 +106,10 @@ export function transportReadRequest(operation: WorkbookReadOperation, value: un
       || !Number.isSafeInteger(coordinate.column) || (coordinate.row as number) < 0 || (coordinate.row as number) >= 1_048_576 || (coordinate.column as number) < 0 || (coordinate.column as number) >= 16_384)
       throw new DocumentError("InvalidOperation", "Invalid transported workbook rule coordinate.");
   } else {
-    if (!keys(value, ["documentId", "revision", "chartIds", "maxCharts", "maxReferences", "maxPoints", "maxCodeUnits"]) || !Array.isArray(value.chartIds)
+    if (!keys(value, ["documentId", "revision", "chartIds", "maxCharts", "maxReferences", "maxPoints", "maxCodeUnits", "maxFormulaCells", "maxFormulaSteps"]) || !Array.isArray(value.chartIds)
       || value.chartIds.some(id => typeof id !== "string" || id.length > 1024)) throw new DocumentError("InvalidOperation", "Invalid workbook chart transport request.");
     limit("maxCharts", limits.maxCharts); limit("maxReferences", limits.maxReferences); limit("maxPoints", limits.maxPoints); limit("maxCodeUnits", limits.maxCodeUnits);
+    limit("maxFormulaCells", limits.maxChartFormulaCells); limit("maxFormulaSteps", limits.maxChartFormulaSteps);
     if (value.chartIds.length > limits.maxCharts) throw new DocumentError("ResourceLimitExceeded", "Too many transported workbook charts.");
   }
   return value;

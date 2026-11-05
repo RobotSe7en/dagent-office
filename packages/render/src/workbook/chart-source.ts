@@ -1,17 +1,20 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookChart, WorkbookChartLiteral, WorkbookChartVector, WorkbookFormulaSource, WorkbookModel, WorkbookReferenceArea, WorkbookReferenceResult, WorkbookSheet, WorkbookSnapshot, WorkbookValue } from "@dagent-office/core";
+import { createWorkbookScalarEvaluator, DocumentError } from "@dagent-office/core";
+import type { DeepReadonly, WorkbookChart, WorkbookChartLiteral, WorkbookChartVector, WorkbookFormulaSource, WorkbookModel, WorkbookReferenceArea, WorkbookReferenceResult, WorkbookScalarEvaluator, WorkbookScalarResult, WorkbookScalarUnavailable, WorkbookSheet, WorkbookSnapshot, WorkbookValue } from "@dagent-office/core";
 import { workbookCellFormat } from "./cell-format.js";
 
 export interface WorkbookChartReadLimits {
   readonly maxCharts: number; readonly maxReferences: number; readonly maxPoints: number; readonly maxCodeUnits: number;
+  readonly maxFormulaCells: number; readonly maxFormulaSteps: number;
 }
-export const DEFAULT_CHART_READ_LIMITS: WorkbookChartReadLimits = Object.freeze({ maxCharts: 128, maxReferences: 5000, maxPoints: 50_000, maxCodeUnits: 8 * 1024 * 1024 });
+export const DEFAULT_CHART_READ_LIMITS: WorkbookChartReadLimits = Object.freeze({ maxCharts: 128, maxReferences: 5000, maxPoints: 50_000, maxCodeUnits: 8 * 1024 * 1024,
+  maxFormulaCells: 250_000, maxFormulaSteps: 5_000_000 });
 export interface WorkbookChartReadRequest extends WorkbookChartReadLimits {
   readonly documentId: string; readonly revision: number; readonly chartIds: readonly string[];
 }
 export interface WorkbookChartCell {
   readonly row: number; readonly column: number; readonly value: DeepReadonly<WorkbookValue>;
   readonly state: "constant" | WorkbookFormulaSource["cacheState"];
+  readonly issue?: Pick<WorkbookScalarUnavailable, "reason" | "functionName">;
   readonly numberFormatId?: string; readonly rowHidden: boolean; readonly columnHidden: boolean;
 }
 /** Areas retain source order and duplicates. Cells within each area are in row
@@ -40,7 +43,8 @@ function cancelled(signal: AbortSignal): void {
   if (signal.aborted) throw new DocumentError("OperationCancelled", "The workbook chart read was cancelled.");
 }
 function limits(input: WorkbookChartReadLimits): WorkbookChartReadLimits {
-  const result = { maxCharts: input.maxCharts, maxReferences: input.maxReferences, maxPoints: input.maxPoints, maxCodeUnits: input.maxCodeUnits };
+  const result = { maxCharts: input.maxCharts, maxReferences: input.maxReferences, maxPoints: input.maxPoints, maxCodeUnits: input.maxCodeUnits,
+    maxFormulaCells: input.maxFormulaCells, maxFormulaSteps: input.maxFormulaSteps };
   if (!Object.values(result).every(value => Number.isSafeInteger(value) && value > 0)) throw new DocumentError("InvalidOperation", "Chart read budgets must be positive safe integers.");
   return result;
 }
@@ -121,40 +125,58 @@ export function modelChartSource(model: WorkbookModel): WorkbookChartSource {
       }
       pending.push({ chartId: chart.chartId, sheetId: chart.sheetId, entries });
     }
-    let visited = 0, yielded = 0;
+    let visited = 0, yielded = 0, steps = 0, readCells = 0, checkpoint = performance.now();
+    let evaluator: WorkbookScalarEvaluator | undefined;
+    const evaluated = new Map<string, WorkbookScalarResult>();
+    const currentFormula = (sheetId: string, row: number, column: number): WorkbookScalarResult => {
+      const key = JSON.stringify([sheetId, row, column]), cached = evaluated.get(key);
+      if (cached) return cached;
+      if (steps >= budget.maxFormulaSteps) throw new DocumentError("ResourceLimitExceeded", "Chart formulas exceed their cumulative step budget.");
+      evaluator ??= createWorkbookScalarEvaluator(model, { maxSteps: budget.maxFormulaSteps, maxCells: budget.maxFormulaCells,
+        maxCodeUnits: budget.maxCodeUnits, maxWindowCells: 256 });
+      const result = evaluator.cell({ sheetId, row, column }, { signal, maxSteps: budget.maxFormulaSteps - steps });
+      steps += result.steps; readCells += result.readCells;
+      if (readCells > budget.maxFormulaCells) throw new DocumentError("ResourceLimitExceeded", "Chart formulas exceed their cumulative dependency-cell budget.");
+      evaluated.set(key, result); return result;
+    };
     const results: WorkbookChartData[] = [];
-    for (const chart of pending) {
-      const refs: (WorkbookChartReferenceSlot & { data: WorkbookChartReferenceData })[] = [];
-      for (const { slot, resolved } of chart.entries) {
-        if (resolved.kind !== "ranges") { refs.push(Object.freeze({ ...slot, data: resolved })); continue; }
-        const areas: { range: DeepReadonly<WorkbookReferenceArea>; cells: readonly WorkbookChartCell[] }[] = [];
-        for (const range of resolved.areas) {
-          const sheet: DeepReadonly<WorkbookSheet> = sheets.get(range.sheetId)!;
-          const cells: WorkbookChartCell[] = [];
-          // Wide ranges use one row per query; narrow ranges batch rows while
-          // preserving row order. Each query contains at most 256 coordinates.
-          const batchColumns = Math.min(256, range.to.column - range.from.column + 1), batchRows = Math.floor(256 / batchColumns);
-          for (let row = range.from.row; row <= range.to.row; row += batchRows) for (let column = range.from.column; column <= range.to.column; column += batchColumns) {
-            cancelled(signal);
-            const columns = Math.min(batchColumns, range.to.column - column + 1), rows = Math.min(batchRows, range.to.row - row + 1);
-            const stored = new Map(model.readWindow({ sheetId: range.sheetId, row, column, rows, columns }).map(cell => [cell.row * 16_384 + cell.column, cell]));
-            for (let r = row; r < row + rows; r++) for (let c = column; c < column + columns; c++) {
-              const cell = stored.get(r * 16_384 + c), value = cell?.value ?? Object.freeze({ type: "blank" as const });
-              const numberFormatId = workbookCellFormat(sheet, { row: r, column: c }, cell).numberFormatId;
-              account((value.type === "text" || value.type === "error" ? value.value.length : 0) + (numberFormatId?.length ?? 0));
-              cells.push(Object.freeze({ row: r, column: c, value, state: cell?.formula?.cacheState ?? "constant",
-                ...(numberFormatId === undefined ? {} : { numberFormatId }), rowHidden: hidden(sheet.rowDimensions, r, sheet.defaultRowsHidden), columnHidden: hidden(sheet.columnDimensions, c) }));
+    try {
+      for (const chart of pending) {
+        const refs: (WorkbookChartReferenceSlot & { data: WorkbookChartReferenceData })[] = [];
+        for (const { slot, resolved } of chart.entries) {
+          if (resolved.kind !== "ranges") { refs.push(Object.freeze({ ...slot, data: resolved })); continue; }
+          const areas: { range: DeepReadonly<WorkbookReferenceArea>; cells: readonly WorkbookChartCell[] }[] = [];
+          for (const range of resolved.areas) {
+            const sheet: DeepReadonly<WorkbookSheet> = sheets.get(range.sheetId)!;
+            const cells: WorkbookChartCell[] = [];
+            // Wide ranges use one row per query; narrow ranges batch rows while
+            // preserving row order. Each query contains at most 256 coordinates.
+            const batchColumns = Math.min(256, range.to.column - range.from.column + 1), batchRows = Math.floor(256 / batchColumns);
+            for (let row = range.from.row; row <= range.to.row; row += batchRows) for (let column = range.from.column; column <= range.to.column; column += batchColumns) {
+              cancelled(signal);
+              const columns = Math.min(batchColumns, range.to.column - column + 1), rows = Math.min(batchRows, range.to.row - row + 1);
+              const stored = new Map(model.readWindow({ sheetId: range.sheetId, row, column, rows, columns }).map(cell => [cell.row * 16_384 + cell.column, cell]));
+              for (let r = row; r < row + rows; r++) for (let c = column; c < column + columns; c++) {
+                const cell = stored.get(r * 16_384 + c), result = cell?.formula ? currentFormula(range.sheetId, r, c) : undefined;
+                const value = result?.kind === "value" ? result.value : result ? Object.freeze({ type: "blank" as const }) : cell?.value ?? Object.freeze({ type: "blank" as const });
+                const issue = result?.kind === "unavailable" ? Object.freeze({ reason: result.reason, ...(result.functionName ? { functionName: result.functionName } : {}) }) : undefined;
+                const numberFormatId = workbookCellFormat(sheet, { row: r, column: c }, cell).numberFormatId;
+                account((value.type === "text" || value.type === "error" ? value.value.length : 0) + (numberFormatId?.length ?? 0) + (issue?.reason.length ?? 0) + (issue?.functionName?.length ?? 0));
+                cells.push(Object.freeze({ row: r, column: c, value, state: result ? result.kind === "value" ? "valid" : "unavailable" : "constant", ...(issue ? { issue } : {}),
+                  ...(numberFormatId === undefined ? {} : { numberFormatId }), rowHidden: hidden(sheet.rowDimensions, r, sheet.defaultRowsHidden), columnHidden: hidden(sheet.columnDimensions, c) }));
+                if (performance.now() - checkpoint >= 8) { await new Promise<void>(resolve => setTimeout(resolve, 0)); checkpoint = performance.now(); cancelled(signal); }
+              }
+              visited += rows * columns;
+              if (visited < points && visited - yielded >= 256) { yielded = visited; await new Promise<void>(resolve => setTimeout(resolve, 0)); }
             }
-            visited += rows * columns;
-            if (visited < points && visited - yielded >= 256) { yielded = visited; await new Promise<void>(resolve => setTimeout(resolve, 0)); }
+            areas.push(Object.freeze({ range, cells: Object.freeze(cells) }));
           }
-          areas.push(Object.freeze({ range, cells: Object.freeze(cells) }));
+          refs.push(Object.freeze({ ...slot, data: Object.freeze({ kind: "cells", areas: Object.freeze(areas) }) }));
         }
-        refs.push(Object.freeze({ ...slot, data: Object.freeze({ kind: "cells", areas: Object.freeze(areas) }) }));
+        results.push(Object.freeze({ chartId: chart.chartId, sheetId: chart.sheetId, references: Object.freeze(refs) }));
       }
-      results.push(Object.freeze({ chartId: chart.chartId, sheetId: chart.sheetId, references: Object.freeze(refs) }));
-    }
-    cancelled(signal);
-    return Object.freeze({ documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, charts: Object.freeze(results) });
+      cancelled(signal);
+      return Object.freeze({ documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, charts: Object.freeze(results) });
+    } finally { evaluator?.dispose(); evaluated.clear(); }
   } });
 }

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { createWorkbook, createWorkbookNumberFormatter, openDocument } from "@dagent-office/core";
 import type { WorkbookChart, WorkbookDocumentMetadata, WorkbookManifest, WorkbookModel } from "@dagent-office/core";
 import { readXlsxRecords } from "../../office/src/xlsx/read.js";
+import { importXlsx } from "../../office/src/xlsx-import.js";
 import { projectXlsxRecords } from "../../office/tests/helpers/xlsx-record-model.js";
 import { DEFAULT_CHART_READ_LIMITS, modelChartSource } from "../src/workbook/chart-source.js";
 import type { WorkbookChartReadRequest, WorkbookChartReadResponse } from "../src/workbook/chart-source.js";
@@ -13,7 +14,7 @@ import { bindWorkbookChartData } from "../src/workbook/chart-values.js";
 
 const encode = (text: string) => new TextEncoder().encode(text), decode = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
 const reference = (expression: string) => ({ expression, valueType: "number" as const, cache: { state: "imported" as const, count: 1, points: [{ index: 0, value: 999 }] } });
-function seeded(edit: (chart: WorkbookChart, metadata: WorkbookDocumentMetadata) => void = () => {}): WorkbookModel {
+function seeded(edit: (chart: WorkbookChart, metadata: WorkbookDocumentMetadata) => void = () => {}, unavailableFormula = '=UNSUPPORTED()'): WorkbookModel {
   const files = new Map(createWorkbook({ documentId: "chart-data", sheetName: "Data" }));
   const manifest = JSON.parse(decode(files.get("manifest.json")!)) as WorkbookManifest;
   const metadata = JSON.parse(decode(files.get("metadata.json")!)) as WorkbookDocumentMetadata;
@@ -26,10 +27,10 @@ function seeded(edit: (chart: WorkbookChart, metadata: WorkbookDocumentMetadata)
   files.set("content.html", encode('<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="styles.css"></head><body><section data-node-id="content" data-office-kind="workbook-content"><div data-node-id="chart-node" data-office-kind="chart"></div></section></body></html>'));
   const path = "sheets/sheet-1/0-0.html", bytes = encode('<!doctype html><html><head></head><body><table data-sheet-id="sheet-1" data-row="0" data-column="0"><tbody>'
     + '<tr data-row="0"><td data-column="0" data-value-type="text">中文😀</td><td data-column="1" data-value-type="number" data-value="12">旧显示</td></tr>'
-    + '<tr data-row="1"><td data-column="0" data-value-type="boolean" data-value="true">TRUE</td><td data-column="1" data-value-type="number" data-value="23" data-formula="=20+3" data-cache-state="imported">23</td></tr>'
-    + '<tr data-row="2"><td data-column="1" data-value-type="number" data-value="34" data-formula="=30+4" data-cache-state="valid">34</td></tr>'
-    + '<tr data-row="3"><td data-column="1" data-value-type="number" data-value="45" data-formula="=40+5" data-cache-state="stale">45</td></tr>'
-    + '<tr data-row="4"><td data-column="1" data-value-type="blank" data-formula="=UNSUPPORTED()" data-cache-state="unavailable"></td></tr>'
+    + '<tr data-row="1"><td data-column="0" data-value-type="boolean" data-value="true">TRUE</td><td data-column="1" data-value-type="number" data-value="999" data-formula="=20+3" data-cache-state="imported">999</td></tr>'
+    + '<tr data-row="2"><td data-column="1" data-value-type="number" data-value="999" data-formula="=30+4" data-cache-state="valid">999</td></tr>'
+    + '<tr data-row="3"><td data-column="1" data-value-type="number" data-value="999" data-formula="=40+5" data-cache-state="stale">999</td></tr>'
+    + '<tr data-row="4"><td data-column="1" data-value-type="number" data-value="999" data-formula="' + unavailableFormula + '" data-cache-state="valid">999</td></tr>'
     + '<tr data-row="5"><td data-column="1" data-value-type="error" data-value="#N/A">#N/A</td></tr>'
     + '</tbody></table></body></html>');
   files.set(path, bytes); manifest.chunks.push({ sheetId: "sheet-1", row: 0, column: 0, path, sha256: createHash("sha256").update(bytes).digest("hex") });
@@ -69,7 +70,10 @@ describe("bounded current-source workbook chart reads", () => {
   });
   it("keeps typed values, formula states and sparse blanks distinct from imported chart caches", async () => {
     const model = seeded(), source = model.serialize(), response = await read(model);
-    expect(cells(response).map(cell => cell.state)).toEqual(["constant", "imported", "valid", "stale", "unavailable", "constant"]);
+    expect(cells(response).map(cell => cell.state)).toEqual(["constant", "valid", "valid", "valid", "unavailable", "constant"]);
+    expect(cells(response)[4]).toMatchObject({ issue: { reason: "unsupported-function", functionName: "UNSUPPORTED" }, value: { type: "blank" } });
+    expect(model.readWindow({ sheetId: 'sheet-1', row: 1, column: 1, rows: 3, columns: 1 }).map(cell => [cell.value, cell.formula?.cacheState]))
+      .toEqual(['imported', 'valid', 'stale'].map(state => [{ type: 'number', value: 999 }, state]));
     expect(cells(response).map(cell => cell.value)).toEqual([{ type: "number", value: 12 }, { type: "number", value: 23 }, { type: "number", value: 34 }, { type: "number", value: 45 }, { type: "blank" }, { type: "error", value: "#N/A" }]);
     expect(cells(response, "categories").map(cell => cell.value)).toEqual([{ type: "text", value: "中文😀" }, { type: "boolean", value: true }]);
     expect(model.snapshot().metadata.workbook.charts![0]!.series[0]!.values).toMatchObject({ cache: { points: [{ index: 0, value: 999 }] } });
@@ -83,6 +87,25 @@ describe("bounded current-source workbook chart reads", () => {
     expect(cells(response).map(cell => [cell.row, cell.column])).toEqual([[2, 1], [3, 1], [1048575, 16383], [0, 0], [0, 1], [1, 0], [1, 1], [0, 1]]);
     expect(cells(response)[2]).toMatchObject({ state: "constant", value: { type: "blank" } });
     await expect(read(model, { maxPoints: 7 })).rejects.toMatchObject({ code: "ResourceLimitExceeded" });
+  });
+  it('bounds cumulative formula work across slots and reuses repeated current coordinates within one request', async () => {
+    const single = seeded(chart => { delete chart.categories; chart.series[0]!.values = reference('=B2'); });
+    await expect(read(single, { maxFormulaSteps: 1 })).rejects.toMatchObject({ code: 'ResourceLimitExceeded' });
+    const repeated = seeded(chart => { chart.categories = reference('=B2'); chart.series[0]!.values = reference('=(B2,B2)'); });
+    expect(cells(await read(repeated, { maxFormulaCells: 1 })).map(cell => cell.value)).toEqual([{ type: 'number', value: 23 }, { type: 'number', value: 23 }]);
+    const distinct = seeded(chart => { delete chart.categories; chart.series[0]!.values = reference('=B2:B3'); });
+    await expect(read(distinct, { maxFormulaCells: 1 })).rejects.toMatchObject({ code: 'ResourceLimitExceeded' });
+    // A rejected read cannot poison another read's calculation or budgets.
+    expect(cells(await read(distinct, { maxFormulaCells: 2 })).map(cell => cell.value)).toEqual([{ type: 'number', value: 23 }, { type: 'number', value: 34 }]);
+  });
+  it.each([['=B5', 'circular-reference'], ['=Loop', 'circular-name']] as const)('keeps %s unavailable despite a source cache marked valid', async (expression, reason) => {
+    const model = seeded((chart, metadata) => {
+      delete chart.categories; chart.series[0]!.values = reference('=B5');
+      metadata.workbook.names = [{ nameId: 'loop', name: 'Loop', expression: '=Loop', origin: { row: 0, column: 0 } }];
+    }, expression), before = model.serialize();
+    const points = cells(await read(model));
+    expect(points[0]).toMatchObject({ state: 'unavailable', value: { type: 'blank' }, issue: { reason } });
+    expect(model.serialize()).toEqual(before);
   });
   it("resolves names in the owning worksheet rather than the active sheet, including title and series slots", async () => {
     const model = seeded((chart, metadata) => {
@@ -171,10 +194,32 @@ describe("bounded current-source workbook chart reads", () => {
     for (const [index, chart] of response.charts.entries()) {
       const points = cells({ ...response, charts: [chart] });
       expect(points.map(point => point.value)).toEqual([{ type: 'number', value: 2 }, { type: 'text', value: '7' }, { type: 'text', value: 'word' }, { type: 'boolean', value: true }, { type: 'boolean', value: false }, { type: 'blank' }, { type: 'blank' }, { type: 'text', value: '' }, { type: 'error', value: '#N/A' }, { type: 'error', value: '#DIV/0!' }, { type: 'number', value: -3 }, { type: 'number', value: 0 }]);
-      expect(points[7]!.state).toBe('imported');
+      expect(points[7]!.state).toBe('valid');
       expect(points.filter(point => point.rowHidden).map(point => point.row)).toEqual(evidence.cases[index]!.hidden === 'rows' ? [2, 4, 11] : []);
       expect(points.every(point => point.columnHidden)).toBe(evidence.cases[index]!.hidden === 'values-column');
       expect(definitions[index]!.series[0]!.values).toMatchObject({ cache: { points: Array.from({ length: 12 }, (_, index) => ({ index, value: 999 })) } });
+    }
+  });
+  it('reads and reopens independent native chart formulas using current values instead of either native cache', async () => {
+    const bytes = readFileSync('packages/office/tests/fixtures/xlsx-chart-formulas.xlsx');
+    const evidence = JSON.parse(readFileSync('docs/evidence/xlsx-chart-formulas.json', 'utf8')) as { sourceSha256: string; expected: Record<string, unknown> };
+    expect(createHash('sha256').update(bytes).digest('hex')).toBe(evidence.sourceSha256);
+    let model = openDocument(await importXlsx(bytes, { documentId: 'chart-current' }), { kind: 'workbook' });
+    for (let pass = 0; pass < 2; pass++) {
+      const before = model.serialize(), response = await read(model, { chartIds: model.snapshot().metadata.workbook.charts!.map(chart => chart.chartId) });
+      const address = (row: number, column: number) => String.fromCharCode(65 + column) + (row + 1);
+      const points = response.charts[0]!.references.flatMap(reference => reference.data.kind === 'cells' ? reference.data.areas.flatMap(area => area.cells) : []);
+      expect(points).toHaveLength(25);
+      for (const point of points) { expect(point.state).toBe('valid'); expect(point.value).toEqual(evidence.expected[address(point.row, point.column)]); }
+      const cached = model.readWindow({ sheetId: 'sheet-1', row: 1, column: 1, rows: 12, columns: 1 });
+      expect(cached.every(cell => cell.value.type === 'number' && cell.value.value === 777 && cell.formula?.cacheState === 'imported')).toBe(true);
+      const formatter = createWorkbookNumberFormatter({ dateSystem: '1900' });
+      try {
+        const [plot] = bindWorkbookChartData(model.snapshot(), response, formatter);
+        expect(plot).toMatchObject({ kind: 'available', data: { categories: Array.from({ length: 12 }, (_, index) => 'Point' + index) } });
+        expect(plot!.diagnostics).toEqual([expect.objectContaining({ code: 'error-point', detail: '#DIV/0!' })]);
+      } finally { formatter.dispose(); }
+      expect(model.serialize()).toEqual(before); model = openDocument(before, { kind: 'workbook' });
     }
   });
 });
@@ -191,7 +236,7 @@ describe("workbook chart display binding", () => {
     expect(plot?.kind).toBe("available"); if (plot?.kind !== "available") throw new Error("Expected available plot");
     expect(plot.data.categories).toEqual(["12", "2300.0%", "34"]); expect(plot.data.series[0]!.values).toEqual([12, 23, 34]);
     expect(plot.valueFormats[0]![1]).toEqual({ formatId: "percent", code: "0.0%" });
-    expect(plot.diagnostics.filter(d => d.code === "imported-cell")).toHaveLength(2);
+    expect(plot.diagnostics).toEqual([]);
     expect(Object.isFrozen(plot.data.series[0]!.values)).toBe(true); expect(model.serialize()).toEqual(source); formatter.dispose();
   });
   it("reports stale, unavailable and unresolved references instead of plotting old chart caches", async () => {
@@ -201,7 +246,10 @@ describe("workbook chart display binding", () => {
       const [plot] = bindWorkbookChartData(model.snapshot(), await read(model), formatter);
       expect(plot?.kind).toBe("unavailable"); expect(plot).not.toHaveProperty("data");
       const codes = plot!.diagnostics.map(d => d.code);
-      if (expression === "=B1:B6") { expect(codes).toContain("stale-cell"); expect(codes).toContain("unavailable-cell"); }
+      if (expression === "=B1:B6") {
+        expect(codes).not.toContain("stale-cell"); expect(codes).toContain("unavailable-cell");
+        expect(plot!.diagnostics).toContainEqual(expect.objectContaining({ code: 'unavailable-cell', issue: { reason: 'unsupported-function', functionName: 'UNSUPPORTED' } }));
+      }
       else expect(codes).toContain(expression.includes("OFFSET") ? "unresolved-reference" : "reference-error");
     }
     const model = seeded(chart => { chart.titleReference = { expression: "=A1:A2", valueType: "text" }; chart.series[0]!.values = reference("=B1"); });

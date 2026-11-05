@@ -15,6 +15,21 @@ const request = (model: WorkbookModel, maxCells = 20) => ({ documentId: model.sn
 const signal = () => new AbortController().signal;
 
 describe('host-owned immutable workbook read transport', () => {
+  it('transports current chart formulas and enforces both formula budgets before querying the model', async () => {
+    const model = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-formulas.xlsx'), { documentId: 'chart-transport' }), { kind: 'workbook' });
+    let reads = 0;
+    const ports = new MessageChannel(), server = serveWorkbookReads(ports.port1, { ...model, readWindow(window) { reads++; return model.readWindow(window); } },
+      { readLimits: { maxChartFormulaCells: 1000, maxChartFormulaSteps: 10_000 } });
+    const client = await connectWorkbookReads(ports.port2);
+    const input = { ...DEFAULT_CHART_READ_LIMITS, documentId: 'chart-transport', revision: 0, chartIds: model.snapshot().metadata.workbook.charts!.map(chart => chart.chartId) };
+    try {
+      await expect(client.charts.read(input, signal())).rejects.toMatchObject({ code: 'ResourceLimitExceeded' }); expect(reads).toBe(0);
+      await expect(client.charts.read({ ...input, maxFormulaCells: 1000 }, signal())).rejects.toMatchObject({ code: 'ResourceLimitExceeded' }); expect(reads).toBe(0);
+      const accepted = { ...input, maxFormulaCells: 1000, maxFormulaSteps: 10_000 };
+      expect(await client.charts.read(accepted, signal())).toEqual(await modelChartSource(model).read(accepted, signal()));
+      expect(reads).toBeGreaterThan(0);
+    } finally { client.dispose(); server.dispose(); }
+  });
   it('transports current rule states through the same authorized revision and enforces cumulative server budgets', async () => {
     const model = openDocument(await importXlsx(readFileSync('examples/xlsx/06-rules-validation.xlsx'), { documentId: 'transport' }), { kind: 'workbook' }), before = model.serialize();
     const ports = new MessageChannel(), server = serveWorkbookReads(ports.port1, model, { readLimits: { maxRuleValues: 50 } }), client = await connectWorkbookReads(ports.port2);

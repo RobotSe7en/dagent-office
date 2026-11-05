@@ -103,6 +103,7 @@ jobs:
       - run: node scripts/install-acceptance-office.mjs
       - run: pnpm check:pptx-fixtures && pnpm check:pptx-reference
       - run: pnpm check:xlsx-fixtures && pnpm check:xlsx-reference
+      - run: python3 scripts/check-xlsx-chart-formulas.py
       - run: pnpm check:docx-export
       - run: node scripts/playwright.mjs install --with-deps chromium --only-shell
       - run: pnpm check:word-closure

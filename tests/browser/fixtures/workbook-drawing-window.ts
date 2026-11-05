@@ -12,10 +12,26 @@ import { modelChartSource } from '../../../packages/render/src/workbook/chart-so
 import type { WorkbookChartReadResponse } from '../../../packages/render/src/workbook/chart-source.js';
 import { layoutWorkbookWindow } from '../../../packages/render/src/workbook/window-layout.js';
 import { layoutWorkbookDrawings } from '../../../packages/render/src/workbook/drawing-layout.js';
+import { WorkbookWindowController } from '../../../packages/render/src/workbook/window-controller.js';
 import type { WorkbookDrawingLayout } from '../../../packages/render/src/workbook/drawing-layout.js';
 import { annotationWindowMeasurement, commentTextMeasurement, windowControllerMeasurement } from './workbook-window-controller.js';
 import { commentPanelMeasurement } from './workbook-comment-panel.js';
 import { annotationControlsAction, mountAnnotationControls } from './workbook-annotation-controls.js';
+
+export async function currentChartWindowMeasurement(entries: readonly [string, number[]][]) {
+  const model = openDocument(new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
+  const container = document.createElement('div'); document.body.append(container);
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 620, heightPt: 420 }), formatter = createWorkbookNumberFormatter({ dateSystem: '1900' });
+  const controller = new WorkbookWindowController(surface, { cells: modelWindowSource(model), assets: modelAssetSource(model), charts: modelChartSource(model) }, formatter);
+  try {
+    await controller.render(snapshot.metadata.workbook.activeSheetId, { widthPt: 620, heightPt: 420, scrollLeftPt: 0, scrollTopPt: 0 });
+    const window = controller.current!, text = window.element.querySelector('[data-office-view="workbook-drawings"]')!.textContent;
+    const after = model.serialize();
+    const result = { text, objects: window.objects.length, diagnostics: window.diagnostics, unavailable: window.element.querySelectorAll('[data-office-view="workbook-chart-unavailable"]').length,
+      sourceUnchanged: [...before].every(([path, bytes]) => { const saved = after.get(path)!; return bytes.length === saved.length && bytes.every((byte, index) => byte === saved[index]); }) };
+    controller.dispose(); return { ...result, released: !surface.view.childNodes.length && !surface.source.childNodes.length };
+  } finally { controller.dispose(); formatter.dispose(); surface.dispose(); container.remove(); }
+}
 
 export async function drawingWindowMeasurement(entries: readonly [string, number[]][], rtl: boolean, overflow = false) {
   const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), decoder = new TextDecoder(), encoder = new TextEncoder();
@@ -128,4 +144,4 @@ export async function drawingWindowMeasurement(entries: readonly [string, number
     URL.createObjectURL = originalCreate; URL.revokeObjectURL = originalRevoke; window.removeEventListener('unhandledrejection', rejection);
   }
 }
-Object.assign(window, { workbookDrawingWindow: { drawingWindowMeasurement, windowControllerMeasurement, annotationWindowMeasurement, commentTextMeasurement, commentPanelMeasurement, annotationControlsAction, mountAnnotationControls } });
+Object.assign(window, { workbookDrawingWindow: { drawingWindowMeasurement, currentChartWindowMeasurement, windowControllerMeasurement, annotationWindowMeasurement, commentTextMeasurement, commentPanelMeasurement, annotationControlsAction, mountAnnotationControls } });

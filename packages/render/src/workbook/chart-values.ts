@@ -2,7 +2,7 @@ import { DocumentError } from "@dagent-office/core";
 import type { DeepReadonly, WorkbookChart, WorkbookChartVector, WorkbookDisplayFormat, WorkbookNumberFormatter, WorkbookSnapshot, WorkbookValue } from "@dagent-office/core";
 import type { BasicChartData } from "../chart.js";
 import { checkWindowIdentity } from "./window-source.js";
-import type { WorkbookChartData, WorkbookChartReadResponse, WorkbookChartReferenceData, WorkbookChartReferenceSlot } from "./chart-source.js";
+import type { WorkbookChartCell, WorkbookChartData, WorkbookChartReadResponse, WorkbookChartReferenceData, WorkbookChartReferenceSlot } from "./chart-source.js";
 
 export interface WorkbookChartBindingLimits { readonly maxCharts: number; readonly maxReferences: number; readonly maxPoints: number; readonly maxCodeUnits: number }
 export interface WorkbookChartDataDiagnostic {
@@ -12,6 +12,7 @@ export interface WorkbookChartDataDiagnostic {
   readonly seriesId?: string;
   readonly index?: number;
   readonly detail?: string;
+  readonly issue?: WorkbookChartCell["issue"];
 }
 export type WorkbookChartBinding = {
   readonly chartId: string;
@@ -34,6 +35,7 @@ interface Point {
   readonly hidden: boolean;
   readonly state: "constant" | "imported" | "valid" | "stale" | "unavailable";
   readonly format?: WorkbookDisplayFormat;
+  readonly issue?: WorkbookChartCell["issue"];
 }
 type Role = WorkbookChartReferenceSlot["role"];
 const slotKey = (role: Role, seriesId?: string): string => `${role}:${seriesId ?? ""}`;
@@ -86,7 +88,16 @@ export function bindWorkbookChartData(snapshot: WorkbookSnapshot, response: Work
       if (cell.value.type === "text" || cell.value.type === "error") accountText(cell.value.value);
       const format = cell.numberFormatId === undefined ? undefined : formats.get(cell.numberFormatId);
       if (cell.numberFormatId !== undefined && !format) throw new DocumentError("InvalidDocument", "A current chart cell references an unknown number format.");
-      return { value: cell.value, hidden: cell.rowHidden || cell.columnHidden, state: cell.state, ...(format ? { format } : {}) };
+      let issue: WorkbookChartCell["issue"];
+      if (cell.issue !== undefined) {
+        if (!cell.issue || cell.state !== "unavailable" || Object.keys(cell.issue).some(key => !["reason", "functionName"].includes(key))
+          || !["unsupported-function", "circular-reference", "circular-name", "ambiguous-name-scope", "calculation-required"].includes(cell.issue.reason)
+          || cell.issue.functionName !== undefined && (typeof cell.issue.functionName !== "string" || !cell.issue.functionName.length))
+          throw new DocumentError("InvalidDocument", "A chart cell has an invalid calculation issue.");
+        issue = Object.freeze({ reason: accountText(cell.issue.reason) as NonNullable<WorkbookChartCell["issue"]>["reason"],
+          ...(cell.issue.functionName !== undefined ? { functionName: accountText(cell.issue.functionName) } : {}) });
+      }
+      return { value: cell.value, hidden: cell.rowHidden || cell.columnHidden, state: cell.state, ...(format ? { format } : {}), ...(issue ? { issue } : {}) };
     }));
   };
   const label = (point: Point | undefined): string => {
@@ -133,7 +144,7 @@ export function bindWorkbookChartData(snapshot: WorkbookSnapshot, response: Work
       const result = vector(data);
       for (const [index, point] of result.entries()) {
         if (visibleOnly && point.hidden) continue;
-        if (point.state === "stale" || point.state === "unavailable") { unavailable = true; diagnostics.push(Object.freeze({ ...identity, index, code: point.state === "stale" ? "stale-cell" : "unavailable-cell" })); }
+        if (point.state === "stale" || point.state === "unavailable") { unavailable = true; diagnostics.push(Object.freeze({ ...identity, index, code: point.state === "stale" ? "stale-cell" : "unavailable-cell", ...(point.issue ? { issue: point.issue } : {}) })); }
         if (point.state === "imported") diagnostics.push(Object.freeze({ ...identity, index, code: "imported-cell" }));
         if (role === "series-values" && point.value.type === "error") diagnostics.push(Object.freeze({ ...identity, index, code: "error-point", detail: point.value.value }));
       }

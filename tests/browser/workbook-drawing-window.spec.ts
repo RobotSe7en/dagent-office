@@ -3,12 +3,12 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { importXlsx } from '../../packages/office/src/xlsx-import.js';
-import type { drawingWindowMeasurement } from './fixtures/workbook-drawing-window.js';
+import type { currentChartWindowMeasurement, drawingWindowMeasurement } from './fixtures/workbook-drawing-window.js';
 import type { annotationWindowMeasurement, commentTextMeasurement, windowControllerMeasurement } from './fixtures/workbook-window-controller.js';
 import type { commentPanelMeasurement } from './fixtures/workbook-comment-panel.js';
 import type { annotationControlsAction, mountAnnotationControls } from './fixtures/workbook-annotation-controls.js';
 
-declare global { interface Window { workbookDrawingWindow: { drawingWindowMeasurement: typeof drawingWindowMeasurement; windowControllerMeasurement: typeof windowControllerMeasurement; annotationWindowMeasurement: typeof annotationWindowMeasurement; commentTextMeasurement: typeof commentTextMeasurement; commentPanelMeasurement: typeof commentPanelMeasurement; annotationControlsAction: typeof annotationControlsAction; mountAnnotationControls: typeof mountAnnotationControls } } }
+declare global { interface Window { workbookDrawingWindow: { drawingWindowMeasurement: typeof drawingWindowMeasurement; currentChartWindowMeasurement: typeof currentChartWindowMeasurement; windowControllerMeasurement: typeof windowControllerMeasurement; annotationWindowMeasurement: typeof annotationWindowMeasurement; commentTextMeasurement: typeof commentTextMeasurement; commentPanelMeasurement: typeof commentPanelMeasurement; annotationControlsAction: typeof annotationControlsAction; mountAnnotationControls: typeof mountAnnotationControls } } }
 let code = '';
 const inputs: { name: string; files: [string, number[]][] }[] = [];
 const comments: typeof inputs = [];
@@ -26,6 +26,13 @@ test.beforeAll(async () => {
   }
 });
 test.beforeEach(async ({ page }) => { await page.goto('/'); await page.addScriptTag({ content: code }); });
+test('native chart labels and points use current formulas while wrong cell and chart caches remain unchanged', async ({ page }) => {
+  const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-formulas.xlsx'), { documentId: 'current-chart-window' });
+  const result = await page.evaluate(entries => window.workbookDrawingWindow.currentChartWindowMeasurement(entries), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  expect(result).toMatchObject({ objects: 1, unavailable: 0, sourceUnchanged: true, released: true });
+  expect(result.text).toContain('Current values'); expect(result.text).toContain('Point0'); expect(result.text).not.toContain('Cache');
+  expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: 'error-point', detail: '#DIV/0!' }));
+});
 for (const rtl of [false, true]) test(`worksheet objects compose above cells across four ${rtl ? 'RTL' : 'LTR'} panes with isolated candidate resources`, async ({ page }) => {
   for (const input of inputs) {
     const result = await page.evaluate(({ files, rtl }) => window.workbookDrawingWindow.drawingWindowMeasurement(files, rtl), { files: input.files, rtl });
