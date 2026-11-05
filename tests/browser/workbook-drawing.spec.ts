@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
+import { createWorkbookNumberFormatter } from "@dagent-office/core";
 import type { WorkbookSnapshot } from '@dagent-office/core';
 import { readXlsxRecords } from '../../packages/office/src/xlsx/read.js';
 import { readDocumentZip, writeOpcZip } from '../../packages/office/src/document-zip.js';
@@ -15,11 +16,12 @@ import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
 import type { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback } from './fixtures/workbook-drawing-text.js';
 import type { measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } from './fixtures/workbook-surface.js';
 import type { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } from './fixtures/workbook-shadow.js';
-import type { measureWorkbookCharts, measureWorkbookChartTitles } from './fixtures/workbook-chart.js';
+import type { measureWorkbookCharts, measureWorkbookChartTitles, measureWorkbookChartPositions } from './fixtures/workbook-chart.js';
+import { bindWorkbookChartData } from "../../packages/render/src/workbook/chart-values.js";
 import type { BasicChartData } from '../../packages/render/src/chart.js';
 import { modelChartSource, DEFAULT_CHART_READ_LIMITS } from '../../packages/render/src/workbook/chart-source.js';
 
-declare global { interface Window { workbookChartHost: { measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartTitles: typeof measureWorkbookChartTitles } } }
+declare global { interface Window { workbookChartHost: { measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
 
 declare global { interface Window { workbookShadowHost: { measureWorkbookShadows: typeof measureWorkbookShadows; mountWorkbookShadowPixels: typeof mountWorkbookShadowPixels; disposeWorkbookShadowPixels: typeof disposeWorkbookShadowPixels } } }
 
@@ -50,16 +52,10 @@ test.beforeAll(async () => {
     inputs.push({ name: prefix + name, snapshot, text: Object.fromEntries(ids.map(id => [id, model.getNode(id)!.text])), resources: Object.fromEntries(snapshot.manifest.assets.map(asset => [asset.path, Buffer.from(model.getAsset(asset.path)!).toString('base64')])) });
     if (name === '07-three-charts') {
       const definitions = snapshot.metadata.workbook.charts!, response = await modelChartSource(model).read({ ...DEFAULT_CHART_READ_LIMITS, documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, chartIds: definitions.map(chart => chart.chartId) }, new AbortController().signal);
-      chartPlots.set(prefix + name, response.charts.map((chart, index) => {
-        const values = (role: string, seriesId?: string) => {
-          const data = chart.references.find(ref => ref.role === role && (seriesId === undefined || 'seriesId' in ref && ref.seriesId === seriesId))!.data;
-          if (data.kind !== 'cells') throw Error('Independent chart fixture must contain static references');
-          return data.areas.flatMap(area => area.cells.map(cell => { if (cell.state !== 'constant') throw Error('Expected independent constants'); return cell.value; }));
-        };
-        return { categories: values('categories').map(value => { if (value.type !== 'text') throw Error('Expected text categories'); return value.value; }),
-          series: definitions[index]!.series.map(series => ({ seriesId: series.seriesId, name: values('series-name', series.seriesId).map(value => { if (value.type !== 'text') throw Error('Expected text series name'); return value.value; }).join(''),
-            values: values('series-values', series.seriesId).map(value => { if (value.type !== 'number') throw Error('Expected numeric constants'); return value.value; }) })) };
-      }));
+      const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
+      chartPlots.set(prefix + name, bindWorkbookChartData(snapshot, response, formatter).map(chart => {
+        if (chart.kind !== 'available') throw Error('Independent chart source must be available'); return chart.data;
+      })); formatter.dispose();
     }
   }
   {
@@ -389,4 +385,14 @@ test('auxiliary parsing rejects active content, foreign nodes, repeated identiti
   for (const limits of [[1, 8 * 1024 * 1024], [100_000, 1]]) expect(await page.evaluate(({ snapshot, limits }) => window.workbookContentHost.rejectContentSource(snapshot, limits[0], limits[1]), { snapshot, limits })).toBe('ResourceLimitExceeded');
   expect(await page.evaluate(snapshot => window.workbookContentHost.rejectContentSource(snapshot, 0), snapshot)).toBe('InvalidOperation');
   await page.waitForTimeout(50); expect(requests).toEqual([]);
+});
+
+test('workbook chart compaction preserves original point styles and distinguishes errors from skipped points', async ({ page }) => {
+  const input = inputs.find(input => input.name === '07-three-charts')!;
+  const result = await page.evaluate(snapshot => window.workbookChartHost.measureWorkbookChartPositions(snapshot), input.snapshot);
+  expect(result.colors).toEqual(['rgb(0, 0, 255)', 'rgb(255, 0, 0)']);
+  expect(result.plain.match(/M/g)).toHaveLength(1); expect(result.plain.match(/L/g)).toHaveLength(4);
+  expect(result.missing.match(/M/g)).toHaveLength(2); expect(result.missing.match(/L/g)).toHaveLength(1);
+  expect(result.hiddenPaths).toBe(0); expect(result.hiddenDiagnostics).toEqual([]);
+  expect(result.errors).toEqual(['InvalidOperation', 'InvalidOperation', 'InvalidOperation']); expect(result.unchanged).toBe(true);
 });

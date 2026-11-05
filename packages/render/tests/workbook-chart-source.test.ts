@@ -2,12 +2,14 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
-import { createWorkbook, openDocument } from "@dagent-office/core";
+import { createWorkbook, createWorkbookNumberFormatter, openDocument } from "@dagent-office/core";
 import type { WorkbookChart, WorkbookDocumentMetadata, WorkbookManifest, WorkbookModel } from "@dagent-office/core";
 import { readXlsxRecords } from "../../office/src/xlsx/read.js";
 import { projectXlsxRecords } from "../../office/tests/helpers/xlsx-record-model.js";
 import { DEFAULT_CHART_READ_LIMITS, modelChartSource } from "../src/workbook/chart-source.js";
 import type { WorkbookChartReadRequest, WorkbookChartReadResponse } from "../src/workbook/chart-source.js";
+
+import { bindWorkbookChartData } from "../src/workbook/chart-values.js";
 
 const encode = (text: string) => new TextEncoder().encode(text), decode = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
 const reference = (expression: string) => ({ expression, valueType: "number" as const, cache: { state: "imported" as const, count: 1, points: [{ index: 0, value: 999 }] } });
@@ -174,5 +176,85 @@ describe("bounded current-source workbook chart reads", () => {
       expect(points.every(point => point.columnHidden)).toBe(evidence.cases[index]!.hidden === 'values-column');
       expect(definitions[index]!.series[0]!.values).toMatchObject({ cache: { points: Array.from({ length: 12 }, (_, index) => ({ index, value: 999 })) } });
     }
+  });
+});
+
+
+describe("workbook chart display binding", () => {
+  it("uses current formats and formula states without borrowing chart caches", async () => {
+    const model = seeded((chart, metadata) => {
+      chart.categories = reference("=B1:B3"); chart.series[0]!.values = reference("=B1:B3");
+      metadata.workbook.numberFormats.push({ formatId: "percent", code: "0.0%" });
+      metadata.workbook.sheets[0]!.rowDimensions = [{ from: 1, to: 1, numberFormatId: "percent" }];
+    }), source = model.serialize(), formatter = createWorkbookNumberFormatter({ dateSystem: "1900" });
+    const [plot] = bindWorkbookChartData(model.snapshot(), await read(model), formatter);
+    expect(plot?.kind).toBe("available"); if (plot?.kind !== "available") throw new Error("Expected available plot");
+    expect(plot.data.categories).toEqual(["12", "2300.0%", "34"]); expect(plot.data.series[0]!.values).toEqual([12, 23, 34]);
+    expect(plot.valueFormats[0]![1]).toEqual({ formatId: "percent", code: "0.0%" });
+    expect(plot.diagnostics.filter(d => d.code === "imported-cell")).toHaveLength(2);
+    expect(Object.isFrozen(plot.data.series[0]!.values)).toBe(true); expect(model.serialize()).toEqual(source); formatter.dispose();
+  });
+  it("reports stale, unavailable and unresolved references instead of plotting old chart caches", async () => {
+    const formatter = createWorkbookNumberFormatter({ dateSystem: "1900" });
+    for (const expression of ["=B1:B6", '=OFFSET(B1,0,0)', '=#REF!']) {
+      const model = seeded(chart => { chart.series[0]!.values = reference(expression); });
+      const [plot] = bindWorkbookChartData(model.snapshot(), await read(model), formatter);
+      expect(plot?.kind).toBe("unavailable"); expect(plot).not.toHaveProperty("data");
+      const codes = plot!.diagnostics.map(d => d.code);
+      if (expression === "=B1:B6") { expect(codes).toContain("stale-cell"); expect(codes).toContain("unavailable-cell"); }
+      else expect(codes).toContain(expression.includes("OFFSET") ? "unresolved-reference" : "reference-error");
+    }
+    const model = seeded(chart => { chart.titleReference = { expression: "=A1:A2", valueType: "text" }; chart.series[0]!.values = reference("=B1"); });
+    expect(bindWorkbookChartData(model.snapshot(), await read(model), formatter)[0]).toMatchObject({ kind: "unavailable", diagnostics: expect.arrayContaining([expect.objectContaining({ code: "non-scalar-label", role: "title" })]) });
+    formatter.dispose();
+  });
+  it("retains literal formats, sparse positions and error gaps without fabricating worksheet values", async () => {
+    const model = seeded(chart => {
+      chart.categories = { kind: "literal", valueType: "text", count: 4, points: [{ index: 0, value: "季度😀" }] };
+      chart.series[0]!.values = { kind: "literal", valueType: "number", count: 4, numberFormat: "0.00", points: [{ index: 0, value: -3 }, { index: 2, value: null }, { index: 3, value: "#N/A", numberFormat: "0%" }] };
+    });
+    const formatter = createWorkbookNumberFormatter({ dateSystem: "1900" }), [plot] = bindWorkbookChartData(model.snapshot(), await read(model), formatter, { maxPoints: 8 });
+    if (plot?.kind !== "available") throw new Error("Expected literal plot");
+    expect(plot.data.categories).toEqual(["季度😀", "", "", ""]); expect(plot.data.sourceIndexes).toEqual([0, 1, 2, 3]);
+    expect(plot.data.series[0]!.values).toEqual([-3, null, null, null]); expect(plot.data.series[0]!.missing).toEqual([undefined, undefined, undefined, "gap"]);
+    expect(plot.valueFormats[0]![0]).toEqual({ code: "0.00" }); expect(plot.valueFormats[0]![3]).toEqual({ code: "0%" });
+    expect(plot.diagnostics).toContainEqual(expect.objectContaining({ code: "error-point", index: 3, detail: "#N/A" }));
+    const response = await read(model), wrong = { ...response, charts: response.charts.map(chart => ({ ...chart, references: chart.references.map(ref => ({ ...ref,
+      data: ref.data.kind === "literal" && ref.role === "categories" ? { ...ref.data, points: [{ index: 0, value: "other workbook" }] } : ref.data })) })) };
+    expect(() => bindWorkbookChartData(model.snapshot(), wrong, formatter)).toThrowError(expect.objectContaining({ code: "InvalidDocument" })); formatter.dispose();
+  });
+  it("bounds both incoming vectors and padded plot allocations before returning a candidate", async () => {
+    const model = seeded(chart => { chart.categories = { kind: "literal", valueType: "text", count: 20, points: [] }; chart.series[0]!.values = reference("=B1"); });
+    const formatter = createWorkbookNumberFormatter({ dateSystem: "1900" }), response = await read(model), snapshot = model.snapshot();
+    for (const limits of [{ maxPoints: 20 }, { maxPoints: 39 }, { maxCodeUnits: 1 }, { maxReferences: 1 }]) expect(() => bindWorkbookChartData(snapshot, response, formatter, limits)).toThrowError(expect.objectContaining({ code: "ResourceLimitExceeded" }));
+    const padded = bindWorkbookChartData(snapshot, response, formatter, { maxPoints: 40 })[0]!;
+    if (padded.kind !== "available") throw new Error("Expected padded plot");
+    expect(padded.data.categories).toHaveLength(20); expect(padded.data.series[0]!.values).toEqual([12, ...Array(19).fill(null)]);
+    expect(() => bindWorkbookChartData(snapshot, { ...response, revision: response.revision + 1 }, formatter)).toThrowError(expect.objectContaining({ code: "RevisionConflict" }));
+    for (const charts of [[response.charts[0]!, response.charts[0]!], [{ ...response.charts[0]!, references: [] }], [{ ...response.charts[0]!, sheetId: "second" }]])
+      expect(() => bindWorkbookChartData(snapshot, { ...response, charts }, formatter)).toThrowError(expect.objectContaining({ code: "InvalidDocument" }));
+    const cached = { ...response, charts: response.charts.map(chart => ({ ...chart, references: chart.references.map(ref => ref.role === "series-values"
+      ? { ...ref, data: { kind: "literal" as const, valueType: "number" as const, count: 1, points: [{ index: 0, value: 999 }] } } : ref) })) };
+    expect(() => bindWorkbookChartData(snapshot, cached, formatter)).toThrowError(expect.objectContaining({ code: "InvalidDocument" }));
+    formatter.dispose();
+  });
+  it("binds all independent mixed-type and hidden-data probes to current source positions", async () => {
+    const bytes = execFileSync('python3', ['-c', "import importlib.util,sys;s=importlib.util.spec_from_file_location('chart_values','scripts/check-xlsx-chart-values.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);sys.stdout.buffer.write(m.generate(m.inputs()))"]);
+    const evidence = JSON.parse(readFileSync('docs/evidence/xlsx-chart-value-semantics.json', 'utf8')) as { cases: { hidden: string; visibleOnly: boolean }[] };
+    const { model } = projectXlsxRecords(await readXlsxRecords(bytes)), definitions = model.snapshot().metadata.workbook.charts!;
+    const response = await read(model, { chartIds: definitions.map(chart => chart.chartId) }), formatter = createWorkbookNumberFormatter({ dateSystem: '1900' });
+    const plots = bindWorkbookChartData(model.snapshot(), response, formatter);
+    for (const [index, plot] of plots.entries()) {
+      if (plot.kind !== 'available') throw new Error('Expected independently supplied current data');
+      const sample = evidence.cases[index]!, positions = Array.from({ length: 12 }, (_, i) => i).filter(i => !sample.visibleOnly || sample.hidden !== 'rows' || ![1, 3, 10].includes(i));
+      const hiddenSeries = sample.visibleOnly && sample.hidden === 'values-column';
+      expect(plot.data.sourceIndexes).toEqual(hiddenSeries ? [] : positions);
+      expect(plot.data.series[0]!.hidden).toBe(hiddenSeries);
+      const values = [2, null, null, 1, 0, null, null, null, null, null, -3, 0];
+      expect(plot.data.series[0]!.values).toEqual(hiddenSeries ? [] : positions.map(i => values[i]));
+      expect(plot.data.categories).toEqual(hiddenSeries ? [] : positions.map(i => sample.visibleOnly && sample.hidden === 'categories-column' ? '' : `Point${i}`));
+      expect(plot.data.series[0]!.values).not.toContain(999);
+    }
+    formatter.dispose();
   });
 });

@@ -6,7 +6,7 @@ import { measureDrawingGradients } from './drawing-gradient.js';
 import { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback } from './workbook-drawing-text.js';
 import { measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } from './workbook-surface.js';
 import { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } from './workbook-shadow.js';
-import { measureWorkbookCharts, measureWorkbookChartTitles } from './workbook-chart.js';
+import { measureWorkbookCharts, measureWorkbookChartTitles, measureWorkbookChartPositions } from './workbook-chart.js';
 
 function sourceText(root: Node): string {
   if (root.nodeType === 3) return root.textContent ?? '';
@@ -43,4 +43,4 @@ export function rejectContentSource(snapshot: WorkbookSnapshot, maxNodes?: numbe
 }
 Object.assign(window, { workbookContentHost: { measureContentSource, rejectContentSource, measureImageView, disposeImageView, measureObjectGeometry, measureDrawingGradients, measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback, measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } });
 Object.assign(window, { workbookShadowHost: { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } });
-Object.assign(window, { workbookChartHost: { measureWorkbookCharts, measureWorkbookChartTitles } });
+Object.assign(window, { workbookChartHost: { measureWorkbookCharts, measureWorkbookChartTitles, measureWorkbookChartPositions } });

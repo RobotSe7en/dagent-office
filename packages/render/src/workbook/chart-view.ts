@@ -34,13 +34,15 @@ export function createWorkbookChartView(source: HTMLElement, chart: DeepReadonly
   if (title && (title.ownerDocument !== document || title.isConnected || title.parentNode)) throw new DocumentError("InvalidOperation", "A chart title must be a fresh detached view in its own document.");
   if (chart.titleVisible !== false && (chart.titleNodeId || chart.titleReference) && !title) throw new DocumentError("InvalidOperation", "A visible chart title requires a materialized title view.");
   if (data.series.length !== chart.series.length || data.series.some((series, index) => series.seriesId !== chart.series[index]!.seriesId || series.values.length !== data.categories.length
-    || series.values.some(value => value !== null && !Number.isFinite(value)))) throw new DocumentError("InvalidOperation", "Derived chart values must match their source series and category positions.");
+    || series.values.some(value => value !== null && !Number.isFinite(value)) || series.hidden !== undefined && typeof series.hidden !== "boolean"
+    || series.missing !== undefined && (series.missing.length !== data.categories.length || series.missing.some((mode, index) => mode !== undefined && (mode !== "gap" && mode !== "span" || series.values[index] !== null))))
+    || data.sourceIndexes !== undefined && (data.sourceIndexes.length !== data.categories.length || data.sourceIndexes.some((index, position) => !Number.isSafeInteger(index) || index < 0 || index > 0xffff_ffff || position > 0 && index <= data.sourceIndexes![position - 1]!))) throw new DocumentError("InvalidOperation", "Derived chart values must match their source series and category positions.");
   let units = 0, points = data.categories.length;
   const accountText = (amount: number): void => { units += amount; if (units > maxCodeUnits) throw new DocumentError("ResourceLimitExceeded", "Chart text exceeds its source and display budget."); };
   for (const name of data.categories) accountText(name.length);
   for (const series of data.series) { accountText(series.name.length); points += series.values.length; }
   if (points > maxPoints) throw new DocumentError("ResourceLimitExceeded", "Derived chart data exceeds its point budget.");
-  const negativePoints = chart.kind === "pie" ? data.series.reduce((count, series) => count + series.values.filter(value => value !== null && value < 0).length, 0) : 0;
+  const negativePoints = chart.kind === "pie" ? data.series.reduce((count, series) => count + (series.hidden ? 0 : series.values.filter(value => value !== null && value < 0).length), 0) : 0;
   const diagnostics: readonly WorkbookChartViewDiagnostic[] = Object.freeze(negativePoints
     ? [Object.freeze({ code: "negative-pie-magnitude" as const, chartId: chart.chartId, negativePoints })] : []);
   const element = markViewNode(document.createElement("div")), probes: HTMLElement[] = [];

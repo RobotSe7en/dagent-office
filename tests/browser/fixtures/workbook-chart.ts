@@ -120,3 +120,30 @@ export async function measureWorkbookChartTitles(snapshot: WorkbookSnapshot) {
     return { native, fits, errors, unchanged: source.outerHTML === before, cleaned: !first.element.parentNode && !second.element.parentNode && !surface.view.querySelector('[data-office-view="workbook-drawing-text-measurement"]') };
   } finally { sources.dispose(); surface.dispose(); container.remove(); }
 }
+
+
+export async function measureWorkbookChartPositions(snapshot: WorkbookSnapshot) {
+  const container = document.createElement('div'); document.body.append(container);
+  const css = '.chart-index-base{font-family:"Liberation Sans";font-size:11pt;color:#0000ff;--office-text-color:#0000ff;--office-text-source:direct;--office-text-lum-mod:1;--office-text-lum-off:0;--office-text-tint:0;--office-text-shade:1;--office-text-alpha:1}.chart-index-red{color:#ff0000;--office-text-color:#ff0000;--office-text-source:direct;--office-text-lum-mod:1;--office-text-lum-off:0;--office-text-tint:0;--office-text-shade:1;--office-text-alpha:1}';
+  const surface = await createWorkbookSurface(container, { ...snapshot, styles: [...snapshot.styles, { path: 'chart-index.css', css }] }, { widthPt: 400, heightPt: 260 });
+  const sources = new WorkbookContentSources(surface.document, snapshot);
+  try {
+    const original = snapshot.metadata.workbook.charts![0]!, series = original.series[0]!, projection = sources.project(surface.source, [original.nodeId]);
+    const source = projection.get(original.nodeId)!, before = source.outerHTML;
+    const chart = { ...original, kind: 'line' as const, titleVisible: false, series: [series], legend: 'none' as const, blankAs: 'zero' as const,
+      showLabels: true, labelContents: ['value'] as const, textCssClass: 'chart-index-base', pointStyles: [{ seriesId: series.seriesId, index: 2, cssClass: 'chart-index-base', labelCssClass: 'chart-index-red' }] };
+    const options = { formatNumber: (value: number) => String(value) };
+    const compact: BasicChartData = { categories: ['A', 'C'], sourceIndexes: [0, 2], series: [{ seriesId: series.seriesId, name: 'Values', values: [2, 8] }] };
+    const graphics = createWorkbookChartView(source, chart, compact, 360, 220, 'indexes', options); surface.view.append(graphics.element);
+    const colors = [...graphics.element.querySelectorAll('svg > text')].filter(node => ['2', '8'].includes(node.textContent ?? '')).slice(-2).map(node => surface.document.defaultView!.getComputedStyle(node).fill);
+    const plain: BasicChartData = { categories: ['A', 'B', 'C', 'D', 'E'], series: [{ seriesId: series.seriesId, name: 'Values', values: [2, null, 8, null, 5] }] };
+    const missing: BasicChartData = { ...plain, series: [{ ...plain.series[0]!, missing: [undefined, 'gap', undefined, 'span', undefined] }] };
+    const path = (data: BasicChartData) => [...createWorkbookChartView(source, { ...chart, showLabels: false }, data, 360, 220, 'gaps', options).element.querySelectorAll('svg > path')].map(node => node.getAttribute('d')).join(' ');
+    const hidden = createWorkbookChartView(source, { ...chart, kind: 'pie' }, { ...compact, series: [{ ...compact.series[0]!, hidden: true, values: [-2, 8] }] }, 360, 220, 'hidden', options);
+    const errors: string[] = [];
+    for (const data of [{ ...compact, sourceIndexes: [2, 2] }, { ...compact, sourceIndexes: [0] }, { ...compact, series: [{ ...compact.series[0]!, missing: ['gap' as const, undefined] }] }]) {
+      try { createWorkbookChartView(source, chart, data, 360, 220, 'invalid', options); errors.push('accepted'); } catch (error) { errors.push((error as { code: string }).code); }
+    }
+    return { colors, plain: path(plain), missing: path(missing), hiddenPaths: hidden.element.querySelectorAll('svg > path').length, hiddenDiagnostics: hidden.diagnostics, errors, unchanged: source.outerHTML === before };
+  } finally { sources.dispose(); surface.dispose(); container.remove(); }
+}
