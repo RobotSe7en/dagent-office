@@ -12,6 +12,8 @@ import type { WorkbookRuleSource } from "./rule-source.js";
 import { cellSourceUnits, checkWindowCancellation, checkWindowIdentity } from "./window-source.js";
 import type { WorkbookWindowSource } from "./window-source.js";
 import { implicitWorkbookRowSources } from "./implicit-row-sources.js";
+import { WorkbookRowSourcePrototypes } from "./row-source-prototypes.js";
+import type { WorkbookSourceCell } from "./cell-source.js";
 import { workbookRowFontKey, workbookRowMetricKey } from "./row-metric-cache.js";
 import type { WorkbookRowTypography } from "./row-metric-cache.js";
 
@@ -83,6 +85,7 @@ export async function measureWorkbookAutoRows(surface: Pick<WorkbookSurface, "so
       }
     }
   }
+  const prototypes = simpleClasses && !sheet.conditionalRules?.length && !sheet.tables?.length ? new WorkbookRowSourcePrototypes(surface.source, snapshot, sheetId) : undefined;
   async function measure(coordinates: readonly Readonly<WorkbookCoordinate>[], byCoordinate: ReadonlyMap<number, WorkbookCell>): Promise<void> {
     checkWindowCancellation(signal);
     let current;
@@ -91,13 +94,19 @@ export async function measureWorkbookAutoRows(surface: Pick<WorkbookSurface, "so
       const request = Object.freeze({ ...identity, sheetId, ...rules.limits, coordinates: Object.freeze(coordinates) });
       current = checkedWorkbookRules(await rules.source.read(request, signal), request, snapshot); checkWindowCancellation(signal);
     }
-    const sources = new WorkbookCellSources(surface.source, snapshot, { ...identity, sheetId, sourceCoordinates: coordinates,
-      getCell: (row, column) => byCoordinate.get(row * 16_384 + column) }, 50_000, current);
+    const shared = new Map<number, WorkbookSourceCell>(), ordinary: Readonly<WorkbookCoordinate>[] = [];
+    for (const point of coordinates) {
+      const key = point.row * 16_384 + point.column, cell = byCoordinate.get(key), source = cell && prototypes?.get(cell);
+      if (source) shared.set(key, source); else ordinary.push(point);
+    }
+    const sources = ordinary.length ? new WorkbookCellSources(surface.source, snapshot, { ...identity, sheetId, sourceCoordinates: ordinary,
+      getCell: (row, column) => byCoordinate.get(row * 16_384 + column) }, 50_000 - (prototypes?.nodes ?? 0), current) : undefined;
     try {
       const values = new Map(current?.cells.map(cell => [cell.row * 16_384 + cell.column, cell.current]));
       const inputs = coordinates.map(point => {
         const cell = byCoordinate.get(point.row * 16_384 + point.column), result = values.get(point.row * 16_384 + point.column);
-        return { source: sources.get(point.row, point.column)!, value: result?.kind === "value" ? result.value : cell?.value, formula: Boolean(cell?.formula),
+        const key = point.row * 16_384 + point.column;
+        return { source: shared.get(key) ?? sources!.get(point.row, point.column)!, value: result?.kind === "value" ? result.value : cell?.value, formula: Boolean(cell?.formula) || shared.has(key),
           widthPt: dimensions.columns.size(point.column), heightPt: sheet.defaultRowHeightPt, bordered: false };
       });
       const selected: typeof inputs = [];
@@ -125,46 +134,48 @@ export async function measureWorkbookAutoRows(surface: Pick<WorkbookSurface, "so
         const height = Math.min(409, Math.max(sheet.defaultRowHeightPt, Math.ceil(required / .75) * .75));
         if (height > (heights.get(cell.row) ?? sheet.defaultRowHeightPt)) heights.set(cell.row, height);
       }
-    } finally { sources.dispose(); }
+    } finally { sources?.dispose(); }
     if (performance.now() - checkpoint >= 8) { await new Promise<void>(resolve => setTimeout(resolve, 0)); checkpoint = performance.now(); }
   }
-  for (const window of windows) {
-    checkWindowCancellation(signal);
-    const response = await source.read({ ...identity, windows: [window], maxCells: 4096, maxCodeUnits: Math.min(limits.maxCodeUnits, 8 * 1024 * 1024) }, signal);
-    checkWindowCancellation(signal); checkWindowIdentity(response, snapshot);
-    if (response.cells.length > window.rows * window.columns) throw new DocumentError("InvalidDocument", "Automatic row data exceeds its requested coordinates.");
-    const seen = new Set<number>();
-    const cells: WorkbookCell[] = [];
-    for (const cell of response.cells) {
-      if (cell.sheetId !== sheetId || !Number.isSafeInteger(cell.row) || !Number.isSafeInteger(cell.column) || cell.row < window.row || cell.row >= window.row + window.rows
-        || cell.column < window.column || cell.column >= window.column + window.columns || seen.has(cell.row * 16_384 + cell.column))
-        throw new DocumentError("InvalidDocument", "Automatic row data contains duplicate or unrequested coordinates.");
-      seen.add(cell.row * 16_384 + cell.column);
-      lastUsedRow = Math.max(lastUsedRow, cell.row);
-      if (implicitFonts) { let columns = occupied.get(cell.row); if (!columns) { columns = new Set(); occupied.set(cell.row, columns); } columns.add(cell.column); }
-      if (++measuredCells > limits.maxCells) throw new DocumentError("ResourceLimitExceeded", "Automatic rows exceed their cumulative source-cell budget.");
-      units += cellSourceUnits(cell);
-      if (units > limits.maxCodeUnits) throw new DocumentError("ResourceLimitExceeded", "Automatic rows exceed their cumulative source-text budget.");
-      // Merged cells do not drive native AutoFit; their complete source extent
-      // is retained by ordinary merge layout rather than distributed over rows.
-      if (automatic(sheet, cell.row) && dimensions.columns.size(cell.column) > 0 && !merges.at(cell.row, cell.column)) cells.push(cell);
+  try {
+    for (const window of windows) {
+      checkWindowCancellation(signal);
+      const response = await source.read({ ...identity, windows: [window], maxCells: 4096, maxCodeUnits: Math.min(limits.maxCodeUnits, 8 * 1024 * 1024) }, signal);
+      checkWindowCancellation(signal); checkWindowIdentity(response, snapshot);
+      if (response.cells.length > window.rows * window.columns) throw new DocumentError("InvalidDocument", "Automatic row data exceeds its requested coordinates.");
+      const seen = new Set<number>();
+      const cells: WorkbookCell[] = [];
+      for (const cell of response.cells) {
+        if (cell.sheetId !== sheetId || !Number.isSafeInteger(cell.row) || !Number.isSafeInteger(cell.column) || cell.row < window.row || cell.row >= window.row + window.rows
+          || cell.column < window.column || cell.column >= window.column + window.columns || seen.has(cell.row * 16_384 + cell.column))
+          throw new DocumentError("InvalidDocument", "Automatic row data contains duplicate or unrequested coordinates.");
+        seen.add(cell.row * 16_384 + cell.column);
+        lastUsedRow = Math.max(lastUsedRow, cell.row);
+        if (implicitFonts) { let columns = occupied.get(cell.row); if (!columns) { columns = new Set(); occupied.set(cell.row, columns); } columns.add(cell.column); }
+        if (++measuredCells > limits.maxCells) throw new DocumentError("ResourceLimitExceeded", "Automatic rows exceed their cumulative source-cell budget.");
+        units += cellSourceUnits(cell);
+        if (units > limits.maxCodeUnits) throw new DocumentError("ResourceLimitExceeded", "Automatic rows exceed their cumulative source-text budget.");
+        // Merged cells do not drive native AutoFit; their complete source extent
+        // is retained by ordinary merge layout rather than distributed over rows.
+        if (automatic(sheet, cell.row) && dimensions.columns.size(cell.column) > 0 && !merges.at(cell.row, cell.column)) cells.push(cell);
+      }
+      for (let offset = 0; offset < cells.length; offset += 128) {
+        const batch = cells.slice(offset, offset + 128);
+        await measure(batch.map(cell => Object.freeze({ row: cell.row, column: cell.column })), new Map(batch.map(cell => [cell.row * 16_384 + cell.column, cell])));
+      }
     }
-    for (let offset = 0; offset < cells.length; offset += 128) {
-      const batch = cells.slice(offset, offset + 128);
-      await measure(batch.map(cell => Object.freeze({ row: cell.row, column: cell.column })), new Map(batch.map(cell => [cell.row * 16_384 + cell.column, cell])));
+    let implicit: Readonly<WorkbookCoordinate>[] = [];
+    const admit = (): void => {
+      if (++visited > limits.maxReadCells) throw new DocumentError("ResourceLimitExceeded", "Automatic row discovery exceeds its cumulative query and implicit-coordinate budget.");
+    };
+    for await (const point of implicitWorkbookRowSources(sheet, dimensions.columns, occupied, lastUsedRow,
+      simpleClasses && !sheet.conditionalRules?.length && !sheet.tables?.length, row => automatic(sheet, row), (row, column) => merges.at(row, column)?.to.column, admit, signal)) {
+      implicit.push(point);
+      if (implicit.length === 128) { await measure(implicit, new Map()); implicit = []; }
     }
-  }
-  let implicit: Readonly<WorkbookCoordinate>[] = [];
-  const admit = (): void => {
-    if (++visited > limits.maxReadCells) throw new DocumentError("ResourceLimitExceeded", "Automatic row discovery exceeds its cumulative query and implicit-coordinate budget.");
-  };
-  for await (const point of implicitWorkbookRowSources(sheet, dimensions.columns, occupied, lastUsedRow,
-    simpleClasses && !sheet.conditionalRules?.length && !sheet.tables?.length, row => automatic(sheet, row), (row, column) => merges.at(row, column)?.to.column, admit, signal)) {
-    implicit.push(point);
-    if (implicit.length === 128) { await measure(implicit, new Map()); implicit = []; }
-  }
-  if (implicit.length) await measure(implicit, new Map());
+    if (implicit.length) await measure(implicit, new Map());
 
-  checkWindowCancellation(signal);
-  return Object.freeze({ dimensions: worksheetDimensions(sheet, normal.maximumDigitWidthPx, heights), fonts: Object.freeze([...fonts.values()]), usedFallbackLineMetrics, measuredCells });
+    checkWindowCancellation(signal);
+    return Object.freeze({ dimensions: worksheetDimensions(sheet, normal.maximumDigitWidthPx, heights), fonts: Object.freeze([...fonts.values()]), usedFallbackLineMetrics, measuredCells });
+  } finally { prototypes?.dispose(); }
 }

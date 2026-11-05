@@ -104,3 +104,34 @@ export async function autoRowMeasurement(entries: readonly [string, number[]][],
     return { results, reads, largest, errors, unchanged, retained: surface.source.querySelectorAll('[data-office-view$="measurement"]').length + surface.view.querySelectorAll('[data-office-view$="measurement"]').length };
   } finally { formatter.dispose(); surface.dispose(); container.remove(); }
 }
+
+export async function autoRowSourceSafety(entries: readonly [string, number[]][]) {
+  const { measureWorkbookAutoRows } = await import('../../../packages/render/src/workbook/auto-rows.js');
+  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
+  const container = document.createElement('div'); document.body.append(container);
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 600, heightPt: 360 });
+  const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem }), provider = modelWindowSource(model), sheetId = snapshot.metadata.workbook.activeSheetId;
+  const normal = measureWorkbookColumnFont(surface.source, snapshot.metadata.workbook, sheetId), errors: string[] = [], retained: number[] = [];
+  try {
+    for (const mode of ['handler', 'script', 'wrong-text', 'wrong-column', 'cancel']) {
+      const abort = new AbortController(), view = surface.document.defaultView!, computed = view.getComputedStyle;
+      if (mode === 'cancel') view.getComputedStyle = function(element, pseudo) { if (element.closest('office-workbook-source')) abort.abort(); return computed.call(this, element, pseudo); };
+      const source = { snapshot, async read(request: Parameters<typeof provider.read>[0], signal: AbortSignal) {
+        const response = await provider.read(request, signal);
+        return { ...response, cells: response.cells.map(cell => {
+          if (cell.row !== 2 || cell.column !== 0 || mode === 'cancel') return cell;
+          const html = mode === 'handler' ? cell.html.replace('<td', '<td onclick="window.parent.document.body.dataset.rowSourceExecuted=true"')
+            : mode === 'script' ? cell.html.replace('After', '<script>window.parent.document.body.dataset.rowSourceExecuted=true</script>After')
+            : mode === 'wrong-text' ? cell.html.replace('After', 'Different') : cell.html.replace('data-column="0"', 'data-column="1"');
+          return { ...cell, html };
+        }) };
+      } };
+      try { await measureWorkbookAutoRows(surface, source, sheetId, normal, formatter, abort.signal); errors.push('accepted'); }
+      catch (error) { errors.push((error as { code: string }).code); }
+      finally { view.getComputedStyle = computed; }
+      retained.push(surface.source.querySelectorAll('[data-office-view="workbook-source-measurement"]').length + surface.view.querySelectorAll('[data-office-view$="measurement"]').length);
+    }
+    const after = model.serialize();
+    return { errors, retained, executed: Boolean(document.body.dataset.rowSourceExecuted), unchanged: [...before].every(([path, bytes]) => bytes.every((byte, i) => byte === after.get(path)![i])) };
+  } finally { formatter.dispose(); surface.dispose(); container.remove(); }
+}

@@ -27,11 +27,12 @@ import type { rotatedCellMeasurement, RotatedCellCase, shapedFillMeasurement } f
 import rotatedCellsReference from "../../docs/evidence/xlsx-rotated-cells.json" with { type: "json" };
 
 import { importXlsx } from '../../packages/office/src/xlsx-import.js';
-import type { autoRowMeasurement, windowLayoutMeasurement } from './fixtures/workbook-window.js';
+import type { autoRowMeasurement, autoRowSourceSafety, windowLayoutMeasurement } from './fixtures/workbook-window.js';
 
 interface GridHost {
   windowLayoutMeasurement: typeof windowLayoutMeasurement;
   autoRowMeasurement: typeof autoRowMeasurement;
+  autoRowSourceSafety: typeof autoRowSourceSafety;
   numberTextMeasurement(cases: readonly NumberTextCase[], locale?: string): ReturnType<typeof numberTextMeasurement>;
   rotatedCellMeasurement(cases: readonly RotatedCellCase[]): ReturnType<typeof rotatedCellMeasurement>;
   shapedFillMeasurement(): ReturnType<typeof shapedFillMeasurement>;
@@ -903,4 +904,11 @@ test('automatic row indexing respects native fixed defaults, exceptions, hidden 
   for (const index of [14, 15, 16, 17, 18, 20]) { expect(heights[index]).toBeGreaterThan(21); expect(heights[index]).toBeLessThan(29); }
   expect(heights[19]).toBeGreaterThanOrEqual(heights[18]!);
   expect(report.results[16]!.heights.slice(0, 3)).toEqual([heights[16], heights[16], heights[16]]);
+});
+
+
+test('automatic row prototypes validate every source and release all nodes on malformed replies and in-flight cancellation', async ({ page }) => {
+  const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-row-heights.xlsx'), { documentId: 'row-prototype-validation' });
+  const report = await page.evaluate(entries => window.workbookGridHost.autoRowSourceSafety(entries), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  expect(report).toEqual({ errors: ['InvalidDocument', 'InvalidDocument', 'InvalidDocument', 'InvalidDocument', 'OperationCancelled'], retained: [0, 0, 0, 0, 0], executed: false, unchanged: true });
 });

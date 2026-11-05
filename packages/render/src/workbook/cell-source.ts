@@ -6,9 +6,9 @@ import type { WorkbookCellFormat } from "./cell-format.js";
 import type { WorkbookWindowFrame } from "./window-loader.js";
 import { WorkbookTableAppearance } from "./table-appearance.js";
 import { WorkbookConditionalAppearance } from "./conditional-appearance.js";
+import { checkWorkbookCellSource, workbookCellSourceAttributes } from "./plain-cell-source.js";
 
 export interface WorkbookSourceCell { readonly element: HTMLTableCellElement; readonly format: WorkbookCellFormat }
-const cellAttributes = new Set(["data-column", "data-value-type", "data-value", "data-formula", "data-cache-state", "data-format-id", "class"]);
 const runAttributes = new Set(["class"]), noAttributes = new Set<string>();
 
 /** A window-only source projection for browser CSS/font measurement. Keep the
@@ -86,16 +86,11 @@ function sourceCell(document: Document, source: WorkbookCell, account: (amount: 
     if (depth > 16) throw new DocumentError("ResourceLimitExceeded", "Workbook cell HTML exceeds its nesting budget.");
     if (node.nodeType === 3) { text.push(node.textContent ?? ""); continue; }
     if (node.nodeType !== 1) throw new DocumentError("InvalidDocument", "A workbook cell projection contains unsupported content.");
-    const element = node as Element, allowed = element === cell ? cellAttributes : element.localName === "span" ? runAttributes : element.localName === "br" ? noAttributes : undefined;
+    const element = node as Element, allowed = element === cell ? workbookCellSourceAttributes : element.localName === "span" ? runAttributes : element.localName === "br" ? noAttributes : undefined;
     if (!allowed || element.namespaceURI !== "http://www.w3.org/1999/xhtml" || [...element.attributes].some(attribute => attribute.namespaceURI || !allowed.has(attribute.name))) throw new DocumentError("InvalidDocument", "A workbook cell projection contains unsupported elements or attributes.");
     if (element.localName === "br") text.push("\n");
     for (const child of [...element.childNodes].reverse()) stack.push({ node: child, depth: depth + 1 });
   }
-  const value = cell.getAttribute("data-value"), equalValue = source.value.type === "number" ? value !== null && value.trim() !== "" && Number(value) === source.value.value
-    : source.value.type === "boolean" ? value === String(source.value.value) : source.value.type === "error" ? value === source.value.value : value === null;
-  if (cell.getAttribute("data-column") !== String(source.column) || cell.getAttribute("data-value-type") !== source.value.type
-    || (cell.getAttribute("class") ?? undefined) !== source.cssClass || (cell.getAttribute("data-format-id") ?? undefined) !== source.formatId
-    || !equalValue || text.join("") !== source.text || (cell.getAttribute("data-formula") ?? undefined) !== source.formula?.expression
-    || (cell.getAttribute("data-cache-state") ?? undefined) !== source.formula?.cacheState) throw new DocumentError("InvalidDocument", "Workbook cell HTML does not match its queried source.");
+  checkWorkbookCellSource(source, name => cell.getAttribute(name), text.join(""));
   return cell;
 }
