@@ -15,6 +15,7 @@ export interface WorkbookNumberLayoutInput {
   readonly format?: WorkbookDisplayFormat;
   readonly widthPt: number;
   readonly heightPt: number;
+  readonly bordered?: boolean;
 }
 type Overflow = Extract<WorkbookNumberDisplay, { kind: "overflow" }>["reason"];
 export interface WorkbookNumberLayouts extends WorkbookTextLayouts {
@@ -91,7 +92,8 @@ export function layoutWorkbookNumbers(scope: HTMLElement, inputs: readonly Workb
       if (outputUnits > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Numeric display exceeds its cumulative text budget.");
       text.element.remove(); liveNodes -= text.nodes;
       const final = createWorkbookNumberText(input.source, parts, display.color, remainingNodes()); liveNodes += final.nodes;
-      finals.push({ source: input.source, text: final, valueType: "number", widthPt: input.widthPt, heightPt: input.heightPt }); overflow.push(reason); locales.push(display.locale);
+      finals.push({ source: input.source, text: final, valueType: "number", widthPt: input.widthPt, heightPt: input.heightPt,
+        ...(input.bordered === undefined ? {} : { bordered: input.bordered }) }); overflow.push(reason); locales.push(display.locale);
     }
   } finally { root.remove(); root.replaceChildren(); }
   const layout = layoutWorkbookTexts(scope, finals, normalSpaceWidthPx, maxNodes);

@@ -19,6 +19,8 @@ export interface WorkbookTextLayoutInput {
   readonly valueType: WorkbookValue["type"];
   readonly widthPt: number;
   readonly heightPt: number;
+  /** Effective ordinary perimeter, including a merge's covered corners. */
+  readonly bordered?: boolean;
 }
 export interface WorkbookTextLayout {
   readonly element: HTMLElement;
@@ -48,7 +50,8 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
   const seen = new Set<HTMLElement>();
   for (const input of inputs) {
     if (input.source.element.ownerDocument !== document || !input.source.element.isConnected || input.text.element.ownerDocument !== document || input.text.element.parentNode || seen.has(input.text.element)
-      || !Number.isFinite(input.widthPt / .75) || input.widthPt <= 0 || !Number.isFinite(input.heightPt / .75) || input.heightPt <= 0) throw new DocumentError("InvalidOperation", "Worksheet text layout requires distinct detached views and positive finite cell geometry.");
+      || !Number.isFinite(input.widthPt / .75) || input.widthPt <= 0 || !Number.isFinite(input.heightPt / .75) || input.heightPt <= 0
+      || input.bordered !== undefined && typeof input.bordered !== "boolean") throw new DocumentError("InvalidOperation", "Worksheet text layout requires distinct detached views and positive finite cell geometry.");
     seen.add(input.text.element); nodes += input.text.nodes + 1;
     if (nodes > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Worksheet text layout exceeds its node budget.");
   }
@@ -67,7 +70,7 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
       const textView = alignment.stacked ? stackWorkbookText(input.text, maxNodes - nodes + input.text.nodes) : input.text;
       nodes += textView.nodes - input.text.nodes;
       const slanted = alignment.rotationDegrees !== 0 && Math.abs(alignment.rotationDegrees) !== 90;
-      const bordered = slanted && Object.keys(workbookCellBorders(document, style, false)).length > 0;
+      const bordered = slanted && (input.bordered ?? Object.keys(workbookCellBorders(document, style, false)).length > 0);
       const shape = workbookCellShape(input.widthPt, input.heightPt, alignment.rotationDegrees, bordered);
       element.style.cssText = `position:relative;overflow:${shape.topOffsetPt ? "visible" : "hidden"};direction:ltr;width:${input.widthPt}pt;height:${input.heightPt}pt`;
       // Gutter is part of cell content geometry, independent of border stroke

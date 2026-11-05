@@ -31,6 +31,11 @@ function integer(style: CSSStyleDeclaration, name: string, min: number, max: num
 export function workbookReadingOrder(style: CSSStyleDeclaration): WorkbookReadingOrder {
   return choice(style, "reading-order", ["context", "ltr", "rtl"], "context");
 }
+export function workbookTextRotation(style: CSSStyleDeclaration): Pick<WorkbookTextAlignment, "rotationDegrees" | "stacked"> {
+  const rotation = integer(style, "text-rotation", 0, 255);
+  if (rotation > 180 && rotation !== 255) invalid();
+  return Object.freeze({ rotationDegrees: rotation === 255 ? 0 : rotation <= 90 ? -rotation : rotation - 90, stacked: rotation === 255 });
+}
 
 /** Resolve physical text alignment independently of worksheet column direction.
  * General uses the value type, never the appearance of its formatted string.
@@ -57,9 +62,6 @@ export function workbookTextAlignment(style: CSSStyleDeclaration, type: Workbook
   choice(style, "justify-last-line", ["true", "false"], "false");
   const wrap = choice(style, "wrap", ["true", "false"], ["pre-wrap", "pre-line", "break-spaces"].includes(style.whiteSpace) ? "true" : "false") === "true";
   const shrink = choice(style, "shrink-to-fit", ["true", "false"], "false") === "true";
-  const rotation = integer(style, "text-rotation", 0, 255);
-  if (rotation > 180 && rotation !== 255) invalid();
   return Object.freeze({ horizontal: horizontal as WorkbookTextAlignment["horizontal"], vertical: vertical as WorkbookTextAlignment["vertical"],
-    indentSpaces: horizontal === "center" ? 0 : Math.max(0, indent * 3 + relative), wrap, shrink,
-    rotationDegrees: rotation === 255 ? 0 : rotation <= 90 ? -rotation : rotation - 90, stacked: rotation === 255 });
+    indentSpaces: horizontal === "center" ? 0 : Math.max(0, indent * 3 + relative), wrap, shrink, ...workbookTextRotation(style) });
 }

@@ -24,7 +24,11 @@ import type { numberTextMeasurement, NumberTextCase } from "./fixtures/workbook-
 import type { rotatedCellMeasurement, RotatedCellCase, shapedFillMeasurement } from "./fixtures/workbook-rotated-cell.js";
 import rotatedCellsReference from "../../docs/evidence/xlsx-rotated-cells.json" with { type: "json" };
 
+import { importXlsx } from '../../packages/office/src/xlsx-import.js';
+import type { windowLayoutMeasurement } from './fixtures/workbook-window.js';
+
 interface GridHost {
+  windowLayoutMeasurement: typeof windowLayoutMeasurement;
   numberTextMeasurement(cases: readonly NumberTextCase[], locale?: string): ReturnType<typeof numberTextMeasurement>;
   rotatedCellMeasurement(cases: readonly RotatedCellCase[]): ReturnType<typeof rotatedCellMeasurement>;
   shapedFillMeasurement(): ReturnType<typeof shapedFillMeasurement>;
@@ -469,4 +473,88 @@ test('workbook asset leases decode authorized images and isolate URL lifetimes w
       dimensions: Array(2).fill([8, 8]), revoked: true, isolated: true, failure: 'OperationCancelled' });
   }
   await expect(page.locator('#workbook-grid-probe img')).toHaveCount(0);
+});
+
+for (const rtl of [false, true]) test(`composed native workbook windows retain values, formatting and source in ${rtl ? 'RTL' : 'LTR'}`, async ({ page }) => {
+  for (const name of ['01-values-text', '02-styles-dates', '03-structure']) {
+    const files = await importXlsx(readFileSync(`examples/xlsx/${name}.xlsx`), { documentId: 'composed-' + name });
+    const report = await page.evaluate(async ({ entries, rtl }) => window.workbookGridHost.windowLayoutMeasurement(entries,
+      [{ sheetId: 'sheet-1', viewport: { widthPt: 680, heightPt: 230, scrollLeftPt: 0, scrollTopPt: 0 } }], rtl), { entries: [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]), rtl });
+    expect(report.unchanged).toBe(true);
+    const result = report.results[0]!;
+    expect(result.detached).toBe(true); expect(result.same).toBe(true); expect(result.retainedSources).toBe(0); expect(result.retainedMeasurements).toBe(0);
+    expect(result.errors).toEqual(['ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded']);
+    const cell = (row: number, column: number) => result.cells.find(cell => cell.row === row && cell.column === column)!;
+    if (name === '01-values-text') {
+      expect(cell(2, 0).text).toBe('12.5'); expect(cell(2, 2).text).toBe('TRUE'); expect(cell(2, 3).text).toBe('FALSE');
+      expect(cell(3, 2).text).toBe('#DIV/0!'); expect(cell(3, 3).text).toBe('#N/A');
+      expect(cell(2, 2).offsets).toEqual([]); expect(cell(2, 0).offsets).toEqual([]);
+      expect(cell(1, 1).text).toBe('001234567890123456789');
+      const rich = cell(5, 0); expect(rich.text).toBe('中文 Latin 😀禰󠄀\n下一行');
+      expect(rich.offsets.map(part => part[2]).join('')).toBe(rich.text);
+    }
+    if (name === '02-styles-dates') {
+      expect(cell(1, 0).text).toBe('12,345.68'); expect(cell(1, 1).text).toBe('2025-12-09'); expect(cell(1, 2).text).toBe('12.50%');
+      expect(cell(1, 3).text).toBe('12:00:00'); expect(cell(1, 4).text).toBe('1.25E+08'); expect(cell(1, 5).text).toBe('-¥1,234.50');
+      expect(cell(6, 1).text).toBe('1900-02-29'); expect(result.borderCount).toBeGreaterThan(0);
+    }
+    if (name === '03-structure') { expect(cell(1, 1).text).toBe('合并标题'); expect(result.cells.some(cell => cell.row === 3)).toBe(false); }
+  }
+});
+
+test('composed native rotated cells share text fill and border geometry inside clipped windows', async ({ page }) => {
+  const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-rotated-cells.xlsx'), { documentId: 'rotated-window' });
+  const report = await page.evaluate(async entries => window.workbookGridHost.windowLayoutMeasurement(entries,
+    ['sheet-3', 'sheet-8', 'sheet-13', 'sheet-18'].map(sheetId => ({ sheetId, viewport: { widthPt: 240, heightPt: 120, scrollLeftPt: 50, scrollTopPt: 18 } }))), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  expect(report.unchanged).toBe(true);
+  for (const result of report.results) {
+    const cell = result.cells.find(cell => cell.row === 1 && cell.column === 1)!;
+    expect(cell.text).toBe('Ab'); expect(Math.abs(cell.shape.topOffsetPt)).toBeGreaterThan(1);
+    expect(result.fills.some(fill => fill.transform?.startsWith('matrix(1 0 '))).toBe(true);
+    expect(result.borderCount).toBeGreaterThan(0); expect(result.detached).toBe(true); expect(result.same).toBe(true);
+    expect(result.retainedSources).toBe(0); expect(result.retainedMeasurements).toBe(0);
+    expect(result.fills.every(fill => fill.width <= 321)).toBe(true);
+  }
+});
+
+for (const rtl of [false, true]) test(`composed merged fills and text keep full geometry across four panes in ${rtl ? 'RTL' : 'LTR'}`, async ({ page }) => {
+  const files = new Map(await importXlsx(readFileSync('examples/xlsx/03-structure.xlsx'), { documentId: 'merge-window' }));
+  const metadata = JSON.parse(new TextDecoder().decode(files.get('metadata.json')!));
+  metadata.workbook.sheets[0].merges[0] = { from: { row: 1, column: 1 }, to: { row: 5, column: 5 } };
+  metadata.workbook.sheets[0].frozen = { rows: 3, columns: 3 };
+  metadata.workbook.sheets[0].showGridLines = true;
+  files.set('metadata.json', new TextEncoder().encode(JSON.stringify(metadata)));
+  files.set('styles.css', new TextEncoder().encode(new TextDecoder().decode(files.get('styles.css')!) +
+    'tr[data-row="1"] td[data-column="1"]{--office-cell-fill-kind:darkTrellis;--office-cell-fill-color:#445566;--office-cell-fill-background-color:#ddeeff;--office-cell-horizontal:center;--office-cell-vertical:center}' +
+    'div{width:999pt!important;height:888pt!important}svg{width:777pt!important;height:666pt!important}'));
+  const widthPt = 350, heightPt = 120;
+  const report = await page.evaluate(async ({ entries, rtl, widthPt, heightPt }) => window.workbookGridHost.windowLayoutMeasurement(entries,
+    [{ sheetId: 'sheet-1', viewport: { widthPt, heightPt, scrollLeftPt: 30, scrollTopPt: 15 } }], rtl), { entries: [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]), rtl, widthPt, heightPt });
+  const result = report.results[0]!, merged = result.cells.filter(cell => cell.row === 1 && cell.column === 1);
+  expect(report.unchanged).toBe(true); expect(merged).toHaveLength(4); expect(result.widthPt).toBeCloseTo(widthPt, 1); expect(result.heightPt).toBeCloseTo(heightPt, 1);
+  expect(result.gridLines).toBe(4);
+  const offsets = merged.map(cell => ({ x: cell.bounds.x - (rtl ? widthPt - cell.rect.x - cell.rect.width : cell.rect.x) / .75, y: cell.bounds.y - cell.rect.y / .75 }));
+  for (const [index, cell] of merged.entries()) {
+    expect(cell.text).toBe('合并标题'); expect(cell.offsets.map(part => part[2]).join('')).toBe('合并标题');
+    expect(Math.abs(offsets[index]!.x - offsets[0]!.x)).toBeLessThan(.1); expect(Math.abs(offsets[index]!.y - offsets[0]!.y)).toBeLessThan(.1);
+  }
+  expect(result.same).toBe(true); expect(result.retainedMeasurements).toBe(0); expect(result.retainedSources).toBe(0);
+});
+
+test('composed rotated merge uses its covered perimeter for text and fill coupling', async ({ page }) => {
+  const files = new Map(await importXlsx(readFileSync('examples/xlsx/03-structure.xlsx'), { documentId: 'merge-corner-window' }));
+  const metadata = JSON.parse(new TextDecoder().decode(files.get('metadata.json')!));
+  metadata.workbook.sheets[0].merges[0] = { from: { row: 1, column: 1 }, to: { row: 5, column: 5 } };
+  metadata.workbook.sheets[0].frozen = { rows: 3, columns: 3 };
+  files.set('metadata.json', new TextEncoder().encode(JSON.stringify(metadata)));
+  files.set('styles.css', new TextEncoder().encode(new TextDecoder().decode(files.get('styles.css')!) +
+    'tr[data-row="1"] td[data-column="1"]{--office-cell-text-rotation:45;--office-cell-border-left-kind:none;--office-cell-border-right-kind:none;--office-cell-border-top-kind:none;--office-cell-border-bottom-kind:none;--office-cell-fill-kind:solid;--office-cell-fill-color:#ddeeff}' +
+    'tr[data-row="5"] td[data-column="1"]{--office-cell-border-bottom-kind:thin;--office-cell-border-bottom-color:#778899}'));
+  const report = await page.evaluate(async entries => window.workbookGridHost.windowLayoutMeasurement(entries,
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 350, heightPt: 120, scrollLeftPt: 30, scrollTopPt: 15 } }]), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  const result = report.results[0]!, merged = result.cells.filter(cell => cell.row === 1 && cell.column === 1);
+  expect(merged).toHaveLength(4);
+  for (const cell of merged) expect(cell.shape.topOffsetPt).toBeCloseTo(cell.shape.heightPt, 6);
+  expect(result.fills.filter(fill => fill.transform?.startsWith('matrix(1 0 '))).toHaveLength(4);
+  expect(result.retainedSources).toBe(0); expect(result.same).toBe(true); expect(report.unchanged).toBe(true);
 });
