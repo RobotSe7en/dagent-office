@@ -48,7 +48,13 @@ export function workbookChartTextSource(chartSource: HTMLElement, chart: DeepRea
   return { source, properties: definition?.text };
 }
 
-function createTextBody(source: HTMLElement, nodeId: string, maxNodes: number): WorkbookDrawingTextView {
+/** A private derived source can share typography without claiming that its
+ * display characters are canonical document text. */
+export function createWorkbookDerivedDrawingText(source: HTMLElement, sourceNodeId: string, maxNodes = 50_000): WorkbookDrawingTextView {
+  return createTextBody(source, sourceNodeId, maxNodes, false);
+}
+
+function createTextBody(source: HTMLElement, nodeId: string, maxNodes: number, project = true): WorkbookDrawingTextView {
   const document = source.ownerDocument, view = document.defaultView;
   if (!source.isConnected || !view || !Number.isSafeInteger(maxNodes) || maxNodes < 1) throw new DocumentError("InvalidOperation", "Drawing text requires a connected source and a positive node budget.");
   const root = markViewNode(document.createElement("div")), projections: WorkbookDrawingTextProjection[] = [];
@@ -99,7 +105,7 @@ function createTextBody(source: HTMLElement, nodeId: string, maxNodes: number): 
         if (!run || run.from !== localOffset || run.to > end) throw new DocumentError("InvalidDocument", "Drawing font runs do not match the source text.");
         account(2); const span = document.createElement("span"), node = document.createTextNode(run.text);
         span.dataset.officeScript = run.role; span.style.fontFamily = run.font.family; span.style.fontSize = run.font.sizePx + "px"; span.style.lineHeight = computed.lineHeight; span.append(node); parent.append(span);
-        projections.push(Object.freeze({ node, sourceNodeId: original.dataset.nodeId!, from: baseOffset + run.from, to: baseOffset + run.to })); localOffset = run.to;
+        if (project) projections.push(Object.freeze({ node, sourceNodeId: original.dataset.nodeId!, from: baseOffset + run.from, to: baseOffset + run.to })); localOffset = run.to;
       }
       if (text.length) { lineHasText = text.includes("\n") ? !text.endsWith("\n") : true; insertionStyle = original; }
     };

@@ -1,7 +1,7 @@
 import { DocumentError } from "@dagent-office/core";
 import type { DeepReadonly, WorkbookChart } from "@dagent-office/core";
 import { renderBasicChart } from "../chart.js";
-import type { BasicChartData } from "../chart.js";
+import type { BasicChartData, BasicChartLayout } from "../chart.js";
 import { markViewNode } from "../view-nodes.js";
 
 export interface WorkbookChartViewOptions {
@@ -10,6 +10,7 @@ export interface WorkbookChartViewOptions {
   readonly formatNumber: (value: number, format?: string) => string;
   /** A fresh, already materialized title view; never a source/active view node. */
   readonly title?: HTMLElement;
+  readonly layout?: BasicChartLayout;
   readonly maxNodes?: number; readonly maxPoints?: number; readonly maxCodeUnits?: number;
 }
 export interface WorkbookChartViewDiagnostic {
@@ -30,6 +31,9 @@ export function createWorkbookChartView(source: HTMLElement, chart: DeepReadonly
   if (!source.isConnected || !view || ![maxNodes, maxPoints, maxCodeUnits].every(value => Number.isSafeInteger(value) && value > 0)
     || ![widthPt, heightPt].every(value => Number.isFinite(value) && value > 0 && value <= 1_000_000) || !/^[A-Za-z_][A-Za-z0-9_.-]*$/.test(id)) throw new DocumentError("InvalidOperation", "Chart graphics require a connected source, finite positive dimensions, a local SVG identity and positive budgets.");
   if (source.dataset.nodeId !== chart.nodeId || source.dataset.officeKind !== "chart") throw new DocumentError("InvalidDocument", "Chart graphics require their own source object.");
+  if (options.layout && [options.layout.plot, ...(options.layout.title ? [options.layout.title] : []), ...(options.layout.legend ? [options.layout.legend] : [])].some(rect => ![rect.x, rect.y, rect.width, rect.height].every(Number.isFinite)
+    || rect.x < 0 || rect.y < 0 || rect.width <= 0 || rect.height <= 0 || rect.x + rect.width > widthPt || rect.y + rect.height > heightPt))
+    throw new DocumentError("InvalidOperation", "Chart layout rectangles must fit inside the finite object canvas.");
   const title = options.title;
   if (title && (title.ownerDocument !== document || title.isConnected || title.parentNode)) throw new DocumentError("InvalidOperation", "A chart title must be a fresh detached view in its own document.");
   if (chart.titleVisible !== false && (chart.titleNodeId || chart.titleReference) && !title) throw new DocumentError("InvalidOperation", "A visible chart title requires a materialized title view.");
@@ -59,7 +63,7 @@ export function createWorkbookChartView(source: HTMLElement, chart: DeepReadonly
       do { account(1); if (walker.currentNode.nodeType === 3) accountText(walker.currentNode.textContent!.length); } while (walker.nextNode());
       element.append(title);
     }
-    renderBasicChart(element, chart, data, widthPt, heightPt, id, account, { formatNumber: options.formatNumber, pieValues: "magnitude", accountText, ...(title ? { title } : {}), style(classes) {
+    renderBasicChart(element, chart, data, widthPt, heightPt, id, account, { formatNumber: options.formatNumber, pieValues: "magnitude", accountText, ...(options.layout ? { layout: options.layout } : {}), ...(title ? { title } : {}), style(classes) {
       account(1);
       const probe = markViewNode(document.createElement("span")); probe.className = classes ?? "";
       probe.style.cssText = "position:absolute;visibility:hidden"; source.append(probe); probes.push(probe); return view.getComputedStyle(probe);

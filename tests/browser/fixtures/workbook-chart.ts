@@ -1,11 +1,15 @@
 import type { WorkbookSnapshot } from '@dagent-office/core';
+import { createWorkbookNumberFormatter } from '@dagent-office/core';
 import type { BasicChartData } from '../../../packages/render/src/chart.js';
 import { createWorkbookChartView } from '../../../packages/render/src/workbook/chart-view.js';
 import { createWorkbookSurface } from '../../../packages/render/src/workbook/surface.js';
 import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';
 import { createWorkbookChartText } from '../../../packages/render/src/workbook/drawing-text.js';
 import type { WorkbookChartTextRole } from '../../../packages/render/src/workbook/drawing-text.js';
-import { layoutWorkbookChartTexts } from '../../../packages/render/src/workbook/drawing-text-layout.js';
+import { layoutWorkbookChartTexts, layoutWorkbookChartTitleContents } from '../../../packages/render/src/workbook/drawing-text-layout.js';
+import type { WorkbookChartTitleContentInput } from '../../../packages/render/src/workbook/drawing-text-layout.js';
+import type { WorkbookChartBinding } from '../../../packages/render/src/workbook/chart-values.js';
+import { layoutWorkbookChart } from '../../../packages/render/src/workbook/chart-layout.js';
 
 export async function measureWorkbookCharts(snapshot: WorkbookSnapshot, plots: readonly BasicChartData[]) {
   const container = document.createElement('div'); document.body.append(container);
@@ -150,4 +154,81 @@ export async function measureWorkbookChartPositions(snapshot: WorkbookSnapshot) 
     }
     return { colors, maskedColors, plain: path(plain), missing: path(missing), hiddenPaths: hidden.element.querySelectorAll('svg > path').length, hiddenDiagnostics: hidden.diagnostics, errors, unchanged: source.outerHTML === before };
   } finally { sources.dispose(); surface.dispose(); container.remove(); }
+}
+
+export async function measureWorkbookChartTitleContents(snapshot: WorkbookSnapshot, bindings: readonly WorkbookChartBinding[]) {
+  const container = document.createElement('div'); document.body.append(container);
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 600, heightPt: 300 });
+  const sources = new WorkbookContentSources(surface.document, snapshot);
+  try {
+    const charts = snapshot.metadata.workbook.charts!, projection = sources.project(surface.source, charts.map(chart => chart.nodeId)), before = surface.source.innerHTML;
+    const inputs: WorkbookChartTitleContentInput[] = [];
+    for (const chart of charts) for (const role of ['title', 'category-axis-title', 'value-axis-title'] as const) {
+      const definition = role === 'title' ? { nodeId: chart.titleNodeId, reference: chart.titleReference } : role === 'category-axis-title' ? chart.categoryAxisTitle : chart.valueAxisTitle;
+      if (!definition) continue;
+      const binding = bindings.find(binding => binding.chartId === chart.chartId)!;
+      if (binding.kind !== 'available') throw Error('Current title source unavailable');
+      inputs.push({ source: projection.get(chart.nodeId)!, chart, role, widthPt: 180, heightPt: 48, ...(definition.reference ? { value: binding.titles[role]! } : {}) });
+    }
+    const batch = layoutWorkbookChartTitleContents(surface.view, inputs);
+    for (const [index, object] of batch.objects.entries()) { object.element.style.top = index * 50 + 'pt'; surface.view.append(object.element); }
+    const stable = surface.view.innerHTML;
+    const results = batch.objects.map((object, index) => {
+      const walker = surface.document.createTreeWalker(object.element, 0xffff_ffff); let nodes = 1; while (walker.nextNode()) nodes++;
+      return { reference: inputs[index]!.value !== undefined, role: inputs[index]!.role, text: object.text.element.textContent,
+        projections: object.text.projections.map(projection => ({ from: projection.from, to: projection.to, text: projection.node.data })),
+        nodes, declared: object.nodes, sourceId: object.text.element.dataset.sourceNodeId, expectedId: inputs[index]!.value !== undefined ? inputs[index]!.chart.nodeId : inputs[index]!.chart.titleNodeId,
+        scale: object.scale, fontSizes: [...object.text.element.querySelectorAll('[data-office-script]')].map(node => surface.document.defaultView!.getComputedStyle(node).fontSize),
+        sourceClasses: object.element.querySelectorAll('[class],[data-node-id]').length };
+    });
+    const errors = [];
+    for (const kind of ['nodes', 'text', 'missing', 'rich-value', 'foreign', 'late-extent']) {
+      try {
+        const first = inputs[0]!, { value: _value, ...missing } = first;
+        const items = kind === 'missing' ? [missing] : kind === 'rich-value' ? [{ ...inputs.at(-1)!, value: 'wrong' }]
+          : kind === 'foreign' ? [{ ...first, chart: { ...first.chart, nodeId: 'other-chart' } }]
+          : kind === 'late-extent' ? [first, { ...first, widthPt: 201 }] : inputs;
+        layoutWorkbookChartTitleContents(surface.view, items, kind === 'nodes' ? { maxNodes: 1 } : kind === 'text' ? { maxCodeUnits: 1 } : kind === 'late-extent' ? { maxExtentPt: 200 } : {});
+        errors.push('accepted');
+      } catch (error) { errors.push((error as { code: string }).code); }
+      if (surface.view.innerHTML !== stable || surface.source.innerHTML !== before) throw Error('Failed title candidate changed the active view or source');
+    }
+    const empty = layoutWorkbookChartTitleContents(surface.view, [{ ...inputs[0]!, value: '' }]).objects[0]!;
+    return { results, errors, empty: { projections: empty.text.projections.length, visible: empty.text.element.textContent?.replace(/\u200b/g, '') },
+      fonts: batch.fonts.length, unchanged: surface.source.innerHTML === before, cleaned: !surface.source.querySelector('[data-office-view="workbook-reference-title-source"]') && !surface.view.querySelector('[data-office-view="workbook-drawing-text-measurement"]') };
+  } finally { sources.dispose(); surface.dispose(); container.remove(); }
+}
+
+export async function measureWorkbookComposedChart(snapshot: WorkbookSnapshot, bindings: readonly WorkbookChartBinding[]) {
+  const container = document.createElement('div'); document.body.append(container);
+  const css = '.axis-top{--office-axis-position:t}.axis-right{--office-axis-position:r}svg,text,div{font-size:99pt!important}';
+  const surface = await createWorkbookSurface(container, { ...snapshot, styles: [...snapshot.styles, { path: 'chart-layout-probe.css', css }] }, { widthPt: 600, heightPt: 300 });
+  const sources = new WorkbookContentSources(surface.document, snapshot), formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
+  try {
+    const original = snapshot.metadata.workbook.charts![0]!, binding = bindings.find(item => item.chartId === original.chartId)!;
+    if (binding.kind !== 'available') throw Error('Current chart must be available');
+    const source = sources.project(surface.source, [original.nodeId]).get(original.nodeId)!, before = source.outerHTML, results = [];
+    let active: ReturnType<typeof layoutWorkbookChart> | undefined;
+    for (const opposite of [false, true]) for (const legend of ['none', 'left', 'right', 'top', 'bottom'] as const) {
+      const chart = { ...original, legend, ...(opposite ? { categoryAxisCssClass: 'axis-top', valueAxisCssClass: 'axis-right' } : {}) };
+      const result = layoutWorkbookChart(surface.view, source, chart, binding, 420, 300, 'composed-chart', formatter);
+      surface.view.replaceChildren(result.element); active = result;
+      const base = result.element.getBoundingClientRect(), rect = (element: Element) => { const box = element.getBoundingClientRect(); return { x: (box.x - base.x) * .75, y: (box.y - base.y) * .75, width: box.width * .75, height: box.height * .75 }; };
+      const walker = surface.document.createTreeWalker(result.element, 0xffff_ffff); let nodes = 1; while (walker.nextNode()) nodes++;
+      results.push({ opposite, legend, layout: result.layout, nodes, declared: result.nodes, unchanged: before === source.outerHTML,
+        plot: rect(result.element.querySelector('svg > rect')!), titles: result.texts.map(text => ({ role: text.text.element.dataset.officeChartTextRole, rect: rect(text.element), text: text.text.element.textContent, projections: text.text.projections.length })),
+        titleOverflow: result.overflowingTitles, styles: result.element.querySelectorAll('[class],[data-node-id]').length });
+    }
+    const current = surface.view.innerHTML, errors = [];
+    for (const kind of ['nodes', 'text', 'points', 'small', 'foreign-binding', 'formatter']) {
+      try {
+        layoutWorkbookChart(surface.view, source, original, kind === 'foreign-binding' ? { ...binding, chartId: 'foreign-chart' } : binding,
+          kind === 'small' ? 30 : 420, 300, 'failed-chart', kind === 'formatter' ? { ...formatter, format: () => { throw Error('format rejected'); } } : formatter,
+          kind === 'nodes' ? { maxNodes: active!.nodes - 1 } : kind === 'text' ? { maxCodeUnits: 1 } : kind === 'points' ? { maxPoints: 1 } : {});
+        errors.push('accepted');
+      } catch (error) { errors.push((error as { code?: string }).code ?? (error as Error).message); }
+      if (surface.view.innerHTML !== current || source.outerHTML !== before) throw Error('Chart candidate changed active source or view on failure');
+    }
+    return { results, errors, unchanged: before === source.outerHTML, cleaned: !surface.source.querySelector('[data-office-view="workbook-reference-title-source"]') && !surface.view.querySelector('[data-office-view="workbook-drawing-text-measurement"]') };
+  } finally { formatter.dispose(); sources.dispose(); surface.dispose(); container.remove(); }
 }

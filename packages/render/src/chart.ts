@@ -26,10 +26,15 @@ export interface BasicChartOptions {
   readonly formatNumber: (value: number, format?: string) => string;
   readonly accountText?: (codeUnits: number) => void;
   readonly title?: HTMLElement;
+  /** The owning compositor may reserve measured text boxes around the plot.
+   * Presentation callers retain the established automatic layout. */
+  readonly layout?: BasicChartLayout;
   /** The owning format selects negative-value semantics explicitly. Value
    * labels keep their signed source numbers under the magnitude policy. */
   readonly pieValues?: "nonnegative" | "magnitude";
 }
+export interface BasicChartRect { readonly x: number; readonly y: number; readonly width: number; readonly height: number }
+export interface BasicChartLayout { readonly plot: BasicChartRect; readonly title?: BasicChartRect; readonly legend?: BasicChartRect }
 const palette = ["#4472c4", "#ed7d31", "#a5a5a5", "#ffc000", "#5b9bd5", "#70ad47"];
 export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartAppearance>, data: BasicChartData, width: number, height: number, serial: string, account: (amount: number) => void, options: BasicChartOptions): void {
   const svgElement: typeof createSvgElement = (document, tag, attributes) => { account(1); return createSvgElement(document, tag, attributes); };
@@ -68,12 +73,15 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
   const title = options.title;
   const titleHeight = title && chart.titleVisible !== false ? Math.min(54, height * 0.2) : 12;
   if (title) { ownViewAttribute(title, "data-sdk-chart-title"); title.setAttribute("data-sdk-chart-title", ""); }
-  if (title) title.style.cssText += `;position:absolute;left:6pt;right:6pt;top:20pt;height:${titleHeight}pt;margin:0;text-align:center;${chart.titleVisible === false ? "display:none" : ""}`;
+  if (title) {
+    const rect = options.layout?.title;
+    title.style.cssText += `;position:absolute;${rect ? `left:${rect.x}pt;top:${rect.y}pt;width:${rect.width}pt;height:${rect.height}pt` : `left:6pt;right:6pt;top:20pt;height:${titleHeight}pt`};margin:0;text-align:center;${chart.titleVisible === false ? "display:none" : ""}`;
+  }
   const entries = chart.kind === "pie" ? data.categories.map((name, i) => ({ name, series: data.series[0]!, index: i })) : data.series.map(series => ({ name: series.name, series, index: -1 }));
   const legendBand = chart.legend === "none" ? 0 : chart.legend === "bottom" || chart.legend === "top" ? 28 : Math.min(width * 0.25, 100);
-  const left = (chart.kind === "pie" || valueRight ? 12 : 28) + (chart.legend === "left" ? legendBand : 0);
-  const top = titleHeight + (chart.kind === "pie" ? 15 : 18) + (chart.legend === "top" ? legendBand : 0) + (categoryTop ? 16 : 0);
-  const right = width - (chart.kind === "pie" ? 12 : valueRight ? 28 : 16) - (chart.legend === "right" ? legendBand : 0), bottom = height - (chart.kind === "pie" ? 8 : categoryTop ? 12 : 26) - (chart.legend === "bottom" ? legendBand : 0);
+  const left = options.layout?.plot.x ?? (chart.kind === "pie" || valueRight ? 12 : 28) + (chart.legend === "left" ? legendBand : 0);
+  const top = options.layout?.plot.y ?? titleHeight + (chart.kind === "pie" ? 15 : 18) + (chart.legend === "top" ? legendBand : 0) + (categoryTop ? 16 : 0);
+  const right = options.layout ? left + options.layout.plot.width : width - (chart.kind === "pie" ? 12 : valueRight ? 28 : 16) - (chart.legend === "right" ? legendBand : 0), bottom = options.layout ? top + options.layout.plot.height : height - (chart.kind === "pie" ? 8 : categoryTop ? 12 : 26) - (chart.legend === "bottom" ? legendBand : 0);
   const w = Math.max(1, right - left), h = Math.max(1, bottom - top);
   svg.append(svgElement(document, "rect", { x: left, y: top, width: w, height: h, fill: svgFill(document, plotStyle, svg, serial + "-plot", { x: left, y: top, width: w, height: h }, "--office-fill", "none", account), ...strokeAttributes(document, plotStyle) }));
   if (!data.series.length) return;
@@ -205,10 +213,12 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     const horizontal = chart.legend === "top" || chart.legend === "bottom", slot = 18;
     const context = document.createElement("canvas").getContext("2d")!; context.font = legendStyle.font || legendStyle.fontSize + " " + legendStyle.fontFamily;
     const keyWidth = chart.kind === "line" ? 22 : 7, widths = entries.map(entry => context.measureText(entry.name).width * 0.75 + keyWidth + 8), total = widths.reduce((sum, n) => sum + n, 0);
-    let cursor = left + (w - total) / 2;
+    const legend = options.layout?.legend;
+    let cursor = legend ? legend.x + (legend.width - total) / 2 : left + (w - total) / 2;
     entries.forEach((entry, index) => {
-      const x = horizontal ? cursor : chart.legend === "left" ? 12 : right + 12; cursor += widths[index]!;
-      const y = horizontal ? chart.legend === "top" ? top - 14 : height - 14 : top + h / 2 + (index - (entries.length - 1) / 2) * slot;
+      const x = horizontal ? cursor : legend ? legend.x + 8 : chart.legend === "left" ? 12 : right + 12; cursor += widths[index]!;
+      const y = horizontal ? legend ? legend.y + legend.height / 2 : chart.legend === "top" ? top - 14 : height - 14
+        : (legend ? legend.y + legend.height / 2 : top + h / 2) + (index - (entries.length - 1) / 2) * slot;
       const s = entry.index >= 0 ? pointStyle(entry.series.seriesId, entry.index) : seriesStyle.get(entry.series.seriesId)!;
       if (chart.kind === "line") svg.append(svgElement(document, "line", { x1: x, y1: y, x2: x + keyWidth, y2: y, ...strokeAttributes(document, s, "--office-line", palette[seriesIndexes.get(entry.series.seriesId)! % palette.length]!) }));
       else svg.append(svgElement(document, "rect", { x, y: y - 3, width: keyWidth, height: 7, fill: fill(entry.series.seriesId, Math.max(0, entry.index), s, { x, y: y - 3, width: keyWidth, height: 7 }) }));

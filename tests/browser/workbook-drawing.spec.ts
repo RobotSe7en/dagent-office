@@ -16,18 +16,19 @@ import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
 import type { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback } from './fixtures/workbook-drawing-text.js';
 import type { measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } from './fixtures/workbook-surface.js';
 import type { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } from './fixtures/workbook-shadow.js';
-import type { measureWorkbookCharts, measureWorkbookChartTitles, measureWorkbookChartPositions } from './fixtures/workbook-chart.js';
+import type { measureWorkbookCharts, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart } from './fixtures/workbook-chart.js';
 import { bindWorkbookChartData } from "../../packages/render/src/workbook/chart-values.js";
 import type { BasicChartData } from '../../packages/render/src/chart.js';
 import { modelChartSource, DEFAULT_CHART_READ_LIMITS } from '../../packages/render/src/workbook/chart-source.js';
 
-declare global { interface Window { workbookChartHost: { measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
+declare global { interface Window { workbookChartHost: { measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
 
 declare global { interface Window { workbookShadowHost: { measureWorkbookShadows: typeof measureWorkbookShadows; mountWorkbookShadowPixels: typeof mountWorkbookShadowPixels; disposeWorkbookShadowPixels: typeof disposeWorkbookShadowPixels } } }
 
 declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView; measureObjectGeometry: typeof measureObjectGeometry; measureDrawingGradients: typeof measureDrawingGradients; measureDrawingText: typeof measureDrawingText; measureDrawingTextLayout: typeof measureDrawingTextLayout; measureNativeDrawingText: typeof measureNativeDrawingText; measureDrawingTextFallback: typeof measureDrawingTextFallback; measureWorkbookSurface: typeof measureWorkbookSurface; mountWorkbookSurfacePixels: typeof mountWorkbookSurfacePixels; disposeWorkbookSurfacePixels: typeof disposeWorkbookSurfacePixels } } }
 const inputs: { name: string; snapshot: WorkbookSnapshot; text: Record<string, string>; resources: Record<string, string> }[] = [];
 const chartPlots = new Map<string, BasicChartData[]>();
+let referenceTitles: { snapshot: WorkbookSnapshot; bindings: ReturnType<typeof bindWorkbookChartData> };
 let code = '';
 let nativeText: WorkbookSnapshot;
 let nativeShadows: WorkbookSnapshot, nativeBlur: WorkbookSnapshot;
@@ -67,6 +68,16 @@ test.beforeAll(async () => {
     const snapshot = projectXlsxRecords(await readXlsxRecords(writeOpcZip(files))).model.snapshot();
     const text = Object.fromEntries(snapshot.metadata.workbook.charts!.map((chart, index) => [chart.nodeId, '图表 ' + chart.kind + (index === 0 ? '季度😀收入禰󠄀' : '')]));
     inputs.push({ name: 'chart-title-layout', snapshot, text, resources: {} });
+  }
+  {
+    const files = new Map(readDocumentZip(readFileSync('examples/xlsx/07-three-charts.xlsx'))), part = 'xl/charts/chart1.xml', encoder = new TextEncoder(), decoder = new TextDecoder();
+    const title = (cell: string) => `<c:title><c:tx><c:strRef><c:f>Data!$${cell}$1</c:f><c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>stale cache</c:v></c:pt></c:strCache></c:strRef></c:tx><c:txPr><a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"><a:normAutofit fontScale="75000"/></a:bodyPr><a:lstStyle/><a:p><a:pPr algn="ctr"><a:defRPr sz="1600"/></a:pPr></a:p></c:txPr></c:title>`;
+    files.set(part, encoder.encode(decoder.decode(files.get(part)!).replace(/<c:title>.*?<\/c:title>/, title('A')).replace('<c:axPos val="b"/>', '<c:axPos val="b"/>' + title('B')).replace('<c:axPos val="l"/>', '<c:axPos val="l"/>' + title('C'))));
+    const sheet = 'xl/worksheets/sheet1.xml'; files.set(sheet, encoder.encode(decoder.decode(files.get(sheet)!).replace('季度</t>', '当前😀禰󠄀\n标题</t>')));
+    const { model } = projectXlsxRecords(await readXlsxRecords(writeOpcZip(files))), snapshot = model.snapshot();
+    const response = await modelChartSource(model).read({ ...DEFAULT_CHART_READ_LIMITS, documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, chartIds: snapshot.metadata.workbook.charts!.map(chart => chart.chartId) }, new AbortController().signal);
+    const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
+    referenceTitles = { snapshot, bindings: bindWorkbookChartData(snapshot, response, formatter) }; formatter.dispose();
   }
   for (const kind of ['default', 'inherited', 'zero']) {
     const files = new Map(readDocumentZip(readFileSync('examples/xlsx/08-images-shapes.xlsx'))), decoder = new TextDecoder(), encoder = new TextEncoder();
@@ -396,4 +407,37 @@ test('workbook chart compaction preserves original point styles and distinguishe
   expect(result.missing.match(/M/g)).toHaveLength(2); expect(result.missing.match(/L/g)).toHaveLength(1);
   expect(result.hiddenPaths).toBe(0); expect(result.hiddenDiagnostics).toEqual([]);
   expect(result.errors).toEqual(['InvalidOperation', 'InvalidOperation', 'InvalidOperation']); expect(result.unchanged).toBe(true);
+});
+
+
+test('current reference chart titles share measured typography without cached text offsets', async ({ page }) => {
+  const result = await page.evaluate(({ snapshot, bindings }) => window.workbookChartHost.measureWorkbookChartTitleContents(snapshot, bindings), referenceTitles);
+  expect(result).toMatchObject({ unchanged: true, cleaned: true, empty: { projections: 0, visible: '' }, errors: ['ResourceLimitExceeded', 'ResourceLimitExceeded', 'InvalidOperation', 'InvalidOperation', 'InvalidOperation', 'ResourceLimitExceeded'] });
+  expect(result.fonts).toBeGreaterThan(0);
+  expect(result.results.slice(0, 3).map(item => item.text)).toEqual(['当前😀禰󠄀\n标题', '交付', '计划']);
+  for (const item of result.results) {
+    expect(item.nodes).toBe(item.declared); expect(item.sourceClasses).toBe(0); expect(item.sourceId).toBe(item.expectedId);
+    if (item.reference) { expect(item.projections).toHaveLength(0); expect(item.scale).toBe(.75); expect(item.fontSizes.every(size => Math.abs(parseFloat(size) - 16) < .02)).toBe(true); }
+    else expect(item.projections.map(projection => projection.text).join('')).toBe(item.text);
+  }
+});
+
+
+test('composed workbook charts reserve separate title, axis and legend boxes and publish atomically', async ({ page }) => {
+  const result = await page.evaluate(({ snapshot, bindings }) => window.workbookChartHost.measureWorkbookComposedChart(snapshot, bindings), referenceTitles);
+  expect(result).toMatchObject({ unchanged: true, cleaned: true, errors: ['ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'InvalidOperation', 'format rejected'] });
+  const overlap = (a: { x: number; y: number; width: number; height: number }, b: typeof a) => Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x) > .1 && Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y) > .1;
+  for (const item of result.results) {
+    expect(item.nodes).toBe(item.declared); expect(item.styles).toBe(0); expect(item.unchanged).toBe(true);
+    for (const key of ['x', 'y', 'width', 'height'] as const) expect(item.plot[key]).toBeCloseTo(item.layout.plot[key], 1);
+    expect(item.titles.map(title => title.text)).toEqual(['当前😀禰󠄀\n标题', '交付', '计划']);
+    for (const title of item.titles) {
+      expect(title.projections).toBe(0); expect(overlap(title.rect, item.plot)).toBe(false);
+      expect(title.rect.x).toBeGreaterThanOrEqual(-.1); expect(title.rect.y).toBeGreaterThanOrEqual(-.1);
+      expect(title.rect.x + title.rect.width).toBeLessThanOrEqual(420.1); expect(title.rect.y + title.rect.height).toBeLessThanOrEqual(300.1);
+      if (item.layout.legend) expect(overlap(title.rect, item.layout.legend)).toBe(false);
+    }
+    const category = item.titles.find(title => title.role === 'category-axis-title')!.rect, value = item.titles.find(title => title.role === 'value-axis-title')!.rect;
+    expect(category.y < item.plot.y).toBe(item.opposite); expect(value.x > item.plot.x).toBe(item.opposite);
+  }
 });

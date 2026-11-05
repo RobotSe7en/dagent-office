@@ -7,7 +7,7 @@ import { markViewNode } from "../view-nodes.js";
 import { property } from "../presentation/appearance.js";
 import { decorateDrawingLists } from "../presentation/text.js";
 import { workbookDrawingOrientation } from "./drawing-view.js";
-import { workbookChartTextSource } from "./drawing-text.js";
+import { createWorkbookChartText, createWorkbookDerivedDrawingText, workbookChartTextSource } from "./drawing-text.js";
 import type { WorkbookChartTextRole, WorkbookDrawingTextView } from "./drawing-text.js";
 
 export interface WorkbookDrawingTextLayoutInput {
@@ -26,6 +26,13 @@ export interface WorkbookDrawingTextBatch {
 export interface WorkbookChartTextLayoutInput {
   readonly source: HTMLElement; readonly chart: DeepReadonly<WorkbookChart>; readonly role: WorkbookChartTextRole; readonly text: WorkbookDrawingTextView;
   readonly widthPt: number; readonly heightPt: number;
+}
+export interface WorkbookChartTitleContentInput {
+  readonly source: HTMLElement; readonly chart: DeepReadonly<WorkbookChart>; readonly role: WorkbookChartTextRole;
+  readonly widthPt: number; readonly heightPt: number;
+  /** Current formatted scalar for a reference title; absent for rich text.
+   * Imported chart cache text is never a fallback. */
+  readonly value?: string;
 }
 interface TextBodyLayoutInput {
   readonly source: HTMLElement; readonly text: WorkbookDrawingTextView; readonly widthPt: number; readonly heightPt: number;
@@ -60,6 +67,74 @@ export function layoutWorkbookChartTexts(scope: HTMLElement, inputs: readonly Wo
   });
 }
 
+/** Compose rich and current-reference titles in one font/layout batch. Private
+ * style probes have no canonical node IDs and are released on every exit.
+ * A reference display owns no source UTF-16 offsets, even if its characters
+ * happen to equal an imported title cache. */
+export function layoutWorkbookChartTitleContents(scope: HTMLElement, inputs: readonly WorkbookChartTitleContentInput[],
+  limits: WorkbookDrawingTextLimits & { readonly maxCodeUnits?: number } = {}): WorkbookDrawingTextBatch {
+  const document = scope.ownerDocument, view = document.defaultView, maxNodes = limits.maxNodes ?? 50_000, maxUnits = limits.maxCodeUnits ?? 8 * 1024 * 1024;
+  if (!scope.isConnected || !view || !Number.isSafeInteger(maxNodes) || maxNodes < 1 || !Number.isSafeInteger(maxUnits) || maxUnits < 1)
+    throw new DocumentError("InvalidOperation", "Chart title contents require a connected surface and positive budgets.");
+  let nodes = 1, units = 0, transientNodes = 0;
+  const account = (count: number): void => { nodes += count; if (nodes > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Chart title contents exceed their cumulative node budget."); };
+  const probes: HTMLElement[] = [], bodies: TextBodyLayoutInput[] = [];
+  try {
+    for (const input of inputs) {
+      const { source, chart, role } = input;
+      if (source.ownerDocument !== document || !source.isConnected || source.dataset.nodeId !== chart.nodeId || source.dataset.officeKind !== "chart")
+        throw new DocumentError("InvalidOperation", "Chart title contents require their own connected chart source.");
+      const definition = role === "title" ? { nodeId: chart.titleNodeId, reference: chart.titleReference, cssClass: chart.titleCssClass, text: chart.titleText }
+        : role === "category-axis-title" ? chart.categoryAxisTitle : role === "value-axis-title" ? chart.valueAxisTitle : undefined;
+      if (!definition || !!definition.nodeId === !!definition.reference || (definition.reference ? input.value === undefined : input.value !== undefined))
+        throw new DocumentError("InvalidOperation", "Chart title contents require exactly their declared rich or current-reference source.");
+      let bodySource: HTMLElement, text: WorkbookDrawingTextView, properties = definition.text;
+      if (definition.nodeId) {
+        bodySource = workbookChartTextSource(source, chart, role).source;
+        units += (bodySource.textContent?.length ?? 0) + bodySource.querySelectorAll("br").length;
+        if (units > maxUnits) throw new DocumentError("ResourceLimitExceeded", "Chart title contents exceed their text budget.");
+        text = createWorkbookChartText(source, chart, role, Math.max(1, maxNodes - nodes));
+      } else {
+        units += input.value!.length;
+        if (units > maxUnits) throw new DocumentError("ResourceLimitExceeded", "Chart title contents exceed their text budget.");
+        account(3); transientNodes += 3;
+        const probe = markViewNode(document.createElement("div")), paragraph = document.createElement("p");
+        probe.dataset.officeView = "workbook-reference-title-source"; probe.dataset.sourceNodeId = chart.nodeId;
+        probe.className = [chart.textCssClass, definition.cssClass].filter(Boolean).join(" ");
+        probe.style.cssText = "position:absolute;visibility:hidden";
+        paragraph.textContent = input.value!; probe.append(paragraph); source.append(probe); probes.push(probe);
+        const computed = view.getComputedStyle(probe);
+        // txPr paragraph properties are stored on the title style; move their
+        // resolved values to the private paragraph without changing the source.
+        for (const key of ["text-align", "text-indent", "margin-left", "margin-right", "margin-top", "margin-bottom"]) paragraph.style.setProperty(key, computed.getPropertyValue(key));
+        const wrap = property(computed, "--office-text-wrap"), autoFit = property(computed, "--office-text-auto-fit");
+        const numeric = (name: string, minimum: number, exclusive: boolean): number | undefined => {
+          const raw = property(computed, name); if (!raw) return undefined;
+          const value = Number(raw);
+          if (!Number.isFinite(value) || (exclusive ? value <= minimum : value < minimum) || value > 1) throw new DocumentError("InvalidDocument", "Chart title text properties are invalid.");
+          return value;
+        };
+        if (wrap && !["true", "false"].includes(wrap) || autoFit && !["none", "normal", "shape"].includes(autoFit)) throw new DocumentError("InvalidDocument", "Chart title text properties are invalid.");
+        const fontScale = numeric("--office-text-font-scale", 0, true), lineSpacingReduction = numeric("--office-text-line-spacing-reduction", 0, false);
+        properties = { ...(wrap ? { wrap: wrap === "true" } : {}), ...(autoFit ? { autoFit: autoFit as "none" | "normal" | "shape" } : {}),
+          ...(fontScale === undefined ? {} : { fontScale }), ...(lineSpacingReduction === undefined ? {} : { lineSpacingReduction }) };
+        bodySource = probe; text = createWorkbookDerivedDrawingText(probe, chart.nodeId, Math.max(1, maxNodes - nodes));
+      }
+      account(text.nodes + 1);
+      units += text.element.textContent?.length ?? 0;
+      if (units > maxUnits) throw new DocumentError("ResourceLimitExceeded", "Chart title contents exceed their source and display text budget.");
+      text.element.dataset.officeChartTextRole = role;
+      bodies.push({ source: bodySource, text, properties, widthPt: input.widthPt, heightPt: input.heightPt,
+        geometry: (width, height) => evaluatePresentationPreset("rect", width, height), flipH: false, flipV: false });
+    }
+    // The measurement pass's own accounting includes all display nodes and its
+    // root; keep simultaneous source probes inside the same peak budget.
+    return layoutTextBodies(scope, bodies, { ...limits, maxNodes: Math.max(1, maxNodes - transientNodes) }, input => input);
+  } finally {
+    for (const probe of probes) probe.remove();
+  }
+}
+
 function layoutTextBodies<T>(scope: HTMLElement, inputs: readonly T[], limits: WorkbookDrawingTextLimits, adapt: (input: T) => TextBodyLayoutInput): WorkbookDrawingTextBatch {
   const document = scope.ownerDocument, view = document.defaultView, maxNodes = limits.maxNodes ?? 50_000, maxPasses = limits.maxPasses ?? 8, maxExtent = limits.maxExtentPt ?? 1_000_000;
   if (!scope.isConnected || !view || document.fonts.status === "loading" || !Number.isSafeInteger(maxNodes) || maxNodes < 1 || !Number.isSafeInteger(maxPasses) || maxPasses < 1 || maxPasses > 128 || !Number.isFinite(maxExtent) || maxExtent <= 0) throw new DocumentError("InvalidOperation", "Drawing text layout requires a connected surface, settled fonts and finite layout budgets.");
@@ -69,7 +144,7 @@ function layoutTextBodies<T>(scope: HTMLElement, inputs: readonly T[], limits: W
   for (const original of inputs) {
     const input = adapt(original);
     if (input.source.ownerDocument !== document || !input.source.isConnected || input.text.element.ownerDocument !== document || input.text.element.parentNode || seen.has(input.text.element)
-      || input.text.element.dataset.sourceNodeId !== input.source.dataset.nodeId
+      || input.text.element.dataset.sourceNodeId !== (input.source.dataset.nodeId ?? input.source.dataset.sourceNodeId)
       || ![input.widthPt, input.heightPt].every(n => Number.isFinite(n) && n >= 0)) throw new DocumentError("InvalidOperation", "Drawing layout requires its own connected source, distinct detached text and finite object extents.");
     if (Math.max(input.widthPt, input.heightPt) > maxExtent) throw new DocumentError("ResourceLimitExceeded", "Drawing text layout exceeds its extent budget.");
     seen.add(input.text.element); account(input.text.nodes + 1); bodies.push(input);
