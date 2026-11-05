@@ -1,5 +1,5 @@
 {
-  "scope": "Native Calc formatted text only. Historical 1900 dates differ from Excel; SDK date semantics await user decision. Number-format rendering, fitting, fonts and Excel/WPS remain unverified.",
+  "scope": "Native Calc formatted text only. Historical 1900 dates differ from Excel; SDK uses the user-selected Excel compatibility calendar. Number-format rendering, fitting, fonts and Excel/WPS remain unverified.",
   "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
   "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
   "localeEnvironment": {

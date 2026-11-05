@@ -93,7 +93,7 @@ def main():
             dates = ["1904-01-01", "1904-01-02", "1904-02-29", "1904-03-01", "1904-03-02"] if date1904 else ["1899-12-30", "1899-12-31", "1900-02-27", "1900-02-28", "1900-03-01"]
             assert observed == dates + COMMON, observed
             cases.append({"dateSystem": system, "sourceSha256": sha256(source.read_bytes()).hexdigest(), "samples": [{"value": value, "code": code, "text": text} for (value, code), text in zip(CASES, observed)]})
-    report = {"scope": "Native Calc formatted text only. Historical 1900 dates differ from Excel; SDK date semantics await user decision. Number-format rendering, fitting, fonts and Excel/WPS remain unverified.", "office": BUILD, "archiveSha256": ARCHIVE_HASH, "localeEnvironment": {"LC_ALL": "C.UTF-8", "LANG": "C.UTF-8", "TZ": "UTC"}, "cases": cases}
+    report = {"scope": "Native Calc formatted text only. Historical 1900 dates differ from Excel; SDK uses the user-selected Excel compatibility calendar. Number-format rendering, fitting, fonts and Excel/WPS remain unverified.", "office": BUILD, "archiveSha256": ARCHIVE_HASH, "localeEnvironment": {"LC_ALL": "C.UTF-8", "LANG": "C.UTF-8", "TZ": "UTC"}, "cases": cases}
     if args.record: REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     else: assert json.loads(REPORT.read_text()) == report, "Native number-format observations changed"
     print(f"Verified {len(CASES) * 2} formatted cells across two date systems with pinned Calc")

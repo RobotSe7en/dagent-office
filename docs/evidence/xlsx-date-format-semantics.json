@@ -1,0 +1,674 @@
+{
+  "scope": "Record native date/time and locale observations without using SDK output.\n\nCalc's historical calendar, whole-second truncation and locale vocabularies are\nobservations, not universal expected Excel results. SDK differences are tested\nand documented separately; Excel/WPS have not been executed.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "localeEnvironment": {
+    "LC_ALL": "C.UTF-8",
+    "LANG": "C.UTF-8",
+    "TZ": "UTC"
+  },
+  "cases": [
+    {
+      "dateSystem": "1900",
+      "sourceSha256": "ad59d23ab1fd0a17bca0af099ff1f704863f37c89d81fe7548f0e203e14ee2ee",
+      "samples": [
+        {
+          "value": 0,
+          "code": "yyyy-mm-dd ddd",
+          "text": "1899-12-30 Sat"
+        },
+        {
+          "value": 1,
+          "code": "yyyy-mm-dd ddd",
+          "text": "1899-12-31 Sun"
+        },
+        {
+          "value": 59,
+          "code": "yyyy-mm-dd ddd",
+          "text": "1900-02-27 Tue"
+        },
+        {
+          "value": 60,
+          "code": "yyyy-mm-dd ddd",
+          "text": "1900-02-28 Wed"
+        },
+        {
+          "value": 61,
+          "code": "yyyy-mm-dd ddd",
+          "text": "1900-03-01 Thu"
+        },
+        {
+          "value": 1462,
+          "code": "yyyy-mm-dd ddd",
+          "text": "1904-01-01 Fri"
+        },
+        {
+          "value": 45351,
+          "code": "yyyy-mm-dd ddd",
+          "text": "2024-02-29 Thu"
+        },
+        {
+          "value": 2957003,
+          "code": "yyyy-mm-dd ddd",
+          "text": "9995-12-30 Sat"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-409]ddd dddd mmm mmmm mmmmm",
+          "text": "Thu Thursday Feb February F"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-409]d mmmm yyyy",
+          "text": "29 February 2024"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-409]h:mm AM/PM",
+          "text": "12:00 PM"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-409]h:mm A/P",
+          "text": "12:00 p"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-804]ddd dddd mmm mmmm mmmmm",
+          "text": "四 星期四 2月 二月 二"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-804]d mmmm yyyy",
+          "text": "29 二月 2024"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-804]h:mm AM/PM",
+          "text": "12:00 下午"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-804]h:mm A/P",
+          "text": "12:00 p"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-407]ddd dddd mmm mmmm mmmmm",
+          "text": "Do Donnerstag Feb Februar F"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-407]d mmmm yyyy",
+          "text": "29 Februar 2024"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-407]h:mm AM/PM",
+          "text": "12:00 nachm."
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-407]h:mm A/P",
+          "text": "12:00 p"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-40C]ddd dddd mmm mmmm mmmmm",
+          "text": "jeu. jeudi févr. février f"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-40C]d mmmm yyyy",
+          "text": "29 février 2024"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-40C]h:mm AM/PM",
+          "text": "12:00 PM"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-40C]h:mm A/P",
+          "text": "12:00 p"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-419]ddd dddd mmm mmmm mmmmm",
+          "text": "Чт четверг фев Февраль Ф"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-419]d mmmm yyyy",
+          "text": "29 февраля 2024"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-419]h:mm AM/PM",
+          "text": "12:00 PM"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-419]h:mm A/P",
+          "text": "12:00 p"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-411]ddd dddd mmm mmmm mmmmm",
+          "text": "木 木曜日 2月 二月 二"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-411]d mmmm yyyy",
+          "text": "29 二月 2024"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-411]h:mm AM/PM",
+          "text": "12:00 午後"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-411]h:mm A/P",
+          "text": "12:00 p"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-412]ddd dddd mmm mmmm mmmmm",
+          "text": "목 목요일 Feb February F"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-412]d mmmm yyyy",
+          "text": "29 February 2024"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-412]h:mm AM/PM",
+          "text": "12:00 오후"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-412]h:mm A/P",
+          "text": "12:00 p"
+        },
+        {
+          "value": 0.0006932870370370371,
+          "code": "yyyy-mm-dd",
+          "text": "1899-12-30"
+        },
+        {
+          "value": 0.0006932870370370371,
+          "code": "yyyy-mm-dd hh:mm:ss",
+          "text": "1899-12-30 00:00:59"
+        },
+        {
+          "value": 0.0006932870370370371,
+          "code": "hh:mm",
+          "text": "00:00"
+        },
+        {
+          "value": 0.0006932870370370371,
+          "code": "hh:mm:ss.000",
+          "text": "00:00:59.900"
+        },
+        {
+          "value": 0.0006932870370370371,
+          "code": "[h]:mm:ss.00",
+          "text": "0:00:59.90"
+        },
+        {
+          "value": 0.0006944398148148148,
+          "code": "yyyy-mm-dd",
+          "text": "1899-12-30"
+        },
+        {
+          "value": 0.0006944398148148148,
+          "code": "yyyy-mm-dd hh:mm:ss",
+          "text": "1899-12-30 00:00:59"
+        },
+        {
+          "value": 0.0006944398148148148,
+          "code": "hh:mm",
+          "text": "00:00"
+        },
+        {
+          "value": 0.0006944398148148148,
+          "code": "hh:mm:ss.000",
+          "text": "00:00:59.999"
+        },
+        {
+          "value": 0.0006944398148148148,
+          "code": "[h]:mm:ss.00",
+          "text": "0:01:00.00"
+        },
+        {
+          "value": 0.9999999953703703,
+          "code": "yyyy-mm-dd",
+          "text": "1899-12-31"
+        },
+        {
+          "value": 0.9999999953703703,
+          "code": "yyyy-mm-dd hh:mm:ss",
+          "text": "1899-12-31 23:59:59"
+        },
+        {
+          "value": 0.9999999953703703,
+          "code": "hh:mm",
+          "text": "23:59"
+        },
+        {
+          "value": 0.9999999953703703,
+          "code": "hh:mm:ss.000",
+          "text": "23:59:59.999"
+        },
+        {
+          "value": 0.9999999953703703,
+          "code": "[h]:mm:ss.00",
+          "text": "24:00:00.00"
+        },
+        {
+          "value": 59.99999999537037,
+          "code": "yyyy-mm-dd",
+          "text": "1900-02-28"
+        },
+        {
+          "value": 59.99999999537037,
+          "code": "yyyy-mm-dd hh:mm:ss",
+          "text": "1900-02-28 23:59:59"
+        },
+        {
+          "value": 59.99999999537037,
+          "code": "hh:mm",
+          "text": "23:59"
+        },
+        {
+          "value": 59.99999999537037,
+          "code": "hh:mm:ss.000",
+          "text": "23:59:59.999"
+        },
+        {
+          "value": 59.99999999537037,
+          "code": "[h]:mm:ss.00",
+          "text": "1440:00:00.00"
+        },
+        {
+          "value": 1.999999999,
+          "code": "yyyy-mm-dd",
+          "text": "1900-01-01"
+        },
+        {
+          "value": 1.999999999,
+          "code": "yyyy-mm-dd hh:mm:ss",
+          "text": "1900-01-01 23:59:59"
+        },
+        {
+          "value": 1.999999999,
+          "code": "hh:mm",
+          "text": "23:59"
+        },
+        {
+          "value": 1.999999999,
+          "code": "hh:mm:ss.000",
+          "text": "23:59:59.999"
+        },
+        {
+          "value": 1.999999999,
+          "code": "[h]:mm:ss.00",
+          "text": "48:00:00.00"
+        },
+        {
+          "value": 1.25,
+          "code": "[h]:mm",
+          "text": "30:00"
+        },
+        {
+          "value": 1.25,
+          "code": "[mm]:ss",
+          "text": "1800:00"
+        },
+        {
+          "value": 1.25,
+          "code": "[ss].00",
+          "text": "108000.00"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-409]dddd, mmmm d, yyyy \"at\" h:mm AM/PM",
+          "text": "Thursday, February 29, 2024 at 12:00 PM"
+        }
+      ]
+    },
+    {
+      "dateSystem": "1904",
+      "sourceSha256": "593db96a3755c6c22c3cd865a87cf1dbbe2ccccc34929ddd5448e3bd3728ef61",
+      "samples": [
+        {
+          "value": 0,
+          "code": "yyyy-mm-dd ddd",
+          "text": "1904-01-01 Fri"
+        },
+        {
+          "value": 1,
+          "code": "yyyy-mm-dd ddd",
+          "text": "1904-01-02 Sat"
+        },
+        {
+          "value": 59,
+          "code": "yyyy-mm-dd ddd",
+          "text": "1904-02-29 Mon"
+        },
+        {
+          "value": 60,
+          "code": "yyyy-mm-dd ddd",
+          "text": "1904-03-01 Tue"
+        },
+        {
+          "value": 61,
+          "code": "yyyy-mm-dd ddd",
+          "text": "1904-03-02 Wed"
+        },
+        {
+          "value": 1462,
+          "code": "yyyy-mm-dd ddd",
+          "text": "1908-01-02 Thu"
+        },
+        {
+          "value": 45351,
+          "code": "yyyy-mm-dd ddd",
+          "text": "2028-03-01 Wed"
+        },
+        {
+          "value": 2957003,
+          "code": "yyyy-mm-dd ddd",
+          "text": "9999-12-31 Fri"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-409]ddd dddd mmm mmmm mmmmm",
+          "text": "Wed Wednesday Mar March M"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-409]d mmmm yyyy",
+          "text": "1 March 2028"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-409]h:mm AM/PM",
+          "text": "12:00 PM"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-409]h:mm A/P",
+          "text": "12:00 p"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-804]ddd dddd mmm mmmm mmmmm",
+          "text": "三 星期三 3月 三月 三"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-804]d mmmm yyyy",
+          "text": "1 三月 2028"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-804]h:mm AM/PM",
+          "text": "12:00 下午"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-804]h:mm A/P",
+          "text": "12:00 p"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-407]ddd dddd mmm mmmm mmmmm",
+          "text": "Mi Mittwoch Mär März M"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-407]d mmmm yyyy",
+          "text": "1 März 2028"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-407]h:mm AM/PM",
+          "text": "12:00 nachm."
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-407]h:mm A/P",
+          "text": "12:00 p"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-40C]ddd dddd mmm mmmm mmmmm",
+          "text": "mer. mercredi mars mars m"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-40C]d mmmm yyyy",
+          "text": "1 mars 2028"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-40C]h:mm AM/PM",
+          "text": "12:00 PM"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-40C]h:mm A/P",
+          "text": "12:00 p"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-419]ddd dddd mmm mmmm mmmmm",
+          "text": "Ср среда мар Март М"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-419]d mmmm yyyy",
+          "text": "1 марта 2028"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-419]h:mm AM/PM",
+          "text": "12:00 PM"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-419]h:mm A/P",
+          "text": "12:00 p"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-411]ddd dddd mmm mmmm mmmmm",
+          "text": "水 水曜日 3月 三月 三"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-411]d mmmm yyyy",
+          "text": "1 三月 2028"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-411]h:mm AM/PM",
+          "text": "12:00 午後"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-411]h:mm A/P",
+          "text": "12:00 p"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-412]ddd dddd mmm mmmm mmmmm",
+          "text": "수 수요일 Mar March M"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-412]d mmmm yyyy",
+          "text": "1 March 2028"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-412]h:mm AM/PM",
+          "text": "12:00 오후"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-412]h:mm A/P",
+          "text": "12:00 p"
+        },
+        {
+          "value": 0.0006932870370370371,
+          "code": "yyyy-mm-dd",
+          "text": "1904-01-01"
+        },
+        {
+          "value": 0.0006932870370370371,
+          "code": "yyyy-mm-dd hh:mm:ss",
+          "text": "1904-01-01 00:00:59"
+        },
+        {
+          "value": 0.0006932870370370371,
+          "code": "hh:mm",
+          "text": "00:00"
+        },
+        {
+          "value": 0.0006932870370370371,
+          "code": "hh:mm:ss.000",
+          "text": "00:00:59.900"
+        },
+        {
+          "value": 0.0006932870370370371,
+          "code": "[h]:mm:ss.00",
+          "text": "0:00:59.90"
+        },
+        {
+          "value": 0.0006944398148148148,
+          "code": "yyyy-mm-dd",
+          "text": "1904-01-01"
+        },
+        {
+          "value": 0.0006944398148148148,
+          "code": "yyyy-mm-dd hh:mm:ss",
+          "text": "1904-01-01 00:00:59"
+        },
+        {
+          "value": 0.0006944398148148148,
+          "code": "hh:mm",
+          "text": "00:00"
+        },
+        {
+          "value": 0.0006944398148148148,
+          "code": "hh:mm:ss.000",
+          "text": "00:00:59.999"
+        },
+        {
+          "value": 0.0006944398148148148,
+          "code": "[h]:mm:ss.00",
+          "text": "0:01:00.00"
+        },
+        {
+          "value": 0.9999999953703703,
+          "code": "yyyy-mm-dd",
+          "text": "1904-01-02"
+        },
+        {
+          "value": 0.9999999953703703,
+          "code": "yyyy-mm-dd hh:mm:ss",
+          "text": "1904-01-02 23:59:59"
+        },
+        {
+          "value": 0.9999999953703703,
+          "code": "hh:mm",
+          "text": "23:59"
+        },
+        {
+          "value": 0.9999999953703703,
+          "code": "hh:mm:ss.000",
+          "text": "23:59:59.999"
+        },
+        {
+          "value": 0.9999999953703703,
+          "code": "[h]:mm:ss.00",
+          "text": "24:00:00.00"
+        },
+        {
+          "value": 59.99999999537037,
+          "code": "yyyy-mm-dd",
+          "text": "1904-03-01"
+        },
+        {
+          "value": 59.99999999537037,
+          "code": "yyyy-mm-dd hh:mm:ss",
+          "text": "1904-03-01 23:59:59"
+        },
+        {
+          "value": 59.99999999537037,
+          "code": "hh:mm",
+          "text": "23:59"
+        },
+        {
+          "value": 59.99999999537037,
+          "code": "hh:mm:ss.000",
+          "text": "23:59:59.999"
+        },
+        {
+          "value": 59.99999999537037,
+          "code": "[h]:mm:ss.00",
+          "text": "1440:00:00.00"
+        },
+        {
+          "value": 1.999999999,
+          "code": "yyyy-mm-dd",
+          "text": "1904-01-03"
+        },
+        {
+          "value": 1.999999999,
+          "code": "yyyy-mm-dd hh:mm:ss",
+          "text": "1904-01-03 23:59:59"
+        },
+        {
+          "value": 1.999999999,
+          "code": "hh:mm",
+          "text": "23:59"
+        },
+        {
+          "value": 1.999999999,
+          "code": "hh:mm:ss.000",
+          "text": "23:59:59.999"
+        },
+        {
+          "value": 1.999999999,
+          "code": "[h]:mm:ss.00",
+          "text": "48:00:00.00"
+        },
+        {
+          "value": 1.25,
+          "code": "[h]:mm",
+          "text": "30:00"
+        },
+        {
+          "value": 1.25,
+          "code": "[mm]:ss",
+          "text": "1800:00"
+        },
+        {
+          "value": 1.25,
+          "code": "[ss].00",
+          "text": "108000.00"
+        },
+        {
+          "value": 45351.5,
+          "code": "[$-409]dddd, mmmm d, yyyy \"at\" h:mm AM/PM",
+          "text": "Wednesday, March 1, 2028 at 12:00 PM"
+        }
+      ]
+    }
+  ]
+}
