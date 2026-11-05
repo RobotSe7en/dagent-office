@@ -68,7 +68,9 @@ test.beforeAll(async () => {
     const original = new TextDecoder().decode(files.get(part)!);
     const xml = original.replace('<c:axPos val="b"/>', '<c:axPos val="b"/>' + title('季度😀', 75000)).replace('<c:axPos val="l"/>', '<c:axPos val="l"/>' + title('收入禰󠄀', 50000));
     expect(xml).not.toBe(original); files.set(part, encoder.encode(xml));
-    inputs.push({ name: 'chart-title-layout', snapshot: projectXlsxRecords(await readXlsxRecords(writeOpcZip(files))).model.snapshot(), text: {}, resources: {} });
+    const snapshot = projectXlsxRecords(await readXlsxRecords(writeOpcZip(files))).model.snapshot();
+    const text = Object.fromEntries(snapshot.metadata.workbook.charts!.map((chart, index) => [chart.nodeId, '图表 ' + chart.kind + (index === 0 ? '季度😀收入禰󠄀' : '')]));
+    inputs.push({ name: 'chart-title-layout', snapshot, text, resources: {} });
   }
   for (const kind of ['default', 'inherited', 'zero']) {
     const files = new Map(readDocumentZip(readFileSync('examples/xlsx/08-images-shapes.xlsx'))), decoder = new TextDecoder(), encoder = new TextEncoder();
