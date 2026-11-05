@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { openDocument } from "@dagent-office/core";
+import type { WorkbookDocumentMetadata } from "@dagent-office/core";
 import { build } from "vite";
 import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
@@ -473,6 +475,68 @@ test('workbook asset leases decode authorized images and isolate URL lifetimes w
       dimensions: Array(2).fill([8, 8]), revoked: true, isolated: true, failure: 'OperationCancelled' });
   }
   await expect(page.locator('#workbook-grid-probe img')).toHaveCount(0);
+});
+
+for (const rtl of [false, true]) test(`native table styles compose per property with direct formats and visible row banding in ${rtl ? 'RTL' : 'LTR'}`, async ({ page }) => {
+  const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-table-style-precedence.xlsx'), { documentId: 'table-composition' });
+  const model = openDocument(files, { kind: 'workbook' }), sheets = model.snapshot().metadata.workbook.sheets;
+  const report = await page.evaluate(async ({ entries, sheets, rtl }) => window.workbookGridHost.windowLayoutMeasurement(entries,
+    sheets.map(sheetId => ({ sheetId, viewport: { widthPt: 240, heightPt: 180, scrollLeftPt: 0, scrollTopPt: 0 } })), rtl),
+  { entries: [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]), sheets: sheets.map(sheet => sheet.sheetId), rtl });
+  expect(report.unchanged).toBe(true);
+  const byName = new Map(sheets.map((sheet, index) => [sheet.name, report.results[index]!]));
+  const cell = (name: string, row = 0, column = 0) => byName.get(name)!.cells.find(cell => cell.row === row && cell.column === column)!;
+  const fill = (name: string, row = 0, column = 0) => byName.get(name)!.fillPaints.find(cell => cell.row === row && cell.column === column)!.color;
+  for (const name of ['implicit', 'explicit_zero', 'bold', 'family', 'duplicate_font', 'duplicate_none_fill', 'duplicate_empty_border', 'number_format']) {
+    expect(cell(name).weight, name).toBe('700'); expect(cell(name).color, name).toBe('rgb(255, 255, 255)');
+    expect(fill(name), name).toBe('rgba(68,114,196,1)');
+  }
+  expect(cell('red_font').weight).toBe('700'); expect(cell('red_font').color).toBe('rgb(204, 0, 0)');
+  expect(cell('red_fill').weight).toBe('700'); expect(fill('red_fill')).toBe('rgba(255,0,0,1)');
+  expect(cell('family').family).toContain('DejaVu Sans');
+  expect(cell('bold', 1).weight).toBe('700'); expect(cell('implicit', 1).weight).toBe('400');
+  expect(cell('number_format', 1).text).toBe('2.00');
+  expect(fill('hidden_rows', 1)).toBe(fill('implicit', 1)); expect(fill('hidden_rows', 3)).toBe(fill('implicit', 2));
+  expect(fill('hidden_rows', 5)).toBe(fill('implicit', 3)); expect(byName.get('hidden_rows')!.cells.some(cell => cell.row === 2 || cell.row === 4)).toBe(false);
+  expect(cell('no_header').weight).toBe('400'); expect(fill('no_header')).toBe(fill('implicit', 1));
+  expect(byName.get('bottom_border')!.borderColors).toContain('rgba(0,255,0,1)');
+  for (const result of report.results) {
+    expect(result.retainedSources).toBe(0); expect(result.retainedMeasurements).toBe(0); expect(result.detached).toBe(true); expect(result.same).toBe(true);
+    expect(result.errors).toEqual(['ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded']);
+  }
+});
+
+for (const rtl of [false, true]) test(`custom table differentials retain clearing, priority, names and formats in ${rtl ? 'RTL' : 'LTR'}`, async ({ page }) => {
+  const files = new Map(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-table-style-precedence.xlsx'), { documentId: 'custom-table-composition' }));
+  const encoder = new TextEncoder(), decoder = new TextDecoder(), metadata = JSON.parse(decoder.decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata;
+  const table = metadata.workbook.sheets[0]!.tables![0]!;
+  table.style = { kind: 'custom', styleId: 'custom-table' }; table.dataCellStyleName = 'Unresolved native alias'; table.columns[0]!.dataCellStyleName = '区域别名';
+  metadata.workbook.cellStyles!.definitions.push({ styleId: 'region-name', cssClass: 'named-region', numberFormatId: 'num-0',
+    apply: { font: true, fill: false, border: false, alignment: false, numberFormat: false, protection: false } });
+  metadata.workbook.cellStyles!.names.push({ name: '区域别名', styleId: 'region-name', hidden: false, customBuiltin: false });
+  metadata.workbook.tableStyles = [{ styleId: 'custom-table', name: 'Custom', pivotCompatible: false, elements: [
+    { region: 'firstHeaderCell', size: 1, style: { cssClass: 'corner' } },
+    { region: 'headerRow', size: 1, style: { cssClass: 'header' } },
+    { region: 'firstRowStripe', size: 1, style: { cssClass: 'body-number', numberFormatId: 'num-2' } },
+    { region: 'wholeTable', size: 1, style: { cssClass: 'whole' } },
+  ] }];
+  files.set('metadata.json', encoder.encode(JSON.stringify(metadata)));
+  files.set('styles.css', encoder.encode(decoder.decode(files.get('styles.css')!) + `
+    .corner{color:#cc0000}
+    .header{font-weight:normal;--office-cell-fill-kind:none;--office-cell-border-bottom-kind:medium;--office-cell-border-bottom-color:#00ff00}
+    .whole{font-weight:bold;background-color:#ffff00;border-left:1pt solid #ff0000;--office-cell-border-vertical-kind:thin;--office-cell-border-vertical-color:#0000ff}
+    .body-number{font-style:italic}
+    .named-region{font-weight:bold;font-size:11pt;color:#800080;--office-cell-foreground-color:#800080;--office-cell-foreground-tint:0}
+  `));
+  const report = await page.evaluate(({ entries, rtl }) => window.workbookGridHost.windowLayoutMeasurement(entries,
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 240, heightPt: 180, scrollLeftPt: 0, scrollTopPt: 0 } }], rtl), { entries: [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]), rtl });
+  const result = report.results[0]!, cell = (row: number, column: number) => result.cells.find(cell => cell.row === row && cell.column === column)!;
+  expect(cell(0, 0).color).toBe('rgb(204, 0, 0)'); expect(cell(0, 0).weight).toBe('400'); expect(cell(0, 1).weight).toBe('400');
+  expect(result.fillPaints.find(cell => cell.row === 0 && cell.column === 0)!.color).toBe('transparent');
+  expect(cell(1, 0).color).toBe('rgb(128, 0, 128)'); expect(cell(1, 0).text).toBe('2.00');
+  expect(result.fillPaints.find(cell => cell.row === 1 && cell.column === 0)!.color).toBe('rgb(255, 255, 0)');
+  expect(result.borderColors).toEqual(expect.arrayContaining(['rgba(255,0,0,1)', 'rgba(0,0,255,1)', 'rgba(0,255,0,1)']));
+  expect(report.unchanged).toBe(true); expect(result.same).toBe(true); expect(result.retainedSources).toBe(0);
 });
 
 for (const rtl of [false, true]) test(`composed native workbook windows retain values, formatting and source in ${rtl ? 'RTL' : 'LTR'}`, async ({ page }) => {

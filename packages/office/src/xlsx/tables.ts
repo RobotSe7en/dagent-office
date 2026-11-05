@@ -42,13 +42,13 @@ export function readTableStyles(styles: XlsxStyles): NativeTableStyles {
   const defaultName = value(root, "defaultTableStyle");
   return { definitions, resolve, ...(defaultName ? { defaultStyle: resolve(spreadsheetText(defaultName, root!, 255), root!) } : {}) };
 }
-function regionStyles(node: XmlNode, styles: XlsxStyles): Pick<WorkbookTable, "headerStyle" | "dataStyle" | "totalStyle" | "headerCellStyleId" | "dataCellStyleId" | "totalCellStyleId"> {
-  const result: Pick<WorkbookTable, "headerStyle" | "dataStyle" | "totalStyle" | "headerCellStyleId" | "dataCellStyleId" | "totalCellStyleId"> = {};
+function regionStyles(node: XmlNode, styles: XlsxStyles): Pick<WorkbookTable, "headerStyle" | "dataStyle" | "totalStyle" | "headerCellStyleName" | "dataCellStyleName" | "totalCellStyleName"> {
+  const result: Pick<WorkbookTable, "headerStyle" | "dataStyle" | "totalStyle" | "headerCellStyleName" | "dataCellStyleName" | "totalCellStyleName"> = {};
   for (const [prefix, property] of [["headerRow", "headerStyle"], ["data", "dataStyle"], ["totalsRow", "totalStyle"]] as const) {
     const name = value(node, prefix + "CellStyle");
     if (name !== undefined) {
-      const key = property === "headerStyle" ? "headerCellStyleId" : property === "dataStyle" ? "dataCellStyleId" : "totalCellStyleId";
-      result[key] = styles.namedStyleId(spreadsheetText(name, node, 255), node);
+      const key = property === "headerStyle" ? "headerCellStyleName" : property === "dataStyle" ? "dataCellStyleName" : "totalCellStyleName";
+      result[key] = spreadsheetText(name, node, 255);
     }
     if (value(node, prefix + "DxfId") !== undefined) result[property] = styles.differential(integer(node, prefix + "DxfId"), node);
   }

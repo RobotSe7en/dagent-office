@@ -44,8 +44,9 @@ export const WorkbookTableStyleReferenceSchema = z.discriminatedUnion("kind", [
 export type WorkbookTableStyleReference = z.infer<typeof WorkbookTableStyleReferenceSchema>;
 const regionStyles = {
   headerStyle: WorkbookDifferentialSchema.optional(), dataStyle: WorkbookDifferentialSchema.optional(), totalStyle: WorkbookDifferentialSchema.optional(),
-  /** References to cellStyles.definitions; appearance stays in the definition's CSS. */
-  headerCellStyleId: IdentifierSchema.optional(), dataCellStyleId: IdentifierSchema.optional(), totalCellStyleId: IdentifierSchema.optional(),
+  /** Native name tokens, including unresolved aliases. Missing definitions use
+   * table-style fallback (ECMA-376 §18.5.1.2/3); appearance stays in shared CSS. */
+  headerCellStyleName: z.string().max(255).optional(), dataCellStyleName: z.string().max(255).optional(), totalCellStyleName: z.string().max(255).optional(),
 };
 export const WorkbookTableColumnSchema = z.strictObject({
   columnId: IdentifierSchema, name: z.string().min(1).max(255),

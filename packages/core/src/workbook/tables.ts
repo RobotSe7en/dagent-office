@@ -40,10 +40,9 @@ function filterDefinition(filter: WorkbookAutoFilter, maxItems: number): number 
 }
 export function validateWorkbookTables(workbook: WorkbookMetadata, classExists: (name: string) => void, formatExists: (name: string | undefined) => void, maxItems: number): number {
   let count = 0;
-  const cellStyles = new Set(workbook.cellStyles?.definitions.map(style => style.styleId));
-  const regionCellStyles = (region: Pick<WorkbookTable, "headerCellStyleId" | "dataCellStyleId" | "totalCellStyleId">): void => {
-    for (const key of ["headerCellStyleId", "dataCellStyleId", "totalCellStyleId"] as const) if (region[key] !== undefined) {
-      count++; if (!cellStyles.has(region[key])) invalid("A table region refers to an undefined named cell style.");
+  const regionCellStyles = (region: Pick<WorkbookTable, "headerCellStyleName" | "dataCellStyleName" | "totalCellStyleName">): void => {
+    for (const key of ["headerCellStyleName", "dataCellStyleName", "totalCellStyleName"] as const) if (region[key] !== undefined) {
+      count++;
     }
   };
   const styles = new Set<string>(), styleNames = new Set<string>(), tableIds = new Set<string>(), names = new Set((workbook.names ?? []).map(name => name.name.toUpperCase())), objectNames = new Set<string>();

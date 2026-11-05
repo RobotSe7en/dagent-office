@@ -3,6 +3,7 @@ import { WorkbookTableRegions, workbookTableRegionBorders, workbookTableRegionOr
 import { workbookBuiltinTableStyle } from '../src/workbook/table-styles.js';
 import type { WorkbookTableRegionElement } from '../src/workbook/table-regions.js';
 import type { WorkbookTableRegion } from '../src/workbook/table-style-types.js';
+import { AxisDimensions } from '../src/workbook/dimensions.js';
 
 const table = { range: { from: { row: 4, column: 2 }, to: { row: 11, column: 6 } }, header: true, totals: true,
   rowStripes: true, columnStripes: true, showFirstColumn: true, showLastColumn: true };
@@ -10,6 +11,20 @@ const elements = [...workbookTableRegionOrder].reverse().map(region => ({ region
 const names = (regions: WorkbookTableRegions<string>, row: number, column: number) => regions.at({ row, column }).map(match => match.style);
 
 describe('workbook table structural regions', () => {
+  it('bands visible rows across hidden runs without resetting at the viewport or changing column stripes', () => {
+    const rows = new AxisDimensions(1_048_576, 1, [{ from: 5, to: 6, sizePt: 0 }, { from: 9, to: 9, sizePt: 0 }]);
+    const regions = new WorkbookTableRegions(table, [
+      { region: 'firstRowStripe', size: 2, style: 'first' }, { region: 'secondRowStripe', size: 1, style: 'second' },
+      { region: 'firstColumnStripe', size: 1, style: 'column' },
+    ], rows);
+    expect(names(regions, 7, 2)).toEqual(['column', 'first']); expect(names(regions, 8, 2)).toEqual(['column', 'first']);
+    expect(regions.at({ row: 7, column: 2 }).at(-1)!.range).toEqual({ from: { row: 7, column: 2 }, to: { row: 8, column: 6 } });
+    expect(names(regions, 10, 2)).toEqual(['column', 'second']); expect(names(regions, 9, 2)).toEqual(['column']);
+    const almostHidden = new AxisDimensions(1_048_576, 0, [{ from: 500_000, to: 500_002, sizePt: 1 }]);
+    const large = new WorkbookTableRegions({ ...table, header: false, totals: false, range: { from: { row: 0, column: 0 }, to: { row: 1_048_575, column: 1 } } }, elements, almostHidden);
+    expect(names(large, 500_000, 0)).toContain('firstRowStripe'); expect(names(large, 500_001, 0)).toContain('secondRowStripe');
+    expect(almostHidden.segmentCount).toBe(3);
+  });
   it('applies the normative precedence at intersecting column, row and corner regions independently of source order', () => {
     const regions = new WorkbookTableRegions(table, elements);
     expect(names(regions, 4, 2)).toEqual(['wholeTable', 'firstColumnStripe', 'firstColumn', 'headerRow', 'firstHeaderCell']);

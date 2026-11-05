@@ -4,6 +4,7 @@ import { markViewNode } from "../view-nodes.js";
 import { workbookCellFormat } from "./cell-format.js";
 import type { WorkbookCellFormat } from "./cell-format.js";
 import type { WorkbookWindowFrame } from "./window-loader.js";
+import { WorkbookTableAppearance } from "./table-appearance.js";
 
 export interface WorkbookSourceCell { readonly element: HTMLTableCellElement; readonly format: WorkbookCellFormat }
 const cellAttributes = new Set(["data-column", "data-value-type", "data-value", "data-formula", "data-cache-state", "data-format-id", "class"]);
@@ -50,6 +51,12 @@ export class WorkbookCellSources {
     // Nothing is connected until all cells have passed the inert shape/budget
     // checks. The caller disposes this temporary projection after measurement.
     scope.append(this.root);
+    try {
+      if (sheet.tables?.length) {
+        const appearance = new WorkbookTableAppearance(snapshot, sheet, document, account);
+        for (const [key, source] of this.cells) this.cells.set(key, appearance.apply({ row: Math.floor(key / 16_384), column: key % 16_384 }, source));
+      }
+    } catch (error) { this.root.remove(); this.root.replaceChildren(); this.cells.clear(); throw error; }
   }
   get(row: number, column: number): WorkbookSourceCell | undefined {
     if (this.disposed) throw new DocumentError("InvalidOperation", "This workbook source projection has been disposed.");

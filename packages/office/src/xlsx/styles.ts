@@ -60,7 +60,6 @@ export class XlsxStyles implements SheetStyles, RichTextStyles {
   private readonly sharedRules = new Map<string, string>();
   private readonly differentials: readonly XmlNode[];
   private readonly dxfCache = new Map<number, DifferentialStyleReference>();
-  private readonly namedStyleIds = new Map<string, string>();
   private ruleUnits = 0;
   private readonly fallbackNode: XmlNode;
   private readonly normalFormat: CellStyleReference | undefined;
@@ -123,7 +122,6 @@ export class XlsxStyles implements SheetStyles, RichTextStyles {
         ...(value(node, "builtinId") === undefined ? {} : { builtinId: integer(node, "builtinId") }),
         ...(value(node, "iLevel") === undefined ? {} : { level: integer(node, "iLevel") }) };
     });
-    for (const style of this.namedStyles) this.namedStyleIds.set(style.name.toUpperCase(), `xlsx-style-definition-${style.format}`);
     const normal = this.namedStyles.filter(style => style.builtinId === 0);
     if (normal.length > 1) fail(root!, "A workbook must not declare competing built-in Normal styles.");
     this.normalFormat = normal[0] ? this.styleFormats[normal[0].format]! : root ? undefined : this.cellFormats[0]!;
@@ -161,11 +159,6 @@ export class XlsxStyles implements SheetStyles, RichTextStyles {
   defaultCell(): CellStyleReference {
     if (!this.normalFormat) unsupported(this.fallbackNode, "Native worksheet defaults require an unambiguous declared Normal style.");
     return { cssClass: this.normalFormat.cssClass, numberFormatId: this.normalFormat.numberFormatId };
-  }
-  namedStyleId(name: string, node: XmlNode): string {
-    const id = this.namedStyleIds.get(name.toUpperCase());
-    if (!id) fail(node, "A native table region references an unknown named cell style.");
-    return id;
   }
   objectStyle(css: Css): string | undefined { return this.sharedRule(css); }
   drawingRule(name: string, css: Css): void { this.addRule(name, css); }

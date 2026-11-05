@@ -1,6 +1,7 @@
 import { DocumentError } from "@dagent-office/core";
 import type { DeepReadonly, WorkbookCoordinate, WorkbookRange, WorkbookTable } from "@dagent-office/core";
 import type { WorkbookTableRegion } from "./table-style-types.js";
+import type { AxisDimensions } from "./dimensions.js";
 
 /** ECMA-376 Part 1 §18.8.41, low to high. Source element/CSS order does
  * not determine regional precedence. This order is different from Word. */
@@ -11,7 +12,7 @@ export const workbookTableRegionOrder: readonly WorkbookTableRegion[] = Object.f
 export interface WorkbookTableRegionElement<Style> {
   readonly region: WorkbookTableRegion;
   readonly size: number;
-  readonly style?: Style;
+  readonly style?: Style | undefined;
 }
 export interface WorkbookTableRegionMatch<Style> {
   readonly region: WorkbookTableRegion;
@@ -32,7 +33,7 @@ export class WorkbookTableRegions<Style> {
   private readonly table: Geometry;
   private readonly elements: readonly WorkbookTableRegionElement<Style>[];
   private readonly sizes: ReadonlyMap<WorkbookTableRegion, number>;
-  constructor(table: Geometry, elements: readonly WorkbookTableRegionElement<Style>[]) {
+  constructor(table: Geometry, elements: readonly WorkbookTableRegionElement<Style>[], private readonly visibleRows: Pick<AxisDimensions, "position" | "size" | "hit"> | undefined = undefined) {
     const { from, to } = table.range;
     if (![from.row, to.row, from.column, to.column].every(Number.isSafeInteger) || from.row < 0 || from.column < 0
       || to.row >= 1_048_576 || to.column >= 16_384 || from.row > to.row || from.column > to.column
@@ -60,10 +61,15 @@ export class WorkbookTableRegions<Style> {
       const firstName = axis === "row" ? "firstRowStripe" : "firstColumnStripe", secondName = axis === "row" ? "secondRowStripe" : "secondColumnStripe";
       const first = this.sizes.get(firstName) ?? 1, next = this.sizes.get(secondName) ?? 1, period = first + next;
       const start = axis === "row" ? dataFrom : from.column, end = axis === "row" ? dataTo : to.column;
-      const value = axis === "row" ? row : column, offset = value - start, position = offset % period;
+      const value = axis === "row" ? row : column, visible = axis === "row" ? this.visibleRows : undefined;
+      if (visible && !visible.size(row)) return undefined;
+      const rankStart = visible ? visible.position(start) : start, rankEnd = visible ? visible.position(end + 1) - 1 : end;
+      const offset = (visible ? visible.position(value) : value) - rankStart, position = offset % period;
       if ((position >= first) !== second) return undefined;
-      const bandFrom = start + Math.floor(offset / period) * period + (second ? first : 0);
-      const bandTo = Math.min(end, bandFrom + (second ? next : first) - 1);
+      const rankFrom = rankStart + Math.floor(offset / period) * period + (second ? first : 0);
+      const rankTo = Math.min(rankEnd, rankFrom + (second ? next : first) - 1);
+      const bandFrom = visible ? visible.hit(rankFrom + .5)! : rankFrom;
+      const bandTo = visible ? visible.hit(rankTo + .5)! : rankTo;
       return axis === "row" ? range(bandFrom, from.column, bandTo, to.column) : range(from.row, bandFrom, to.row, bandTo);
     };
     const regionRange = (region: WorkbookTableRegion): Range | undefined => {

@@ -67,20 +67,22 @@ describe("native tables and auto-filters", () => {
     });
     const files = await importXlsx(writeOpcZip(opc.files), { documentId: 'named-table-regions' }), model = openDocument(files, { kind: 'workbook' });
     const snapshot = model.snapshot(), table = snapshot.metadata.workbook.sheets[0]!.tables![0]!, expected = {
-      headerCellStyleId: 'xlsx-style-definition-0', dataCellStyleId: 'xlsx-style-definition-0', totalCellStyleId: 'xlsx-style-definition-0',
+      headerCellStyleName: '区域😀', dataCellStyleName: 'Normal', totalCellStyleName: '区域😀',
     };
-    expect(table).toMatchObject(expected); expect(table.columns[0]).toMatchObject(expected);
-    expect(snapshot.metadata.workbook.cellStyles!.names).toContainEqual(expect.objectContaining({ name: '区域😀', styleId: expected.headerCellStyleId }));
+    expect(table).toMatchObject(expected); expect(table.columns[0]).toMatchObject({ ...expected, dataCellStyleName: 'normal' });
+    expect(snapshot.metadata.workbook.cellStyles!.names).toContainEqual(expect.objectContaining({ name: '区域😀', styleId: 'xlsx-style-definition-0' }));
     expect(openDocument(model.serialize(), { kind: 'workbook' }).snapshot()).toEqual(snapshot);
     for (const column of [false, true]) {
       const changed = new Map(files), metadata = JSON.parse(decoder.decode(changed.get('metadata.json')!));
-      const target = metadata.workbook.sheets[0].tables[0]; (column ? target.columns[0] : target).dataCellStyleId = 'missing';
+      const target = metadata.workbook.sheets[0].tables[0]; (column ? target.columns[0] : target).dataCellStyleName = 99;
       changed.set('metadata.json', encoder.encode(JSON.stringify(metadata)));
       expect(() => openDocument(changed)).toThrowError(expect.objectContaining({ code: 'InvalidDocument' }));
     }
     for (const name of ['Missing', '']) {
-      const invalid = variant({ 'xl/tables/table1.xml': s => s.replace('<table ', `<table dataCellStyle="${name}" `) });
-      await expect(importXlsx(writeOpcZip(invalid.files), { documentId: 'missing-region-style' })).rejects.toMatchObject({ code: 'InvalidDocument' });
+      const unresolved = variant({ 'xl/tables/table1.xml': s => s.replace('<table ', `<table dataCellStyle="${name}" `) });
+      const reopened = openDocument(await importXlsx(writeOpcZip(unresolved.files), { documentId: 'unresolved-region-style' }), { kind: 'workbook' });
+      expect(reopened.snapshot().metadata.workbook.sheets[0]!.tables![0]!.dataCellStyleName).toBe(name);
+      expect(openDocument(reopened.serialize()).snapshot()).toEqual(reopened.snapshot());
     }
   });
   it("keeps inner table borders as differential slots without assigning them to every cell edge", async () => {
