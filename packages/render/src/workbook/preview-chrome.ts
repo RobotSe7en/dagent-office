@@ -75,7 +75,8 @@ export function createWorkbookPreviewChrome(container: HTMLElement, title: strin
       }
       const nextX = new WorkbookScrollAxis(layout.maxScrollLeftPt + layout.widthPt, layout.widthPt), nextY = new WorkbookScrollAxis(layout.maxScrollTopPt + layout.heightPt, layout.heightPt);
       return () => {
-        root.style.width = layout.widthPt + 48 + "pt";
+        // The board excludes the root's two one-pixel borders (1.5 pt).
+        root.style.width = layout.widthPt + 49.5 + "pt";
         board.style.width = layout.widthPt + 48 + "pt"; board.style.height = layout.heightPt + 30 + "pt";
         canvas.style.width = columns.style.width = x.style.width = layout.widthPt + "pt"; canvas.style.height = rows.style.height = y.style.height = layout.heightPt + "pt";
         x.style.top = layout.heightPt + 18 + "pt"; y.style.left = layout.widthPt + 36 + "pt";

@@ -41,13 +41,13 @@ jobs:
       - run: sudo apt-get install -y poppler-utils fonts-noto-cjk fonts-liberation2 python3-pil
       - run: pnpm build
       - run: node scripts/playwright.mjs test workspace.spec.ts interaction.spec.ts workbench.spec.ts text-editor.spec.ts pagination.spec.ts rendering.spec.ts remote-access.spec.ts word-closure.spec.ts presentation.spec.ts presentation-editor.spec.ts presentation-workbench.spec.ts presentation-closure.spec.ts
-      - run: node scripts/playwright.mjs test workbook-storage.spec.ts workbook-grid.spec.ts workbook-drawing.spec.ts workbook-drawing-window.spec.ts workbook-preview.spec.ts workbook-read-worker.spec.ts --output=.cache/workbook-browser/modern
+      - run: node scripts/playwright.mjs test workbook-storage.spec.ts workbook-grid.spec.ts workbook-drawing.spec.ts workbook-drawing-window.spec.ts workbook-preview.spec.ts workbook-read-worker.spec.ts workbook-playground.spec.ts --output=.cache/workbook-browser/modern
       - run: /usr/bin/python3 scripts/check-presentation-reference.py && /usr/bin/python3 scripts/check-presentation-reference.py --browser firefox && /usr/bin/python3 scripts/check-presentation-reference.py --browser webkit
       - run: node scripts/install-legacy-chromium.mjs
       - run: node scripts/playwright.mjs test workspace.spec.ts pagination.spec.ts presentation.spec.ts presentation-editor.spec.ts presentation-workbench.spec.ts presentation-closure.spec.ts --project=chromium
         env:
           DAGENT_OFFICE_BROWSER_EXECUTABLE: ${{ github.workspace }}/.cache/legacy-browser/chromium-1041/chrome-linux/chrome
-      - run: node scripts/playwright.mjs test workbook-storage.spec.ts workbook-grid.spec.ts workbook-drawing.spec.ts workbook-drawing-window.spec.ts workbook-preview.spec.ts workbook-read-worker.spec.ts --project=chromium --output=.cache/workbook-browser/legacy
+      - run: node scripts/playwright.mjs test workbook-storage.spec.ts workbook-grid.spec.ts workbook-drawing.spec.ts workbook-drawing-window.spec.ts workbook-preview.spec.ts workbook-read-worker.spec.ts workbook-playground.spec.ts --project=chromium --output=.cache/workbook-browser/legacy
         env:
           DAGENT_OFFICE_BROWSER_EXECUTABLE: ${{ github.workspace }}/.cache/legacy-browser/chromium-1041/chrome-linux/chrome
       - uses: actions/upload-artifact@v4

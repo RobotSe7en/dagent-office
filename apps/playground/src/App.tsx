@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { createPresentation, createDocumentSession, createOpaqueId, DocumentError, openDocument } from "@dagent-office/core";
-import type { DocumentModel, DocumentSession, DocumentSnapshot } from "@dagent-office/core";
+import type { ContentDocumentModel as DocumentModel, DocumentSession, DocumentSnapshot } from "@dagent-office/core";
 import {
   importDocx,
   importPptx,
   DEFAULT_MAX_ZIP_BYTES,
-  readDocumentZip,
   writeDocumentZip,
 } from "@dagent-office/office";
-import type { DocxExportReport, PptxExportReport } from "@dagent-office/office";
+import type { DocxExportReport, OfficeImportProgress, PptxExportReport } from "@dagent-office/office";
 import type { DocumentWorkbenchView, PresentationWorkbenchView } from "@dagent-office/editor";
 import { DocumentWorkbench, PresentationWorkbench } from "@dagent-office/editor/react";
 import { reportFiles, sampleProposal, presentationFiles, presentationProposal } from "./samples.js";
@@ -16,12 +15,17 @@ import { exportCurrentPptx } from "./export-pptx.js";
 import { exportCurrentDocx } from "./export-docx.js";
 import { downloadBytes } from "./download.js";
 import { Icon } from "./icons.js";
-type WorkspaceFile = { id: string; name: string; kind: "word" | "presentation"; detail: string };
+import { openWorkbookFile } from "./open-workbook.js";
+import type { HostedWorkbook, OpenedWorkspaceDocument } from "./open-workbook.js";
+import { WorkbookPane } from "./WorkbookPane.js";
+type WorkspaceFile = { id: string; name: string; kind: "word" | "presentation" | "workbook"; detail: string };
+interface WorkbookCandidate { document: HostedWorkbook; accept(): void; reject(error: Error): void }
 const examples: WorkspaceFile[] = [
   { id: "report", name: "季度项目报告", kind: "word", detail: "批注与智能体协作样例" },
   { id: "docx", name: "文字与编号.docx", kind: "word", detail: "Word 原生文件样例" },
   { id: "presentation", name: "项目进展演示", kind: "presentation", detail: "PPT 编辑与协作样例" },
   { id: "pptx", name: "多页演示文稿.pptx", kind: "presentation", detail: "PowerPoint 原生文件样例" },
+  { id: "xlsx", name: "一万行工作簿.xlsx", kind: "workbook", detail: "Excel 只读样例 · 20 万单元格" },
 ];
 const sample = import.meta.env.BASE_URL + "01-text-numbering.docx";
 function base64(bytes: Uint8Array): string {
@@ -33,10 +37,15 @@ export function App() {
   const [activeId, setActiveId] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | WorkspaceFile["kind"]>("all");
-  const opened = useRef(new Map<string, DocumentModel>());
+  const opened = useRef(new Map<string, OpenedWorkspaceDocument>());
   const sessions = useRef(new Map<DocumentModel, DocumentSession>());
   const fileInput = useRef<HTMLInputElement>(null);
   const [model, setModel] = useState<DocumentModel>();
+  const [workbook, setWorkbook] = useState<HostedWorkbook>();
+  const [candidate, setCandidate] = useState<WorkbookCandidate>();
+  const [progress, setProgress] = useState<OfficeImportProgress>();
+  const loadRef = useRef<AbortController>(undefined);
+  const activeDocument = useRef<OpenedWorkspaceDocument>(undefined);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [layout, setLayout] = useState<"pages" | "continuous">(() => {
@@ -58,7 +67,7 @@ export function App() {
     setSubmitted(false);
     setDocxReport(undefined);
     setPptxReport(undefined);
-    if (!model) { setSession(undefined); return; }
+    if (!model) { setSession(undefined); sessionRef.current = undefined; return; }
     const session = sessions.current.get(model) ?? createDocumentSession(model);
     sessions.current.set(model, session);
     sessionRef.current = session;
@@ -81,37 +90,72 @@ export function App() {
   useEffect(
     () => () => {
       generation.current++;
+      loadRef.current?.abort(); loadRef.current = undefined;
       exportRef.current?.controller.abort(); exportRef.current = undefined;
       for (const session of sessions.current.values()) session.dispose();
       sessions.current.clear();
+      for (const document of opened.current.values()) if (document.kind === "workbook") document.dispose();
       opened.current.clear();
     },
     [],
   );
   function activate(next: DocumentModel, file: WorkspaceFile): void {
+    activeDocument.current = next;
+    setWorkbook(undefined); setCandidate(undefined);
     opened.current.set(file.id, next);
     setFiles(current => current.some(item => item.id === file.id) ? current : [...current, file]);
     setActiveId(file.id);
     setModel(next);
   }
+  function beginLoad(): { current: number; controller: AbortController } {
+    const current = ++generation.current; loadRef.current?.abort();
+    const controller = new AbortController(); loadRef.current = controller;
+    exportRef.current?.controller.abort(); exportRef.current = undefined; setExporting(undefined);
+    setLoading(true); setProgress(undefined); setError("");
+    return { current, controller };
+  }
+  function stageWorkbook(document: HostedWorkbook, file: WorkspaceFile, current: number, signal: AbortSignal): Promise<void> {
+    if (signal.aborted || current !== generation.current) return Promise.reject(new DocumentError("OperationCancelled", "已取消读取。"));
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = (error?: Error): void => {
+        if (settled) return; settled = true;
+        signal.removeEventListener("abort", cancel);
+        setCandidate(value => value === next ? undefined : value);
+        if (error) { reject(error); return; }
+        opened.current.set(file.id, document); setFiles(files => files.some(item => item.id === file.id) ? files : [...files, { ...file, kind: "workbook" }]);
+        activeDocument.current = document;
+        setActiveId(file.id); setWorkbook(document); setModel(undefined); setSnapshot(undefined); setSession(undefined); sessionRef.current = undefined;
+        setDocxReport(undefined); setPptxReport(undefined); setSubmitted(false); resolve();
+      };
+      const cancel = (): void => finish(new DocumentError("OperationCancelled", "已取消读取。"));
+      const next: WorkbookCandidate = { document, accept() { if (current === generation.current && !signal.aborted) finish(); }, reject: finish };
+      signal.addEventListener("abort", cancel, { once: true }); setCandidate(next);
+    });
+  }
+  function cancelLoad(): void {
+    generation.current++; loadRef.current?.abort(); loadRef.current = undefined;
+    setLoading(false); setProgress(undefined); setError("已取消读取。");
+  }
   async function load(
     bytes: Promise<ArrayBuffer>,
-    kind: "docx" | "pptx" | "package",
+    kind: "docx" | "pptx" | "xlsx" | "package",
     file: WorkspaceFile,
   ): Promise<void> {
-    const current = ++generation.current;
-    exportRef.current?.controller.abort(); exportRef.current = undefined; setExporting(undefined);
-    setLoading(true);
-    setError("");
+    const { current, controller } = beginLoad();
+    let next: OpenedWorkspaceDocument | undefined;
     try {
       const value = new Uint8Array(await bytes);
-      const files =
-        kind === "docx"
-          ? importDocx(value, { documentId: createOpaqueId() })
-          : kind === "pptx" ? importPptx(value,{documentId:createOpaqueId()}) : readDocumentZip(value);
-      const next = openDocument(files);
-      if (next.kind === "workbook") throw new Error("Excel 编辑尚未开放。");
-      if (current === generation.current) activate(next, { ...file, kind: next.snapshot().metadata.presentation ? "presentation" : "word" });
+      if (controller.signal.aborted || current !== generation.current) return;
+      next = kind === "xlsx" || kind === "package" ? await openWorkbookFile(value, kind, createOpaqueId(), createOpaqueId(), {
+        signal: controller.signal, onProgress(value) { if (current === generation.current) setProgress(value); },
+        onFailure(error) { if (activeDocument.current === next) setError(error.message); },
+      }) : kind === "docx" ? openDocument(importDocx(value, { documentId: createOpaqueId() }), { kind: "document" })
+        : openDocument(importPptx(value, { documentId: createOpaqueId() }), { kind: "presentation" });
+      if (current === generation.current && !controller.signal.aborted) {
+        if (next.kind === "workbook") { setProgress(undefined); await stageWorkbook(next, file, current, controller.signal); }
+        else activate(next, { ...file, kind: next.snapshot().metadata.presentation ? "presentation" : "word" });
+      }
     } catch (reason) {
       if (current === generation.current)
         setError(
@@ -124,7 +168,8 @@ export function App() {
             : "无法读取文件。",
         );
     } finally {
-      if (current === generation.current) setLoading(false);
+      if (next?.kind === "workbook" && opened.current.get(file.id) !== next) next.dispose();
+      if (current === generation.current) { setLoading(false); setProgress(undefined); if (loadRef.current === controller) loadRef.current = undefined; }
     }
   }
   function download(): void {
@@ -134,24 +179,31 @@ export function App() {
     catch (reason) { setError(reason instanceof Error ? reason.message : "文档包导出失败。"); }
   }
   async function openReport(presentation=false): Promise<void> {
-    const current = ++generation.current;
-    exportRef.current?.controller.abort(); exportRef.current = undefined; setExporting(undefined);
-    setLoading(true); setError("");
-    try { const files = await (presentation?presentationFiles():reportFiles()); if (current === generation.current) activate(openDocument(files), examples[presentation ? 2 : 0]!); }
+    const { current, controller } = beginLoad();
+    try { const files = await (presentation?presentationFiles():reportFiles()); if (current === generation.current) activate(openDocument(files, { kind: presentation ? "presentation" : "document" }), examples[presentation ? 2 : 0]!); }
     catch (reason) { if (current === generation.current) setError(reason instanceof Error ? reason.message : "报告读取失败"); }
-    finally { if (current === generation.current) setLoading(false); }
+    finally { if (current === generation.current) { setLoading(false); if (loadRef.current === controller) loadRef.current = undefined; } }
   }
   function openFile(file: WorkspaceFile): void {
     const cached = opened.current.get(file.id);
     if (cached) {
+      if (cached.kind === "workbook") {
+        if (cached.disposed) { setError("工作簿读取进程已停止，请重新选择原文件。"); return; }
+        if (cached === workbook) { setError(""); return; }
+        const { current, controller } = beginLoad();
+        void stageWorkbook(cached, file, current, controller.signal).catch(error => { if (current === generation.current) setError(error.message); })
+          .finally(() => { if (current === generation.current) { setLoading(false); loadRef.current = undefined; } });
+        return;
+      }
       generation.current++;
+      loadRef.current?.abort(); loadRef.current = undefined;
       exportRef.current?.controller.abort(); exportRef.current = undefined; setExporting(undefined);
       setError(""); setLoading(false); activate(cached, file);
     } else if (file.id === "report" || file.id === "presentation") {
       void openReport(file.id === "presentation");
     } else {
-      const url = file.id === "pptx" ? import.meta.env.BASE_URL + "pptx/13-multi-slide.pptx" : sample;
-      void load(fetch(url).then(response => { if (!response.ok) throw new Error("样例读取失败"); return response.arrayBuffer(); }), file.id === "pptx" ? "pptx" : "docx", file);
+      const url = file.id === "xlsx" ? import.meta.env.BASE_URL + "xlsx/15-ten-thousand-rows.xlsx" : file.id === "pptx" ? import.meta.env.BASE_URL + "pptx/13-multi-slide.pptx" : sample;
+      void load(fetch(url).then(response => { if (!response.ok) throw new Error("样例读取失败"); return response.arrayBuffer(); }), file.id === "xlsx" ? "xlsx" : file.id === "pptx" ? "pptx" : "docx", file);
     }
   }
   async function downloadDocx(): Promise<void> {
@@ -224,7 +276,8 @@ export function App() {
   }
   const activeFile = files.find(file => file.id === activeId);
   const visibleFiles = files.filter(file => (filter === "all" || file.kind === filter) && (file.name + file.detail).toLowerCase().includes(search.toLowerCase()));
-  const exampleLabels: Record<string, string> = { report: "打开报告协作样例", docx: "打开 DOCX 样例", presentation: "打开 PPT 协作样例", pptx: "打开 PPTX 样例" };
+  const exampleLabels: Record<string, string> = { report: "打开报告协作样例", docx: "打开 DOCX 样例", presentation: "打开 PPT 协作样例", pptx: "打开 PPTX 样例", xlsx: "打开一万行 XLSX 样例" };
+  const progressLabels = { zip: "解包", metadata: "读取工作簿", worksheet: "读取工作表", content: "读取对象与批注", validate: "校验工作簿" };
   return (
     <main className="office-app">
       <aside className="document-sidebar" aria-label="文档列表">
@@ -233,11 +286,11 @@ export function App() {
         <label className="document-search"><Icon name="search" size={16} /><input aria-label="搜索文档" placeholder="搜索文档…" value={search} onChange={event => setSearch(event.currentTarget.value)} /><kbd>⌕</kbd></label>
         <div className="library-title"><h2>我的文档</h2><span>{files.length}</span></div>
         <div className="document-filters" role="group" aria-label="筛选文档">
-          {([["all", "全部"], ["word", "Word"], ["presentation", "PPT"]] as const).map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
+          {([["all", "全部"], ["word", "Word"], ["presentation", "PPT"], ["workbook", "Excel"]] as const).map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
         </div>
         <nav className="document-list" aria-label="打开文档">
           {visibleFiles.map(file => <button key={file.id} className={"document-item" + (activeId === file.id ? " active" : "")} aria-label={exampleLabels[file.id] ?? "打开 " + file.name} aria-current={activeId === file.id ? "page" : undefined} disabled={loading} onClick={() => openFile(file)}>
-            <span className={"file-icon " + file.kind}><Icon name={file.kind === "word" ? "file" : "slides"} size={21} /></span>
+            <span className={"file-icon " + file.kind}><Icon name={file.kind === "word" ? "file" : file.kind === "workbook" ? "grid" : "slides"} size={21} /></span>
             <span className="file-description"><strong>{file.name}</strong><small>{file.detail}</small></span>
             {activeId === file.id && <span className="active-indicator" />}
           </button>)}
@@ -249,10 +302,11 @@ export function App() {
       <section className="workspace" aria-label="文档工作区">
         <header className="workspace-topbar"><div className="breadcrumb">工作空间 <Icon name="chevron" size={13} /><span>Playground</span></div><span className="environment-badge"><span className="connection-dot" />交互办公</span></header>
         <div className="document-header">
-          <div className="document-title"><span className={"file-icon " + (isPresentation ? "presentation" : "word")}><Icon name={isPresentation ? "slides" : "file"} size={22} /></span><div><h1>{activeFile?.name ?? "文档工作台"}</h1><p>{activeFile ? (isPresentation ? "PowerPoint" : "Word") + " · 预览、编辑与批注协作" : "打开一份文档，开始与智能体协作"}</p></div></div>
+          <div className="document-title"><span className={"file-icon " + (workbook ? "workbook" : isPresentation ? "presentation" : "word")}><Icon name={workbook ? "grid" : isPresentation ? "slides" : "file"} size={22} /></span><div><h1>{activeFile?.name ?? "文档工作台"}</h1><p>{activeFile ? workbook ? "Excel · 只读预览" : (isPresentation ? "PowerPoint" : "Word") + " · 预览、编辑与批注协作" : "打开一份文档，开始与智能体协作"}</p></div></div>
           <div className="document-header-actions"><button className="subtle-button" disabled={loading} onClick={() => {
             generation.current++; exportRef.current?.controller.abort(); exportRef.current = undefined; setExporting(undefined);
-            activate(openDocument(createPresentation({ documentId: createOpaqueId() })), { id: createOpaqueId(), name: "未命名演示文稿", kind: "presentation", detail: "新建 PowerPoint 文稿" }); setError("");
+            loadRef.current?.abort(); loadRef.current = undefined;
+            activate(openDocument(createPresentation({ documentId: createOpaqueId() }), { kind: "presentation" }), { id: createOpaqueId(), name: "未命名演示文稿", kind: "presentation", detail: "新建 PowerPoint 文稿" }); setError("");
           }}><Icon name="plus" size={16} />新建 PPT</button><button className="primary-button" disabled={loading} onClick={() => fileInput.current?.click()}><Icon name="upload" size={16} />打开文件</button></div>
           <input
             ref={fileInput}
@@ -261,7 +315,7 @@ export function App() {
             aria-label="打开文件"
             type="file"
             disabled={loading}
-            accept=".docx,.pptx,.zip"
+            accept=".docx,.pptx,.xlsx,.zip"
             onChange={(event) => {
               const file = event.currentTarget.files?.[0];
               if (file && file.size > DEFAULT_MAX_ZIP_BYTES) setError("文件超过 64 MiB，无法打开。");
@@ -270,14 +324,14 @@ export function App() {
                   file.arrayBuffer(),
                   file.name.toLowerCase().endsWith(".docx")
                     ? "docx"
-                    : file.name.toLowerCase().endsWith(".pptx") ? "pptx" : "package",
-                  { id: createOpaqueId(), name: file.name, kind: file.name.toLowerCase().endsWith(".pptx") ? "presentation" : "word", detail: "本地导入 · " + (file.size < 1024 * 1024 ? Math.max(1, Math.round(file.size / 1024)) + " KB" : (file.size / 1024 / 1024).toFixed(1) + " MB") },
+                    : file.name.toLowerCase().endsWith(".pptx") ? "pptx" : file.name.toLowerCase().endsWith(".xlsx") ? "xlsx" : "package",
+                  { id: createOpaqueId(), name: file.name, kind: file.name.toLowerCase().endsWith(".xlsx") ? "workbook" : file.name.toLowerCase().endsWith(".pptx") ? "presentation" : "word", detail: "本地导入 · " + (file.size < 1024 * 1024 ? Math.max(1, Math.round(file.size / 1024)) + " KB" : (file.size / 1024 / 1024).toFixed(1) + " MB") },
                 );
               event.currentTarget.value = "";
             }}
           />
         </div>
-        <div className="document-toolbar" role="toolbar" aria-label="文件与导出">
+        {!workbook && <div className="document-toolbar" role="toolbar" aria-label="文件与导出">
         <div className="toolbar-group"><span className="toolbar-caption">文件</span>
         <button disabled={!session || loading} onClick={download}>
           <Icon name="download" size={15} />下载文档包
@@ -293,9 +347,9 @@ export function App() {
           const value = event.currentTarget.value === "continuous" ? "continuous" : "pages"; setLayout(value);
           try { localStorage.setItem("dagent-office:layout", value); } catch { /* The host preference is optional. */ }
         }}><option value="pages">页面视图</option><option value="continuous">连续视图</option></select></label>}
-      </div>
+      </div>}
       <div className="workspace-feedback">
-      {loading && <p role="status">正在读取…</p>}
+      {loading && <p role="status">{progress ? `${progressLabels[progress.phase]} · ${progress.completed} / ${progress.total}` : candidate ? "正在准备工作簿预览…" : "正在读取…"} <button onClick={cancelLoad}>取消读取</button></p>}
       {error && <p className="error-message" role="alert">{error}</p>}
       {model && !loading && (
         <p className="document-status" role="status"><span className="connection-dot" />
@@ -303,6 +357,8 @@ export function App() {
           {(snapshot ?? model.snapshot()).annotations.length}
         </p>
       )}
+      {workbook && !loading && <p className="document-status" role="status"><span className="connection-dot" />已打开 · 修订 {workbook.source.cells.snapshot.manifest.revision} · 工作表 {workbook.source.cells.snapshot.metadata.workbook.sheets.length} · 批注 {workbook.source.cells.snapshot.annotations.length}</p>}
+      {workbook && <p className="workbook-note">只读预览试用：表样式、条件格式和部分排版仍在完善，编辑及导出尚未开放。</p>}
       {submitted && <p className="submission-message"><Icon name="check" size={16} />Playground 已接收批注请求；使用固定提案验证返回与应用。</p>}
       {docxReport && <section className="export-report" aria-label="DOCX 导出报告">
         <p>已生成 DOCX · 修订 {docxReport.revision} · 保留原生批注 {docxReport.exportedAnnotationIds.length} 条。</p>
@@ -320,14 +376,17 @@ export function App() {
         <button onClick={()=>downloadBytes(new TextEncoder().encode(JSON.stringify(pptxReport,null,2)),"presentation.export-report.json","application/json")}>下载导出报告</button>
       </section>}
       </div>
-      {!model && <div className="empty-workspace"><div className="empty-paper"><div className="paper-lines"><i /><i /><i /><i /></div><span className="empty-comment"><Icon name="comment" size={24} /></span></div><span className="empty-eyebrow">YOUR NEXT IDEA STARTS HERE</span><h2>让文档成为协作的起点</h2><p>从左侧选择一份样例，或打开自己的 Office 文档。<br />选中内容、写下批注，让每一个修改想法都有迹可循。</p><div className="format-tags"><span><i className="word-dot" />Word · DOCX</span><span><i className="ppt-dot" />PowerPoint · PPTX</span><span><i className="html-dot" />HTML 文档包</span></div></div>}
+      {!model && !workbook && <div className="empty-workspace"><div className="empty-paper"><div className="paper-lines"><i /><i /><i /><i /></div><span className="empty-comment"><Icon name="comment" size={24} /></span></div><span className="empty-eyebrow">YOUR NEXT IDEA STARTS HERE</span><h2>让文档成为协作的起点</h2><p>从左侧选择一份样例，或打开自己的 Office 文档。<br />选中内容、写下批注，让每一个修改想法都有迹可循。</p><div className="format-tags"><span><i className="word-dot" />Word · DOCX</span><span><i className="ppt-dot" />PowerPoint · PPTX</span><span><i className="html-dot" />HTML 文档包</span></div></div>}
+      {(workbook || candidate) && <WorkbookPane source={(candidate?.document ?? workbook)!.source} preparing={!workbook}
+        onReady={source => { if (candidate?.document.source === source) candidate.accept(); }}
+        onError={(source, error) => { if (candidate?.document.source === source) candidate.reject(error); else if (workbook?.source === source) setError(error.message); }} />}
       {model&&session&&isPresentation&&<PresentationWorkbench session={session} appearance="workspace" className="preview" onViewChange={view=>{presentationRef.current=view;}} onSubmitAnnotations={()=>{setSubmitted(true);}} onError={reason=>setError(reason.message)}/>}
       {model && session && !isPresentation && <DocumentWorkbench session={session} appearance="workspace" layout={layout} className="preview"
         onViewChange={(view) => { workbenchRef.current = view; }}
         onSubmitAnnotations={() => { setSubmitted(true); }}
         onError={(reason) => setError(reason.message)} />}
 
-        <footer className="workspace-footer"><span>dagent-office <i /> Playground</span><span>选中内容添加批注 · 人工与智能体共享编辑历史</span></footer>
+        <footer className="workspace-footer"><span>dagent-office <i /> Playground</span><span>{workbook ? "Excel 只读预览 · 查看单元格、工作表与批注" : "选中内容添加批注 · 人工与智能体共享编辑历史"}</span></footer>
       </section>
     </main>
   );

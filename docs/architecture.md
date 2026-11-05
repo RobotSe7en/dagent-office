@@ -199,3 +199,5 @@ DOCX、PPTX、XLSX 的 OOXML 读写与样式映射由本项目依据公开格式
 SDK 接收不透明的会话、宿主版本和缓存命名空间；用户、部门和租户规则在宿主实现。SDK 的 `revision` 与正式存储版本分别比较。保存某修订期间出现新编辑时，保存成功只覆盖已提交的快照，后续修改仍显示未保存。
 
 请求 ID、文档 ID、节点 ID 和资源 hash 仅用于关联。授权输入和主体隔离由宿主实施；SDK 不读取 Enterprise 数据库或知识表。宿主边界见[达智集成](dagent-integration.md)。
+
+第三轮的 Playground 只读工作簿入口直接使用 `render` 的公开预览与专用端口读取接口。应用拥有 Worker、输入字节、进度、取消和缓存生命周期；SDK 继续只接收宿主授权的数据和端口，不创建 Worker 或管理宿主文件列表，见[工作簿接入](workbook-model.md#playground-只读接入)。

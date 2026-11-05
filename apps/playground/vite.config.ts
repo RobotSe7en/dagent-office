@@ -25,13 +25,14 @@ function collaborationExamples(): Plugin {
     "report.proposal.json": readFileSync(new URL("../../examples/report.proposal.json", import.meta.url), "utf8"),
   };
   for (const name of readdirSync(new URL("../../examples/pptx/", import.meta.url)).filter(name => name.endsWith(".pptx"))) assets["pptx/"+name]=readFileSync(new URL("../../examples/pptx/"+name,import.meta.url));
+  assets["xlsx/15-ten-thousand-rows.xlsx"] = readFileSync(new URL("../../examples/xlsx/15-ten-thousand-rows.xlsx", import.meta.url));
   return {
     name: "collaboration-examples",
     configureServer(server) {
       server.middlewares.use((request, response, next) => {
         const source = assets[(request.url ?? "").split("?")[0]!.replace(/^\//, "")];
         if (source === undefined) { next(); return; }
-        response.setHeader("Content-Type", typeof source === "string" ? "application/json; charset=utf-8" : "application/vnd.openxmlformats-officedocument.presentationml.presentation"); response.end(source);
+        response.setHeader("Content-Type", typeof source === "string" ? "application/json; charset=utf-8" : request.url?.split("?")[0]?.endsWith(".xlsx") ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "application/vnd.openxmlformats-officedocument.presentationml.presentation"); response.end(source);
       });
     },
     generateBundle() {
