@@ -9,6 +9,9 @@ export interface WorkbookReadTransportLimits {
   readonly maxCharts: number;
   readonly maxReferences: number;
   readonly maxPoints: number;
+  readonly maxRules: number;
+  readonly maxRuleValues: number;
+  readonly maxRuleSteps: number;
 }
 export interface WorkbookReadTransportOptions {
   readonly maxPendingRequests?: number;
@@ -24,7 +27,8 @@ export interface WorkbookReadTransportConfig {
   readonly maxSnapshotCodeUnits: number;
   readonly readLimits: WorkbookReadTransportLimits;
 }
-const readDefaults: WorkbookReadTransportLimits = Object.freeze({ maxCells: 25_000, maxCodeUnits: 8 * 1024 * 1024, maxAssetBytes: 8 * 1024 * 1024, maxCharts: 128, maxReferences: 5000, maxPoints: 50_000 });
+const readDefaults: WorkbookReadTransportLimits = Object.freeze({ maxCells: 25_000, maxCodeUnits: 8 * 1024 * 1024, maxAssetBytes: 8 * 1024 * 1024, maxCharts: 128, maxReferences: 5000, maxPoints: 50_000,
+  maxRules: 256, maxRuleValues: 250_000, maxRuleSteps: 5_000_000 });
 export function transportConfig(input: WorkbookReadTransportOptions): WorkbookReadTransportConfig {
   const { readLimits, ...own } = input;
   const config = { maxPendingRequests: 8, requestTimeoutMs: 60_000, maxSnapshotNodes: 500_000, maxSnapshotCodeUnits: 32 * 1024 * 1024, ...own };
@@ -71,7 +75,7 @@ export function transportSnapshot(value: unknown, config: WorkbookReadTransportC
   }
   return value as unknown as WorkbookSnapshot;
 }
-export type WorkbookReadOperation = "cells" | "asset" | "charts";
+export type WorkbookReadOperation = "cells" | "asset" | "charts" | "rules";
 /** Reject oversized client budgets before invoking any model adapter. The
  * adapter then validates exact coordinates/references against its own model. */
 export function transportReadRequest(operation: WorkbookReadOperation, value: unknown, config: WorkbookReadTransportConfig): Record<string, unknown> {
@@ -91,6 +95,14 @@ export function transportReadRequest(operation: WorkbookReadOperation, value: un
   } else if (operation === "asset") {
     if (!keys(value, ["documentId", "revision", "path", "maxBytes"]) || typeof value.path !== "string" || value.path.length > 1024) throw new DocumentError("InvalidOperation", "Invalid workbook resource transport request.");
     limit("maxBytes", limits.maxAssetBytes);
+  } else if (operation === "rules") {
+    if (!keys(value, ["documentId", "revision", "sheetId", "coordinates", "maxCells", "maxRules", "maxValues", "maxSteps", "maxCodeUnits"])
+      || typeof value.sheetId !== "string" || value.sheetId.length > 1024 || !Array.isArray(value.coordinates)) throw new DocumentError("InvalidOperation", "Invalid workbook rule transport request.");
+    limit("maxCells", limits.maxCells); limit("maxRules", limits.maxRules); limit("maxValues", limits.maxRuleValues); limit("maxSteps", limits.maxRuleSteps); limit("maxCodeUnits", limits.maxCodeUnits);
+    if (value.coordinates.length > (value.maxCells as number)) throw new DocumentError("ResourceLimitExceeded", "Too many transported workbook rule coordinates.");
+    for (const coordinate of value.coordinates) if (!isRecord(coordinate) || !keys(coordinate, ["row", "column"]) || !Number.isSafeInteger(coordinate.row)
+      || !Number.isSafeInteger(coordinate.column) || (coordinate.row as number) < 0 || (coordinate.row as number) >= 1_048_576 || (coordinate.column as number) < 0 || (coordinate.column as number) >= 16_384)
+      throw new DocumentError("InvalidOperation", "Invalid transported workbook rule coordinate.");
   } else {
     if (!keys(value, ["documentId", "revision", "chartIds", "maxCharts", "maxReferences", "maxPoints", "maxCodeUnits"]) || !Array.isArray(value.chartIds)
       || value.chartIds.some(id => typeof id !== "string" || id.length > 1024)) throw new DocumentError("InvalidOperation", "Invalid workbook chart transport request.");

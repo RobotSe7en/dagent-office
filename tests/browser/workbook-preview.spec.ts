@@ -49,3 +49,36 @@ test('initial failures release their candidate and a host retry can satisfy the 
   const result = await page.evaluate(files => window.workbookPreview.initialPreviewFailure(files), inputs.find(input => input.name === '09-classic-notes')!.files);
   expect(result).toEqual({ rejected: 'InvalidOperation', frames: 0, errors: ['InvalidOperation', 'InvalidOperation'], retried: true, finalFrames: 1 });
 });
+
+test('public read-only validation shows native prompts and the actual violating value without rewriting source', async ({ page }) => {
+  const files = await importXlsx(readFileSync('examples/xlsx/06-rules-validation.xlsx'), { documentId: 'validation-preview' });
+  const entries = [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]);
+  await page.evaluate(entries => window.workbookPreview.mountPublicPreview(entries, false), entries);
+  for (let row = 2; row <= 8; row++) {
+    const point = await page.evaluate(row => window.workbookPreview.previewAction('point-E-' + row), row) as { x: number; y: number };
+    await page.mouse.click(point.x, point.y);
+    const result = await page.evaluate(() => window.workbookPreview.previewInspect());
+    expect(result).toMatchObject({ address: 'E' + row, unchanged: true, errors: [] });
+    expect(result).toMatchObject({ validation: expect.stringContaining('填写提示\n保留来源违规值') });
+    expect(result).toMatchObject({ validation: expect.stringContaining(row === 3 ? '当前值不符合验证规则。\n输入不符\n请检查范围' : '当前值符合验证规则。') });
+    if (row === 3) expect(result).toMatchObject({ value: '99' });
+  }
+  expect(await page.evaluate(() => window.workbookPreview.previewAction('empty'))).toMatchObject({ validation: '' });
+  await page.evaluate(() => window.workbookPreview.previewAction('dispose'));
+});
+test('failed or late rule responses preserve the last complete public window', async ({ page }) => {
+  const files = await importXlsx(readFileSync('examples/xlsx/06-rules-validation.xlsx'), { documentId: 'rules-lifecycle' });
+  const result = await page.evaluate(entries => window.workbookPreview.ruleWindowLifecycle(entries), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  expect(result).toEqual({ failures: ['InvalidDocument', 'RevisionConflict'], cancelled: true, aborted: true, retainedLatest: true });
+});
+
+test('worksheet-wide prompt suppression retains current validation status and source violations in the report', async ({ page }) => {
+  const files = new Map(await importXlsx(readFileSync('examples/xlsx/06-rules-validation.xlsx'), { documentId: 'quiet-validation' }));
+  const metadata = JSON.parse(new TextDecoder().decode(files.get('metadata.json')!)); metadata.workbook.sheets[0].disableValidationPrompts = true;
+  files.set('metadata.json', new TextEncoder().encode(JSON.stringify(metadata)));
+  await page.evaluate(entries => window.workbookPreview.mountPublicPreview(entries, false), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  const point = await page.evaluate(() => window.workbookPreview.previewAction('point-E-3')) as { x: number; y: number }; await page.mouse.click(point.x, point.y);
+  expect(await page.evaluate(() => window.workbookPreview.previewInspect())).toMatchObject({ validation: '当前值不符合验证规则。', value: '99', unchanged: true,
+    report: { diagnostics: [expect.objectContaining({ code: 'validation-invalid', row: 2, column: 4 })] } });
+  await page.evaluate(() => window.workbookPreview.previewAction('dispose'));
+});

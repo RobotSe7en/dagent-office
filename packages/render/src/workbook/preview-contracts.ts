@@ -3,6 +3,8 @@ import type { FontResolution } from "../contracts.js";
 import type { WorkbookWindowSource } from "./window-source.js";
 import type { WorkbookAssetSource } from "./assets.js";
 import type { WorkbookChartSource } from "./chart-source.js";
+import type { WorkbookRuleSource } from "./rule-source.js";
+import type { WorkbookRuleDiagnostic } from "./rule-source.js";
 import type { WorkbookDrawingDiagnostic } from "./drawing-layout.js";
 import type { WorkbookWindowControllerOptions } from "./window-controller.js";
 import type { WorkbookViewport } from "./viewport.js";
@@ -15,6 +17,7 @@ export interface WorkbookPreviewSource {
   readonly cells: WorkbookWindowSource;
   readonly assets: WorkbookAssetSource;
   readonly charts: WorkbookChartSource;
+  readonly rules?: WorkbookRuleSource;
 }
 export type WorkbookPreviewInput = WorkbookModel | WorkbookPreviewSource;
 export interface WorkbookPreviewOptions {
@@ -40,7 +43,8 @@ export interface WorkbookRenderReport {
   readonly storedCellCount: number;
   readonly objectFragmentCount: number;
   readonly formulaCaches: Readonly<Record<"imported" | "valid" | "stale" | "unavailable", number>>;
-  readonly diagnostics: readonly WorkbookDrawingDiagnostic[];
+  readonly ruleFormulaValues: Readonly<Record<"current" | "unavailable", number>>;
+  readonly diagnostics: readonly (WorkbookDrawingDiagnostic | WorkbookRuleDiagnostic)[];
   readonly fonts: readonly FontResolution[];
   readonly usedFallbackLineMetrics: boolean;
 }

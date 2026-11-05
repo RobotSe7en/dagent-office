@@ -1,5 +1,6 @@
 import { DocumentError } from "@dagent-office/core";
-import type { WorkbookModel, WorkbookSnapshot } from "@dagent-office/core";
+import type { WorkbookModel, WorkbookRuleReadRequest, WorkbookSnapshot } from "@dagent-office/core";
+import { modelRuleSource } from "./rule-source.js";
 import { modelAssetSource } from "./assets.js";
 import type { WorkbookAssetRequest } from "./assets.js";
 import { modelChartSource } from "./chart-source.js";
@@ -17,8 +18,8 @@ export function serveWorkbookReads(port: MessagePort, model: WorkbookModel, opti
   if (model.kind !== "workbook") throw new DocumentError("UnsupportedFormat", "Workbook read servers require a workbook model.");
   const config = transportConfig(options);
   let snapshot: WorkbookSnapshot | undefined = transportSnapshot(model.snapshot(), config);
-  let providers: { cells: ReturnType<typeof modelWindowSource>; assets: ReturnType<typeof modelAssetSource>; charts: ReturnType<typeof modelChartSource> } | undefined
-    = { cells: modelWindowSource(model), assets: modelAssetSource(model), charts: modelChartSource(model) };
+  let providers: { cells: ReturnType<typeof modelWindowSource>; assets: ReturnType<typeof modelAssetSource>; charts: ReturnType<typeof modelChartSource>; rules: ReturnType<typeof modelRuleSource> } | undefined
+    = { cells: modelWindowSource(model), assets: modelAssetSource(model), charts: modelChartSource(model), rules: modelRuleSource(model) };
   let disposed = false, highestId = 0, snapshotSent = false;
   const pending = new Map<number, AbortController>();
   const post = (id: number, ok: boolean, value: unknown, transfer: Transferable[] = []): void => {
@@ -44,7 +45,7 @@ export function serveWorkbookReads(port: MessagePort, model: WorkbookModel, opti
     }
     const owned = providers; if (!owned) return;
     try {
-      if (operation !== "cells" && operation !== "asset" && operation !== "charts") throw new DocumentError("InvalidOperation", "Unknown workbook transport read operation.");
+      if (operation !== "cells" && operation !== "asset" && operation !== "charts" && operation !== "rules") throw new DocumentError("InvalidOperation", "Unknown workbook transport read operation.");
       transportReadRequest(operation, message.payload, config);
       const abort = new AbortController(); pending.set(id, abort);
       const timer = setTimeout(() => { if (!abort.signal.aborted) { post(id, false, new DocumentError("OperationCancelled", "Workbook transport read exceeded its deadline.")); abort.abort(); } }, config.requestTimeoutMs);
@@ -55,7 +56,8 @@ export function serveWorkbookReads(port: MessagePort, model: WorkbookModel, opti
             if (!abort.signal.aborted) post(id, true, result, [result.bytes.buffer as ArrayBuffer]);
           } else {
             const result = operation === "cells" ? await owned.cells.read(message.payload as WorkbookWindowRequest, abort.signal)
-              : await owned.charts.read(message.payload as WorkbookChartReadRequest, abort.signal);
+              : operation === "charts" ? await owned.charts.read(message.payload as WorkbookChartReadRequest, abort.signal)
+              : await owned.rules.read(message.payload as WorkbookRuleReadRequest, abort.signal);
             if (!abort.signal.aborted) post(id, true, result);
           }
         } catch (error) { if (!abort.signal.aborted) post(id, false, error); }

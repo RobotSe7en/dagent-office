@@ -1,4 +1,5 @@
 import { DocumentError, DocumentErrorDataSchema } from "@dagent-office/core";
+import type { WorkbookRuleReadRequest, WorkbookRuleReadResponse } from "@dagent-office/core";
 import type { WorkbookPreviewSource } from "./preview-contracts.js";
 import type { WorkbookWindowRequest, WorkbookWindowResponse } from "./window-source.js";
 import { checkWindowIdentity } from "./window-source.js";
@@ -59,7 +60,7 @@ export async function connectWorkbookReads(port: MessagePort, options: WorkbookR
     const value = await request("snapshot", undefined, signal);
     if (signal?.aborted) throw new DocumentError("OperationCancelled", "The workbook transport connection was cancelled.");
     const snapshot = transportSnapshot(value, config, true);
-    const read = async <T>(operation: WorkbookReadOperation, input: WorkbookWindowRequest | WorkbookAssetRequest | WorkbookChartReadRequest, signal: AbortSignal): Promise<T> => {
+    const read = async <T>(operation: WorkbookReadOperation, input: WorkbookWindowRequest | WorkbookAssetRequest | WorkbookChartReadRequest | WorkbookRuleReadRequest, signal: AbortSignal): Promise<T> => {
       checkWindowIdentity(input, snapshot);
       const result = await request(operation, input, signal);
       if (!isRecord(result) || typeof result.documentId !== "string" || !Number.isSafeInteger(result.revision)) throw new DocumentError("InvalidDocument", "Workbook transport returned an invalid read identity.");
@@ -70,6 +71,7 @@ export async function connectWorkbookReads(port: MessagePort, options: WorkbookR
       read: (input: WorkbookWindowRequest, signal: AbortSignal) => read<WorkbookWindowResponse>("cells", input, signal) }),
     assets: Object.freeze({ snapshot, readAsset: (input: WorkbookAssetRequest, signal: AbortSignal) => read<WorkbookAssetResponse>("asset", input, signal) }),
     charts: Object.freeze({ snapshot, read: (input: WorkbookChartReadRequest, signal: AbortSignal) => read<WorkbookChartReadResponse>("charts", input, signal) }),
+    rules: Object.freeze({ snapshot, read: (input: WorkbookRuleReadRequest, signal: AbortSignal) => read<WorkbookRuleReadResponse>("rules", input, signal) }),
     dispose: () => dispose() });
   } catch (error) { dispose(); throw error; }
 }

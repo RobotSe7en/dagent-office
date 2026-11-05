@@ -1,5 +1,6 @@
 import { connectWorkbookReads, mountDocumentPreview } from '@dagent-office/render';
 import type { WorkbookPreview, WorkbookReadConnection } from '@dagent-office/render';
+import { DEFAULT_WORKBOOK_RULE_LIMITS } from '@dagent-office/core';
 
 export async function nativeWorkerRead(code: string, input: number[], documentId: string, audit: boolean) {
   const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' })), worker = new Worker(url), channel = new MessageChannel();
@@ -25,6 +26,8 @@ export async function nativeWorkerRead(code: string, input: number[], documentId
     const openedMs = performance.now() - started, importDelays = [...delays].sort((a, b) => a - b), snapshot = client.cells.snapshot;
     preview = mountDocumentPreview(container, client, { widthPt: 420, heightPt: 300 }); await preview.ready;
     const firstScreenMs = performance.now() - started, first = preview.layout();
+    const ruleStates = snapshot.metadata.workbook.sheets[0]?.dataValidations?.length ? await client.rules!.read({ documentId, revision: snapshot.manifest.revision,
+      sheetId: first.sheetId, coordinates: Array.from({ length: 7 }, (_, row) => ({ row: row + 1, column: 4 })), ...DEFAULT_WORKBOOK_RULE_LIMITS }, new AbortController().signal) : undefined;
     const query = { documentId, revision: snapshot.manifest.revision, windows: [{ sheetId: snapshot.metadata.workbook.activeSheetId, row: audit ? 9999 : 0, column: 0, rows: 1, columns: 20 }], maxCells: 20, maxCodeUnits: 65536 };
     const last = await client.cells.read(query, new AbortController().signal);
     if (audit) await preview.setViewport({ ...first.viewport, scrollLeftPt: 1000, scrollTopPt: 149_800 });
@@ -37,7 +40,7 @@ export async function nativeWorkerRead(code: string, input: number[], documentId
     return { openedMs, firstScreenMs, first, afterScroll, last: last.cells, retained: JSON.stringify(last) === JSON.stringify(retained), closed, counts,
       ticks, progress, largestReplyUnits, replies, importDelayP95Ms: importDelays[Math.floor(importDelays.length * .95)] ?? 0, failures,
       snapshotUnits: JSON.stringify(snapshot).length, frozen: Object.isFrozen(snapshot.metadata.workbook.sheets[0]), detachedInput: bytes.byteLength === 0,
-      browser: navigator.userAgent };
+      browser: navigator.userAgent, ruleStates };
   } finally { clearInterval(timer); preview?.dispose(); client?.dispose(); channel.port2.close(); worker.terminate(); URL.revokeObjectURL(url); container.remove(); }
 }
 

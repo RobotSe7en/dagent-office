@@ -5,6 +5,7 @@ export type { WorkbookViewport } from "./workbook/viewport.js";
 export type { WorkbookWindowSource, WorkbookWindowRequest, WorkbookWindowResponse } from "./workbook/window-source.js";
 export type { WorkbookAssetSource } from "./workbook/assets.js";
 export type { WorkbookChartSource } from "./workbook/chart-source.js";
+export type { WorkbookRuleSource } from "./workbook/rule-source.js";
 export { serveWorkbookReads } from "./workbook/read-server.js";
 export type { WorkbookReadServer } from "./workbook/read-server.js";
 export { connectWorkbookReads } from "./workbook/read-client.js";

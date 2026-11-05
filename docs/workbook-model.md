@@ -163,7 +163,9 @@ DrawingML 主题的填充、背景填充、线条和效果列表也已映射为�
 
 核心文件属性中的标题、语言以及作者、主题、说明、修订、日期等来源信息保存在元数据；`properties` 的作者与应用字段不代表宿主身份或权限，日期字符串保留原始精度及时区。应用中的派生统计列表和包缩略图经过结构/资源检查后丢弃，不作为额外文档源；未知属性内容、签名和非空相对链接基址明确拒绝。原生计算链按[计算链说明](https://learn.microsoft.com/en-us/office/open-xml/spreadsheet/working-with-the-calculation-chain)仅视为旧计算次序提示，逐条复核实际公式地址及继承的工作表身份后丢弃。它不能替代依赖图，也不会使任何导入缓存变成有效计算结果。
 
-`conditionalRules` 已有数值比较、标量公式和双色/三色色阶来源；差异外观及色阶颜色引用 CSS，阈值与优先级保留为元数据。`dataValidations` 保存列表、整数、小数、日期、时间、文本长度和自定义公式，也允许仅有提示的 `none`。规则都保存精确多区域和公式原点；严格检查身份、公式数量、样式引用、优先级及有歧义的重叠验证。已有违规数据不会在读取阶段被修正；规则求值、违规诊断和各编辑入口执行仍未实现。
+`conditionalRules` 已有数值比较、标量公式和双色/三色色阶来源；差异外观及色阶颜色引用 CSS，阈值与优先级保留为元数据。`dataValidations` 保存列表、整数、小数、日期、时间、文本长度和自定义公式，也允许仅有提示的 `none`。规则都保存精确多区域和公式原点；严格检查身份、公式数量、样式引用、优先级及有歧义的重叠验证。已有违规数据不会在读取阶段被修正；规则读取现经第一方标量内核计算当前源依赖，返回条件匹配、色阶插值及验证有效／违规／不可用状态；优先级、停止规则和部分属性叠加已接入预览。导入缓存不冒充当前校验，源中的违规值保留并在报告中列出，选择时显示允许的原生输入／错误提示；工作表禁用提示仍保留可查询的验证状态。各编辑入口的统一执行仍待后续阶段。
+
+规则提供者 `WorkbookRuleSource` 与单元格／资源／图表提供者绑定同一修订；含规则工作表缺少该提供者时预览明确失败。内建模型与 Worker 连接自动提供规则读取，窗口请求覆盖用于可见格及共享边框的来源坐标。端点同时限制坐标、规则、依赖值、步数与文字，接受方校验规则顺序及完整性；失败或迟到结果不替换已接受窗口。规则覆盖的公式显示当前派生值，来源缓存状态仍保留，报告的 `ruleFormulaValues` 单独列出当前／不可用数量。公式派生文字不声明虚假的源 UTF-16 偏移。
 
 原生规则验证依据 [SpreadsheetML 条件格式说明](https://learn.microsoft.com/en-us/office/open-xml/spreadsheet/working-with-conditional-formatting)及[数据验证契约](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.datavalidation?view=openxml-2.8.1)，并单独保存[固定 Calc 的探针结果](evidence/xlsx-rule-semantics.json)：传统 `showDropDown="1"` 隐藏列表；多区域公式原点取最左列中最靠上的实际区域起点，不取列表首项或外包矩形角。后者在跨行列样例中分别为 B5/E9，并经外部 ODS 中的引用重定位核对。这是固定 Calc 的独立观测，不冒充 Excel/WPS 实机结论。运行 `python3 scripts/check-xlsx-rule-semantics.py` 重复核对；只有显式 `--record` 更新记录。
 
@@ -361,8 +363,8 @@ Playground 的本地打开入口接受 `.xlsx` 和工作簿 `.zip`，列表提�
 
 [生成器](../scripts/generate-workbook-table-styles.py)固定完整 XML 摘要并检查所有消费字段。该附件的局部 `dxfId` 从 1 起；Light14 的 `dxfs@count` 写成 10 而实际及引用均为 9，内嵌样式名多一个尾空格；Dark9 的内嵌名误写为 `TableStyleDark9 2`。提取仅接受这份固定附件的已记录差异，使用外层元素及 Annex G.1 的规范名称；普通 XLSX 的零起始差异索引、计数及名称校验保持严格。来源摘要、许可与差异见[记录](evidence/xlsx-builtin-table-styles.json)，[Ecma 许可](../packages/render/ECMA-376-TABLE-STYLES-LICENSE.txt)随 render 打包并保留在生成数据注释中。
 
-可运行 `python3 scripts/generate-workbook-table-styles.py /path/to/presetTableStyles.xml --check` 重核。目录的完整名称、典型主题及边框、不可变性和附件差异有单元检查；表样式与直接格式已接入上述窗口组合，条件规则及原生页面验收尚未完成；定义目录本身仍不能替代读取门槛。
+可运行 `python3 scripts/generate-workbook-table-styles.py /path/to/presetTableStyles.xml --check` 重核。目录的完整名称、典型主题及边框、不可变性和附件差异有单元检查；表样式、直接格式与条件规则已接入上述窗口组合，完整原生页面验收尚未完成；定义目录本身仍不能替代读取门槛。
 
-内部区域投影按 §18.8.41 的顺序处理十三类区域，并按 §18.18.77 的结构图区分数据条纹、表头和汇总行。条纹大小与缺省空白带独立保留，末带裁到所属区域；列方向使用源坐标，视口和 RTL 不改变区域身份。内边框只作用于区域内部，外边框只作用于区域边界，显式 `none` 与缺省不混同。独立预期覆盖可变条纹、无表头／无汇总行、单列角落重叠及整张工作表尺寸查询；此层不展开全表单元格。隐藏／筛选后的条纹、实际 CSS 层组合和显示接入仍待完成。
+内部区域投影按 §18.8.41 的顺序处理十三类区域，并按 §18.18.77 的结构图区分数据条纹、表头和汇总行。条纹大小与缺省空白带独立保留，末带裁到所属区域；列方向使用源坐标，视口和 RTL 不改变区域身份。内边框只作用于区域内部，外边框只作用于区域边界，显式 `none` 与缺省不混同。独立预期覆盖可变条纹、无表头／无汇总行、单列角落重叠及整张工作表尺寸查询；此层不展开全表单元格。隐藏／筛选后的可见行条纹、命名／直接格式和条件属性优先级已接入实际窗口 CSS 组合；完整原生页面验收仍待完成。
 
 [独立原生探针](../scripts/check-xlsx-table-styles.py)包含十七种表开关和直接格式组合，输入通过官方 Transitional XSD 与关系检查。固定 Calc 25.8.1.1 在这些输入上没有显示被引用的 `TableStyleMedium9`，因此不能用其输出证明表样式优先级或隐藏行条纹；[记录](evidence/xlsx-table-style-semantics.json)保留所有单元格观察及这一限制。直接粗体、字体颜色和填充的对照仍有效。可运行 `python3 scripts/check-xlsx-table-styles.py` 重核；Excel/WPS 未实机验证。

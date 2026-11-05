@@ -18,6 +18,8 @@ export interface WorkbookFormattedTextInput {
   readonly widthPt: number;
   readonly heightPt: number;
   readonly bordered?: boolean;
+  /** Formula text is derived; @ fields cannot claim source text offsets. */
+  readonly derived?: boolean;
 }
 
 /** A text format derives affixes/spacing/repetition around independently
@@ -47,7 +49,7 @@ export function layoutWorkbookFormattedTexts(scope: HTMLElement, inputs: readonl
       for (const [index, part] of display.parts.entries()) {
         if (part.kind === "fill" && index !== lastFill) continue;
         let text: WorkbookTextView;
-        if (part.kind === "text" && part.source) {
+        if (part.kind === "text" && part.source && !input.derived) {
           if (part.source.from !== 0 || part.source.to !== input.value.length || part.text !== input.value) throw new DocumentError("InvalidDocument", "A text-format field does not match its source value.");
           text = createWorkbookTextView(input.source, remaining());
           if (text.projections.map(projection => projection.node.data).join("") !== input.value) throw new DocumentError("InvalidDocument", "A text-format source differs from its stored text value.");

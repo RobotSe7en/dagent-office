@@ -5,6 +5,7 @@ import type { WorkbookPreview, WorkbookPreviewSource, WorkbookPreviewOptions } f
 import { modelWindowSource } from '../../../packages/render/src/workbook/window-source.js';
 import { modelAssetSource } from '../../../packages/render/src/workbook/assets.js';
 import { modelChartSource } from '../../../packages/render/src/workbook/chart-source.js';
+import { modelRuleSource } from '../../../packages/render/src/workbook/rule-source.js';
 import { createWorkbookSurface } from '../../../packages/render/src/workbook/surface.js';
 import { WorkbookWindowController } from '../../../packages/render/src/workbook/window-controller.js';
 import { decorateWorkbookPreview } from '../../../packages/render/src/workbook/preview-decoration.js';
@@ -43,9 +44,15 @@ export async function mountPublicPreview(entries: Entries, rtl: boolean) {
     const bytesUnchanged = () => { const after = model.serialize(); return [...before].every(([path, bytes]) => bytes.length === after.get(path)!.length && bytes.every((byte, i) => byte === after.get(path)![i])); };
     inspect = () => ({ report: preview.layout(), address: chrome.querySelector<HTMLInputElement>('[aria-label="单元格地址"]')!.value,
       value: chrome.querySelector<HTMLInputElement>('[aria-label="单元格值或公式"]')!.value, status: chrome.querySelector('[role="status"]')!.textContent,
+      validation: chrome.querySelector('[aria-label="数据验证"]')!.textContent,
       tabs: [...chrome.querySelectorAll('[role="tab"]')].map(tab => ({ text: tab.textContent, selected: tab.getAttribute('aria-selected') })),
       selection: preview.selection(), selections, errors, serializations, unchanged: bytesUnchanged(), frames: chrome.querySelectorAll('iframe').length });
     action = async name => {
+      if (name.startsWith('point-')) {
+        const [, column, row] = name.split('-'), headers = [...chrome.querySelectorAll('.header>div')];
+        const x = headers.find(node => node.textContent === column)!.getBoundingClientRect(), y = headers.find(node => node.textContent === row)!.getBoundingClientRect();
+        return { x: x.x + x.width / 2, y: y.y + y.height / 2 };
+      }
       if (name === 'empty') chrome.querySelector<HTMLButtonElement>('[data-sheet-id="preview-empty"]')!.click();
       if (name === 'first') await preview.showSheet(sheetId);
       if (name === 'comment') preview.openComment(model.snapshot().annotations[0]!.annotationId);
@@ -142,4 +149,27 @@ export async function initialPreviewFailure(entries: Entries) {
   try { await preview.ready; const report = await preview.settled(); return { rejected, frames, errors, retried: report.documentId === model.snapshot().manifest.documentId, finalFrames: retry.chrome.querySelectorAll('iframe').length }; }
   finally { preview.dispose(); container.remove(); }
 }
-(window as unknown as { workbookPreview: unknown }).workbookPreview = { mountPublicPreview, previewInspect, previewAction, publicPreviewLifecycle, previewDecorationMeasurement, initialPreviewFailure };
+export async function ruleWindowLifecycle(entries: Entries) {
+  const model = modelOf(entries), snapshot = model.snapshot(), container = host(), rules = modelRuleSource(model), formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 420, heightPt: 300 });
+  let mode = 'ok', begin!: () => void, release!: () => void, aborted = false;
+  const controller = new WorkbookWindowController(surface, { cells: modelWindowSource(model), assets: modelAssetSource(model), charts: modelChartSource(model),
+    rules: { ...rules, async read(request, signal) {
+      if (mode === 'held') { mode = 'ok'; signal.addEventListener('abort', () => { aborted = true; }, { once: true }); await new Promise<void>(resolve => { release = resolve; begin(); }); }
+      const value = await rules.read(request, new AbortController().signal);
+      return mode === 'empty' ? { ...value, cells: [] } : mode === 'revision' ? { ...value, revision: value.revision + 1 } : value;
+    } } }, formatter);
+  const viewport = { widthPt: 420, heightPt: 300, scrollTopPt: 0, scrollLeftPt: 0 }, failures: string[] = [];
+  try {
+    await controller.render('sheet-1', viewport); const original = controller.current!, before = surface.view.innerHTML;
+    for (mode of ['empty', 'revision']) {
+      try { await controller.render('sheet-1', viewport); failures.push('accepted'); } catch (error) { failures.push((error as { code: string }).code); }
+      if (controller.current !== original || surface.view.innerHTML !== before) throw Error('A failed rule read changed the accepted window');
+    }
+    mode = 'held'; const started = new Promise<void>(resolve => { begin = resolve; }), old = controller.render('sheet-1', viewport); await started;
+    await controller.render('preview-empty', viewport); const cancelled = !await old;
+    release(); await new Promise<void>(resolve => setTimeout(resolve, 0));
+    return { failures, cancelled, aborted, retainedLatest: controller.current!.frame.sheetId === 'preview-empty' };
+  } finally { controller.dispose(); surface.dispose(); formatter.dispose(); container.remove(); }
+}
+(window as unknown as { workbookPreview: unknown }).workbookPreview = { mountPublicPreview, previewInspect, previewAction, publicPreviewLifecycle, previewDecorationMeasurement, initialPreviewFailure, ruleWindowLifecycle };

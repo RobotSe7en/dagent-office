@@ -648,3 +648,85 @@ test('composed native plain and rich text formats preserve source styles and fie
   }
   expect(result.retainedMeasurements).toBe(0); expect(result.retainedSources).toBe(0);
 });
+
+for (const rtl of [false, true]) test(`composed native conditional rules and validation use current source in ${rtl ? 'RTL' : 'LTR'}`, async ({ page }) => {
+  const files = await importXlsx(readFileSync('examples/xlsx/06-rules-validation.xlsx'), { documentId: 'rules-window' });
+  const report = await page.evaluate(async ({ entries, rtl }) => window.workbookGridHost.windowLayoutMeasurement(entries,
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 420, heightPt: 220, scrollLeftPt: 0, scrollTopPt: 0 } }], rtl), { entries: [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]), rtl });
+  const result = report.results[0]!, cell = (row: number, column: number) => result.cells.find(cell => cell.row === row && cell.column === column)!;
+  expect(report.unchanged).toBe(true); expect(result.retainedSources).toBe(0); expect(result.same).toBe(true);
+  // Independent source DXF 0 is FF9C0006; DXF 1 changes only fill.
+  expect(cell(4, 0).color).toBe('rgb(156, 0, 6)'); expect(cell(1, 0).color).not.toBe('rgb(156, 0, 6)');
+  expect(result.fillPaints.find(cell => cell.row === 2 && cell.column === 1)!.color).toBe('rgba(198,239,206,1)');
+  expect(result.fillPaints.find(cell => cell.row === 1 && cell.column === 1)!.color).not.toBe('rgba(198,239,206,1)');
+  expect(result.rules!.cells.filter(cell => cell.column === 4).map(cell => cell.validation?.state)).toEqual(['valid', 'invalid', 'valid', 'valid', 'valid', 'valid', 'valid']);
+  const fills = (column: number) => result.fillPaints.filter(cell => cell.column === column && cell.row >= 1 && cell.row <= 5).map(cell => cell.color);
+  expect(fills(2)[0]).toBe('rgb(248, 105, 107)'); expect(fills(2).at(-1)).toBe('rgb(99, 190, 123)');
+  expect(fills(3)[0]).toBe('rgb(248, 105, 107)'); expect(fills(3).at(-1)).toBe('rgb(99, 190, 123)');
+});
+
+test('native color scales preserve constant and repeated threshold paints from independent PDFs', async ({ page }) => {
+  const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-color-scales.xlsx'), { documentId: 'scale-paints' });
+  const report = await page.evaluate(async entries => window.workbookGridHost.windowLayoutMeasurement(entries,
+    Array.from({ length: 8 }, (_, index) => ({ sheetId: `sheet-${index + 1}`, viewport: { widthPt: 150, heightPt: 110, scrollLeftPt: 0, scrollTopPt: 0 } }))), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  const red = 'rgb(255, 0, 0)', yellow = 'rgb(255, 255, 0)', green = 'rgb(0, 255, 0)';
+  const expected = [[red, red, red], [red, red, red], [red, 'rgb(128, 127, 0)', green], [green, green, green], [green, green, green], [red, yellow, green], [red, red, green], [red, green, green]];
+  for (const [index, result] of report.results.entries()) expect(result.fillPaints.filter(cell => cell.column === 0 && cell.row < 3).map(cell => cell.color)).toEqual(expected[index]);
+  expect(report.unchanged).toBe(true);
+});
+
+for (const rtl of [false, true]) test(`conditional property priority overrides table and direct formatting without speculative fallback in ${rtl ? 'RTL' : 'LTR'}`, async ({ page }) => {
+  const files = new Map(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-table-style-precedence.xlsx'), { documentId: 'conditional-precedence' }));
+  const encoder = new TextEncoder(), decoder = new TextDecoder(), metadata = JSON.parse(decoder.decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata;
+  const origin = { row: 0, column: 0 }, ranges = [{ from: origin, to: { row: 2, column: 1 } }];
+  metadata.workbook.sheets[0]!.conditionalRules = [
+    { ruleId: 'unknown', priority: 1, kind: 'expression', expression: '=FUTUREFUNC()', origin, ranges: [{ from: { row: 0, column: 1 }, to: { row: 0, column: 1 } }], stopIfTrue: false, cssClass: 'cf-unknown' },
+    { ruleId: 'first', priority: 2, kind: 'expression', expression: '=TRUE', origin, ranges, stopIfTrue: false, cssClass: 'cf-first', numberFormatId: 'num-2' },
+    { ruleId: 'stop', priority: 3, kind: 'expression', expression: '=ROW()=2', origin, ranges, stopIfTrue: true },
+    { ruleId: 'last', priority: 4, kind: 'expression', expression: '=TRUE', origin, ranges, stopIfTrue: false, cssClass: 'cf-last', numberFormatId: 'num-0' },
+  ];
+  files.set('metadata.json', encoder.encode(JSON.stringify(metadata)));
+  files.set('styles.css', encoder.encode(decoder.decode(files.get('styles.css')!) + '.cf-first{font-weight:normal;color:#112233}.cf-last{font-style:italic;font-weight:bold;color:#ff0000;background-color:#ffff00}.cf-unknown{color:#ff00ff}'));
+  const report = await page.evaluate(({ entries, rtl }) => window.workbookGridHost.windowLayoutMeasurement(entries,
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 240, heightPt: 160, scrollLeftPt: 0, scrollTopPt: 0 } }], rtl), { entries: [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]), rtl });
+  const result = report.results[0]!, cell = (row: number, column: number) => result.cells.find(cell => cell.row === row && cell.column === column)!;
+  expect(cell(0, 0).weight).toBe('400'); expect(cell(0, 0).color).toBe('rgb(17, 34, 51)');
+  expect(cell(0, 1).color).toBe('rgb(255, 255, 255)');
+  expect(cell(1, 0).text).toBe('2.00'); expect(cell(1, 0).color).toBe('rgb(17, 34, 51)');
+  expect(result.fillPaints.find(cell => cell.row === 0 && cell.column === 0)!.color).toBe('rgb(255, 255, 0)');
+  expect(result.fillPaints.find(cell => cell.row === 1 && cell.column === 0)!.color).not.toBe('rgb(255, 255, 0)');
+  expect(result.rules!.cells.find(cell => cell.row === 1 && cell.column === 0)!.conditional.map(rule => rule.ruleId)).toEqual(['first', 'stop']);
+  expect(report.unchanged).toBe(true); expect(result.retainedSources).toBe(0);
+});
+
+test('rules display current formula values while preserving deliberately wrong native caches and derived text has no source offsets', async ({ page }) => {
+  const files = new Map(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-scalar-semantics.xlsx'), { documentId: 'current-rule-display' }));
+  const encoder = new TextEncoder(), metadata = JSON.parse(new TextDecoder().decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata;
+  metadata.workbook.sheets[0]!.conditionalRules = [{ ruleId: 'current', kind: 'expression', expression: '=TRUE', priority: 1, stopIfTrue: false, origin: { row: 0, column: 4 }, ranges: [{ from: { row: 0, column: 4 }, to: { row: 14, column: 4 } }] }];
+  files.set('metadata.json', encoder.encode(JSON.stringify(metadata)));
+  const report = await page.evaluate(entries => window.workbookGridHost.windowLayoutMeasurement(entries,
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 420, heightPt: 300, scrollLeftPt: 0, scrollTopPt: 0 } }]), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  const cells = report.results[0]!.cells.filter(cell => cell.column === 4 && cell.row <= 14), expected = JSON.parse(readFileSync('docs/evidence/xlsx-scalar-semantics.json', 'utf8')).cases;
+  for (const cell of cells) {
+    const value = expected[cell.row].expected;
+    expect(cell.text).toBe(value.type === 'boolean' ? value.value ? 'TRUE' : 'FALSE' : String(value.value));
+    expect(cell.offsets).toEqual([]);
+  }
+  expect(cells.length).toBeGreaterThan(10); expect(report.unchanged).toBe(true);
+  expect(openDocument(files, { kind: 'workbook' }).getCell('sheet-1', 0, 4)!.value).toEqual({ type: 'number', value: 999 });
+});
+
+test('conditional font attributes override rich runs while text-format explicit color keeps its declared precedence', async ({ page }) => {
+  const files = new Map(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-text-formats.xlsx'), { documentId: 'rich-rule-font' }));
+  const encoder = new TextEncoder(), decoder = new TextDecoder(), metadata = JSON.parse(decoder.decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata;
+  metadata.workbook.sheets[0]!.conditionalRules = [{ ruleId: 'font', kind: 'expression', expression: '=TRUE', priority: 1, stopIfTrue: false, origin: { row: 10, column: 0 },
+    ranges: [{ from: { row: 10, column: 0 }, to: { row: 11, column: 0 } }], cssClass: 'conditional-font' }];
+  files.set('metadata.json', encoder.encode(JSON.stringify(metadata)));
+  files.set('styles.css', encoder.encode(decoder.decode(files.get('styles.css')!) + '.conditional-font{font-weight:normal;color:#112233}'));
+  const report = await page.evaluate(entries => window.workbookGridHost.windowLayoutMeasurement(entries,
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 300, heightPt: 400, scrollLeftPt: 0, scrollTopPt: 0 } }]), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  const cells = report.results[0]!.cells;
+  expect(cells.find(cell => cell.row === 10 && cell.column === 0)!.runs.map(run => [run.color, run.weight, run.style])).toEqual([['rgb(255, 0, 0)', '400', 'normal'], ['rgb(255, 0, 0)', '400', 'italic']]);
+  expect(cells.find(cell => cell.row === 11 && cell.column === 0)!.runs.map(run => [run.color, run.weight, run.style])).toEqual([['rgb(17, 34, 51)', '400', 'normal'], ['rgb(17, 34, 51)', '400', 'italic']]);
+  expect(report.unchanged).toBe(true);
+});

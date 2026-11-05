@@ -1,5 +1,5 @@
 import { DocumentError } from "@dagent-office/core";
-import type { WorkbookDisplayFormat, WorkbookNumberFormatter, WorkbookSnapshot } from "@dagent-office/core";
+import type { WorkbookDisplayFormat, WorkbookNumberFormatter, WorkbookRuleReadResponse, WorkbookSnapshot } from "@dagent-office/core";
 import type { WorkbookFormulaSource, WorkbookNumberDisplay } from "@dagent-office/core";
 import type { FontResolution } from "../contracts.js";
 import { WorkbookCellSources } from "./cell-source.js";
@@ -49,13 +49,14 @@ export interface WorkbookWindowLayout {
  * Objects/rules/automatic row heights belong to the enclosing preview stage. */
 export function layoutWorkbookWindow(surface: Pick<WorkbookSurface, "source" | "view">, snapshot: WorkbookSnapshot, frame: WorkbookWindowFrame,
   dimensions: { readonly rows: AxisDimensions; readonly columns: AxisDimensions }, formatter: WorkbookNumberFormatter,
-  options: WorkbookWindowLayoutOptions): WorkbookWindowLayout {
+  options: WorkbookWindowLayoutOptions, rules?: WorkbookRuleReadResponse): WorkbookWindowLayout {
   const maxNodes = options.maxNodes ?? 50_000, maxSourceNodes = options.maxSourceNodes ?? 50_000, maxTextUnits = options.maxTextCodeUnits ?? 8 * 1024 * 1024;
   if (![maxNodes, maxSourceNodes, maxTextUnits].every(n => Number.isSafeInteger(n) && n > 0) || !Number.isFinite(options.normalSpaceWidthPx) || options.normalSpaceWidthPx < 0
     || surface.source.ownerDocument !== surface.view.ownerDocument || !surface.view.isConnected) throw new DocumentError("InvalidOperation", "Workbook window layout requires one connected surface and positive budgets.");
   const document = surface.source.ownerDocument, sheet = snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === frame.sheetId);
   if (!sheet) throw new DocumentError("InvalidOperation", "The workbook window has no source worksheet.");
-  const sources = new WorkbookCellSources(surface.source, snapshot, frame, maxSourceNodes);
+  const sources = new WorkbookCellSources(surface.source, snapshot, frame, maxSourceNodes, rules);
+  const current = new Map(rules?.cells.map(cell => [cell.row * 16_384 + cell.column, cell.current]));
   try {
     const styles = new Map<number, CSSStyleDeclaration>();
     const style = (row: number, column: number): CSSStyleDeclaration => {
@@ -79,27 +80,29 @@ export function layoutWorkbookWindow(surface: Pick<WorkbookSurface, "source" | "
     };
     for (const projection of frame.projections) {
       const cell = frame.getCell(projection.row, projection.column), source = sources.get(projection.row, projection.column)!;
-      if (!cell || cell.value.type === "blank") continue;
+      const calculated = current.get(projection.row * 16_384 + projection.column);
+      const value = calculated?.kind === "value" ? calculated.value : cell?.value;
+      if (!cell || !value || value.type === "blank") continue;
       const format: WorkbookDisplayFormat | undefined = source.format.numberFormatId ? formats.get(source.format.numberFormatId) : undefined;
       const size = { widthPt: projection.rect.width, heightPt: projection.rect.height, bordered: bordered(projection) };
-      if (cell.value.type === "number") {
-        locations.set(projection, { kind: "number", index: numbers.length }); numbers.push({ source, value: cell.value.value, ...(format ? { format } : {}), ...size });
+      if (value.type === "number") {
+        locations.set(projection, { kind: "number", index: numbers.length }); numbers.push({ source, value: value.value, ...(format ? { format } : {}), ...size });
         continue;
       }
-      if (cell.value.type === "text" && format) {
-        const display = formatter.format(cell.value.value, format);
+      if (value.type === "text" && format) {
+        const display = formatter.format(value.value, format);
         if (display.kind !== "parts" || display.color || display.parts.some(part => part.kind !== "text")
           || display.parts.length !== 1 || display.parts[0]?.kind !== "text" || !display.parts[0].source) {
           // Text formats apply to both plain and rich values. @ fields retain
           // source runs; affixes are derived and a format color overrides runs.
-          locations.set(projection, { kind: "formatted", index: formatted.length }); formatted.push({ source, value: cell.value.value, format, ...size }); continue;
+          locations.set(projection, { kind: "formatted", index: formatted.length }); formatted.push({ source, value: value.value, format, derived: Boolean(cell.formula), ...size }); continue;
         }
       }
-      const text = cell.value.type === "text" ? createWorkbookTextView(source, remaining())
-        : createWorkbookNumberText(source, [{ kind: "text", text: cell.value.type === "boolean" ? cell.value.value ? "TRUE" : "FALSE" : cell.value.value }], undefined, remaining());
+      const text = value.type === "text" && !cell.formula ? createWorkbookTextView(source, remaining())
+        : createWorkbookNumberText(source, [{ kind: "text", text: value.type === "boolean" ? value.value ? "TRUE" : "FALSE" : value.value }], undefined, remaining());
       textNodes += text.nodes + 1; units += text.element.textContent?.length ?? 0;
       if (units > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Workbook window text exceeds its cumulative source-text budget.");
-      locations.set(projection, { kind: "text", index: texts.length }); texts.push({ source, text, valueType: cell.value.type, ...size });
+      locations.set(projection, { kind: "text", index: texts.length }); texts.push({ source, text, valueType: value.type, ...size });
     }
     const rich = layoutWorkbookTexts(surface.view, texts, options.normalSpaceWidthPx, maxNodes);
     textNodes = rich.cells.reduce((sum, cell) => sum + cell.text.nodes + 1, 0);

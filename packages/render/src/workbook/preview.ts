@@ -34,9 +34,12 @@ function reportOf(window: WorkbookRenderedWindow): WorkbookRenderReport {
     if (formula) counts[formula.cacheState]++;
   }
   const { documentId, revision, sheetId, storedCellCount, layout } = window.frame;
+  const ruleFormulaValues = { current: 0, unavailable: 0 };
+  for (const cell of window.rules?.cells ?? []) if (seen.has(cell.row * 16_384 + cell.column) && window.frame.getCell(cell.row, cell.column)?.formula)
+    ruleFormulaValues[cell.current.kind === "value" ? "current" : "unavailable"]++;
   return Object.freeze({ kind: "workbook", layout: "grid", documentId, revision, sheetId, viewport: viewportOf(window),
     maxScrollLeftPt: layout.maxScrollLeftPt, maxScrollTopPt: layout.maxScrollTopPt, visibleCellCount: seen.size, storedCellCount,
-    objectFragmentCount: window.objects.length, formulaCaches: Object.freeze(counts), diagnostics: window.diagnostics, fonts: window.fonts,
+    objectFragmentCount: window.objects.length, formulaCaches: Object.freeze(counts), ruleFormulaValues: Object.freeze(ruleFormulaValues), diagnostics: window.diagnostics, fonts: window.fonts,
     usedFallbackLineMetrics: window.usedFallbackLineMetrics });
 }
 
@@ -46,7 +49,7 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
   if (Object.keys(options).some(key => !["title", "widthPt", "heightPt", "sheetId", "locale", "limits", "onError", "onSelectionChange"].includes(key)))
     throw new DocumentError("InvalidOperation", "Workbook preview received an unsupported option.");
   const config = { ...options, limits: { ...options.limits, read: { ...options.limits?.read }, cells: { ...options.limits?.cells },
-    annotations: { ...options.limits?.annotations }, drawings: { ...options.limits?.drawings, assets: { ...options.limits?.drawings?.assets } } } };
+    annotations: { ...options.limits?.annotations }, rules: { ...options.limits?.rules }, drawings: { ...options.limits?.drawings, assets: { ...options.limits?.drawings?.assets } } } };
   let desired: WorkbookViewport = Object.freeze({ widthPt: config.widthPt ?? 600, heightPt: config.heightPt ?? 360, scrollLeftPt: 0, scrollTopPt: 0 });
   let active: PreviewContext | undefined, pending: { cancel(): void } | undefined, disposed = false, generation = 0;
   let selection: DocumentSelection | undefined, latest: Promise<void> = Promise.resolve();
@@ -78,7 +81,7 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
     }),
   });
   const clearSelection = (): void => {
-    chrome.cell("", "");
+    chrome.cell("", ""); chrome.validation("");
     if (!selection) return; selection = undefined;
     const ticket = generation;
     queueMicrotask(() => { if (!disposed && ticket === generation && !selection) {
@@ -89,8 +92,12 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
     const window = context.controller.current!;
     context.windows.get(window.element)!.commitChrome(); desired = viewportOf(window); clearSelection();
     const report = reportOf(window), counts = report.formulaCaches;
-    chrome.status(counts.stale || counts.unavailable ? "当前窗口含过期或不可用的公式结果。"
-      : counts.imported ? "当前窗口的公式结果来自导入缓存。" : "只读预览");
+    chrome.status(report.diagnostics.some(item => ["rule-current-value-unavailable", "conditional-rule-unavailable", "validation-unavailable"].includes(item.code))
+      ? "部分条件格式或数据验证无法按当前值求出。"
+      : report.diagnostics.some(item => item.code === "validation-invalid") ? "当前窗口含不符合数据验证的来源值，选中单元格可查看提示。"
+      : report.ruleFormulaValues.current === Object.values(counts).reduce((a, b) => a + b, 0) && report.ruleFormulaValues.current > 0 ? "当前窗口的公式已按当前值求出。"
+      : counts.stale || counts.unavailable ? "当前窗口含过期或不可用的公式结果。"
+      : counts.imported ? "当前窗口含导入的公式缓存。" : "只读预览");
     resolveReady();
   };
   const observe = (work: Promise<void>, ticket: number): void => {
@@ -163,6 +170,15 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
             const anchor = Object.freeze({ kind: "cells" as const, sheetId: sheet.sheetId, ranges: Object.freeze([Object.freeze({ from: Object.freeze({ ...range.from }), to: Object.freeze({ ...range.to }) })]) });
             selection = Object.freeze({ documentId: snapshot.manifest.documentId, baseRevision: snapshot.manifest.revision, anchor });
             chrome.cell(workbookColumnLabel(cell.column) + (cell.row + 1), value?.formula?.expression ?? (value?.value.type === "blank" || !value ? "" : String(value.value.value)));
+            const validation = window.rules?.cells.find(item => item.row === cell.row && item.column === cell.column)?.validation;
+            const definition = validation && sheet.dataValidations?.find(rule => rule.ruleId === validation.ruleId);
+            const messages: string[] = [];
+            if (definition && validation) {
+              if (!sheet.disableValidationPrompts && definition.showInputMessage) messages.push(...[definition.promptTitle, definition.prompt].filter(Boolean));
+              if (validation.state !== "none") messages.push(validation.state === "valid" ? "当前值符合验证规则。" : validation.state === "invalid" ? "当前值不符合验证规则。" : "当前值无法校验。" + (validation.issue?.functionName ? " 未支持函数：" + validation.issue.functionName : ""));
+              if (!sheet.disableValidationPrompts && validation.state === "invalid" && definition.showErrorMessage) messages.push(...[definition.errorTitle, definition.error].filter(Boolean));
+            }
+            chrome.validation(messages.join("\n"));
             try { config.onSelectionChange?.(selection); } catch { /* Host-owned callback. */ }
           }), { signal: events.signal });
           return { get nodes() { return controls.nodes; }, get fonts() { return controls.fonts; }, dispose() { events.abort(); controls.dispose(); } };

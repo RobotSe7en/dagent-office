@@ -1,10 +1,11 @@
 import { DocumentError } from "@dagent-office/core";
-import type { WorkbookCell, WorkbookSnapshot } from "@dagent-office/core";
+import type { WorkbookCell, WorkbookRuleReadResponse, WorkbookSnapshot } from "@dagent-office/core";
 import { markViewNode } from "../view-nodes.js";
 import { workbookCellFormat } from "./cell-format.js";
 import type { WorkbookCellFormat } from "./cell-format.js";
 import type { WorkbookWindowFrame } from "./window-loader.js";
 import { WorkbookTableAppearance } from "./table-appearance.js";
+import { WorkbookConditionalAppearance } from "./conditional-appearance.js";
 
 export interface WorkbookSourceCell { readonly element: HTMLTableCellElement; readonly format: WorkbookCellFormat }
 const cellAttributes = new Set(["data-column", "data-value-type", "data-value", "data-formula", "data-cache-state", "data-format-id", "class"]);
@@ -19,7 +20,7 @@ export class WorkbookCellSources {
   private readonly root: HTMLElement;
   private readonly cells = new Map<number, WorkbookSourceCell>();
   private disposed = false;
-  constructor(scope: HTMLElement, snapshot: WorkbookSnapshot, frame: WorkbookWindowFrame, maxNodes = 50_000) {
+  constructor(scope: HTMLElement, snapshot: WorkbookSnapshot, frame: WorkbookWindowFrame, maxNodes = 50_000, rules?: WorkbookRuleReadResponse) {
     const document = scope.ownerDocument, sheet = snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === frame.sheetId);
     if (!sheet || snapshot.manifest.documentId !== frame.documentId || snapshot.manifest.revision !== frame.revision) throw new DocumentError("RevisionConflict", "Cell source styles require the same workbook revision as their window.");
     if (!scope.isConnected || !document.defaultView || !Number.isSafeInteger(maxNodes) || maxNodes < 1) throw new DocumentError("InvalidOperation", "Cell source measurement requires a connected surface and a positive node budget.");
@@ -55,6 +56,10 @@ export class WorkbookCellSources {
       if (sheet.tables?.length) {
         const appearance = new WorkbookTableAppearance(snapshot, sheet, document, account);
         for (const [key, source] of this.cells) this.cells.set(key, appearance.apply({ row: Math.floor(key / 16_384), column: key % 16_384 }, source));
+      }
+      if (rules) {
+        const appearance = new WorkbookConditionalAppearance(document, sheet, rules, account);
+        for (const [key, source] of this.cells) this.cells.set(key, appearance.apply(key, source));
       }
     } catch (error) { this.root.remove(); this.root.replaceChildren(); this.cells.clear(); throw error; }
   }

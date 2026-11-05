@@ -13,6 +13,7 @@ export interface WorkbookPreviewChrome {
   readonly canvas: HTMLElement;
   prepare(window: WorkbookRenderedWindow, snapshot: WorkbookSnapshot): () => void;
   cell(address: string, value: string): void;
+  validation(message: string): void;
   status(message: string, error?: boolean): void;
   busy(value: boolean): void;
   dispose(): void;
@@ -39,7 +40,8 @@ export function createWorkbookPreviewChrome(container: HTMLElement, title: strin
   x.tabIndex = y.tabIndex = 0; const xTrack = document.createElement("div"), yTrack = document.createElement("div"); xTrack.style.height = "1px"; yTrack.style.width = "1px"; x.append(xTrack); y.append(yTrack);
   board.append(rows, columns, canvas, x, y);
   const tabs = document.createElement("div"), status = document.createElement("div"); tabs.className = "tabs"; tabs.setAttribute("role", "tablist"); tabs.setAttribute("aria-label", "工作表");
-  status.className = "status"; status.setAttribute("role", "status"); root.append(toolbar, board, tabs, status); shadow.append(style, root); container.append(element);
+  const validation = document.createElement("div"); validation.className = "status"; validation.setAttribute("role", "note"); validation.setAttribute("aria-live", "polite"); validation.setAttribute("aria-label", "数据验证"); validation.hidden = true;
+  status.className = "status"; status.setAttribute("role", "status"); root.append(toolbar, board, tabs, validation, status); shadow.append(style, root); container.append(element);
   let horizontal: WorkbookScrollAxis | undefined, vertical: WorkbookScrollAxis | undefined, left = 0, top = 0, trackLeft = 0, trackTop = 0, busy = false;
   x.addEventListener("scroll", () => { if (x.scrollLeft === trackLeft) return; trackLeft = x.scrollLeft; if (!busy && horizontal) actions.scroll(horizontal.fromTrack(trackLeft), top); }, { signal: controls.signal });
   y.addEventListener("scroll", () => { if (y.scrollTop === trackTop) return; trackTop = y.scrollTop; if (!busy && vertical) actions.scroll(left, vertical.fromTrack(trackTop)); }, { signal: controls.signal });
@@ -88,11 +90,12 @@ export function createWorkbookPreviewChrome(container: HTMLElement, title: strin
       };
     },
     cell(nextAddress: string, nextValue: string) { address.value = nextAddress; value.value = nextValue; },
+    validation(message: string) { validation.textContent = message; validation.hidden = !message; },
     status(message: string, error = false) { status.textContent = message; status.style.color = error ? "#a12d22" : "#596273"; },
     busy(value: boolean) { busy = value; element.setAttribute("aria-busy", String(value)); comments.disabled = value; for (const button of tabs.querySelectorAll("button")) button.disabled = value; },
     dispose() {
       controls.abort(); element.remove(); element.removeAttribute("aria-label");
-      address.value = value.value = ""; status.textContent = "";
+      address.value = value.value = ""; status.textContent = validation.textContent = "";
       rows.replaceChildren(); columns.replaceChildren(); tabs.replaceChildren(); canvas.replaceChildren(); root.replaceChildren(); shadow.replaceChildren();
     },
   });

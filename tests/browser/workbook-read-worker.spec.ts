@@ -23,6 +23,12 @@ test('native XLSX pictures and charts stay in a host Worker and feed the public 
     expect(result.first.objectFragmentCount).toBeGreaterThan(0); expect(result.first.documentId).toBe(name); expect(result.largestReplyUnits).toBeLessThan(1024 * 1024);
   }
 });
+test('native conditional and validation states reach the public preview through the host Worker', async ({ page }) => {
+  const result = await page.evaluate(({ code, bytes }) => window.workbookReadHost.nativeWorkerRead(code, bytes, 'worker-rules', false), { code: workerCode, bytes: [...readFileSync('examples/xlsx/06-rules-validation.xlsx')] });
+  expect(result).toMatchObject({ frozen: true, retained: true, failures: [], first: { diagnostics: [expect.objectContaining({ code: 'validation-invalid', row: 2, column: 4 })] } });
+  expect(result.ruleStates!.cells.map(cell => cell.validation?.state)).toEqual(['valid', 'invalid', 'valid', 'valid', 'valid', 'valid', 'valid']);
+  expect(result.largestReplyUnits).toBeLessThan(1024 * 1024);
+});
 test('10,000 actual XLSX rows open and scroll through the production read transport without moving full cell chunks to the main thread', async ({ page }, info) => {
   test.setTimeout(120_000);
   const bytes = [...readFileSync('examples/xlsx/15-ten-thousand-rows.xlsx')];

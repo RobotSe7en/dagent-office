@@ -1,4 +1,4 @@
-import { createWorkbookNumberFormatter, openDocument } from '@dagent-office/core';
+import { createWorkbookNumberFormatter, DEFAULT_WORKBOOK_RULE_LIMITS, openDocument, readWorkbookRules } from '@dagent-office/core';
 import type { WorkbookDocumentMetadata } from '@dagent-office/core';
 import { createWorkbookSurface } from '../../../packages/render/src/workbook/surface.js';
 import { measureWorkbookColumnFont } from '../../../packages/render/src/workbook/column-font.js';
@@ -24,7 +24,10 @@ export async function windowLayoutMeasurement(entries: readonly [string, number[
       const normal = measureWorkbookColumnFont(surface.source, snapshot.metadata.workbook, sheetId);
       const dimensions = worksheetDimensions(snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === sheetId)!, normal.maximumDigitWidthPx);
       await loader.load(sheetId, dimensions, viewport);
-      const rendered = layoutWorkbookWindow(surface, snapshot, loader.frame!, dimensions, formatter, { normalSpaceWidthPx: normal.spaceWidthPx });
+      const sheet = snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === sheetId)!;
+      const rules = sheet.conditionalRules?.length || sheet.dataValidations?.length ? await readWorkbookRules(model, { documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision,
+        sheetId, coordinates: loader.frame!.sourceCoordinates, ...DEFAULT_WORKBOOK_RULE_LIMITS }) : undefined;
+      const rendered = layoutWorkbookWindow(surface, snapshot, loader.frame!, dimensions, formatter, { normalSpaceWidthPx: normal.spaceWidthPx }, rules);
       const before = surface.view.firstChild; const detached = !rendered.element.isConnected && surface.view.firstChild === before;
       surface.view.replaceChildren(rendered.element); surface.frame.style.setProperty('visibility', 'visible', 'important');
       const view = surface.document.defaultView!;
@@ -44,7 +47,7 @@ export async function windowLayoutMeasurement(entries: readonly [string, number[
       }
       const same = rendered.element === surface.view.firstChild;
       const fillNodes = [...rendered.element.querySelector('[data-office-view="workbook-fills"]')!.children];
-      results.push({ sheetId, cells, detached, same, errors, fonts: rendered.fonts.length,
+      results.push({ sheetId, cells, detached, same, errors, fonts: rendered.fonts.length, rules,
         fillPaints: frameFills(),
         borderColors: [...rendered.element.querySelectorAll('line')].filter(line => !line.closest('[data-office-view="workbook-gridlines"]')).map(line => line.getAttribute('stroke')),
         gridLines: rendered.element.querySelectorAll('[data-office-view="workbook-gridlines"]').length,

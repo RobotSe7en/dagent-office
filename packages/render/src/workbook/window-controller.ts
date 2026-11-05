@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookNumberFormatter, WorkbookSnapshot } from "@dagent-office/core";
+import { DEFAULT_WORKBOOK_RULE_LIMITS, DocumentError } from "@dagent-office/core";
+import type { WorkbookNumberFormatter, WorkbookRuleReadLimits, WorkbookRuleReadResponse, WorkbookSnapshot } from "@dagent-office/core";
 import type { FontResolution } from "../contracts.js";
 import type { WorkbookAssetSource } from "./assets.js";
 import { projectWorkbookAnnotations } from "./annotation-projection.js";
@@ -19,11 +19,15 @@ import { WorkbookWindowLoader } from "./window-loader.js";
 import type { WorkbookViewportReadLimits, WorkbookWindowFrame } from "./window-loader.js";
 import { checkWindowIdentity } from "./window-source.js";
 import type { WorkbookWindowSource } from "./window-source.js";
+import { checkedWorkbookRules } from "./rule-response.js";
+import { workbookRuleDiagnostics } from "./rule-source.js";
+import type { WorkbookRuleSource, WorkbookRuleDiagnostic } from "./rule-source.js";
 
 export interface WorkbookWindowProviders {
   readonly cells: WorkbookWindowSource;
   readonly assets: WorkbookAssetSource;
   readonly charts: WorkbookChartSource;
+  readonly rules?: WorkbookRuleSource;
 }
 export interface WorkbookWindowControllerOptions {
   /** Combined final cell/object nodes, independently of each phase's budget. */
@@ -32,6 +36,7 @@ export interface WorkbookWindowControllerOptions {
   readonly cells?: Omit<WorkbookWindowLayoutOptions, "normalSpaceWidthPx">;
   readonly drawings?: WorkbookDrawingLayoutLimits;
   readonly annotations?: WorkbookAnnotationProjectionLimits;
+  readonly rules?: Partial<WorkbookRuleReadLimits>;
 }
 export interface WorkbookRenderedWindow {
   readonly frame: WorkbookWindowFrame;
@@ -42,7 +47,8 @@ export interface WorkbookRenderedWindow {
   readonly objects: WorkbookDrawingLayout["objects"];
   readonly annotations: WorkbookAnnotationWindow;
   readonly fonts: readonly FontResolution[];
-  readonly diagnostics: WorkbookDrawingLayout["diagnostics"];
+  readonly diagnostics: readonly (WorkbookDrawingLayout["diagnostics"][number] | WorkbookRuleDiagnostic)[];
+  readonly rules?: WorkbookRuleReadResponse;
   readonly usedFallbackLineMetrics: boolean;
 }
 export interface WorkbookWindowDecoration {
@@ -62,6 +68,7 @@ export class WorkbookWindowController {
   private readonly content: WorkbookContentSources;
   private readonly options: WorkbookWindowControllerOptions;
   private readonly maxNodes: number;
+  private readonly ruleLimits: WorkbookRuleReadLimits;
   private readonly sheets = new Map<string, { readonly normal: WorkbookColumnFont; readonly dimensions: ReturnType<typeof worksheetDimensions> }>();
   private pending: { cancel(): void } | undefined;
   private active: { readonly state: WorkbookRenderedWindow; readonly drawings: WorkbookDrawingLayout; readonly decoration?: WorkbookWindowDecoration } | undefined;
@@ -70,11 +77,15 @@ export class WorkbookWindowController {
   constructor(private readonly surface: WorkbookSurface, private readonly providers: WorkbookWindowProviders,
     private readonly formatter: WorkbookNumberFormatter, input: WorkbookWindowControllerOptions = {}, private readonly decorate: WorkbookWindowDecorator | undefined = undefined) {
     this.maxNodes = input.maxNodes ?? 50_000;
-    if (!Number.isSafeInteger(this.maxNodes) || this.maxNodes < 1 || Object.keys(input).some(key => !["maxNodes", "read", "cells", "drawings", "annotations"].includes(key))
+    this.ruleLimits = Object.freeze({ ...DEFAULT_WORKBOOK_RULE_LIMITS, ...input.rules });
+    if (Object.keys(this.ruleLimits).some(key => !Object.hasOwn(DEFAULT_WORKBOOK_RULE_LIMITS, key)) || !Object.values(this.ruleLimits).every(value => Number.isSafeInteger(value) && value > 0))
+      throw new DocumentError("InvalidOperation", "Workbook rules require supported positive safe-integer budgets.");
+    if (!Number.isSafeInteger(this.maxNodes) || this.maxNodes < 1 || Object.keys(input).some(key => !["maxNodes", "read", "cells", "drawings", "annotations", "rules"].includes(key))
       || !surface.source.isConnected || !surface.view.isConnected || surface.source.ownerDocument !== surface.document || surface.view.ownerDocument !== surface.document
       || surface.view.childNodes.length) throw new DocumentError("InvalidOperation", "A workbook controller requires its own empty connected surface and supported node budget.");
     this.snapshot = providers.cells.snapshot;
     checkWindowIdentity(providers.assets.snapshot.manifest, this.snapshot); checkWindowIdentity(providers.charts.snapshot.manifest, this.snapshot);
+    if (providers.rules) checkWindowIdentity(providers.rules.snapshot.manifest, this.snapshot);
     this.options = Object.freeze({ ...input, read: Object.freeze({ ...input.read }), cells: Object.freeze({ ...input.cells }), annotations: Object.freeze({ ...input.annotations }),
       drawings: Object.freeze({ ...input.drawings, ...(input.drawings?.assets ? { assets: Object.freeze({ ...input.drawings.assets }) } : {}) }) });
     // Validate read limits before retaining auxiliary content or starting work.
@@ -114,9 +125,18 @@ export class WorkbookWindowController {
       const { normal, dimensions } = metrics;
       if (!await Promise.race([loader.load(sheetId, dimensions, viewport), cancelled]) || !current()) return false;
       const frame = loader.frame!;
+      let rules: WorkbookRuleReadResponse | undefined;
+      if (sheet.conditionalRules?.length || sheet.dataValidations?.length) {
+        if (!this.providers.rules) throw new DocumentError("InvalidOperation", "This worksheet requires an authorized current-value rule provider.");
+        const request = Object.freeze({ documentId: frame.documentId, revision: frame.revision, sheetId, ...this.ruleLimits,
+          coordinates: Object.freeze(frame.sourceCoordinates.map(point => Object.freeze({ row: point.row, column: point.column }))) });
+        const response = await Promise.race([this.providers.rules.read(request, abort.signal), cancelled]);
+        if (response === false || !current()) return false;
+        rules = checkedWorkbookRules(response, request, this.snapshot);
+      }
       const annotations = projectWorkbookAnnotations(this.snapshot, frame, dimensions, this.options.annotations);
       const cells = layoutWorkbookWindow(this.surface, this.snapshot, frame, dimensions, this.formatter,
-        { ...this.options.cells, normalSpaceWidthPx: normal.spaceWidthPx, maxNodes: Math.min(this.maxNodes, this.options.cells?.maxNodes ?? this.maxNodes) });
+        { ...this.options.cells, normalSpaceWidthPx: normal.spaceWidthPx, maxNodes: Math.min(this.maxNodes, this.options.cells?.maxNodes ?? this.maxNodes) }, rules);
       const walker = this.surface.document.createTreeWalker(cells.element, 0xffff_ffff); let nodes = 1;
       while (walker.nextNode()) if (++nodes >= this.maxNodes) throw new DocumentError("ResourceLimitExceeded", "The combined workbook window exceeds its node budget.");
       if (nodes >= this.maxNodes) throw new DocumentError("ResourceLimitExceeded", "The combined workbook window has no remaining object-layer budget.");
@@ -125,7 +145,7 @@ export class WorkbookWindowController {
       if (!current()) return false;
       nodes += drawings.nodes; cells.element.append(drawings.element);
       const base: WorkbookRenderedWindow = Object.freeze({ frame, element: cells.element, nodes, dimensions, cells: cells.cells, objects: drawings.objects, annotations,
-        fonts: Object.freeze([...normal.fonts, ...cells.fonts, ...drawings.fonts]), diagnostics: drawings.diagnostics,
+        fonts: Object.freeze([...normal.fonts, ...cells.fonts, ...drawings.fonts]), diagnostics: Object.freeze([...drawings.diagnostics, ...rules ? workbookRuleDiagnostics(rules) : []]), ...(rules ? { rules } : {}),
         usedFallbackLineMetrics: cells.usedFallbackLineMetrics || drawings.usedFallbackLineMetrics });
       decoration = this.decorate?.(base, this.content, this.maxNodes - nodes);
       if (decoration && (!Number.isSafeInteger(decoration.nodes) || decoration.nodes < 0 || nodes + decoration.nodes > this.maxNodes))

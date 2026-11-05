@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { createWorkbook, openDocument } from '@dagent-office/core';
+import { createWorkbook, DEFAULT_WORKBOOK_RULE_LIMITS, openDocument, readWorkbookRules } from '@dagent-office/core';
 import type { WorkbookModel } from '@dagent-office/core';
 import { importXlsx } from '../../office/src/xlsx-import.js';
 import { connectWorkbookReads } from '../src/workbook/read-client.js';
@@ -15,6 +15,19 @@ const request = (model: WorkbookModel, maxCells = 20) => ({ documentId: model.sn
 const signal = () => new AbortController().signal;
 
 describe('host-owned immutable workbook read transport', () => {
+  it('transports current rule states through the same authorized revision and enforces cumulative server budgets', async () => {
+    const model = openDocument(await importXlsx(readFileSync('examples/xlsx/06-rules-validation.xlsx'), { documentId: 'transport' }), { kind: 'workbook' }), before = model.serialize();
+    const ports = new MessageChannel(), server = serveWorkbookReads(ports.port1, model, { readLimits: { maxRuleValues: 50 } }), client = await connectWorkbookReads(ports.port2);
+    const input = { documentId: 'transport', revision: 0, sheetId: 'sheet-1', coordinates: [{ row: 2, column: 2 }, { row: 2, column: 4 }], ...DEFAULT_WORKBOOK_RULE_LIMITS };
+    try {
+      await expect(client.rules!.read(input, signal())).rejects.toMatchObject({ code: 'ResourceLimitExceeded' });
+      const admitted = { ...input, maxValues: 50 };
+      expect(await client.rules!.read(admitted, signal())).toEqual(await readWorkbookRules(model, admitted));
+      await expect(client.rules!.read({ ...admitted, revision: 1 }, signal())).rejects.toMatchObject({ code: 'RevisionConflict' });
+      await expect(client.rules!.read({ ...admitted, coordinates: [{ row: -1, column: 0 }] }, signal())).rejects.toMatchObject({ code: 'InvalidOperation' });
+      expect(model.serialize()).toEqual(before);
+    } finally { client.dispose(); server.dispose(); }
+  });
   it('transports native windows, current chart values and copied images without serializing the package', async () => {
     for (const name of ['07-three-charts', '08-images-shapes']) {
       const model = openDocument(await importXlsx(readFileSync(`examples/xlsx/${name}.xlsx`), { documentId: 'transport' }), { kind: 'workbook' });
@@ -128,6 +141,21 @@ describe('host-owned immutable workbook read transport', () => {
       await expect(client.cells.read(batch, abort.signal)).rejects.toMatchObject({ code: 'OperationCancelled' });
       await tick(); expect(reads).toBeGreaterThan(0); expect(reads).toBeLessThan(21);
       expect((await client.cells.read(request(model), signal())).cells).toEqual([]);
+    } finally { client.dispose(); server.dispose(); }
+  });
+  it('delivers message cancellation during actual rule evaluation and keeps later reads isolated', async () => {
+    const files = new Map(createWorkbook({ documentId: 'transport' })), metadata = JSON.parse(new TextDecoder().decode(files.get('metadata.json')!));
+    metadata.workbook.sheets[0].conditionalRules = [{ ruleId: 'rule', kind: 'expression', expression: '=A1=0', priority: 1, stopIfTrue: false,
+      origin: { row: 0, column: 0 }, ranges: [{ from: { row: 0, column: 0 }, to: { row: 999, column: 0 } }] }];
+    files.set('metadata.json', new TextEncoder().encode(JSON.stringify(metadata)));
+    const model = openDocument(files, { kind: 'workbook' }), ports = new MessageChannel(), abort = new AbortController(); let reads = 0;
+    const server = serveWorkbookReads(ports.port1, { ...model, getCell(sheetId, row, column) { if (++reads === 1) abort.abort(); return model.getCell(sheetId, row, column); } });
+    const client = await connectWorkbookReads(ports.port2);
+    const input = { documentId: 'transport', revision: 0, sheetId: 'sheet-1', coordinates: Array.from({ length: 1000 }, (_, row) => ({ row, column: 0 })), ...DEFAULT_WORKBOOK_RULE_LIMITS };
+    try {
+      await expect(client.rules!.read(input, abort.signal)).rejects.toMatchObject({ code: 'OperationCancelled' });
+      await tick(); expect(reads).toBeGreaterThan(0); expect(reads).toBeLessThan(50);
+      expect((await client.rules!.read({ ...input, coordinates: [{ row: 0, column: 0 }] }, signal())).cells[0]!.conditional[0]!.state).toBe('match');
     } finally { client.dispose(); server.dispose(); }
   });
 });
