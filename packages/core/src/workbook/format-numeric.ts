@@ -2,7 +2,13 @@ import { checkLimit, invalid, unsupported } from "../document/validation.js";
 import { decimalMagnitude } from "./format-decimal.js";
 import type { NumberFormatSection, NumberFormatToken } from "./number-format.js";
 
-export type NumberDisplayPart = { readonly kind: "text"; readonly text: string } | { readonly kind: "space" | "fill"; readonly character: string };
+export type NumberDisplayPart = {
+  readonly kind: "text";
+  readonly text: string;
+  /** Original text-value offsets for an @ field. Literals and numeric/date
+   * displays have no source range, even if their characters happen to match. */
+  readonly source?: { readonly from: number; readonly to: number };
+} | { readonly kind: "space" | "fill"; readonly character: string };
 export interface NumberSeparators { readonly decimal: string; readonly group: string; readonly primaryGroupSize: number; readonly secondaryGroupSize: number }
 export interface NumericSectionDisplay {
   readonly parts: readonly NumberDisplayPart[];

@@ -8,6 +8,32 @@ function content(display: WorkbookNumberDisplay): string {
   return display.parts.map(part => part.kind === "text" ? part.text : `<${part.kind}:${part.character}>`).join("");
 }
 describe("public workbook number formatter", () => {
+  it("maps text fields by format structure, including identical affixes and repeated UTF-16 text", () => {
+    const formatter = createWorkbookNumberFormatter({ dateSystem: "1900" });
+    expect(formatter.format("ID ", { code: '"ID "@' })).toMatchObject({ kind: "parts", parts: [
+      { kind: "text", text: "ID " }, { kind: "text", text: "ID ", source: { from: 0, to: 3 } },
+    ] });
+    const repeated = formatter.format("😀禰󠄀", { code: '@"/"@' });
+    expect(repeated).toMatchObject({ kind: "parts", parts: [
+      { kind: "text", text: "😀禰󠄀", source: { from: 0, to: 5 } }, { kind: "text", text: "/" },
+      { kind: "text", text: "😀禰󠄀", source: { from: 0, to: 5 } },
+    ] });
+    if (repeated.kind !== "parts") throw new Error("Expected text parts");
+    expect(repeated.parts[1]).not.toHaveProperty("source"); expect(Object.isFrozen(repeated.parts[0])).toBe(true);
+    expect(formatter.format("001", { code: "0.00" })).toMatchObject({ parts: [{ kind: "text", text: "001", source: { from: 0, to: 3 } }] });
+    expect(formatter.format("", { code: '"prefix"@' })).toMatchObject({ parts: [{ kind: "text", text: "prefix" }, { kind: "text", text: "", source: { from: 0, to: 0 } }] });
+    expect(formatter.format("hidden", { code: ";;;" })).toMatchObject({ parts: [] });
+    expect(() => formatter.format("x".repeat(20000), { code: "@@" })).toThrowError(expect.objectContaining({ code: "ResourceLimitExceeded" }));
+    formatter.dispose();
+  });
+  it("matches native plain text-section observations without treating Calc's rich-text policy as acceptance", () => {
+    const evidence = JSON.parse(readFileSync("docs/evidence/xlsx-text-formats.json", "utf8")) as { samples: { value: string; code: string; text: string; rich?: boolean }[] };
+    const formatter = createWorkbookNumberFormatter({ dateSystem: "1900" });
+    const cases = evidence.samples.filter(sample => !sample.rich && !/[*_]/.test(sample.code));
+    expect(cases).toHaveLength(6);
+    for (const sample of cases) expect(content(formatter.format(sample.value, { code: sample.code })), sample.code).toBe(sample.text);
+    formatter.dispose();
+  });
   it("uses current values and the selected section's locale, preserving source types and native definitions", () => {
     const formatter = createWorkbookNumberFormatter({ dateSystem: "1900", hostLocale: "de-DE", documentLocale: "fr-FR" });
     const definition = Object.freeze({ formatId: "currency", code: '#,##0.00;[Red][$¥-804](#,##0.00)' });

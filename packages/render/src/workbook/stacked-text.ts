@@ -6,16 +6,21 @@ import type { WorkbookTextProjection, WorkbookTextView } from "./text-view.js";
  * Derived breaks add no source units; original text and UTF-16 offsets remain. */
 export function stackWorkbookText(text: WorkbookTextView, maxNodes: number): WorkbookTextView {
   if (typeof Intl.Segmenter !== "function") throw new DocumentError("UnsupportedFeature", "Stacked worksheet text requires Unicode grapheme segmentation.");
-  let source = text.projections;
-  const mapped = source.length > 0;
-  if (!mapped) {
-    const derived: WorkbookTextProjection[] = [], document = text.element.ownerDocument;
-    const walker = document.createTreeWalker(text.element, document.defaultView!.NodeFilter.SHOW_TEXT); let offset = 0;
-    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      if (derived.length >= maxNodes) throw new DocumentError("ResourceLimitExceeded", "Stacked numeric text exceeds its node budget.");
-      const next = offset + (node as Text).length; derived.push({ node: node as Text, from: offset, to: next }); offset = next;
-    }
-    source = derived;
+  const mapped = new Map<Text, WorkbookTextProjection>();
+  for (const projection of text.projections) {
+    if (mapped.has(projection.node) || !text.element.contains(projection.node) || !Number.isSafeInteger(projection.from) || projection.from < 0
+      || projection.to - projection.from !== projection.node.length) throw new DocumentError("InvalidOperation", "Stacked worksheet text has an inconsistent source projection.");
+    mapped.set(projection.node, projection);
+  }
+  // Grapheme boundaries belong to displayed text, which can interleave source
+  // fields, repeated @ fields and unmapped format literals. Source offsets
+  // need not be contiguous or monotonic in that display.
+  const source: { node: Text; from: number; to: number; mapping?: WorkbookTextProjection }[] = [], document = text.element.ownerDocument;
+  const walker = document.createTreeWalker(text.element, document.defaultView!.NodeFilter.SHOW_TEXT); let offset = 0;
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (source.length >= maxNodes) throw new DocumentError("ResourceLimitExceeded", "Stacked worksheet text exceeds its node budget.");
+    const next = offset + (node as Text).length, mapping = mapped.get(node as Text);
+    source.push({ node: node as Text, from: offset, to: next, ...(mapping ? { mapping } : {}) }); offset = next;
   }
   const content = source.map(projection => projection.node.data).join(""), boundaries: number[] = [];
   let nodes = text.nodes;
@@ -26,7 +31,7 @@ export function stackWorkbookText(text: WorkbookTextView, maxNodes: number): Wor
     // long cell can allocate an unbounded boundary array.
     if (nodes + boundaries.length > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Stacked worksheet text exceeds its node budget.");
   }
-  const projections: WorkbookTextProjection[] = [], document = text.element.ownerDocument;
+  const projections: WorkbookTextProjection[] = [];
   const account = (): void => { if (++nodes > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Stacked worksheet text exceeds its node budget."); };
   let index = 0;
   for (const projection of source) {
@@ -42,10 +47,10 @@ export function stackWorkbookText(text: WorkbookTextView, maxNodes: number): Wor
         account(); const span = document.createElement("span"); span.style.whiteSpace = "normal";
         node.parentNode!.insertBefore(span, node); span.append(node); anchor = span;
       }
-      projections.push(Object.freeze({ node, from, to: end }));
+      if (projection.mapping) projections.push(Object.freeze({ node, from: projection.mapping.from + from - projection.from, to: projection.mapping.from + end - projection.from }));
       if (boundary === end) { account(); anchor.parentNode!.insertBefore(document.createElement("br"), anchor.nextSibling); index++; }
       from = end; if (next) node = next;
     }
   }
-  return Object.freeze({ element: text.element, projections: Object.freeze(mapped ? projections : []), nodes });
+  return Object.freeze({ element: text.element, projections: Object.freeze(projections), nodes });
 }

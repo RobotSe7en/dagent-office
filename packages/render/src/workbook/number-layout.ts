@@ -41,25 +41,35 @@ export function measureNumberDisplay(source: readonly WorkbookNumberDisplayPart[
     parts.push(part.kind === "text" ? { kind: "text", text, width } : { kind: "space", width });
   }
   let width = fixedWidth;
-  if (fill && fixedWidth < availableWidth && measured(fill.character) > 0) {
-    const remaining = availableWidth - fixedWidth, maximum = Math.floor((32767 - units) / fill.character.length);
-    // At most one extra Unicode character is measured to distinguish an exact
-    // budget fit from truncating a fill that would need more output characters.
-    // Temporary shaping strings therefore remain bounded by 32769 code units.
-    // Find a nearby upper bound before binary search. A normal narrow cell
-    // must not shape thousands of temporary characters just because the
-    // global output budget permits that many.
-    let low = 0, high = 1;
-    while (high <= maximum && measured(fill.character.repeat(high)) <= remaining) {
-      low = high; high = Math.min(maximum + 1, high * 2);
-    }
-    while (low < high) {
-      const middle = Math.ceil((low + high) / 2), sample = fill.character.repeat(middle);
-      if (measured(sample) <= remaining) low = middle; else high = middle - 1;
-    }
-    if (low > maximum) throw new DocumentError("ResourceLimitExceeded", "Numeric fill exceeds the rendered text budget.");
-    const text = fill.character.repeat(low), fillWidth = measured(text);
-    parts[fill.index] = { kind: "text", text, width: fillWidth }; width += fillWidth;
+  if (fill) {
+    const result = fitWorkbookFill(fill.character, Math.max(0, availableWidth - fixedWidth), units, measured);
+    parts[fill.index] = { kind: "text", ...result }; width += result.width;
   }
   return { parts, width, overflow: fixedWidth > availableWidth };
+}
+
+/** Shared measured repetition for numeric and source-aware text sections. The
+ * caller accounts for all fixed displayed code units before admitting a fill. */
+export function fitWorkbookFill(character: string, availableWidth: number, fixedCodeUnits: number, measure: (text: string) => number): { readonly text: string; readonly width: number } {
+  if ([...character].length !== 1 || !Number.isFinite(availableWidth) || availableWidth < 0 || !Number.isSafeInteger(fixedCodeUnits) || fixedCodeUnits < 0 || fixedCodeUnits > 32767)
+    throw new DocumentError("InvalidOperation", "Text repetition needs one Unicode character, finite space and a bounded fixed text size.");
+  const measured = (text: string): number => {
+    const width = measure(text);
+    if (!Number.isFinite(width) || width < 0) throw new DocumentError("InvalidOperation", "Text repetition measurements must be finite and nonnegative.");
+    return width;
+  };
+  if (!availableWidth || measured(character) === 0) return { text: "", width: 0 };
+  const maximum = Math.floor((32767 - fixedCodeUnits) / character.length);
+  // Exponential admission keeps a normal cell from shaping thousands of
+  // characters. One extra character distinguishes an exact fit from truncation.
+  let low = 0, high = 1;
+  while (high <= maximum && measured(character.repeat(high)) <= availableWidth) {
+    low = high; high = Math.min(maximum + 1, high * 2);
+  }
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2), sample = character.repeat(middle);
+    if (measured(sample) <= availableWidth) low = middle; else high = middle - 1;
+  }
+  if (low > maximum) throw new DocumentError("ResourceLimitExceeded", "Text repetition exceeds the rendered text budget.");
+  const text = character.repeat(low); return { text, width: measured(text) };
 }

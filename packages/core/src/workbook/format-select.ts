@@ -46,17 +46,20 @@ export function selectNumberFormat(value: number | string, sections: readonly Nu
 
 /** Render text/literal-only sections without parsing the input as another value
  * type. Expansion is checked before concatenation, including repeated @ fields. */
-export function formatLiteralSection(value: string | undefined, section: NumberFormatSection): readonly NumberDisplayPart[] {
+export function formatLiteralSection(value: string | undefined, section: NumberFormatSection, retainTextSource = false): readonly NumberDisplayPart[] {
   const parts: NumberDisplayPart[] = []; let units = 0;
   const text = (text: string): void => {
     units += text.length; checkLimit(units, 32767); if (!text) return;
     const previous = parts.at(-1);
-    if (previous?.kind === "text") parts[parts.length - 1] = { kind: "text", text: previous.text + text };
+    if (previous?.kind === "text" && !previous.source) parts[parts.length - 1] = { kind: "text", text: previous.text + text };
     else parts.push({ kind: "text", text });
   };
   for (const token of section.tokens) {
     if (token.kind === "literal") text(token.text);
-    else if (token.kind === "text" && value !== undefined) text(value);
+    else if (token.kind === "text" && value !== undefined) {
+      if (retainTextSource) { units += value.length; checkLimit(units, 32767); parts.push({ kind: "text", text: value, source: { from: 0, to: value.length } }); }
+      else text(value);
+    }
     else if (token.kind === "space" || token.kind === "fill") { units += token.character.length; checkLimit(units, 32767); parts.push(token); }
     else unsupported("This text or literal number-format section contains a nonliteral field.");
   }

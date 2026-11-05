@@ -558,3 +558,20 @@ test('composed rotated merge uses its covered perimeter for text and fill coupli
   expect(result.fills.filter(fill => fill.transform?.startsWith('matrix(1 0 '))).toHaveLength(4);
   expect(result.retainedSources).toBe(0); expect(result.same).toBe(true); expect(report.unchanged).toBe(true);
 });
+
+test('composed native plain text formats preserve source fields through affixes, repetition and stacking', async ({ page }) => {
+  const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-text-formats.xlsx'), { documentId: 'text-format-window' });
+  const report = await page.evaluate(async entries => window.workbookGridHost.windowLayoutMeasurement(entries,
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 300, heightPt: 235, scrollLeftPt: 0, scrollTopPt: 0 } }]), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  const result = report.results[0]!, cell = (row: number) => result.cells.find(cell => cell.row === row && cell.column === 0)!;
+  expect(result.same).toBe(true); expect(result.detached).toBe(true); expect(report.unchanged).toBe(true);
+  expect(cell(0).text).toBe('ID 001😀'); expect(cell(0).offsets.map(part => part[2]).join('')).toBe('001😀');
+  expect(cell(1).text).toBe('A/B / A/B'); expect(cell(1).offsets).toEqual([[0, 3, 'A/B'], [0, 3, 'A/B']]);
+  expect(cell(2).text).toBe('ID AB'); expect(cell(2).color).toBe('rgb(255, 0, 0)'); expect(cell(2).offsets).toEqual([[0, 2, 'AB']]);
+  expect(cell(3).text).toBe('fixed'); expect(cell(3).offsets).toEqual([]); expect(cell(4).text).toBe(''); expect(cell(4).offsets).toEqual([]);
+  expect(cell(5).text).toMatch(/^AB\.+$/); expect(cell(5).spaces).toHaveLength(1); expect(cell(5).spaces[0]).toBeGreaterThan(0);
+  expect(cell(6).text).toMatch(/^x+AB$/); expect(cell(7).text).toMatch(/^ABx+$/); expect(cell(8).text).toMatch(/^AB\.+$/);
+  for (const row of [5, 6, 7, 8]) { expect(cell(row).offsets).toEqual([[0, 2, 'AB']]); expect(cell(row).bounds.width * .75).toBeLessThanOrEqual(cell(row).shape.widthPt - 2.25 + .1); }
+  expect(cell(9).text).toBe('ID A😀'); expect(cell(9).breaks).toBe(4); expect(cell(9).offsets).toEqual([[0, 1, 'A'], [1, 3, '😀']]);
+  expect(result.retainedMeasurements).toBe(0); expect(result.retainedSources).toBe(0);
+});

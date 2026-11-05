@@ -10,7 +10,7 @@ import { formatDateSection } from "./format-date.js";
 import { formatGeneralSection } from "./format-general-section.js";
 import type { WorkbookNumberMeasure } from "./format-general-section.js";
 import type { NumberDisplayPart, NumberSeparators } from "./format-numeric.js";
-import { selectNumberFormat } from "./format-select.js";
+import { formatLiteralSection, selectNumberFormat } from "./format-select.js";
 import { formatWorkbookValue } from "./format-value.js";
 import { workbookLocaleDatePattern } from "./locale-date-pattern.js";
 import { compileNumberFormat } from "./number-format.js";
@@ -75,6 +75,8 @@ export function createWorkbookNumberFormatter(input: WorkbookNumberFormatterOpti
       const selection = selectNumberFormat(value, sections), section = "section" in selection ? selection.section : undefined;
       const selected = context(section?.locale), metadata: DisplayMetadata = { locale: selected.display.locale, localeSource: selected.display.source, ...(section?.color ? { color: section.color } : {}) };
       if (selection.kind === "unmatchedCondition") return freeze({ ...metadata, kind: "overflow", reason: "unmatchedCondition" });
+      if (typeof value === "string") return freeze({ ...metadata, kind: "parts", parts: selection.kind === "text"
+        ? formatLiteralSection(value, selection.section, true) : [{ kind: "text", text: value, source: { from: 0, to: value.length } }] });
       let result = formatWorkbookValue(value, sections, selected.separators);
       if (typeof value === "number" && selected.display.systemFormat) {
         const pattern = compile(workbookLocaleDatePattern(selected.display, selected.display.systemFormat))[0]!;
