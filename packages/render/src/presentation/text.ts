@@ -51,7 +51,8 @@ export function decorateDrawingLists(box: HTMLElement, account: (n: number) => v
       const format = paragraph.dataset.officeNumbering ?? property(s, "--office-list-numbering", "arabicPeriod"), key = (paragraph.dataset.officeLevel ?? "0") + ":" + format;
       const value = counters.get(key) ?? Number(paragraph.dataset.officeNumberingStart ?? property(s, "--office-list-start", "1")); counters.set(key, value + 1);
       marker.textContent = kind === "bullet" ? character : numberLabel(value, format);
-      const indent = parseFloat(s.textIndent) || -24, margin = parseFloat(s.marginLeft) || 24;
+      const sourceIndent = parseFloat(s.textIndent), sourceMargin = parseFloat(s.marginLeft);
+      const indent = Number.isFinite(sourceIndent) ? sourceIndent : -24, margin = Number.isFinite(sourceMargin) ? sourceMargin : 24;
       marker.style.cssText = `position:absolute;pointer-events:none;white-space:pre;left:${indent}px;width:${Math.abs(indent)}px;font-family:${property(s, "--office-bullet-font", s.fontFamily)};font-size:${property(s, "--office-bullet-size", "1em")};color:${resolvedColor(document, s, "--office-bullet", s.color)}`;
       ownViewStyle(paragraph, "position", "text-indent", "margin-left"); paragraph.style.position = "relative"; paragraph.style.textIndent = "0"; paragraph.style.marginLeft = margin + "px"; paragraph.prepend(marker);
     }

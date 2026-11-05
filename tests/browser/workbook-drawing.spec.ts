@@ -251,6 +251,7 @@ test('drawing text layout uses native insets, bounded auto-fit and readable glyp
     expect(result.leading[1]!.height).toBeCloseTo(result.leading[0]!.height * .375, 0);
     expect(result.listValues.markers).toEqual([{ text: '3.', left: '-10px', position: 'absolute' }, { text: '4.', left: '-10px', position: 'absolute' }]);
     expect(result.listValues.sourceText).toBe('OneTwo'); expect(result.listValues.nodes).toBe(result.listValues.actualNodes);
+    expect(result.zeroList).toEqual({ margin: '0px', indent: '0px', markerLeft: '0px', markerWidth: '0px', sourceText: 'OneTwo' });
     expect(result.insetOverflow).toEqual({ width: 1, overflow: true });
     expect(result).toMatchObject({ unchanged: true, cleaned: true, errors: ['ResourceLimitExceeded', 'InvalidOperation', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded'] });
   }

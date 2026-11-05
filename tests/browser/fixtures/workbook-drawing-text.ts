@@ -98,11 +98,18 @@ export async function measureDrawingTextLayout(snapshot: WorkbookSnapshot) {
     const listValues = { nodes: lists.nodes, actualNodes: listNodes, markers, sourceText: list.projections.map(piece => piece.node.data).join('') }; lists.element.remove();
     const limitedList = createWorkbookDrawingText(source, object);
     try { layoutWorkbookDrawingTexts(scope, [{ source, object, text: limitedList, widthPt: 200, heightPt: 100 }], { maxNodes: lists.nodes }); errors.push('accepted'); } catch (error) { errors.push((error as { code: string }).code); }
+    p.style.marginLeft = '0'; p.style.textIndent = '0';
+    const zeroText = createWorkbookDrawingText(source, object), zeroLayout = layoutWorkbookDrawingTexts(scope, [{ source, object, text: zeroText, widthPt: 200, heightPt: 100 }]).objects[0]!;
+    scope.append(zeroLayout.element);
+    const zeroParagraph = zeroText.element.querySelector('p')!, zeroMarker = zeroParagraph.querySelector<HTMLElement>('.sdk-ppt-marker')!;
+    const zeroList = { margin: getComputedStyle(zeroParagraph).marginLeft, indent: getComputedStyle(zeroParagraph).textIndent,
+      markerLeft: getComputedStyle(zeroMarker).left, markerWidth: getComputedStyle(zeroMarker).width,
+      sourceText: zeroText.projections.map(piece => piece.node.data).join('') }; zeroLayout.element.remove();
     next.remove(); p.textContent = 'X'; p.removeAttribute('data-office-numbering'); p.removeAttribute('data-office-numbering-start'); p.style.marginLeft = '0'; p.style.textIndent = '0';
     const tinyObject = { ...object, text: { autoFit: 'normal' as const } }, tinyText = createWorkbookDrawingText(source, tinyObject);
     const tiny = layoutWorkbookDrawingTexts(scope, [{ source, object: tinyObject, text: tinyText, widthPt: 1, heightPt: 100 }]).objects[0]!;
     const insetOverflow = { width: tiny.widthPt, overflow: tiny.overflow }; tiny.element.remove();
-    return { nativeStyles, cases, unchanged, errors, cleaned: cleaned && !limitedList.element.parentNode, leading, listValues, insetOverflow };
+    return { nativeStyles, cases, unchanged, errors, cleaned: cleaned && !limitedList.element.parentNode, leading, listValues, zeroList, insetOverflow };
   } finally { sources.dispose(); dispose(); }
 }
 
