@@ -8,8 +8,9 @@ import { modelWindowSource } from '../../../packages/render/src/workbook/window-
 import { layoutWorkbookWindow } from '../../../packages/render/src/workbook/window-layout.js';
 import type { WorkbookViewport } from '../../../packages/render/src/workbook/viewport.js';
 import { maximumWorkbookSkew } from '../../../packages/render/src/workbook/skew-sources.js';
+import { WorkbookCellTextCache } from '../../../packages/render/src/workbook/cell-text-cache.js';
 
-export async function windowLayoutMeasurement(entries: readonly [string, number[]][], views: readonly { sheetId: string; viewport: WorkbookViewport; maxCellFragments?: number }[], rtl = false) {
+export async function windowLayoutMeasurement(entries: readonly [string, number[]][], views: readonly { sheetId: string; viewport: WorkbookViewport; maxCellFragments?: number }[], rtl = false, cacheEnabled = false) {
   const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)]));
   const metadata = JSON.parse(new TextDecoder().decode(files.get('metadata.json'))) as WorkbookDocumentMetadata;
   for (const sheet of metadata.workbook.sheets) sheet.rightToLeft = rtl;
@@ -20,6 +21,7 @@ export async function windowLayoutMeasurement(entries: readonly [string, number[
   const container = document.createElement('div'); container.style.cssText = 'position:relative;width:1000px;height:800px'; document.body.append(container);
   const surface = await createWorkbookSurface(container, snapshot, { widthPt: 750, heightPt: 600 });
   const loader = new WorkbookWindowLoader(modelWindowSource(model), {}, true, maximumWorkbookSkew(surface.document)), results = [];
+  const cache = cacheEnabled ? new WorkbookCellTextCache(5000, 50_000, 8 * 1024 * 1024) : undefined, cacheSafety = [];
   try {
     for (const { sheetId, viewport, maxCellFragments } of views) {
       const normal = measureWorkbookColumnFont(surface.source, snapshot.metadata.workbook, sheetId);
@@ -28,7 +30,7 @@ export async function windowLayoutMeasurement(entries: readonly [string, number[
       const sheet = snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === sheetId)!;
       const rules = sheet.conditionalRules?.length || sheet.dataValidations?.length ? await readWorkbookRules(model, { documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision,
         sheetId, coordinates: loader.frame!.sourceCoordinates, ...DEFAULT_WORKBOOK_RULE_LIMITS }) : undefined;
-      const rendered = layoutWorkbookWindow(surface, snapshot, loader.frame!, dimensions, formatter, { normalSpaceWidthPx: normal.spaceWidthPx, ...(maxCellFragments === undefined ? {} : { maxCellFragments }) }, rules);
+      const rendered = layoutWorkbookWindow(surface, snapshot, loader.frame!, dimensions, formatter, { normalSpaceWidthPx: normal.spaceWidthPx, ...(maxCellFragments === undefined ? {} : { maxCellFragments }) }, rules, cache);
       const before = surface.view.firstChild; const detached = !rendered.element.isConnected && surface.view.firstChild === before;
       surface.view.replaceChildren(rendered.element); surface.frame.style.setProperty('visibility', 'visible', 'important');
       const view = surface.document.defaultView!;
@@ -63,13 +65,27 @@ export async function windowLayoutMeasurement(entries: readonly [string, number[
         retainedSources: surface.source.querySelectorAll('[data-office-view="workbook-source-measurement"]').length,
         retainedMeasurements: surface.view.querySelectorAll('[data-office-view$="measurement"]').length,
       });
+      if (cache) {
+        const frame = loader.frame!, point = frame.sourceCoordinates.find(point => { const cell = frame.getCell(point.row, point.column); return cell?.value.type === 'text' && !cell.formula; })!, source = frame.getCell(point.row, point.column)!;
+        const changed = { ...source, text: '新的😀禰󠄀', value: { type: 'text' as const, value: '新的😀禰󠄀' }, html: source.html.replace(/>[\s\S]*<\/td>$/, '>新的😀禰󠄀</td>') };
+        const replacement = (cell: typeof source) => ({ ...frame, getCell: (row: number, column: number) => row === point.row && column === point.column ? cell : frame.getCell(row, column) });
+        let rejected = '';
+        try { layoutWorkbookWindow(surface, snapshot, replacement({ ...source, html: source.html.replace('<td', '<td onclick="window.workbookInjected=true"') }), dimensions, formatter, { normalSpaceWidthPx: normal.spaceWidthPx }, rules, cache); }
+        catch (error) { rejected = (error as { code: string }).code; }
+        const next = layoutWorkbookWindow(surface, snapshot, replacement(changed), dimensions, formatter, { normalSpaceWidthPx: normal.spaceWidthPx }, rules, cache);
+        cacheSafety.push({ rejected, retained: surface.view.firstChild === rendered.element,
+          changedText: next.cells.find(cell => cell.projection.row === point.row && cell.projection.column === point.column)!.text!.text.element.textContent,
+          offsets: next.cells.find(cell => cell.projection.row === point.row && cell.projection.column === point.column)!.text!.text.projections.map(part => [part.from, part.to, part.node.data]),
+          leaked: surface.source.querySelectorAll('[data-office-view="workbook-source-measurement"]').length });
+      }
       function frameFills() {
-        return loader.frame!.projections.map((cell, index) => ({ row: cell.row, column: cell.column, pane: cell.pane, color: fillNodes[index]!.querySelector('rect')?.getAttribute('fill') ?? null }));
+        return loader.frame!.projections.map((cell, index) => ({ row: cell.row, column: cell.column, pane: cell.pane,
+          color: fillNodes[index]!.getAttribute('data-office-fill-color') ?? fillNodes[index]!.querySelector('rect')?.getAttribute('fill') ?? null }));
       }
     }
     const after = model.serialize(), unchanged = [...originalSource].every(([path, bytes]) => bytes.length === after.get(path)!.length && bytes.every((byte, index) => byte === after.get(path)![index]));
-    return { results, unchanged };
-  } finally { loader.dispose(); formatter.dispose(); surface.dispose(); container.remove(); }
+    return { results, unchanged, cacheSafety };
+  } finally { cache?.clear(); loader.dispose(); formatter.dispose(); surface.dispose(); container.remove(); }
 }
 
 export async function autoRowMeasurement(entries: readonly [string, number[]][], ids: readonly string[]) {

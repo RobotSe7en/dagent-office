@@ -15,20 +15,21 @@ export function checkWorkbookCellSource(source: WorkbookCell, attribute: (name: 
 /** Exact small fast path for canonical, entity-free plain cells. Anything
  * requiring HTML decoding or rich structure uses the existing inert DOM parser.
  * No input markup is inserted or silently stripped by this classifier. */
-export function checkedPlainWorkbookCell(source: WorkbookCell): boolean {
+export function checkedPlainWorkbookAttributes(source: WorkbookCell): ReadonlyMap<string, string> | undefined {
   const html = source.html;
   if (typeof html !== "string" || html.length > 8 * 1024 * 1024) throw new DocumentError("ResourceLimitExceeded", "Workbook cell HTML exceeds its source budget.");
-  if (!html.startsWith("<td") || !/[\s>]/.test(html[3] ?? "") || !html.endsWith("</td>") || /[&\r\u0000]/.test(html)) return false;
+  if (!html.startsWith("<td") || !/[\t\n\f >]/.test(html[3] ?? "") || !html.endsWith("</td>") || /[&\r\u0000]/.test(html)) return undefined;
   const end = html.indexOf(">"), opening = html.slice(3, end), body = html.slice(end + 1, -5);
-  if (end < 0 || opening.includes("<") || body.includes("<")) return false;
-  const attributes = new Map<string, string>(), pattern = /\s+([a-z][a-z0-9-]*)="([^"<>]*)"/gy; let cursor = 0;
+  if (end < 0 || opening.includes("<") || body.includes("<")) return undefined;
+  const attributes = new Map<string, string>(), pattern = /[\t\n\f ]+([a-z][a-z0-9-]*)="([^"<>]*)"/gy; let cursor = 0;
   while (cursor < opening.length) {
     pattern.lastIndex = cursor; const match = pattern.exec(opening);
-    if (!match) { if (opening.slice(cursor).trim()) return false; break; }
+    if (!match) { if (!/^[\t\n\f ]*$/.test(opening.slice(cursor))) return undefined; break; }
     const name = match[1]!;
     if (!workbookCellSourceAttributes.has(name) || attributes.has(name)) throw new DocumentError("InvalidDocument", "A workbook plain cell has duplicate or unsupported attributes.");
     attributes.set(name, match[2]!); cursor = pattern.lastIndex;
   }
   checkWorkbookCellSource(source, name => attributes.get(name) ?? null, body);
-  return true;
+  return attributes;
 }
+export function checkedPlainWorkbookCell(source: WorkbookCell): boolean { return checkedPlainWorkbookAttributes(source) !== undefined; }

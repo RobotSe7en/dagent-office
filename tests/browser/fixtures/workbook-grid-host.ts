@@ -39,6 +39,7 @@ import { layoutWorkbookNumbers } from "../../../packages/render/src/workbook/num
 import type { WorkbookNumberLayoutInput } from "../../../packages/render/src/workbook/number-text-layout.js";
 
 import { autoRowMeasurement, autoRowSourceSafety, windowLayoutMeasurement } from './workbook-window.js';
+import { textCacheMeasurement } from './workbook-text-cache.js';
 
 const encode = (text: string) => new TextEncoder().encode(text);
 async function main() {
@@ -72,7 +73,7 @@ async function main() {
   const style = document.createElement('style'); style.textContent = model.snapshot().styles.map(style => style.css).join('\n'); document.head.append(style);
   let rightToLeft = false;
   const host = {
-    windowLayoutMeasurement, autoRowMeasurement, autoRowSourceSafety,
+    windowLayoutMeasurement, autoRowMeasurement, autoRowSourceSafety, textCacheMeasurement,
     numberTextMeasurement(cases: readonly NumberTextCase[], locale?: string) { return numberTextMeasurement(container, cases, locale); },
     rotatedCellMeasurement(cases: readonly RotatedCellCase[]) { return rotatedCellMeasurement(container, cases); },
     shapedFillMeasurement,

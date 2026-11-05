@@ -44,7 +44,12 @@ export function paintWorkbookWindow(document: Document, frame: WorkbookWindowFra
       const bounds = intersectRect({ x: x + Math.min(0, shape.topOffsetPt), y: rect.y, width: rect.width + Math.abs(shape.topOffsetPt), height: rect.height }, pane)!;
       // The projection guarantees a visible rectangular cell; the full slant
       // envelope contains that rectangle and thus always intersects its pane.
-      const fill = createWorkbookShapedFillView(document, cell.fill, shape, `workbook-fill-${++id}`, {
+      const fill = cell.fill.kind === "solid" && !shape.topOffsetPt ? (() => {
+        account(1); const element = markViewNode(document.createElement("div")); element.dataset.officeView = "workbook-cell-fill";
+        element.dataset.officeFillColor = cell.fill.color; element.setAttribute("aria-hidden", "true");
+        element.style.cssText = `position:absolute;pointer-events:none;left:${bounds.x}pt;top:${bounds.y}pt;width:${bounds.width}pt;height:${bounds.height}pt`;
+        element.style.backgroundColor = cell.fill.color; return { element, nodes: 0 };
+      })() : createWorkbookShapedFillView(document, cell.fill, shape, `workbook-fill-${++id}`, {
         xPt: bounds.x - x, yPt: bounds.y - rect.y, widthPt: bounds.width, heightPt: bounds.height,
       }, Math.max(1, maxNodes - nodes));
       account(fill.nodes); fill.element.style.left = `${bounds.x}pt`; fill.element.style.top = `${bounds.y}pt`; fills.append(fill.element);

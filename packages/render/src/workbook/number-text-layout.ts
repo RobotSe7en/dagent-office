@@ -8,6 +8,7 @@ import { createWorkbookNumberText } from "./number-text.js";
 import { workbookTextAlignment, workbookTextGutters } from "./text-alignment.js";
 import { layoutWorkbookTexts } from "./text-layout.js";
 import type { WorkbookTextLayoutInput, WorkbookTextLayouts } from "./text-layout.js";
+import { workbookAsciiWidth } from "./ascii-width.js";
 
 export interface WorkbookNumberLayoutInput {
   readonly source: WorkbookSourceCell;
@@ -52,11 +53,21 @@ export function layoutWorkbookNumbers(scope: HTMLElement, inputs: readonly Workb
     });
     scope.append(root);
     resolvePreviewFontsInScope(document, root, "[data-office-text-style],[data-office-script]");
+    const context = document.createElement("canvas").getContext("2d");
     for (const { input, text } of prepared) {
+      const alignment = workbookTextAlignment(view.getComputedStyle(input.source.element), "number", "ltr"), gutter = workbookTextGutters(alignment, normalSpaceWidthPx);
+      const available = Math.max(0, input.widthPt / .75 - gutter.left - gutter.right), fit = !alignment.shrink && !alignment.wrap && !alignment.rotationDegrees && !alignment.stacked;
       const families = new Map<string, string>(), widths = new Map<string, number>();
       for (const span of text.element.querySelectorAll<HTMLElement>("[data-office-script]")) families.set(span.dataset.officeScript!, view.getComputedStyle(span).fontFamily);
+      const general = !input.format || "builtinId" in input.format && input.format.builtinId === 0 || "code" in input.format && input.format.code === "General";
+      const ascii = text.element.querySelector<HTMLElement>('[data-office-script="ascii"]');
+      const fast = general && ascii ? workbookAsciiWidth(context, view.getComputedStyle(ascii)) : undefined;
       const measure = (value: string): number => {
         const known = widths.get(value); if (known !== undefined) return known;
+        const quick = fast?.(value);
+        // Preserve the exact DOM decision at a fit boundary, including layout
+        // engine subpixel quantization. Complex format parts never use this.
+        if (quick !== undefined && Math.abs(quick - available) > 1 / 16) return quick;
         const sample = createWorkbookNumberText(input.source, [{ kind: "text", text: value }], undefined, remainingNodes());
         sample.element.style.cssText += ';display:inline-block;position:absolute;width:max-content;white-space:pre;font-kerning:none;font-feature-settings:"kern" 0;direction:ltr;unicode-bidi:isolate';
         root.append(sample.element);
@@ -77,8 +88,6 @@ export function layoutWorkbookNumbers(scope: HTMLElement, inputs: readonly Workb
           return width;
         } finally { sample.element.remove(); }
       };
-      const alignment = workbookTextAlignment(view.getComputedStyle(input.source.element), "number", "ltr"), gutter = workbookTextGutters(alignment, normalSpaceWidthPx);
-      const available = Math.max(0, input.widthPt / .75 - gutter.left - gutter.right), fit = !alignment.shrink && !alignment.wrap && !alignment.rotationDegrees && !alignment.stacked;
       const display = formatter.format(input.value, input.format, fit ? { availableWidth: available, measure } : undefined);
       let reason: Overflow | undefined = display.kind === "overflow" ? display.reason : undefined;
       let measured = display.kind === "parts" ? measureNumberDisplay(display.parts, available, measure) : undefined;

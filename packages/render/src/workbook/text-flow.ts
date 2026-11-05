@@ -15,6 +15,13 @@ export class WorkbookTextFlow {
   private readonly known: ReadonlySet<number>;
   private readonly panes: ReadonlyMap<WorkbookGridCell["pane"], WorkbookWindowFrame["layout"]["panes"][number]>;
   private work = 0;
+  private readonly appearances = new WeakMap<CSSStyleDeclaration, { rotation: string; horizontal: string; wrap: boolean; shrink: boolean }>();
+  private appearance(row: number, column: number) {
+    const style = this.style(row, column), known = this.appearances.get(style); if (known) return known;
+    const value = { rotation: style.getPropertyValue("--office-cell-text-rotation").trim(), horizontal: style.getPropertyValue("--office-cell-horizontal").trim(),
+      wrap: style.getPropertyValue("--office-cell-wrap").trim() === "true", shrink: style.getPropertyValue("--office-cell-shrink-to-fit").trim() === "true" };
+    this.appearances.set(style, value); return value;
+  }
   constructor(private readonly frame: WorkbookWindowFrame, private readonly sheet: DeepReadonly<WorkbookSheet>,
     private readonly dimensions: { readonly rows: AxisDimensions; readonly columns: AxisDimensions }, private readonly merges: WorkbookMergeIndex,
     private readonly sources: WorkbookCellSources, private readonly style: (row: number, column: number) => CSSStyleDeclaration, private readonly maxWork: number) {
@@ -31,8 +38,8 @@ export class WorkbookTextFlow {
     const result: WorkbookGridCell[] = [], existing = new Set(this.frame.projections.map(cell => `${cell.pane}:${cell.row}:${cell.column}`));
     for (const point of this.frame.sourceCoordinates) {
       this.step(); const current = value(point.row, point.column);
-      const sourceStyle = this.style(point.row, point.column), rotation = sourceStyle.getPropertyValue("--office-cell-text-rotation").trim();
-      const continuous = sourceStyle.getPropertyValue("--office-cell-horizontal").trim() === "centerContinuous";
+      const { rotation, horizontal } = this.appearance(point.row, point.column);
+      const continuous = horizontal === "centerContinuous";
       const rotated = Boolean(rotation && rotation !== "0" && rotation !== "90" && rotation !== "180" && rotation !== "255");
       if (current?.type !== "text" && !(continuous && current && current.type !== "blank") && !rotated) continue;
       const range = this.merges.at(point.row, point.column) ?? { from: point, to: point };
@@ -55,7 +62,7 @@ export class WorkbookTextFlow {
   /** A centerContinuous span includes only explicit blank cells carrying the
    * same cell style. It stops at a merge, nonblank/formula or frozen partition. */
   textRect(projection: WorkbookGridCell): WorkbookRect {
-    if (this.style(projection.row, projection.column).getPropertyValue("--office-cell-horizontal").trim() !== "centerContinuous"
+    if (this.appearance(projection.row, projection.column).horizontal !== "centerContinuous"
       || projection.range.from.row !== projection.range.to.row || projection.range.from.column !== projection.range.to.column) return projection.rect;
     const original = this.sources.get(projection.row, projection.column)!, pane = this.panes.get(projection.pane)!;
     let column = projection.column;
@@ -72,8 +79,7 @@ export class WorkbookTextFlow {
 
   clip(projection: WorkbookGridCell, textRect: WorkbookRect, text: WorkbookTextLayout, type: WorkbookValue["type"]): WorkbookRect | undefined {
     this.step(); const pane = this.panes.get(projection.pane)!, physicalPane = this.physical(paneRect(pane)), body = this.physical(textRect);
-    const sourceStyle = this.style(projection.row, projection.column), rawRotation = sourceStyle.getPropertyValue("--office-cell-text-rotation").trim(), rotation = rawRotation ? Number(rawRotation) : 0;
-    const horizontal = sourceStyle.getPropertyValue("--office-cell-horizontal").trim(), wrap = sourceStyle.getPropertyValue("--office-cell-wrap").trim() === "true", shrink = sourceStyle.getPropertyValue("--office-cell-shrink-to-fit").trim() === "true";
+    const { rotation: rawRotation, horizontal, wrap, shrink } = this.appearance(projection.row, projection.column), rotation = rawRotation ? Number(rawRotation) : 0;
     const rotated = rotation !== 0 && rotation !== 255;
     const ordinary = type === "text" && !rotation && !wrap && !shrink && !["fill", "justify", "distributed", "centerContinuous"].includes(horizontal)
       && projection.range.from.row === projection.range.to.row && projection.range.from.column === projection.range.to.column;

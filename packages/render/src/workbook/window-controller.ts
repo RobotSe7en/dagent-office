@@ -25,6 +25,7 @@ import type { WorkbookRuleSource, WorkbookRuleDiagnostic } from "./rule-source.j
 import { maximumWorkbookSkew } from "./skew-sources.js";
 import { measureWorkbookAutoRows } from "./auto-rows.js";
 import type { WorkbookAutoRowLimits, WorkbookAutoRows } from "./auto-rows.js";
+import { WorkbookCellTextCache } from "./cell-text-cache.js";
 
 export interface WorkbookWindowProviders {
   readonly cells: WorkbookWindowSource;
@@ -74,6 +75,8 @@ export class WorkbookWindowController {
   private readonly maxNodes: number;
   private readonly ruleLimits: WorkbookRuleReadLimits;
   private readonly skewCoefficient: number;
+  private readonly classStyles: boolean;
+  private readonly textCache: WorkbookCellTextCache;
   private readonly sheets = new Map<string, WorkbookAutoRows & { readonly normal: WorkbookColumnFont }>();
   private pending: { cancel(): void } | undefined;
   private active: { readonly state: WorkbookRenderedWindow; readonly drawings: WorkbookDrawingLayout; readonly decoration?: WorkbookWindowDecoration } | undefined;
@@ -89,6 +92,8 @@ export class WorkbookWindowController {
       || !surface.source.isConnected || !surface.view.isConnected || surface.source.ownerDocument !== surface.document || surface.view.ownerDocument !== surface.document
       || surface.view.childNodes.length) throw new DocumentError("InvalidOperation", "A workbook controller requires its own empty connected surface and supported node budget.");
     this.snapshot = providers.cells.snapshot;
+    this.classStyles = this.snapshot.styles.every(style => /^(?:\s*\.[a-zA-Z_][-\w]*\s*\{[^{}]*\}\s*)*$/.test(style.css));
+    this.textCache = new WorkbookCellTextCache(input.read?.maxCells ?? 5000, Math.min(this.maxNodes, input.cells?.maxNodes ?? this.maxNodes), input.cells?.maxTextCodeUnits ?? 8 * 1024 * 1024);
     this.skewCoefficient = maximumWorkbookSkew(surface.document);
     checkWindowIdentity(providers.assets.snapshot.manifest, this.snapshot); checkWindowIdentity(providers.charts.snapshot.manifest, this.snapshot);
     if (providers.rules) checkWindowIdentity(providers.rules.snapshot.manifest, this.snapshot);
@@ -146,7 +151,8 @@ export class WorkbookWindowController {
       const annotations = projectWorkbookAnnotations(this.snapshot, frame, dimensions, this.options.annotations);
       const cells = layoutWorkbookWindow(this.surface, this.snapshot, frame, dimensions, this.formatter,
         { ...this.options.cells, normalSpaceWidthPx: normal.spaceWidthPx, maxNodes: Math.min(this.maxNodes, this.options.cells?.maxNodes ?? this.maxNodes),
-          maxCellFragments: Math.min(this.options.read?.maxCells ?? 5000, this.options.cells?.maxCellFragments ?? this.options.read?.maxCells ?? 5000) }, rules);
+          maxCellFragments: Math.min(this.options.read?.maxCells ?? 5000, this.options.cells?.maxCellFragments ?? this.options.read?.maxCells ?? 5000) }, rules,
+        this.classStyles && !sheet.tables?.length && !sheet.conditionalRules?.length ? this.textCache : undefined);
       const walker = this.surface.document.createTreeWalker(cells.element, 0xffff_ffff); let nodes = 1;
       while (walker.nextNode()) if (++nodes >= this.maxNodes) throw new DocumentError("ResourceLimitExceeded", "The combined workbook window exceeds its node budget.");
       if (nodes >= this.maxNodes) throw new DocumentError("ResourceLimitExceeded", "The combined workbook window has no remaining object-layer budget.");
@@ -185,6 +191,6 @@ export class WorkbookWindowController {
     if (this.disposed) return;
     this.disposed = true; this.pending?.cancel(); this.pending = undefined;
     this.active?.decoration?.dispose(); this.active?.drawings.dispose(); this.active?.state.element.remove(); this.active?.state.element.replaceChildren(); this.active = undefined;
-    this.content.dispose(); this.sheets.clear();
+    this.content.dispose(); this.sheets.clear(); this.textCache.clear();
   }
 }

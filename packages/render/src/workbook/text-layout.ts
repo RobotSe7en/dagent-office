@@ -123,8 +123,12 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
       units += item.textView.element.textContent?.length ?? 0;
       if (units > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Worksheet text exceeds its cumulative display-text budget.");
     }
-    const cells = prepared.map(({ input, textView, alignment, element, available, left, shape, naturalHeightPx }): WorkbookTextLayout => {
-      const text = textView.element, measured = view.getComputedStyle(text), width = Number.parseFloat(measured.width), height = Number.parseFloat(measured.height);
+    const dimensions = prepared.map(({ textView }) => {
+      const measured = view.getComputedStyle(textView.element);
+      return { width: Number.parseFloat(measured.width), height: Number.parseFloat(measured.height) };
+    });
+    const cells = prepared.map(({ input, textView, alignment, element, available, left, shape, naturalHeightPx }, index): WorkbookTextLayout => {
+      const text = textView.element, { width, height } = dimensions[index]!;
       if (![width, height].every(value => Number.isFinite(value) && value >= 0)) throw new DocumentError("UnsupportedFeature", "This browser cannot measure worksheet text geometry.");
       const angle = alignment.rotationDegrees * Math.PI / 180, cosine = Math.cos(angle), sine = Math.sin(angle);
       const rotatedWidth = Math.abs(width * cosine) + Math.abs(height * sine), rotatedHeight = Math.abs(width * sine) + Math.abs(height * cosine);

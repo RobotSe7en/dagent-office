@@ -27,9 +27,11 @@ import type { rotatedCellMeasurement, RotatedCellCase, shapedFillMeasurement } f
 import rotatedCellsReference from "../../docs/evidence/xlsx-rotated-cells.json" with { type: "json" };
 
 import { importXlsx } from '../../packages/office/src/xlsx-import.js';
+import type { textCacheMeasurement } from './fixtures/workbook-text-cache.js';
 import type { autoRowMeasurement, autoRowSourceSafety, windowLayoutMeasurement } from './fixtures/workbook-window.js';
 
 interface GridHost {
+  textCacheMeasurement: typeof textCacheMeasurement;
   windowLayoutMeasurement: typeof windowLayoutMeasurement;
   autoRowMeasurement: typeof autoRowMeasurement;
   autoRowSourceSafety: typeof autoRowSourceSafety;
@@ -101,6 +103,23 @@ test('General fitting and numeric fill agree with independently laid out fixed-f
   expect(result.scientific).toMatchObject({ kind: 'text', text: '1.23457E+11' });
   expect(result.overflow).toBe(false); expect(result.fill?.text).toMatch(/^f+$/);
   expect(result.actual).toBeLessThanOrEqual(140.25); expect(Math.abs(result.actual - result.predicted)).toBeLessThan(.25);
+});
+
+test('cached text keeps independent live UTF-16 projections, ownership, font invalidation and complete window budgets', async ({ page }) => {
+  const result = await page.evaluate(() => window.workbookGridHost.textCacheMeasurement());
+  expect(result.offsets.map(part => part[2]).join('')).toBe('A😀\n禰󠄀B');
+  expect(result.offsets[0]![0]).toBe(0); expect(result.offsets.at(-1)![1]).toBe('A😀\n禰󠄀B'.length);
+  for (const key of ['projectionsOwned', 'same', 'isolated', 'detached', 'atomic', 'evicted', 'bounded', 'invalidated', 'cleared', 'unchanged'] as const) expect(result[key], key).toBe(true);
+  expect(result.failures).toEqual(['ResourceLimitExceeded', 'ResourceLimitExceeded']);
+});
+
+test('a cached window validates every new source and invalidates text when a provider changes its content', async ({ page }) => {
+  const files = await importXlsx(readFileSync('examples/xlsx/01-values-text.xlsx'), { documentId: 'cached-window-source' });
+  const result = await page.evaluate(entries => window.workbookGridHost.windowLayoutMeasurement(entries,
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 350, heightPt: 120, scrollLeftPt: 0, scrollTopPt: 0 } }], false, true), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  expect(result.unchanged).toBe(true); expect(result.cacheSafety).toHaveLength(1);
+  expect(result.cacheSafety[0]).toMatchObject({ rejected: 'InvalidDocument', retained: true, changedText: '新的😀禰󠄀', leaked: 0 });
+  expect(result.cacheSafety[0]!.offsets.map(part => part[2]).join('')).toBe('新的😀禰󠄀');
 });
 
 test('virtual grid renders formatted scalar values instead of imported display text in both directions', async ({ page }) => {

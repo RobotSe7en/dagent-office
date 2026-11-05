@@ -4,6 +4,7 @@ import type { WorkbookFormulaSource, WorkbookNumberDisplay } from "@dagent-offic
 import type { FontResolution } from "../contracts.js";
 import { WorkbookCellSources } from "./cell-source.js";
 import { workbookCellBorders, workbookCellDiagonals } from "./cell-borders.js";
+import type { WorkbookCellBorders } from "./cell-borders.js";
 import { workbookCellFill } from "./cell-fill.js";
 import { workbookCellShape } from "./cell-shape.js";
 import type { WorkbookTextLayout } from "./text-layout.js";
@@ -18,6 +19,8 @@ import type { WorkbookSurface } from "./surface.js";
 import type { WorkbookWindowFrame } from "./window-loader.js";
 import { paintWorkbookWindow } from "./window-paint.js";
 import { layoutWorkbookCellTexts } from "./cell-text-layout.js";
+import { layoutCachedWorkbookCellTexts } from "./cell-text-cache.js";
+import type { WorkbookCellTextCache } from "./cell-text-cache.js";
 import { WorkbookTextFlow } from "./text-flow.js";
 import { intersectRect } from "./projection.js";
 import type { WorkbookRect } from "./projection.js";
@@ -47,7 +50,7 @@ export interface WorkbookWindowLayout {
  * Objects/rules/automatic row heights belong to the enclosing preview stage. */
 export function layoutWorkbookWindow(surface: Pick<WorkbookSurface, "source" | "view">, snapshot: WorkbookSnapshot, frame: WorkbookWindowFrame,
   dimensions: { readonly rows: AxisDimensions; readonly columns: AxisDimensions }, formatter: WorkbookNumberFormatter,
-  options: WorkbookWindowLayoutOptions, rules?: WorkbookRuleReadResponse): WorkbookWindowLayout {
+  options: WorkbookWindowLayoutOptions, rules?: WorkbookRuleReadResponse, cache?: WorkbookCellTextCache): WorkbookWindowLayout {
   const maxNodes = options.maxNodes ?? 50_000, maxSourceNodes = options.maxSourceNodes ?? 50_000, maxTextUnits = options.maxTextCodeUnits ?? 8 * 1024 * 1024, maxCellFragments = options.maxCellFragments ?? 5000;
   if (Object.keys(options).some(key => !["normalSpaceWidthPx", "maxNodes", "maxSourceNodes", "maxTextCodeUnits", "maxCellFragments"].includes(key))
     || ![maxNodes, maxSourceNodes, maxTextUnits, maxCellFragments].every(n => Number.isSafeInteger(n) && n > 0) || !Number.isFinite(options.normalSpaceWidthPx) || options.normalSpaceWidthPx < 0
@@ -58,13 +61,21 @@ export function layoutWorkbookWindow(surface: Pick<WorkbookSurface, "source" | "
   const current = new Map(rules?.cells.map(cell => [cell.row * 16_384 + cell.column, cell.current]));
   try {
     const styles = new Map<number, CSSStyleDeclaration>();
+    const classStyles = new Map<string, CSSStyleDeclaration>();
     const style = (row: number, column: number): CSSStyleDeclaration => {
       const key = row * 16_384 + column, existing = styles.get(key); if (existing) return existing;
       const source = sources.get(row, column);
       if (!source) throw new DocumentError("InvalidOperation", "A workbook appearance source is missing from its window.");
-      const value = document.defaultView!.getComputedStyle(source.element); styles.set(key, value); return value;
+      const shared = cache ? classStyles.get(source.format.cssClass) : undefined;
+      const value = shared ?? document.defaultView!.getComputedStyle(source.element);
+      if (cache && !shared) classStyles.set(source.format.cssClass, value);
+      styles.set(key, value); return value;
     };
-    const bordersAt = (row: number, column: number) => workbookCellBorders(document, style(row, column), sheet.rightToLeft);
+    const borders = new WeakMap<CSSStyleDeclaration, WorkbookCellBorders>();
+    const bordersAt = (row: number, column: number): WorkbookCellBorders => {
+      const computed = style(row, column), known = borders.get(computed); if (known) return known;
+      const value = workbookCellBorders(document, computed, sheet.rightToLeft); borders.set(computed, value); return value;
+    };
     const bordered = (cell: WorkbookGridCell): boolean => {
       const { from, to } = cell.range, anchor = bordersAt(from.row, from.column);
       return Boolean(anchor.top || anchor.before || bordersAt(from.row, to.column).after || bordersAt(to.row, from.column).bottom);
@@ -80,20 +91,31 @@ export function layoutWorkbookWindow(surface: Pick<WorkbookSurface, "source" | "
       textRects.set(projection, rect);
       return { source, value, formula: Boolean(cell?.formula), widthPt: rect.width, heightPt: rect.height, bordered: bordered(projection) };
     });
-    const textLayout = layoutWorkbookCellTexts(surface.view, snapshot, textInputs, formatter, options, maxNodes, maxTextUnits);
+    const context = [document.defaultView!.innerWidth, document.defaultView!.innerHeight];
+    const keys = cache ? projections.map((projection, index) => JSON.stringify([frame.sheetId, projection.row, projection.column,
+      textInputs[index]!.widthPt, textInputs[index]!.heightPt, textInputs[index]!.bordered, textInputs[index]!.value, textInputs[index]!.formula,
+      textInputs[index]!.source.format, frame.getCell(projection.row, projection.column)?.html, context])) : [];
+    const textLayout = cache ? layoutCachedWorkbookCellTexts(surface.view, snapshot, textInputs, keys, formatter, options, maxNodes, maxTextUnits, cache)
+      : layoutWorkbookCellTexts(surface.view, snapshot, textInputs, formatter, options, maxNodes, maxTextUnits);
     let textNodes = textLayout.nodes;
     const remaining = (): number => {
       if (textNodes >= maxNodes) throw new DocumentError("ResourceLimitExceeded", "Workbook window text exceeds its cumulative node budget.");
       return maxNodes - textNodes;
     };
     const textIndices = new Map(projections.map((projection, index) => [projection, index]));
+    const fills = new WeakMap<CSSStyleDeclaration, ReturnType<typeof workbookCellFill>>(), rotations = new WeakMap<CSSStyleDeclaration, number>();
+    const rotation = (computed: CSSStyleDeclaration): number => {
+      const known = rotations.get(computed); if (known !== undefined) return known;
+      const value = workbookTextRotation(computed).rotationDegrees; rotations.set(computed, value); return value;
+    };
     const all = projections.map((projection, index) => {
       const computed = style(projection.row, projection.column), text = textLayout.cells[index]!.text;
       const shape = workbookCellShape(projection.rect.width, projection.rect.height,
-        workbookTextRotation(computed).rotationDegrees, bordered(projection));
+        rotation(computed), bordered(projection));
       const textRect = textRects.get(projection) ?? projection.rect, value = valueAt(projection.row, projection.column);
       const textClip = text && value ? flow.clip(projection, textRect, text, value.type) : undefined;
-      return { projection, shape, fill: workbookCellFill(document, computed), ...(text ? { text, textRect, ...(textClip ? { textClip } : {}) } : {}) };
+      let fill = fills.get(computed); if (!fill) { fill = workbookCellFill(document, computed); fills.set(computed, fill); }
+      return { projection, shape, fill, ...(text ? { text, textRect, ...(textClip ? { textClip } : {}) } : {}) };
     });
     const prepared = all.slice(0, frame.projections.length), overflow = all.slice(frame.projections.length).filter(cell => {
       const pane = frame.layout.panes.find(pane => pane.kind === cell.projection.pane)!;
@@ -107,13 +129,13 @@ export function layoutWorkbookWindow(surface: Pick<WorkbookSurface, "source" | "
       return Boolean(intersectRect({ x: bodyX + cell.text.ink.xPt, y: cell.textRect.y + cell.text.ink.yPt, width: cell.text.ink.widthPt, height: cell.text.ink.heightPt }, { ...cell.textClip, x: clipX }));
     });
     if (prepared.length + overflow.length > maxCellFragments) throw new DocumentError("ResourceLimitExceeded", "All workbook panes and offscreen cell fragments exceed their combined cell budget.");
-    const borders = projectWorkbookBorders(dimensions, frame.layout, merges, bordersAt, sheet.rightToLeft,
-      maxNodes, (row, column) => workbookTextRotation(style(row, column)).rotationDegrees, new Map(frame.skewColumns.map(item => [item.pane, item.columns])));
+    const projectedBorders = projectWorkbookBorders(dimensions, frame.layout, merges, bordersAt, sheet.rightToLeft,
+      maxNodes, (row, column) => rotation(style(row, column)), new Map(frame.skewColumns.map(item => [item.pane, item.columns])));
     const diagonals = projectWorkbookDiagonals(frame.projections, frame.layout, (row, column) => workbookCellDiagonals(document, style(row, column)), sheet.rightToLeft, maxNodes);
     const materialize = (panes: ReturnType<typeof projectWorkbookBorders>): SVGSVGElement[] => panes.filter(pane => pane.edges.length).map(pane => {
       const element = createWorkbookBorderView(document, pane.bounds, pane.edges, remaining()); textNodes += 1 + element.querySelectorAll("*").length; return element;
     });
-    const views = materialize([...borders, ...diagonals]);
+    const views = materialize([...projectedBorders, ...diagonals]);
     const gridPaint = { kind: "css" as const, style: "solid" as const, widthPt: .75, color: "rgb(220, 224, 230)" };
     const gridLines = sheet.showGridLines ? materialize(projectWorkbookBorders(dimensions, frame.layout, merges,
       () => ({ before: gridPaint, after: gridPaint, top: gridPaint, bottom: gridPaint }), sheet.rightToLeft, maxNodes)) : [];

@@ -6,7 +6,7 @@ import type { WorkbookCellFormat } from "./cell-format.js";
 import type { WorkbookWindowFrame } from "./window-loader.js";
 import { WorkbookTableAppearance } from "./table-appearance.js";
 import { WorkbookConditionalAppearance } from "./conditional-appearance.js";
-import { checkWorkbookCellSource, workbookCellSourceAttributes } from "./plain-cell-source.js";
+import { checkedPlainWorkbookAttributes, checkWorkbookCellSource, workbookCellSourceAttributes } from "./plain-cell-source.js";
 
 export interface WorkbookSourceCell { readonly element: HTMLTableCellElement; readonly format: WorkbookCellFormat }
 const runAttributes = new Set(["class"]), noAttributes = new Set<string>();
@@ -26,7 +26,10 @@ export class WorkbookCellSources {
     if (!scope.isConnected || !document.defaultView || !Number.isSafeInteger(maxNodes) || maxNodes < 1) throw new DocumentError("InvalidOperation", "Cell source measurement requires a connected surface and a positive node budget.");
     this.root = markViewNode(document.createElement("office-workbook-source"));
     this.root.dataset.officeView = "workbook-source-measurement"; this.root.setAttribute("aria-hidden", "true");
-    this.root.style.cssText = "position:absolute;visibility:hidden;pointer-events:none;contain:layout;overflow:hidden;left:0;top:0;width:0;height:0";
+    // This tree supplies computed source styles and text identities only. Its
+    // table geometry is never measured; display:none avoids solving hundreds
+    // of irrelevant source-column widths when the real text probes lay out.
+    this.root.style.cssText = "display:none!important;position:absolute;visibility:hidden;pointer-events:none;contain:layout;overflow:hidden;left:0;top:0;width:0;height:0";
     if (snapshot.metadata.workbook.themeCssClass) this.root.className = snapshot.metadata.workbook.themeCssClass;
     let count = 1;
     const account = (amount: number): void => { count += amount; if (count > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Workbook source projection exceeds its node budget."); };
@@ -72,6 +75,12 @@ export class WorkbookCellSources {
 }
 
 function sourceCell(document: Document, source: WorkbookCell, account: (amount: number) => void): HTMLTableCellElement {
+  const attributes = checkedPlainWorkbookAttributes(source);
+  if (attributes) {
+    account(1 + Number(source.text.length > 0)); const cell = document.createElement("td");
+    for (const [name, value] of attributes) cell.setAttribute(name, value);
+    cell.textContent = source.text; return cell;
+  }
   if (typeof source.html !== "string" || source.html.length > 8 * 1024 * 1024) throw new DocumentError("ResourceLimitExceeded", "Workbook cell HTML exceeds its source budget.");
   const template = document.createElement("template"); template.innerHTML = "<table><tbody><tr>" + source.html + "</tr></tbody></table>";
   const single = (parent: ParentNode, name: string): HTMLElement => {
