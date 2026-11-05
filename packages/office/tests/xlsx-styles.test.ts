@@ -73,9 +73,9 @@ describe("native workbook style tables", () => {
       (s: string) => s.replace('fontId="1"', 'fontId="999"'),
       (s: string) => s.replace('numFmtId="164" fontId', 'numFmtId="999" fontId'),
       (s: string) => s.replace('<fonts count="3">', '<fonts count="4">'),
-      (s: string) => s.replace('<alignment horizontal="center"', '<alignment textRotation="45" horizontal="center"'),
-      (s: string) => s.replace('patternType="solid"', 'patternType="darkGrid"'),
-      (s: string) => s.replace('<border><left/>', '<border diagonalUp="1"><left/>'),
+      (s: string) => s.replace('<alignment horizontal="center"', '<alignment textRotation="181" horizontal="center"'),
+      (s: string) => s.replace('patternType="solid"', 'patternType="unknown"'),
+      (s: string) => s.replace('<border><left/>', '<border diagonalUp="maybe"><left/>'),
     ];
     for (const edit of edits) expect(() => new XlsxStyles(variant(edit), "xl/workbook.xml", 1_000_000)).toThrow();
     expect(() => new XlsxStyles(variant(s => s), "xl/workbook.xml", 100)).toThrowError(expect.objectContaining({ code: "ResourceLimitExceeded" }));
