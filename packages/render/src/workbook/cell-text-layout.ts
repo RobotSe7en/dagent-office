@@ -1,6 +1,7 @@
 import { DocumentError } from "@dagent-office/core";
 import type { WorkbookDisplayFormat, WorkbookNumberDisplay, WorkbookNumberFormatter, WorkbookSnapshot, WorkbookValue } from "@dagent-office/core";
 import type { FontResolution } from "../contracts.js";
+import type { FontProbeCache } from "../font-probe-cache.js";
 import type { WorkbookSourceCell } from "./cell-source.js";
 import { createWorkbookTextView } from "./text-view.js";
 import { createWorkbookNumberText } from "./number-text.js";
@@ -29,7 +30,7 @@ export interface WorkbookCellTextLayouts {
 /** One display and natural-height pipeline for visible cells and stable row
  * measurement. Both use source styles, numeric/text formats and local fonts. */
 export function layoutWorkbookCellTexts(scope: HTMLElement, snapshot: WorkbookSnapshot, inputs: readonly WorkbookCellTextInput[], formatter: WorkbookNumberFormatter,
-  options: { readonly normalSpaceWidthPx: number }, maxNodes: number, maxTextUnits: number): WorkbookCellTextLayouts {
+  options: { readonly normalSpaceWidthPx: number }, maxNodes: number, maxTextUnits: number, probes?: FontProbeCache): WorkbookCellTextLayouts {
   const formats = new Map(snapshot.metadata.workbook.numberFormats.map(format => [format.formatId, format]));
   const texts: WorkbookTextLayoutInput[] = [], numbers: WorkbookNumberLayoutInput[] = [], formatted: WorkbookFormattedTextInput[] = [];
   const locations = new Map<WorkbookCellTextInput, { kind: "text" | "number" | "formatted"; index: number }>();
@@ -62,14 +63,14 @@ export function layoutWorkbookCellTexts(scope: HTMLElement, snapshot: WorkbookSn
     if (units > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Workbook window text exceeds its cumulative source-text budget.");
     locations.set(input, { kind: "text", index: texts.length }); texts.push({ source, text, valueType: value.type, ...size });
   }
-  const rich = layoutWorkbookTexts(scope, texts, options.normalSpaceWidthPx, maxNodes, maxTextUnits);
+  const rich = layoutWorkbookTexts(scope, texts, options.normalSpaceWidthPx, maxNodes, maxTextUnits, probes);
   textNodes = rich.cells.reduce((sum, cell) => sum + cell.text.nodes + 1, 0);
   units = rich.cells.reduce((sum, cell) => sum + (cell.text.element.textContent?.length ?? 0), 0);
-  const formattedText = layoutWorkbookFormattedTexts(scope, formatted, formatter, options.normalSpaceWidthPx, remaining(), Math.max(1, maxTextUnits - units));
+  const formattedText = layoutWorkbookFormattedTexts(scope, formatted, formatter, options.normalSpaceWidthPx, remaining(), Math.max(1, maxTextUnits - units), probes);
   textNodes += formattedText.cells.reduce((sum, cell) => sum + cell.text.nodes + 1, 0);
   units += formattedText.cells.reduce((sum, cell) => sum + (cell.text.element.textContent?.length ?? 0), 0);
   if (units > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Workbook window exceeds its cumulative displayed-text budget.");
-  const numeric = layoutWorkbookNumbers(scope, numbers, formatter, options.normalSpaceWidthPx, remaining(), Math.max(1, maxTextUnits - units));
+  const numeric = layoutWorkbookNumbers(scope, numbers, formatter, options.normalSpaceWidthPx, remaining(), Math.max(1, maxTextUnits - units), probes);
   textNodes += numeric.cells.reduce((sum, cell) => sum + cell.text.nodes + 1, 0);
   units += numeric.cells.reduce((sum, cell) => sum + (cell.text.element.textContent?.length ?? 0), 0);
   if (units > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Workbook window exceeds its cumulative displayed-text budget.");

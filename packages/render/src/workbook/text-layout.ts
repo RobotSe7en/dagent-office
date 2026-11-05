@@ -2,6 +2,7 @@ import { DocumentError } from "@dagent-office/core";
 import type { WorkbookValue } from "@dagent-office/core";
 import type { FontResolution } from "../contracts.js";
 import { resolvePreviewFontsInScope } from "../fonts.js";
+import type { FontProbeCache } from "../font-probe-cache.js";
 import { markViewNode } from "../view-nodes.js";
 import type { WorkbookSourceCell } from "./cell-source.js";
 import type { WorkbookTextView } from "./text-view.js";
@@ -45,7 +46,7 @@ export interface WorkbookTextLayouts {
  * text views are private detached projections; source nodes are never changed.
  * Return full-cell geometry for later pane clipping. This does not yet compose
  * neighboring-cell overflow or choose formatted numeric/date display strings. */
-export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly WorkbookTextLayoutInput[], normalSpaceWidthPx: number, maxNodes = 50_000, maxTextUnits: number = 8 * 1024 * 1024): WorkbookTextLayouts {
+export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly WorkbookTextLayoutInput[], normalSpaceWidthPx: number, maxNodes = 50_000, maxTextUnits: number = 8 * 1024 * 1024, probes?: FontProbeCache): WorkbookTextLayouts {
   const document = scope.ownerDocument, view = document.defaultView;
   if (!scope.isConnected || !view || document.fonts.status === "loading" || !Number.isFinite(normalSpaceWidthPx) || normalSpaceWidthPx < 0
     || ![maxNodes, maxTextUnits].every(value => Number.isSafeInteger(value) && value > 0)) throw new DocumentError("InvalidOperation", "Worksheet text layout requires a connected surface, settled fonts and valid measurement limits.");
@@ -94,7 +95,7 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
       element.append(text); root.append(element); return { input, textView, alignment, element, available, left, shape, naturalHeightPx: undefined as number | undefined };
     });
     scope.append(root);
-    const fonts = resolvePreviewFontsInScope(document, root, "[data-office-text-style],[data-office-script]");
+    const fonts = resolvePreviewFontsInScope(document, root, "[data-office-text-style],[data-office-script]", probes);
     let usedFallbackLineMetrics = false;
     if (prepared.some(item => item.alignment.stacked)) {
       if (++nodes > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Worksheet font measurement exceeds its node budget.");

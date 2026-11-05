@@ -1,6 +1,7 @@
 import { DocumentError } from "@dagent-office/core";
 import type { WorkbookNumberFormatter, WorkbookSnapshot } from "@dagent-office/core";
 import type { FontResolution } from "../contracts.js";
+import { FontProbeCache } from "../font-probe-cache.js";
 import { markViewNode, viewNodeRole } from "../view-nodes.js";
 import { layoutWorkbookCellTexts } from "./cell-text-layout.js";
 import type { WorkbookCellTextInput, WorkbookCellTextLayouts } from "./cell-text-layout.js";
@@ -29,26 +30,17 @@ function cloneText(text: WorkbookTextLayout): WorkbookTextLayout {
 export class WorkbookCellTextCache {
   private readonly entries = new Map<string, Entry>();
   private readonly fontIds = new WeakMap<FontResolution, string>();
-  private readonly faces = new WeakMap<FontFace, number>();
-  private faceId = 0;
-  private fontState: string | undefined;
+  readonly probes: FontProbeCache = new FontProbeCache();
+  private fontEpoch: number | undefined;
   private nodes = 0; private units = 0;
   constructor(private readonly maxEntries: number, private readonly maxNodes: number, private readonly maxUnits: number) {
     if (![maxEntries, maxNodes, maxUnits].every(value => Number.isSafeInteger(value) && value > 0))
       throw new DocumentError("InvalidOperation", "Workbook text caching requires positive finite budgets.");
   }
   settled(fonts: FontFaceSet): boolean {
-    const state = JSON.stringify([...fonts].map(face => {
-      let id = this.faces.get(face); if (id === undefined) { id = ++this.faceId; this.faces.set(face, id); }
-      return [id, face.family, face.style, face.weight, face.stretch, face.unicodeRange, face.featureSettings, face.variationSettings,
-        face.ascentOverride, face.descentOverride, face.lineGapOverride, face.display, face.status];
-    }));
-    // Reading fonts.ready can itself force layout for every newly projected
-    // source table. Face identity/descriptors/status also detect completed
-    // loads between frames, without that synchronous layout checkpoint.
-    if (this.fontState !== state || fonts.status === "loading") this.clear();
-    this.fontState = state;
-    return fonts.status !== "loading";
+    const state = this.probes.watch(fonts);
+    if (state.epoch !== this.fontEpoch) { this.entries.clear(); this.nodes = 0; this.units = 0; this.fontEpoch = state.epoch; }
+    return state.ready;
   }
   fontId(font: FontResolution): string { let key = this.fontIds.get(font); if (!key) { key = JSON.stringify(font); this.fontIds.set(font, key); } return key; }
   get(key: string): Entry | undefined {
@@ -66,7 +58,7 @@ export class WorkbookCellTextCache {
     }
     this.entries.set(key, { cell: Object.freeze({ ...cell, text: cloneText(cell.text) }), fonts, fallback, nodes, units }); this.nodes += nodes; this.units += units;
   }
-  clear(): void { this.entries.clear(); this.nodes = 0; this.units = 0; }
+  clear(): void { this.entries.clear(); this.nodes = 0; this.units = 0; this.fontEpoch = undefined; this.probes.clear(); }
 }
 
 export function layoutCachedWorkbookCellTexts(scope: HTMLElement, snapshot: WorkbookSnapshot, inputs: readonly WorkbookCellTextInput[], keys: readonly string[],
@@ -80,7 +72,7 @@ export function layoutCachedWorkbookCellTexts(scope: HTMLElement, snapshot: Work
     for (const font of entry.fonts) fonts.set(cache.fontId(font), font);
   }
   if (nodes >= maxNodes || units > maxUnits) throw new DocumentError("ResourceLimitExceeded", "Cached workbook text exceeds the complete window budget.");
-  const fresh = missing.length ? layoutWorkbookCellTexts(scope, snapshot, missing, formatter, options, maxNodes - nodes, Math.max(1, maxUnits - units))
+  const fresh = missing.length ? layoutWorkbookCellTexts(scope, snapshot, missing, formatter, options, maxNodes - nodes, Math.max(1, maxUnits - units), cache.probes)
     : { cells: [], nodes: 0, units: 0, fonts: [], usedFallbackLineMetrics: false };
   nodes += fresh.nodes; units += fresh.units; fallback ||= fresh.usedFallbackLineMetrics;
   if (nodes >= maxNodes || units > maxUnits) throw new DocumentError("ResourceLimitExceeded", "Workbook text exceeds its cumulative cache and layout budget.");

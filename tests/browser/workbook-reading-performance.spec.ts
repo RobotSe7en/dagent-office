@@ -20,7 +20,9 @@ test('pinned-resource native reading, actual selection and wheel feedback, DOM a
     return output.filter(part => part.type === 'chunk').map(part => part.code).join('\n');
   };
   const worker = await bundle('workbook-read-worker'), host = await bundle('workbook-reading-budget');
-  await page.goto('/'); await page.evaluate(code => { const script = document.createElement('script'); script.textContent = code; document.head.append(script); }, host);
+  await page.route('**/workbook-reading-budget.html', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><html><head><meta charset="utf-8"><title>Workbook reading budget</title></head><body></body></html>' }));
+  await page.goto('/workbook-reading-budget.html');
+  await page.evaluate(code => { const script = document.createElement('script'); script.textContent = code; document.head.append(script); }, host);
   const bytes = readFileSync('examples/xlsx/15-ten-thousand-rows.xlsx');
   try {
     await page.evaluate(({ worker, bytes }) => window.workbookBudget.openBudget(worker, bytes), { worker, bytes: [...bytes] });
@@ -41,7 +43,7 @@ test('pinned-resource native reading, actual selection and wheel feedback, DOM a
     const sha256 = (value: Uint8Array | string) => createHash('sha256').update(value).digest('hex');
     const report = { ...measured, sourceSha256: sha256(bytes), sourceBytes: bytes.length, workerBundleSha256: sha256(worker), hostBundleSha256: sha256(host), viewport: { width: 1280, height: 800 }, grid: { widthPt: 880, heightPt: 450 }, counts,
       selectionP95Ms: p95(measured.selections), wheelP95Ms: p95(measured.wheels), cancellation,
-      instrumentation: { trace: 'off', screenshots: 'off', video: 'off', cpuProfiler: Boolean(profile) } };
+      instrumentation: { host: 'standalone public-SDK preview', trace: 'off', screenshots: 'off', video: 'off', cpuProfiler: Boolean(profile) } };
     writeFileSync(info.outputPath('workbook-reading-budget.json'), JSON.stringify(report, null, 2) + '\n');
     await info.attach('workbook-reading-budget.json', { body: JSON.stringify(report), contentType: 'application/json' });
     expect(report.counts).toEqual({ kind: 'audit', cells: 200_000, formulas: 20_000, chunks: 40 });

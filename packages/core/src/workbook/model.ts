@@ -10,9 +10,11 @@ import { parseHtml } from "../document/html.js";
 import { validateWorkbookMetadata } from "./metadata.js";
 import { validateWorkbookContent } from "./content.js";
 import { createFormulaTemplatePool } from "./formula.js";
-import { CHUNK_ROWS, CHUNK_COLUMNS, MAX_SHEET_COLUMNS, MAX_SHEET_ROWS, indexWorkbookChunk, decodeWorkbookCell } from "./chunk-index.js";
+import { CHUNK_ROWS, CHUNK_COLUMNS, MAX_SHEET_COLUMNS, MAX_SHEET_ROWS, indexWorkbookChunk } from "./chunk-index.js";
 import type { ChunkIndex } from "./chunk-index.js";
 import { WorkbookReferences } from "./reference.js";
+import { WorkbookCellReadCache } from "./cell-read-cache.js";
+import { WorkbookChunkTextCache } from "./chunk-text-cache.js";
 
 export const DEFAULT_WORKBOOK_READ_LIMITS: WorkbookReadLimits = Object.freeze({
   maxCells: 250_000, maxFormulas: 25_000, maxWindowCells: 5000, maxFormulaTemplates: 25_000, maxFormulaKeyCodeUnits: 4 * 1024 * 1024,
@@ -37,17 +39,19 @@ export function openWorkbookModel(files: Map<string, Uint8Array>, manifest: Work
   validateWorkbookContent(metadata.workbook, manifest, annotations, content, classes, documentLimits.maxNodes, items);
   const sheets = new Map(metadata.workbook.sheets.map(sheet => [sheet.sheetId, new Map<number, ChunkIndex>()]));
   const chunks: { path: string; index: ChunkIndex }[] = [], formulas = createFormulaTemplatePool(limits.maxFormulaTemplates, limits.maxFormulaKeyCodeUnits);
+  const textCache = new WorkbookChunkTextCache();
   let cellCount = 0, formulaCount = 0;
   for (const chunk of manifest.chunks) {
     const sheet = sheets.get(chunk.sheetId), key = chunk.row / CHUNK_ROWS * (MAX_SHEET_COLUMNS / CHUNK_COLUMNS) + chunk.column / CHUNK_COLUMNS;
     if (!sheet || sheet.has(key)) invalid("Workbook chunks must have unique positions on existing worksheets.");
     const bytes = files.get(chunk.path);
     if (!bytes || assetDigest(bytes) !== chunk.sha256) invalid("Workbook chunk bytes do not match their digest.");
-    const index = indexWorkbookChunk(bytes, chunk, documentLimits.maxFileBytes, { formulas, cssClasses: classes, cellStyleClasses, numberFormats: formats, maxNodes: documentLimits.maxNodes, maxDepth: documentLimits.maxDepth });
+    const index = indexWorkbookChunk(bytes, chunk, documentLimits.maxFileBytes, { formulas, textCache, cssClasses: classes, cellStyleClasses, numberFormats: formats, maxNodes: documentLimits.maxNodes, maxDepth: documentLimits.maxDepth });
     cellCount += index.cellCount; formulaCount += index.formulaCount;
     checkLimit(cellCount, limits.maxCells); checkLimit(formulaCount, limits.maxFormulas);
     sheet.set(key, index); chunks.push({ path: chunk.path, index }); files.delete(chunk.path);
   }
+  const decodedCells = new WorkbookCellReadCache(Math.min(5000, limits.maxWindowCells));
   for (const sheet of metadata.workbook.sheets) for (const table of sheet.tables ?? []) if (table.header) {
     for (const [index, column] of table.columns.entries()) {
       const cell = readWindow({ sheetId: sheet.sheetId, row: table.range.from.row, column: table.range.from.column + index, rows: 1, columns: 1 })[0];
@@ -75,11 +79,11 @@ export function openWorkbookModel(files: Map<string, Uint8Array>, manifest: Work
     for (let row = Math.floor(window.row / CHUNK_ROWS); row <= Math.floor((window.row + window.rows - 1) / CHUNK_ROWS); row++) {
       for (let column = Math.floor(window.column / CHUNK_COLUMNS); column <= Math.floor((window.column + window.columns - 1) / CHUNK_COLUMNS); column++) {
         const chunk = sheet.get(row * (MAX_SHEET_COLUMNS / CHUNK_COLUMNS) + column);
-        for (const source of chunk?.readWindow(window) ?? []) cells.push({ sheetId: window.sheetId, row: source.row, column: source.column, html: source.html, ...decodeWorkbookCell(source.html) });
+        for (const source of chunk?.readWindow(window) ?? []) cells.push(decodedCells.read(window.sheetId, source));
       }
     }
     cells.sort((a, b) => a.row - b.row || a.column - b.column);
-    return freeze(cells);
+    return Object.freeze(cells);
   }
   return Object.freeze({
     kind: "workbook", snapshot: () => snapshot, getNode: (nodeId: string) => content?.getNode(nodeId),

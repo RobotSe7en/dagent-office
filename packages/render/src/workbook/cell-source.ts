@@ -20,7 +20,7 @@ export class WorkbookCellSources {
   private readonly root: HTMLElement;
   private readonly cells = new Map<number, WorkbookSourceCell>();
   private disposed = false;
-  constructor(scope: HTMLElement, snapshot: WorkbookSnapshot, frame: Pick<WorkbookWindowFrame, "documentId" | "revision" | "sheetId" | "sourceCoordinates" | "getCell">, maxNodes = 50_000, rules?: WorkbookRuleReadResponse) {
+  constructor(scope: HTMLElement, snapshot: WorkbookSnapshot, frame: Pick<WorkbookWindowFrame, "documentId" | "revision" | "sheetId" | "sourceCoordinates" | "getCell">, maxNodes = 50_000, rules?: WorkbookRuleReadResponse, scalarPrototypes = false) {
     const document = scope.ownerDocument, sheet = snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === frame.sheetId);
     if (!sheet || snapshot.manifest.documentId !== frame.documentId || snapshot.manifest.revision !== frame.revision) throw new DocumentError("RevisionConflict", "Cell source styles require the same workbook revision as their window.");
     if (!scope.isConnected || !document.defaultView || !Number.isSafeInteger(maxNodes) || maxNodes < 1) throw new DocumentError("InvalidOperation", "Cell source measurement requires a connected surface and a positive node budget.");
@@ -34,6 +34,9 @@ export class WorkbookCellSources {
     let count = 1;
     const account = (amount: number): void => { count += amount; if (count > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Workbook source projection exceeds its node budget."); };
     const tables = new Map<number, { table: HTMLTableElement; body: HTMLTableSectionElement; rows: Map<number, HTMLTableRowElement> }>();
+    const reusable = scalarPrototypes && !rules && !sheet.tables?.length && !sheet.conditionalRules?.length
+      && snapshot.styles.every(style => /^(?:\s*\.[a-zA-Z_][-\w]*\s*\{[^{}]*\}\s*)*$/.test(style.css));
+    const prototypes = new Map<string, HTMLTableCellElement>();
     const coordinates = frame.sourceCoordinates;
     for (const coordinate of coordinates) {
       const { row, column } = coordinate, blockRow = Math.floor(row / 256) * 256, blockColumn = Math.floor(column / 32) * 32, blockKey = blockRow / 256 * 512 + blockColumn / 32;
@@ -46,9 +49,17 @@ export class WorkbookCellSources {
       let rowElement = chunk.rows.get(row);
       if (!rowElement) { account(1); rowElement = document.createElement("tr"); rowElement.dataset.row = String(row); chunk.rows.set(row, rowElement); chunk.body.append(rowElement); }
       const source = frame.getCell(row, column), format = workbookCellFormat(sheet, coordinate, source);
+      // Non-text displays are derived from typed values and have no source
+      // character offsets. Class-only scalar typography can share a private
+      // connected TD, after every scalar's complete source check. Text/rich
+      // cells retain their actual source tree and UTF-16 mapping.
+      const attributes = reusable && source && source.value.type !== "text" ? checkedPlainWorkbookAttributes(source) : undefined;
+      const prototype = attributes ? prototypes.get(format.cssClass) : undefined;
+      if (prototype) { this.cells.set(row * 16_384 + column, Object.freeze({ element: prototype, format })); continue; }
       const element = source ? sourceCell(document, source, account) : document.createElement("td");
       if (!source) { account(1); element.dataset.column = String(column); element.dataset.valueType = "blank"; }
       element.className = format.cssClass; rowElement.append(element);
+      if (attributes) prototypes.set(format.cssClass, element);
       this.cells.set(row * 16_384 + column, Object.freeze({ element, format }));
     }
     for (const [, chunk] of [...tables].sort((a, b) => a[0] - b[0])) this.root.append(chunk.table);

@@ -44,21 +44,25 @@ export function paintWorkbookWindow(document: Document, frame: WorkbookWindowFra
       const bounds = intersectRect({ x: x + Math.min(0, shape.topOffsetPt), y: rect.y, width: rect.width + Math.abs(shape.topOffsetPt), height: rect.height }, pane)!;
       // The projection guarantees a visible rectangular cell; the full slant
       // envelope contains that rectangle and thus always intersects its pane.
-      const fill = cell.fill.kind === "solid" && !shape.topOffsetPt ? (() => {
-        account(1); const element = markViewNode(document.createElement("div")); element.dataset.officeView = "workbook-cell-fill";
-        element.dataset.officeFillColor = cell.fill.color; element.setAttribute("aria-hidden", "true");
-        element.style.cssText = `position:absolute;pointer-events:none;left:${bounds.x}pt;top:${bounds.y}pt;width:${bounds.width}pt;height:${bounds.height}pt`;
-        element.style.backgroundColor = cell.fill.color; return { element, nodes: 0 };
-      })() : createWorkbookShapedFillView(document, cell.fill, shape, `workbook-fill-${++id}`, {
-        xPt: bounds.x - x, yPt: bounds.y - rect.y, widthPt: bounds.width, heightPt: bounds.height,
-      }, Math.max(1, maxNodes - nodes));
-      account(fill.nodes); fill.element.style.left = `${bounds.x}pt`; fill.element.style.top = `${bounds.y}pt`; fills.append(fill.element);
+      const transparent = cell.fill.kind === "solid" && ["transparent", "rgba(0, 0, 0, 0)", "rgba(0,0,0,0)"].includes(cell.fill.color);
+      if (!transparent) {
+        const fill = cell.fill.kind === "solid" && !shape.topOffsetPt ? (() => {
+          account(1); const element = markViewNode(document.createElement("div")); element.dataset.officeView = "workbook-cell-fill";
+          element.dataset.officeFillColor = cell.fill.color; element.setAttribute("aria-hidden", "true");
+          element.style.cssText = `position:absolute;pointer-events:none;left:${bounds.x}pt;top:${bounds.y}pt;width:${bounds.width}pt;height:${bounds.height}pt`;
+          element.style.backgroundColor = cell.fill.color; return { element, nodes: 0 };
+        })() : createWorkbookShapedFillView(document, cell.fill, shape, `workbook-fill-${++id}`, {
+          xPt: bounds.x - x, yPt: bounds.y - rect.y, widthPt: bounds.width, heightPt: bounds.height,
+        }, Math.max(1, maxNodes - nodes));
+        account(fill.nodes); fill.element.style.left = `${bounds.x}pt`; fill.element.style.top = `${bounds.y}pt`;
+        fill.element.dataset.officeFillKey = `${projection.pane}:${projection.row}:${projection.column}`; fills.append(fill.element);
+      }
       let row = rows.get(projection.row);
       if (!row) {
         account(1); row = document.createElement("div"); row.setAttribute("role", "row"); row.setAttribute("aria-rowindex", String(projection.row + 1)); row.style.display = "contents"; rows.set(projection.row, row);
       }
-      account(2 + (text ? 1 + text.text.nodes : 0));
-      const clip = document.createElement("div"), body = document.createElement("div"), key = projection.row * 16_384 + projection.column;
+      account(1 + (text ? 1 + text.text.nodes : 0));
+      const clip = document.createElement("div"), key = projection.row * 16_384 + projection.column;
       clip.dataset.officeView = "workbook-cell"; clip.dataset.row = String(projection.row); clip.dataset.column = String(projection.column); clip.dataset.pane = projection.pane;
       if (accessible.has(key)) clip.setAttribute("aria-hidden", "true");
       else {
@@ -73,9 +77,10 @@ export function paintWorkbookWindow(document: Document, frame: WorkbookWindowFra
         : { ...projection.clip, x: rightToLeft ? frame.layout.widthPt - projection.clip.x - projection.clip.width : projection.clip.x };
       clip.style.cssText = `position:absolute;overflow:hidden;left:${textBounds.x}pt;top:${textBounds.y}pt;width:${textBounds.width}pt;height:${textBounds.height}pt`;
       const contentRect = cell.textRect ?? rect, contentX = rightToLeft ? frame.layout.widthPt - contentRect.x - contentRect.width : contentRect.x;
-      body.style.cssText = `position:absolute;left:${contentX - textBounds.x}pt;top:${contentRect.y - textBounds.y}pt;width:${contentRect.width}pt;height:${contentRect.height}pt`;
-      if (text) body.append(text.element);
-      clip.append(body); row.append(clip);
+      // The text layout already owns the complete source-cell box. Position
+      // that box directly in its pane clip instead of nesting an identical box.
+      if (text) { Object.assign(text.element.style, { position: "absolute", left: `${contentX - textBounds.x}pt`, top: `${contentRect.y - textBounds.y}pt` }); clip.append(text.element); }
+      row.append(clip);
     }
     for (const [, row] of [...rows].sort((a, b) => a[0] - b[0])) root.append(row);
     for (const cell of overflowCells) {
@@ -92,13 +97,13 @@ export function paintWorkbookWindow(document: Document, frame: WorkbookWindowFra
         }
       }
       if (!cell.text || !cell.textClip || !cell.textRect) continue;
-      account(3 + cell.text.text.nodes);
-      const clip = document.createElement("div"), body = document.createElement("div"), bounds = cell.textClip, contentRect = cell.textRect;
+      account(2 + cell.text.text.nodes);
+      const clip = document.createElement("div"), bounds = cell.textClip, contentRect = cell.textRect;
       const clipX = rightToLeft ? frame.layout.widthPt - bounds.x - bounds.width : bounds.x, bodyX = rightToLeft ? frame.layout.widthPt - contentRect.x - contentRect.width : contentRect.x;
       clip.dataset.officeView = "workbook-text-overflow"; clip.dataset.row = String(cell.projection.row); clip.dataset.column = String(cell.projection.column); clip.dataset.pane = cell.projection.pane;
       clip.style.cssText = `position:absolute;overflow:hidden;left:${clipX}pt;top:${bounds.y}pt;width:${bounds.width}pt;height:${bounds.height}pt`;
-      body.style.cssText = `position:absolute;left:${bodyX - clipX}pt;top:${contentRect.y - bounds.y}pt;width:${contentRect.width}pt;height:${contentRect.height}pt`;
-      body.append(cell.text.element); clip.append(body); root.append(clip);
+      Object.assign(cell.text.element.style, { position: "absolute", left: `${bodyX - clipX}pt`, top: `${contentRect.y - bounds.y}pt` });
+      clip.append(cell.text.element); root.append(clip);
     }
     for (const border of borders) { account(1 + border.querySelectorAll("*").length); root.append(border); }
     return root;

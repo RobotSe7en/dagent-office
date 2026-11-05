@@ -1,4 +1,5 @@
 import type { FontResolution } from "./contracts.js";
+import type { FontProbeCache } from "./font-probe-cache.js";
 export type { FontResolution } from "./contracts.js";
 const generic = new Set([
   "serif",
@@ -27,9 +28,13 @@ export function resolvePreviewFonts(
 }
 /** Limit private probes/window diagnostics to their owning surface. A selector
  * in another mounted document must not participate in font substitution. */
-export function resolvePreviewFontsInScope(document: Document, scope: ParentNode, selector: string): readonly FontResolution[] {
-  const canvas = document.createElement("canvas");
-  const context = canvas.getContext("2d")!;
+export function resolvePreviewFontsInScope(document: Document, scope: ParentNode, selector: string, probes?: FontProbeCache): readonly FontResolution[] {
+  probes?.watch(document.fonts);
+  let canvas: HTMLCanvasElement | undefined, context: CanvasRenderingContext2D | undefined, glyphPhase = false;
+  const probe = (): CanvasRenderingContext2D => {
+    if (!context) { canvas = document.createElement("canvas"); if (glyphPhase) { canvas.width = 128; canvas.height = 128; } context = canvas.getContext("2d")!; }
+    return context;
+  };
   const cache = new Map<string, boolean>();
   const resolutions = new Map<
     string,
@@ -46,16 +51,17 @@ export function resolvePreviewFontsInScope(document: Document, scope: ParentNode
     if (generic.has(family.toLowerCase())) return true;
     const known = cache.get(family);
     if (known !== undefined) return known;
-    const quoted = JSON.stringify(family);
-    const sample = "汉字中文，。AaWim0123";
-    let found = false;
-    for (const base of ["monospace", "serif", "sans-serif"]) {
-      context.font = "72px " + base;
-      const fallback = context.measureText(sample).width;
-      context.font = "72px " + quoted + "," + base;
-      if (Math.abs(context.measureText(sample).width - fallback) > 0.01)
-        found = true;
-    }
+    const measure = (): boolean => {
+      const context = probe();
+      const quoted = JSON.stringify(family), sample = "汉字中文，。AaWim0123"; let found = false;
+      for (const base of ["monospace", "serif", "sans-serif"]) {
+        context.font = "72px " + base; const fallback = context.measureText(sample).width;
+        context.font = "72px " + quoted + "," + base;
+        if (Math.abs(context.measureText(sample).width - fallback) > 0.01) found = true;
+      }
+      return found;
+    };
+    const found = probes ? probes.available(family, measure) : measure();
     cache.set(family, found);
     return found;
   };
@@ -91,8 +97,8 @@ export function resolvePreviewFontsInScope(document: Document, scope: ParentNode
   }
   // A local raster comparison also catches the generic missing-glyph box. This
   // is a preview diagnostic, not a promise of platform-independent font coverage.
-  canvas.width = 128;
-  canvas.height = 128;
+  glyphPhase = true;
+  if (canvas) { canvas.width = 128; canvas.height = 128; }
   const hashes = new Map<string, number>();
   const unavailableAudits = new Set<string>();
   let audited = 0;
@@ -100,14 +106,14 @@ export function resolvePreviewFontsInScope(document: Document, scope: ParentNode
     const key = font + "\0" + character;
     const cached = hashes.get(key);
     if (cached !== undefined) return cached;
-    context.clearRect(0, 0, 128, 128);
-    context.font = "64px " + font;
-    context.fillText(character, 16, 90);
-    const pixels = context.getImageData(0, 0, 128, 128).data;
-    let hash = 2166136261;
-    for (const value of pixels) hash = Math.imul(hash ^ value, 16777619);
-    hashes.set(key, hash >>> 0);
-    return hash >>> 0;
+    const measure = (): number => {
+      const context = probe();
+      context.clearRect(0, 0, 128, 128); context.font = "64px " + font; context.fillText(character, 16, 90);
+      const pixels = context.getImageData(0, 0, 128, 128).data; let hash = 2166136261;
+      for (const value of pixels) hash = Math.imul(hash ^ value, 16777619);
+      return hash >>> 0;
+    };
+    const hash = probes ? probes.glyph(key, measure) : measure(); hashes.set(key, hash); return hash;
   };
   for (const node of nodes.filter((item) =>
     item.matches('[data-word-script="eastAsia"],[data-office-script="east-asia"],.sdk-number-marker,.sdk-ppt-marker'),

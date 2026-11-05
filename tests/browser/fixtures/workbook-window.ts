@@ -36,14 +36,15 @@ export async function windowLayoutMeasurement(entries: readonly [string, number[
       const view = surface.document.defaultView!;
       const cells = rendered.cells.filter(cell => cell.text).map(cell => {
         const text = cell.text!, bounds = text.text.element.getBoundingClientRect();
-        const clipBounds = text.element.parentElement!.parentElement!.getBoundingClientRect();
+        const clip = text.element.closest<HTMLElement>('[data-office-view="workbook-cell"],[data-office-view="workbook-text-overflow"]')!;
+        const clipBounds = clip.getBoundingClientRect();
         return { row: cell.projection.row, column: cell.projection.column, pane: cell.projection.pane, text: text.text.element.textContent,
           rect: cell.projection.rect, clipRect: cell.projection.clip, offsets: text.text.projections.map(part => [part.from, part.to, part.node.data]), shape: text.shape, scale: text.scale,
           runs: text.text.projections.map(part => { const style = view.getComputedStyle(part.node.parentElement!); return { from: part.from, to: part.to, text: part.node.data, color: style.color, weight: style.fontWeight, style: style.fontStyle, family: style.fontFamily }; }),
           color: view.getComputedStyle(text.text.element).color, weight: view.getComputedStyle(text.text.element).fontWeight, family: view.getComputedStyle(text.text.element).fontFamily,
           breaks: text.text.element.querySelectorAll("br").length, spaces: [...text.text.element.querySelectorAll<HTMLElement>("[data-office-number-space]")].map(node => node.getBoundingClientRect().width), bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
           clipWidthPt: clipBounds.width * .75, clipHeightPt: clipBounds.height * .75,
-          clip: text.element.parentElement!.parentElement!.style.cssText };
+          clip: clip.style.cssText };
       });
       const errors: string[] = [];
       for (const limits of [{ maxNodes: 5 }, { maxSourceNodes: 1 }, { maxTextCodeUnits: 1 }]) {
@@ -51,7 +52,7 @@ export async function windowLayoutMeasurement(entries: readonly [string, number[
         catch (error) { errors.push((error as { code: string }).code); }
       }
       const same = rendered.element === surface.view.firstChild;
-      const fillNodes = [...rendered.element.querySelector('[data-office-view="workbook-fills"]')!.children];
+      const fillNodes = new Map([...rendered.element.querySelector('[data-office-view="workbook-fills"]')!.children].map(node => [node.getAttribute('data-office-fill-key'), node]));
       results.push({ sheetId, cells, detached, same, errors, fonts: rendered.fonts.length, rules, completeRows: loader.frame!.completeRows,
         overflowCount: rendered.element.querySelectorAll('[data-office-view="workbook-text-overflow"]').length,
         overflowFills: [...rendered.element.querySelectorAll<SVGSVGElement>('[data-office-overflow-fill]')].map(fill => ({ color: fill.querySelector('rect')?.getAttribute('fill'), widthPt: fill.getBoundingClientRect().width * .75 })),
@@ -69,18 +70,22 @@ export async function windowLayoutMeasurement(entries: readonly [string, number[
         const frame = loader.frame!, point = frame.sourceCoordinates.find(point => { const cell = frame.getCell(point.row, point.column); return cell?.value.type === 'text' && !cell.formula; })!, source = frame.getCell(point.row, point.column)!;
         const changed = { ...source, text: '新的😀禰󠄀', value: { type: 'text' as const, value: '新的😀禰󠄀' }, html: source.html.replace(/>[\s\S]*<\/td>$/, '>新的😀禰󠄀</td>') };
         const replacement = (cell: typeof source) => ({ ...frame, getCell: (row: number, column: number) => row === point.row && column === point.column ? cell : frame.getCell(row, column) });
-        let rejected = '';
+        let rejected = '', rejectedNumeric = '';
         try { layoutWorkbookWindow(surface, snapshot, replacement({ ...source, html: source.html.replace('<td', '<td onclick="window.workbookInjected=true"') }), dimensions, formatter, { normalSpaceWidthPx: normal.spaceWidthPx }, rules, cache); }
         catch (error) { rejected = (error as { code: string }).code; }
+        const numericPoint = [...frame.sourceCoordinates].reverse().find(point => frame.getCell(point.row, point.column)?.value.type === 'number')!, numeric = frame.getCell(numericPoint.row, numericPoint.column)!;
+        try { layoutWorkbookWindow(surface, snapshot, { ...frame, getCell: (row, column) => row === numericPoint.row && column === numericPoint.column
+          ? { ...numeric, html: numeric.html.replace('<td', '<td onclick="window.workbookInjected=true"') } : frame.getCell(row, column) }, dimensions, formatter, { normalSpaceWidthPx: normal.spaceWidthPx }, rules, cache); }
+        catch (error) { rejectedNumeric = (error as { code: string }).code; }
         const next = layoutWorkbookWindow(surface, snapshot, replacement(changed), dimensions, formatter, { normalSpaceWidthPx: normal.spaceWidthPx }, rules, cache);
-        cacheSafety.push({ rejected, retained: surface.view.firstChild === rendered.element,
+        cacheSafety.push({ rejected, rejectedNumeric, retained: surface.view.firstChild === rendered.element,
           changedText: next.cells.find(cell => cell.projection.row === point.row && cell.projection.column === point.column)!.text!.text.element.textContent,
           offsets: next.cells.find(cell => cell.projection.row === point.row && cell.projection.column === point.column)!.text!.text.projections.map(part => [part.from, part.to, part.node.data]),
           leaked: surface.source.querySelectorAll('[data-office-view="workbook-source-measurement"]').length });
       }
       function frameFills() {
-        return loader.frame!.projections.map((cell, index) => ({ row: cell.row, column: cell.column, pane: cell.pane,
-          color: fillNodes[index]!.getAttribute('data-office-fill-color') ?? fillNodes[index]!.querySelector('rect')?.getAttribute('fill') ?? null }));
+        return loader.frame!.projections.map(cell => { const node = fillNodes.get(`${cell.pane}:${cell.row}:${cell.column}`); return { row: cell.row, column: cell.column, pane: cell.pane,
+          color: node?.getAttribute('data-office-fill-color') ?? node?.querySelector('rect')?.getAttribute('fill') ?? 'transparent' }; });
       }
     }
     const after = model.serialize(), unchanged = [...originalSource].every(([path, bytes]) => bytes.length === after.get(path)!.length && bytes.every((byte, index) => byte === after.get(path)![index]));

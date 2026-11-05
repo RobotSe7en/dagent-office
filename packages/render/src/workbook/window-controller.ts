@@ -152,7 +152,7 @@ export class WorkbookWindowController {
       const cells = layoutWorkbookWindow(this.surface, this.snapshot, frame, dimensions, this.formatter,
         { ...this.options.cells, normalSpaceWidthPx: normal.spaceWidthPx, maxNodes: Math.min(this.maxNodes, this.options.cells?.maxNodes ?? this.maxNodes),
           maxCellFragments: Math.min(this.options.read?.maxCells ?? 5000, this.options.cells?.maxCellFragments ?? this.options.read?.maxCells ?? 5000) }, rules,
-        this.classStyles && !sheet.tables?.length && !sheet.conditionalRules?.length ? this.textCache : undefined);
+        this.classStyles && !sheet.tables?.length && !sheet.conditionalRules?.length ? this.textCache : undefined, this.textCache.probes);
       const walker = this.surface.document.createTreeWalker(cells.element, 0xffff_ffff); let nodes = 1;
       while (walker.nextNode()) if (++nodes >= this.maxNodes) throw new DocumentError("ResourceLimitExceeded", "The combined workbook window exceeds its node budget.");
       if (nodes >= this.maxNodes) throw new DocumentError("ResourceLimitExceeded", "The combined workbook window has no remaining object-layer budget.");

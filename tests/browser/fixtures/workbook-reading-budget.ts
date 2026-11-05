@@ -31,6 +31,7 @@ export async function openBudget(code: string, input: number[]) {
   let connection: WorkbookReadConnection | undefined, preview: WorkbookPreview | undefined;
   let selectionStart: number | undefined, wheelStart = 0, largestReply = 0, maxFragments = 0;
   const selections: number[] = [], wheels: number[] = [], errors: unknown[] = [], delays: number[] = [], inputDelays: number[] = [];
+  const reads: { milliseconds: number; slots: number; cells: number }[] = [], wheelPhases: { settledMs: number; nextFrameMs: number; reads: number[] }[] = [];
   const pending = new Map<string, { resolve(value: number): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout> }>();
   let previous = performance.now(); const timer = setInterval(() => { const now = performance.now(); delays.push(Math.max(0, now - previous - 10)); previous = now; }, 10);
   const frame = () => roots.flatMap(root => [...root.querySelectorAll('iframe')])[0]!;
@@ -55,7 +56,11 @@ export async function openBudget(code: string, input: number[]) {
     const started = performance.now(), bytes = new Uint8Array(input);
     worker.postMessage({ kind: 'open', documentId: 'reading-budget', bytes, port: ports.port1 }, [bytes.buffer, ports.port1]);
     connection = await connectWorkbookReads(ports.port2, {}, abort.signal); const openedMs = performance.now() - started;
-    preview = mountDocumentPreview(container, connection, { widthPt: 880, heightPt: 450,
+    const owned = connection;
+    preview = mountDocumentPreview(container, { ...owned, cells: { snapshot: owned.cells.snapshot, async read(request, signal) {
+      const start = performance.now(), result = await owned.cells.read(request, signal);
+      reads.push({ milliseconds: performance.now() - start, slots: request.windows.reduce((sum, window) => sum + window.rows * window.columns, 0), cells: result.cells.length }); return result;
+    } } }, { widthPt: 880, heightPt: 450,
       onError(error) { errors.push(error); }, onSelectionChange(selection) {
         if (!selection || selectionStart === undefined) return;
         const start = selectionStart; selectionStart = undefined;
@@ -64,6 +69,7 @@ export async function openBudget(code: string, input: number[]) {
     });
     await preview.ready;
     const firstScreenMs = performance.now() - started, first = preview.layout(), initialFragments = count();
+    const openingReads = [...reads]; reads.length = 0;
     const document = frame().contentDocument!;
     const inputStart = (event: Event): number => {
       const now = performance.now(), delay = document.defaultView!.performance.now() - event.timeStamp;
@@ -72,13 +78,18 @@ export async function openBudget(code: string, input: number[]) {
     };
     document.addEventListener('pointerdown', event => { selectionStart = inputStart(event); }, true);
     document.addEventListener('wheel', event => {
-      wheelStart = inputStart(event); const start = wheelStart, before = preview!.layout().viewport;
+      wheelStart = inputStart(event); const start = wheelStart, before = preview!.layout().viewport, firstRead = reads.length;
+      let settledAt = 0;
       // A microtask checkpoint can run between capture/bubble listeners. A
       // task waits for the SDK wheel handler to register its actual candidate.
       setTimeout(() => { void preview!.settled().then(report => {
+        settledAt = performance.now();
         if (report.viewport.scrollTopPt === before.scrollTopPt && report.viewport.scrollLeftPt === before.scrollLeftPt) throw Error('The native wheel did not publish a changed viewport.');
         return new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
-      }).then(() => publish('wheel', performance.now() - start)).catch(error => errors.push(String(error))); }, 0);
+      }).then(() => {
+        wheelPhases.push({ settledMs: settledAt - start, nextFrameMs: performance.now() - settledAt, reads: reads.slice(firstRead).map(read => read.milliseconds) });
+        publish('wheel', performance.now() - start);
+      }).catch(error => errors.push(String(error))); }, 0);
     }, { capture: true, passive: true });
     point = index => {
       const cell = grid()!.querySelectorAll<HTMLElement>('[role="gridcell"]')[index % 5]!, local = cell.getBoundingClientRect(), outer = frame().getBoundingClientRect();
@@ -88,7 +99,8 @@ export async function openBudget(code: string, input: number[]) {
       const values = kind === 'selection' ? selections : wheels; if (values[index] !== undefined) return Promise.resolve(values[index]!);
       return new Promise((resolve, reject) => { const timer = setTimeout(() => { pending.delete(kind + index); reject(Error('Interaction sample timed out')); }, 15_000); pending.set(kind + index, { resolve, reject, timer }); });
     };
-    state = () => ({ openedMs, firstScreenMs, first, initialFragments, maxFragments, largestReply, selections: [...selections], wheels: [...wheels], errors: [...errors], delays: [...delays], inputDelays: [...inputDelays], browser: navigator.userAgent });
+    state = () => ({ openedMs, firstScreenMs, first, initialFragments, maxFragments, largestReply, selections: [...selections], wheels: [...wheels], openingReads, wheelPhases, reads,
+      errors: [...errors], delays: [...delays], inputDelays: [...inputDelays], browser: navigator.userAgent });
     audit = () => new Promise((resolve, reject) => {
       const timer = setTimeout(() => { worker.removeEventListener('message', listener); reject(Error('Audit timed out')); }, 60_000);
       const listener = (event: MessageEvent) => { if (event.data.kind === 'audit') { clearTimeout(timer); worker.removeEventListener('message', listener); resolve(event.data); } };

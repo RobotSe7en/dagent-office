@@ -5,12 +5,19 @@ import { checkLimit, invalid } from "./validation.js";
 // Standard UTF-8 codecs exist in supported browsers and Node. Keep their platform
 // declarations private so public core types need neither DOM nor Node ambient types.
 const codecs = globalThis as unknown as {
-  TextDecoder: new (label: string, options: { fatal: boolean }) => { decode(bytes: Uint8Array): string };
+  TextDecoder: new (label: string, options: { fatal: boolean; ignoreBOM?: boolean }) => { decode(bytes: Uint8Array): string };
   TextEncoder: new () => { encode(text: string): Uint8Array };
 };
 
 export function encode(text: string): Uint8Array {
   return new codecs.TextEncoder().encode(text);
+}
+
+/** Detach already valid document text. Each owner gets private, non-streaming
+ * codecs; copying many small cells need not create codecs for every cell. */
+export function createUtf8TextCopy(): (text: string) => string {
+  const encoder = new codecs.TextEncoder(), decoder = new codecs.TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+  return text => decoder.decode(encoder.encode(text));
 }
 
 export function copyPackage(input: DocumentPackage, limits: DocumentReadLimits): Map<string, Uint8Array> {

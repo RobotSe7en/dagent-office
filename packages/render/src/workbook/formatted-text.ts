@@ -1,6 +1,7 @@
 import { DocumentError } from "@dagent-office/core";
 import type { WorkbookDisplayFormat, WorkbookNumberFormatter } from "@dagent-office/core";
 import { resolvePreviewFontsInScope } from "../fonts.js";
+import type { FontProbeCache } from "../font-probe-cache.js";
 import type { WorkbookSourceCell } from "./cell-source.js";
 import { createWorkbookTextView } from "./text-view.js";
 import type { WorkbookTextProjection, WorkbookTextView } from "./text-view.js";
@@ -26,7 +27,7 @@ export interface WorkbookFormattedTextInput {
  * projected @ fields. It neither flattens rich runs nor assigns fake source
  * offsets to literals. Repeated fields retain repeated source ranges. */
 export function layoutWorkbookFormattedTexts(scope: HTMLElement, inputs: readonly WorkbookFormattedTextInput[], formatter: WorkbookNumberFormatter,
-  normalSpaceWidthPx: number, maxNodes = 50_000, maxTextUnits: number = 8 * 1024 * 1024): WorkbookTextLayouts {
+  normalSpaceWidthPx: number, maxNodes = 50_000, maxTextUnits: number = 8 * 1024 * 1024, probes?: FontProbeCache): WorkbookTextLayouts {
   const document = scope.ownerDocument, view = document.defaultView;
   if (!scope.isConnected || !view || document.fonts.status === "loading" || !Number.isFinite(normalSpaceWidthPx) || normalSpaceWidthPx < 0
     || ![maxNodes, maxTextUnits].every(n => Number.isSafeInteger(n) && n > 0)) throw new DocumentError("InvalidOperation", "Text-format layout requires a connected settled surface and positive budgets.");
@@ -67,7 +68,7 @@ export function layoutWorkbookFormattedTexts(scope: HTMLElement, inputs: readonl
       return { input, element, projections, spaces, fill, count, fixedUnits };
     });
     scope.append(root);
-    const fonts = resolvePreviewFontsInScope(document, root, "[data-office-text-style],[data-office-script]");
+    const fonts = resolvePreviewFontsInScope(document, root, "[data-office-text-style],[data-office-script]", probes);
     const finals: WorkbookTextLayoutInput[] = [];
     for (const item of prepared) {
       for (const space of item.spaces) {
@@ -95,7 +96,7 @@ export function layoutWorkbookFormattedTexts(scope: HTMLElement, inputs: readonl
       finals.push({ source: item.input.source, text, valueType: "text", widthPt: item.input.widthPt, heightPt: item.input.heightPt,
         ...(item.input.bordered === undefined ? {} : { bordered: item.input.bordered }) });
     }
-    const layout = layoutWorkbookTexts(scope, finals, normalSpaceWidthPx, maxNodes, maxTextUnits);
+    const layout = layoutWorkbookTexts(scope, finals, normalSpaceWidthPx, maxNodes, maxTextUnits, probes);
     return Object.freeze({ ...layout, fonts });
   } finally { root.remove(); root.replaceChildren(); direction.dispose(); }
 }

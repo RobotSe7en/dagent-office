@@ -1,6 +1,7 @@
 import { DocumentError } from "@dagent-office/core";
 import type { DeepReadonly, WorkbookCell, WorkbookCoordinate, WorkbookNumberFormatter, WorkbookRuleReadLimits, WorkbookSheet, WorkbookWindow } from "@dagent-office/core";
 import type { FontResolution } from "../contracts.js";
+import { FontProbeCache } from "../font-probe-cache.js";
 import { WorkbookCellSources } from "./cell-source.js";
 import { layoutWorkbookRowTexts } from "./row-text-layout.js";
 import type { WorkbookColumnFont } from "./column-font.js";
@@ -86,8 +87,11 @@ export async function measureWorkbookAutoRows(surface: Pick<WorkbookSurface, "so
     }
   }
   const prototypes = simpleClasses && !sheet.conditionalRules?.length && !sheet.tables?.length ? new WorkbookRowSourcePrototypes(surface.source, snapshot, sheetId) : undefined;
+  const probes = new FontProbeCache(), fontEpoch = probes.watch(surface.source.ownerDocument.fonts).epoch;
   async function measure(coordinates: readonly Readonly<WorkbookCoordinate>[], byCoordinate: ReadonlyMap<number, WorkbookCell>): Promise<void> {
     checkWindowCancellation(signal);
+    const fontState = probes.watch(surface.source.ownerDocument.fonts);
+    if (!fontState.ready || fontState.epoch !== fontEpoch) throw new DocumentError("InvalidOperation", "Worksheet fonts changed during automatic row measurement.");
     let current;
     if (sheet.conditionalRules?.length) {
       if (!rules) throw new DocumentError("InvalidOperation", "Automatic rule appearance requires an authorized current-value provider.");
@@ -116,7 +120,7 @@ export async function measureWorkbookAutoRows(surface: Pick<WorkbookSurface, "so
         if (key !== undefined && pending.has(key)) return pending.get(key)!;
         const at = selected.length; selected.push(input); if (key !== undefined) pending.set(key, at); return at;
       });
-      const measured = layoutWorkbookRowTexts(surface.view, snapshot, selected, formatter, normal.spaceWidthPx, fontCache, input => workbookRowFontKey(input, typography));
+      const measured = layoutWorkbookRowTexts(surface.view, snapshot, selected, formatter, normal.spaceWidthPx, fontCache, input => workbookRowFontKey(input, typography), probes);
       usedFallbackLineMetrics ||= measured.usedFallbackLineMetrics;
       for (const font of measured.fonts) {
         const key = JSON.stringify(font);
@@ -176,6 +180,8 @@ export async function measureWorkbookAutoRows(surface: Pick<WorkbookSurface, "so
     if (implicit.length) await measure(implicit, new Map());
 
     checkWindowCancellation(signal);
+    const finalFonts = probes.watch(surface.source.ownerDocument.fonts);
+    if (!finalFonts.ready || finalFonts.epoch !== fontEpoch) throw new DocumentError("InvalidOperation", "Worksheet fonts changed during automatic row measurement.");
     return Object.freeze({ dimensions: worksheetDimensions(sheet, normal.maximumDigitWidthPx, heights), fonts: Object.freeze([...fonts.values()]), usedFallbackLineMetrics, measuredCells });
-  } finally { prototypes?.dispose(); }
+  } finally { prototypes?.dispose(); probes.clear(); }
 }

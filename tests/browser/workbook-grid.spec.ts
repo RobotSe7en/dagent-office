@@ -28,9 +28,11 @@ import rotatedCellsReference from "../../docs/evidence/xlsx-rotated-cells.json" 
 
 import { importXlsx } from '../../packages/office/src/xlsx-import.js';
 import type { textCacheMeasurement } from './fixtures/workbook-text-cache.js';
+import type { fontProbeMeasurement } from './fixtures/workbook-font-probe.js';
 import type { autoRowMeasurement, autoRowSourceSafety, windowLayoutMeasurement } from './fixtures/workbook-window.js';
 
 interface GridHost {
+  fontProbeMeasurement: typeof fontProbeMeasurement;
   textCacheMeasurement: typeof textCacheMeasurement;
   windowLayoutMeasurement: typeof windowLayoutMeasurement;
   autoRowMeasurement: typeof autoRowMeasurement;
@@ -113,12 +115,19 @@ test('cached text keeps independent live UTF-16 projections, ownership, font inv
   expect(result.failures).toEqual(['ResourceLimitExceeded', 'ResourceLimitExceeded']);
 });
 
+test('owned font probes retain identical glyph diagnostics without repeating raster readbacks', async ({ page }) => {
+  const result = await page.evaluate(() => window.workbookGridHost.fontProbeMeasurement());
+  expect(result.initial).toBeGreaterThan(0); expect(result.repeated).toBe(result.initial); expect(result.cleared).toBeGreaterThan(result.repeated);
+  expect(result.first).toEqual(result.second); expect(result.first).toEqual(result.third);
+  expect(result.first[0]).toMatchObject({ requestedFamily: 'serif', selectedFamily: 'serif', substituted: false, glyphAuditComplete: true });
+});
+
 test('a cached window validates every new source and invalidates text when a provider changes its content', async ({ page }) => {
   const files = await importXlsx(readFileSync('examples/xlsx/01-values-text.xlsx'), { documentId: 'cached-window-source' });
   const result = await page.evaluate(entries => window.workbookGridHost.windowLayoutMeasurement(entries,
     [{ sheetId: 'sheet-1', viewport: { widthPt: 350, heightPt: 120, scrollLeftPt: 0, scrollTopPt: 0 } }], false, true), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
   expect(result.unchanged).toBe(true); expect(result.cacheSafety).toHaveLength(1);
-  expect(result.cacheSafety[0]).toMatchObject({ rejected: 'InvalidDocument', retained: true, changedText: '新的😀禰󠄀', leaked: 0 });
+  expect(result.cacheSafety[0]).toMatchObject({ rejected: 'InvalidDocument', rejectedNumeric: 'InvalidDocument', retained: true, changedText: '新的😀禰󠄀', leaked: 0 });
   expect(result.cacheSafety[0]!.offsets.map(part => part[2]).join('')).toBe('新的😀禰󠄀');
 });
 

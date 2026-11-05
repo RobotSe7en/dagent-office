@@ -2,6 +2,7 @@ import { DocumentError } from "@dagent-office/core";
 import type { WorkbookNumberFormatter, WorkbookSnapshot } from "@dagent-office/core";
 import type { FontResolution } from "../contracts.js";
 import { resolvePreviewFontsInScope } from "../fonts.js";
+import type { FontProbeCache } from "../font-probe-cache.js";
 import { copyWorkbookTextStyle } from "./text-style.js";
 import { workbookComputedTextFont } from "./text-fonts.js";
 import { layoutWorkbookCellTexts } from "./cell-text-layout.js";
@@ -17,14 +18,14 @@ export interface WorkbookRowTextLayouts {
  * wrapping or number-format literals of an invented cell value. The M is a
  * private font probe, like the column-width digits, and has no source offsets. */
 export function layoutWorkbookRowTexts(scope: HTMLElement, snapshot: WorkbookSnapshot, inputs: readonly WorkbookCellTextInput[], formatter: WorkbookNumberFormatter,
-  normalSpaceWidthPx: number, fontCache: Map<string, number>, fontKey: (input: WorkbookCellTextInput) => string = workbookRowFontKey): WorkbookRowTextLayouts {
+  normalSpaceWidthPx: number, fontCache: Map<string, number>, fontKey: (input: WorkbookCellTextInput) => string = workbookRowFontKey, probes?: FontProbeCache): WorkbookRowTextLayouts {
   if (!inputs.length) return Object.freeze({ heights: Object.freeze([]), fonts: Object.freeze([]), usedFallbackLineMetrics: false });
   const document = scope.ownerDocument, view = document.defaultView;
   if (!scope.isConnected || !view || document.fonts.status === "loading" || !Number.isFinite(normalSpaceWidthPx) || normalSpaceWidthPx < 0
     || inputs.some(input => !input.source.element.isConnected || input.source.element.ownerDocument !== document))
     throw new DocumentError("InvalidOperation", "Row font measurement requires connected sources and settled local fonts.");
   const normal = inputs.filter(input => input.value && input.value.type !== "blank");
-  const measured = normal.length ? layoutWorkbookCellTexts(scope, snapshot, normal, formatter, { normalSpaceWidthPx }, 50_000, 8 * 1024 * 1024) : { cells: [], fonts: [], usedFallbackLineMetrics: false };
+  const measured = normal.length ? layoutWorkbookCellTexts(scope, snapshot, normal, formatter, { normalSpaceWidthPx }, 50_000, 8 * 1024 * 1024, probes) : { cells: [], fonts: [], usedFallbackLineMetrics: false };
   const heights = new Map<WorkbookCellTextInput, number | undefined>(normal.map((input, index) => [input, measured.cells[index]?.text?.requiredHeightPt]));
   const keys = inputs.map(fontKey), pending = new Map<string, WorkbookCellTextInput>();
   for (const [index, input] of inputs.entries()) if (!fontCache.has(keys[index]!)) pending.set(keys[index]!, input);
@@ -41,7 +42,7 @@ export function layoutWorkbookRowTexts(scope: HTMLElement, snapshot: WorkbookSna
       probe.textContent = "M"; root.append(probe);
     }
     scope.append(root);
-    const fonts = pending.size ? resolvePreviewFontsInScope(document, root, "span") : [], measuredFonts = new Map<string, number>();
+    const fonts = pending.size ? resolvePreviewFontsInScope(document, root, "span", probes) : [], measuredFonts = new Map<string, number>();
     for (const [index, key] of [...pending.keys()].entries()) {
       const height = (root.children[index] as HTMLElement).getBoundingClientRect().height;
       if (!Number.isFinite(height) || height < 0) throw new DocumentError("UnsupportedFeature", "This browser cannot measure empty-cell font leading.");

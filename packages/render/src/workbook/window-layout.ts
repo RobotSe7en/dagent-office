@@ -2,6 +2,7 @@ import { DocumentError } from "@dagent-office/core";
 import type { WorkbookNumberFormatter, WorkbookRuleReadResponse, WorkbookSnapshot } from "@dagent-office/core";
 import type { WorkbookFormulaSource, WorkbookNumberDisplay } from "@dagent-office/core";
 import type { FontResolution } from "../contracts.js";
+import type { FontProbeCache } from "../font-probe-cache.js";
 import { WorkbookCellSources } from "./cell-source.js";
 import { workbookCellBorders, workbookCellDiagonals } from "./cell-borders.js";
 import type { WorkbookCellBorders } from "./cell-borders.js";
@@ -50,14 +51,14 @@ export interface WorkbookWindowLayout {
  * Objects/rules/automatic row heights belong to the enclosing preview stage. */
 export function layoutWorkbookWindow(surface: Pick<WorkbookSurface, "source" | "view">, snapshot: WorkbookSnapshot, frame: WorkbookWindowFrame,
   dimensions: { readonly rows: AxisDimensions; readonly columns: AxisDimensions }, formatter: WorkbookNumberFormatter,
-  options: WorkbookWindowLayoutOptions, rules?: WorkbookRuleReadResponse, cache?: WorkbookCellTextCache): WorkbookWindowLayout {
+  options: WorkbookWindowLayoutOptions, rules?: WorkbookRuleReadResponse, cache?: WorkbookCellTextCache, probes?: FontProbeCache): WorkbookWindowLayout {
   const maxNodes = options.maxNodes ?? 50_000, maxSourceNodes = options.maxSourceNodes ?? 50_000, maxTextUnits = options.maxTextCodeUnits ?? 8 * 1024 * 1024, maxCellFragments = options.maxCellFragments ?? 5000;
   if (Object.keys(options).some(key => !["normalSpaceWidthPx", "maxNodes", "maxSourceNodes", "maxTextCodeUnits", "maxCellFragments"].includes(key))
     || ![maxNodes, maxSourceNodes, maxTextUnits, maxCellFragments].every(n => Number.isSafeInteger(n) && n > 0) || !Number.isFinite(options.normalSpaceWidthPx) || options.normalSpaceWidthPx < 0
     || surface.source.ownerDocument !== surface.view.ownerDocument || !surface.view.isConnected) throw new DocumentError("InvalidOperation", "Workbook window layout requires one connected surface and positive budgets.");
   const document = surface.source.ownerDocument, sheet = snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === frame.sheetId);
   if (!sheet) throw new DocumentError("InvalidOperation", "The workbook window has no source worksheet.");
-  const sources = new WorkbookCellSources(surface.source, snapshot, frame, maxSourceNodes, rules);
+  const sources = new WorkbookCellSources(surface.source, snapshot, frame, maxSourceNodes, rules, Boolean(cache));
   const current = new Map(rules?.cells.map(cell => [cell.row * 16_384 + cell.column, cell.current]));
   try {
     const styles = new Map<number, CSSStyleDeclaration>();
@@ -96,7 +97,7 @@ export function layoutWorkbookWindow(surface: Pick<WorkbookSurface, "source" | "
       textInputs[index]!.widthPt, textInputs[index]!.heightPt, textInputs[index]!.bordered, textInputs[index]!.value, textInputs[index]!.formula,
       textInputs[index]!.source.format, frame.getCell(projection.row, projection.column)?.html, context])) : [];
     const textLayout = cache ? layoutCachedWorkbookCellTexts(surface.view, snapshot, textInputs, keys, formatter, options, maxNodes, maxTextUnits, cache)
-      : layoutWorkbookCellTexts(surface.view, snapshot, textInputs, formatter, options, maxNodes, maxTextUnits);
+      : layoutWorkbookCellTexts(surface.view, snapshot, textInputs, formatter, options, maxNodes, maxTextUnits, probes);
     let textNodes = textLayout.nodes;
     const remaining = (): number => {
       if (textNodes >= maxNodes) throw new DocumentError("ResourceLimitExceeded", "Workbook window text exceeds its cumulative node budget.");
