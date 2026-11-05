@@ -1,5 +1,7 @@
 import { projectXlsxRecords } from "./helpers/xlsx-record-model.js";
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import { openDocument } from "@dagent-office/core";
 import { writeOpcZip, readDocumentZip } from "../src/document-zip.js";
@@ -20,6 +22,17 @@ function variant(edit: (xml: string) => string, relationships?: string): Uint8Ar
   return writeOpcZip(files);
 }
 describe("native worksheet images and text drawings", () => {
+  it("retains all independent text anchoring cases and their source styles on package reopen", async () => {
+    const bytes = readFileSync('packages/office/tests/fixtures/xlsx-text-anchoring.xlsx');
+    const regenerated = execFileSync('python3', ['-c', "import importlib.util,sys;s=importlib.util.spec_from_file_location('anchoring','scripts/check-xlsx-text-anchoring.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);sys.stdout.buffer.write(m.generate(m.inputs()))"]);
+    expect(regenerated).toEqual(bytes);
+    const evidence = JSON.parse(readFileSync('docs/evidence/xlsx-text-anchoring.json', 'utf8')) as { sourceSha256: string; cases: { paragraphs: string[] }[] };
+    expect(createHash('sha256').update(bytes).digest('hex')).toBe(evidence.sourceSha256);
+    const { model } = await read(bytes), snapshot = model.snapshot(), objects = snapshot.metadata.workbook.objects!;
+    expect(objects).toHaveLength(evidence.cases.length);
+    for (const [index, object] of objects.entries()) expect(model.getNode(object.nodeId)?.text).toBe(evidence.cases[index]!.paragraphs.join(''));
+    expect(openDocument(model.serialize(), { kind: 'workbook' }).snapshot()).toEqual(snapshot);
+  });
   it.each(["examples/xlsx/08-images-shapes.xlsx", "examples/xlsx/producer/08-images-shapes.xlsx"])("preserves %s as editable package source with exact text, assets and anchor modes", async path => {
     const { model, drawings } = await read(readFileSync(path)), snapshot = model.snapshot(), objects = snapshot.metadata.workbook.objects!;
     expect(objects).toHaveLength(3); expect(objects[0]?.kind).toBe("image"); expect(objects[1]).toMatchObject({ kind: "geometry", preset: "roundRect" });

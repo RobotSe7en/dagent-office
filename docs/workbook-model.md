@@ -241,6 +241,8 @@ SDK 对其中 22 项明确字号且语义相同的样例执行三浏览器行距
 
 字体测量还校验 Canvas 是否真正接受当前字体简写；合法 CSS 的 `all-small-caps` 等值超出该简写语法时，改用上述 DOM 测量，不沿用前一段文字的字体。依据 [Canvas 字体设置规则](https://html.spec.whatwg.org/multipage/canvas.html#dom-context-2d-font)，失败赋值不改变已有字体。三引擎的真实简写拒绝与缺失字体边界两种路径均检查行高、空行、临时预算和失败清理。
 
+`anchorCtr` 按 ECMA-376 Part 1 §21.1.2.1.1 将最小文字块居中，保留块内段落对齐及独立的上／中／下锚定。显示块使用有原矩形上限的固有宽度，自动调整完成后再测量其水平位置，不把文字改为统一居中段落。[24 项独立锚定探针](evidence/xlsx-text-anchoring.json)包含左／中／右及混合段落对齐，固定 Calc 与三种现代浏览器及旧 Chromium 的文字边界误差小于 1.5pt；源摘要、字体及生产者版本由 `python3 scripts/check-xlsx-text-anchoring.py` 重核。原生输入也通过官方 Transitional XSD、关系审计和 SDK 包保存重开。该局部对照不代表整页绘图验收。共享 DrawingML 列表另保留显式零缩进和零左边距，不以缺省值覆盖它们。
+
 内部预览表面为每个候选创建独立、无脚本的 iframe。源 CSS 保留 `:root/html/body` 的字体和变量继承；画布外框的尺寸、边距由 SDK 控制，源节点的 CSS 仍按原祖先解析。生成的网格／绘图视图置于单独的 Shadow DOM，源类型选择器和 `!important` 不会重新匹配这些显示节点。表面缺省限制 CSS 为 4 Mi UTF-16 单位，准备阶段保持隐藏并支持取消，加载期限为 30 秒；上层组合器负责整窗成功后的替换。失败与释放清空源测量、显示节点和样式，保留的表面句柄也不会继续持有这些子树。三浏览器及固定旧 Chromium 检查宿主样式、源强制样式、真实文字／形状布局、并存工作簿、取消及释放，并从实际页面截图核对隔离视图内的 SVG 渐变引用。
 
 隔离视图的选区适配使用明确端点设置选择；读取时优先采用支持 Shadow DOM 的 [`getComposedRanges`](https://www.w3.org/TR/selection-api/#dom-selection-getcomposedranges)，旧 Chromium 沿用其真实 DOM 范围。WebKit 的普通 `getRangeAt()` 会返回外层容器，不能直接用于 UTF-16 投影；适配层只接受两个端点都属于当前视图的单一区间，不猜测外层节点或其他视图的对应文字。反向划选、原生选择文字、精确端点、越界失败后原选择不变均有检查。隔离层已用于下述公共工作簿预览；正文 UTF-16 划选仍是内部适配。

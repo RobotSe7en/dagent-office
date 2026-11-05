@@ -160,19 +160,22 @@ function layoutTextBodies<T>(scope: HTMLElement, inputs: readonly T[], limits: W
       const computed = view.getComputedStyle(input.source), text = input.text.element, element = markViewNode(document.createElement("div"));
       const anchor = property(computed, "--office-text-anchor", "t"), centered = property(computed, "--office-text-anchor-center", "false");
       if (!["t", "ctr", "b", "just", "dist"].includes(anchor) || !["false", "true"].includes(centered)) throw new DocumentError("InvalidDocument", "A drawing text anchor is invalid.");
-      if (centered === "true") throw new DocumentError("UnsupportedFeature", "Centered drawing text-block anchoring requires measured line geometry.");
       element.style.cssText = "position:relative;direction:ltr";
       Object.assign(text.style, { position: "absolute", display: "flex", flexDirection: "column", boxSizing: "border-box", margin: "0", overflow: "visible", justifyContent: "flex-start",
         whiteSpace: input.properties?.wrap === false ? "pre" : "pre-wrap", overflowWrap: input.properties?.wrap === false ? "normal" : "anywhere", transformOrigin: "50% 50%", transform: `scale(${input.flipH ? -1 : 1},${input.flipV ? -1 : 1})` });
       for (const side of ["left", "right", "top", "bottom"]) text.style.setProperty("padding-" + side, computed.getPropertyValue("padding-" + side));
       element.append(text); root.append(element);
-      const state = { input, element, text, anchor, nodes: input.text.nodes + 1, width: input.widthPt, height: input.heightPt, geometry: input.geometry(input.widthPt, input.heightPt),
+      const state = { input, element, text, anchor, centered: centered === "true", nodes: input.text.nodes + 1, width: input.widthPt, height: input.heightPt, geometry: input.geometry(input.widthPt, input.heightPt),
         resize(width: number, height: number) {
           if (![width, height].every(n => Number.isFinite(n) && n >= 0 && n <= maxExtent)) throw new DocumentError("ResourceLimitExceeded", "Drawing text auto-fit exceeds its extent budget.");
           this.width = width; this.height = height; this.geometry = input.geometry(width, height);
           element.style.width = width + "pt"; element.style.height = height + "pt";
           const rect = this.geometry.textRect;
-          Object.assign(text.style, rect ? { display: "flex", left: rect.x + "pt", top: rect.y + "pt", width: rect.width + "pt", height: rect.height + "pt" } : { display: "none" });
+          Object.assign(text.style, rect ? { display: "flex", left: rect.x + "pt", top: rect.y + "pt",
+            // anchorCtr centers a minimal text block, independently of the
+            // paragraphs' alignments. Intrinsic width keeps mixed alignment
+            // inside that block; max-width preserves the native wrap boundary.
+            width: centered === "true" ? "max-content" : rect.width + "pt", maxWidth: centered === "true" ? rect.width + "pt" : "none", height: rect.height + "pt" } : { display: "none" });
         } };
       state.resize(state.width, state.height); return state;
     });
@@ -231,6 +234,10 @@ function layoutTextBodies<T>(scope: HTMLElement, inputs: readonly T[], limits: W
       }
       const exceeded = overflow();
       text.style.justifyContent = item.anchor === "ctr" ? "center" : item.anchor === "b" ? "flex-end" : item.anchor === "just" ? "space-between" : item.anchor === "dist" ? "space-around" : "flex-start";
+      if (item.centered && item.geometry.textRect) {
+        const rect = item.geometry.textRect, width = text.getBoundingClientRect().width * .75;
+        text.style.left = rect.x + (rect.width - width) / 2 + "pt";
+      }
       const origin = item.element.getBoundingClientRect();
       let left = 0, top = 0, right = item.width, bottom = item.height;
       // Element rectangles include paragraph/run backgrounds and reflected

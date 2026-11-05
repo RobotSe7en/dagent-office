@@ -33,6 +33,8 @@ let referenceTitles: { snapshot: WorkbookSnapshot; bindings: ReturnType<typeof b
 let formatCharts: typeof referenceTitles;
 let code = '';
 let nativeText: WorkbookSnapshot;
+let anchoredText: WorkbookSnapshot;
+const anchoringEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-text-anchoring.json', 'utf8')) as { sourceSha256: string; cases: { paragraphs: string[]; anchorCenter: boolean; observed: { words: { text: string; boundsPt: number[] }[] } }[] };
 let nativeShadows: WorkbookSnapshot, nativeBlur: WorkbookSnapshot;
 const textEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-drawing-text-semantics.json', 'utf8')) as { sourceSha256: string; cases: { fontPt: number | null; endPt: number | null; paragraphs: string[]; listStyle: string; observed: { lineAdvancePt: number; words: { text: string; boundsPt: number[] }[] } }[] };
 const shadowEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-drawing-shadow-semantics.json', 'utf8')) as { sourceSha256: string; cases: { rotation: number; flipH: boolean; flipV: boolean; rotateWithShape: boolean; direction: number; distancePt: number; observed: { offsetPt: number[] } }[] };
@@ -44,6 +46,9 @@ test.beforeAll(async () => {
   const nativeBytes = execFileSync('python3', ['-c', "import importlib.util,sys; s=importlib.util.spec_from_file_location('drawing_text_inputs','scripts/check-xlsx-drawing-text.py'); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); sys.stdout.buffer.write(m.generate(m.inputs()))"], { maxBuffer: 16 * 1024 * 1024 });
   expect(createHash('sha256').update(nativeBytes).digest('hex')).toBe(textEvidence.sourceSha256);
   nativeText = projectXlsxRecords(await readXlsxRecords(nativeBytes)).model.snapshot();
+  const anchoringBytes = readFileSync('packages/office/tests/fixtures/xlsx-text-anchoring.xlsx');
+  expect(createHash('sha256').update(anchoringBytes).digest('hex')).toBe(anchoringEvidence.sourceSha256);
+  anchoredText = openDocument(await importXlsx(anchoringBytes, { documentId: 'native-text-anchoring' }), { kind: 'workbook' }).snapshot();
   for (const [name, evidence] of [['drawing-effects', shadowEvidence], ['shadow-blur', blurEvidence]] as const) {
     const bytes = execFileSync('python3', ['-c', `import importlib.util,sys; s=importlib.util.spec_from_file_location('shadow_inputs','scripts/check-xlsx-${name}.py'); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); sys.stdout.buffer.write(m.generate(m.inputs()))`], { maxBuffer: 16 * 1024 * 1024 });
     expect(createHash('sha256').update(bytes).digest('hex')).toBe(evidence.sourceSha256);
@@ -272,6 +277,24 @@ test('explicit native drawing text follows independent fixed-font line advances 
       const expected = reference.observed.words[wordIndex]!; expect(word.text).toBe(expected.text);
       word.boundsPt.forEach((value, axis) => expect(Math.abs(value - expected.boundsPt[axis]!), `case ${index}, ${word.text}, axis ${axis}`).toBeLessThan(1.5));
     });
+  }
+});
+
+test('native drawing block centering preserves paragraph alignment and vertical anchoring', async ({ page }) => {
+  const actual = await page.evaluate(snapshot => window.workbookContentHost.measureNativeDrawingText(snapshot), anchoredText);
+  expect(actual).toHaveLength(anchoringEvidence.cases.length);
+  for (const [index, item] of actual.entries()) {
+    const expected = anchoringEvidence.cases[index]!;
+    expect(item).toMatchObject({ unchanged: true, sourceText: expected.paragraphs.join(''), limited: 'ResourceLimitExceeded' });
+    expect(item.nodes).toBe(item.declared); expect(item.exact).toBe(item.textNodes);
+    for (const [wordIndex, word] of item.words.entries()) {
+      const reference = expected.observed.words[wordIndex]!; expect(word.text).toBe(reference.text);
+      for (const [axis, value] of word.boundsPt.entries()) expect(Math.abs(value - reference.boundsPt[axis]!), `case ${index + 1}, ${word.text}, axis ${axis}`).toBeLessThan(1.5);
+    }
+    if (expected.anchorCenter) {
+      const left = Math.min(...item.words.map(word => word.boundsPt[0]!)), right = Math.max(...item.words.map(word => word.boundsPt[2]!));
+      expect(Math.abs((left + right) / 2 - 60)).toBeLessThan(.5);
+    }
   }
 });
 
