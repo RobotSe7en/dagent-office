@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { build } from "vite";
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
+import { readXlsxRecords } from "../../packages/office/src/xlsx/read.js";
+import { projectXlsxRecords } from "../../packages/office/tests/helpers/xlsx-record-model.js";
 import type { WorkbookViewport } from "../../packages/render/src/workbook/viewport.js";
 import type { WorkbookTextFontRun } from "../../packages/render/src/workbook/text-fonts.js";
 import type { WorkbookBorderEdge } from "../../packages/render/src/workbook/border-view.js";
@@ -11,8 +14,12 @@ import type { TextLayoutCase, textLayoutMeasurement } from "./fixtures/workbook-
 import type { borderSourceMeasurement } from "./fixtures/workbook-border-source.js";
 import type { assetMeasurement } from "./fixtures/workbook-assets.js";
 import { workbookRasterCases } from "../workbook-image-fixture.js";
+import type { measureWorkbookFills } from "./fixtures/workbook-fill.js";
+import fillReference from "../../docs/evidence/xlsx-fill-pattern-spec.json" with { type: "json" };
+import appearanceReference from "../../docs/evidence/xlsx-cell-appearance.json" with { type: "json" };
 
 interface GridHost {
+  measureWorkbookFills(css: string, classes: readonly string[]): ReturnType<typeof measureWorkbookFills>;
   assetMeasurement(base64: string, mimeType: string): ReturnType<typeof assetMeasurement>;
   borderSourceMeasurement(): ReturnType<typeof borderSourceMeasurement>;
   textLayoutMeasurement(cases: readonly TextLayoutCase[]): ReturnType<typeof textLayoutMeasurement>;
@@ -91,7 +98,46 @@ test('worksheet colors resolve theme variables and luminance without treating na
   const result = await page.evaluate(() => window.workbookGridHost.colorMeasurement());
   expect(result.values).toEqual(['rgba(143,170,220,1)', 'rgba(51,90,161,1)', 'rgba(20,40,60,1)', 'rgba(255,0,0,1)', 'rgba(20,40,60,0.5)', 'rgba(0,255,0,1)', undefined]);
   expect(result.errors).toEqual(['InvalidDocument', 'InvalidDocument', 'InvalidDocument']); expect(result.unchanged).toBe(true);
-  expect(result.fills).toEqual(['rgb(1, 2, 3)', 'transparent', 'rgba(143,170,220,1)']); expect(result.fillErrors).toEqual(['InvalidDocument', 'UnsupportedFeature']);
+  expect(result.fills).toEqual(['rgb(1, 2, 3)', 'transparent', 'rgba(143,170,220,1)', 'pattern']); expect(result.fillErrors).toEqual(['InvalidDocument']);
+});
+
+test('native cell fills match standard patterns and preserve full-cell gradients across clipped panes', async ({ page }) => {
+  const { model } = projectXlsxRecords(await readXlsxRecords(readFileSync('packages/office/tests/fixtures/xlsx-cell-appearance.xlsx')));
+  const inputs = appearanceReference.cases.filter(input => input.kind === 'pattern' || input.kind === 'gradient');
+  const classes = inputs.map((_, index) => model.getCell(`sheet-${index + 1}`, 1, 1)!.cssClass!);
+  const report = await page.evaluate(({ css, classes }) => window.workbookGridHost.measureWorkbookFills(css, classes), { css: model.snapshot().styles.map(style => style.css).join('\n'), classes });
+  expect(report.reports).toHaveLength(27);
+  expect(report.invalid).toEqual(['InvalidDocument', 'ResourceLimitExceeded', 'InvalidDocument', 'InvalidDocument']);
+  for (const [index, actual] of report.reports.entries()) {
+    const input = inputs[index]!;
+    expect(actual.sourceUnchanged).toBe(true); expect(actual.immutable).toBe(true); expect(actual.nodes).toBe(actual.actual);
+    expect(actual.extent).toEqual(['24pt', '18pt']); expect(actual.largeNodes).toBeLessThanOrEqual(actual.nodes);
+    expect(actual.errors).toEqual(['ResourceLimitExceeded']); expect(actual.difference, JSON.stringify(input)).toBeLessThanOrEqual(3);
+    if (input.kind === 'pattern') {
+      if (input.pattern === 'none') { expect(actual.samples.every(sample => sample.color[3] === 0)).toBe(true); continue; }
+      if (input.pattern === 'solid') { expect(actual.samples.every(sample => sample.color.join(',') === '32,64,128,255')).toBe(true); continue; }
+      const expected = fillReference.cases.find(item => item.pattern === input.pattern)!;
+      const rows = expected.rows, width = rows[0]!.length, height = rows.length;
+      let matches = false;
+      for (let dy = 0; dy < height; dy++) for (let dx = 0; dx < width; dx++) if (actual.rows.every((row, y) => [...row].every((pixel, x) => pixel === rows[(y + dy) % height]![(x + dx) % width]))) matches = true;
+      expect(matches, input.pattern).toBe(true);
+      expect(actual.rows.join('').split('1').length - 1).toBe(expected.foregroundFraction * 1024);
+    } else {
+      for (const sample of actual.samples) {
+        const x = (sample.x + .5) / 96, y = (sample.y + .5) / 72;
+        let fraction: number;
+        if (input.type === 'linear') {
+          const angle = input.degree! * Math.PI / 180, dx = Math.cos(angle), dy = Math.sin(angle);
+          fraction = .5 + ((x - .5) * 96 * dx + (y - .5) * 72 * dy) / (96 * Math.abs(dx) + 72 * Math.abs(dy));
+        } else {
+          const left = input.left!, right = input.right!, top = input.top!, bottom = input.bottom!;
+          fraction = Math.max(0, x < left ? (left - x) / left : x > right ? (x - right) / (1 - right) : 0, y < top ? (top - y) / top : y > bottom ? (y - bottom) / (1 - bottom) : 0);
+        }
+        const expected = fraction <= .5 ? [255 * (1 - 2 * fraction), 510 * fraction, 0, 255] : [0, 510 * (1 - fraction), 255 * (2 * fraction - 1), 255];
+        for (let channel = 0; channel < 4; channel++) expect(Math.abs(sample.color[channel]! - Math.round(expected[channel]!)), `${JSON.stringify(input)} at ${sample.x},${sample.y} channel ${channel}`).toBeLessThanOrEqual(3);
+      }
+    }
+  }
 });
 
 test('bounded cell style projection retains source chunk selectors, rich runs and lifecycle isolation', async ({ page }) => {

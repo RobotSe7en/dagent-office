@@ -1,0 +1,215 @@
+{
+  "source": "https://ecma-international.org/wp-content/uploads/ECMA-376-1_5th_edition_december_2016.zip",
+  "archiveSha256": "9d0bcad9cf06054785b03762fcfadbf6bab7e54a5f9d69434e34b7fd464d4129",
+  "section": "Part 1, fifth edition, section 18.18.55; PDF pages 2481–2484 (printed 2471–2474).",
+  "scope": "Binary pattern geometry and coverage, up to repeating phase. Functional measurements from standard illustrations; no Office conversion library or SDK output.",
+  "cases": [
+    {
+      "pattern": "darkDown",
+      "imageIndex": 0,
+      "imageRgbSha256": "cc97532f1967696d218a8167df75f7994eef87786189fff003c5bdf280749741",
+      "illustrationScale": 4,
+      "rows": [
+        "1100",
+        "0110",
+        "0011",
+        "1001"
+      ],
+      "foregroundFraction": 0.5
+    },
+    {
+      "pattern": "darkGray",
+      "imageIndex": 1,
+      "imageRgbSha256": "64b04f102cc36fff1882de9c3183fc500c3ba87b5d7e65cebac4858f3c5a98f1",
+      "illustrationScale": 4,
+      "rows": [
+        "0111",
+        "1101"
+      ],
+      "foregroundFraction": 0.75
+    },
+    {
+      "pattern": "darkGrid",
+      "imageIndex": 2,
+      "imageRgbSha256": "8cab350ad37d3936cfd2ccc2c1013a0a0a5306e9ca6d9f2dae168e840e216031",
+      "illustrationScale": 4,
+      "rows": [
+        "1100",
+        "1100",
+        "0011",
+        "0011"
+      ],
+      "foregroundFraction": 0.5
+    },
+    {
+      "pattern": "darkHorizontal",
+      "imageIndex": 3,
+      "imageRgbSha256": "500ef50c385d3062f30698e484b0617fcf0f9054438fa5d429e1d186c5a8a141",
+      "illustrationScale": 4,
+      "rows": [
+        "1",
+        "0",
+        "0",
+        "1"
+      ],
+      "foregroundFraction": 0.5
+    },
+    {
+      "pattern": "darkTrellis",
+      "imageIndex": 4,
+      "imageRgbSha256": "c108566adb6e9254b0b9a4017ce4de0b8b3f83e6a0a06a779b98839eff61f5f9",
+      "illustrationScale": 4,
+      "rows": [
+        "1100",
+        "1111",
+        "0011",
+        "1111"
+      ],
+      "foregroundFraction": 0.75
+    },
+    {
+      "pattern": "darkUp",
+      "imageIndex": 5,
+      "imageRgbSha256": "3b15eedfd68c04383c14f9b4c9e30b09ff7595a04b2f087b5f33c10fbe0a97e5",
+      "illustrationScale": 4,
+      "rows": [
+        "1100",
+        "1001",
+        "0011",
+        "0110"
+      ],
+      "foregroundFraction": 0.5
+    },
+    {
+      "pattern": "darkVertical",
+      "imageIndex": 6,
+      "imageRgbSha256": "c091eddce6f4533c2fcc6a7ca020f867fefb9fbd0e99871005d467df6661ba80",
+      "illustrationScale": 4,
+      "rows": [
+        "0011"
+      ],
+      "foregroundFraction": 0.5
+    },
+    {
+      "pattern": "gray0625",
+      "imageIndex": 7,
+      "imageRgbSha256": "cc28837424e082e577cfb94f71d499d771d1e34297e14afe3a670366d1c87e35",
+      "illustrationScale": 4,
+      "rows": [
+        "00000000",
+        "00000001",
+        "00000000",
+        "00010000"
+      ],
+      "foregroundFraction": 0.0625
+    },
+    {
+      "pattern": "gray125",
+      "imageIndex": 8,
+      "imageRgbSha256": "ecb1219b0dde4041f08593345f304cf1f43b48ebbee064a8c30eaa345de04780",
+      "illustrationScale": 4,
+      "rows": [
+        "0000",
+        "0100",
+        "0000",
+        "0001"
+      ],
+      "foregroundFraction": 0.125
+    },
+    {
+      "pattern": "lightDown",
+      "imageIndex": 9,
+      "imageRgbSha256": "64bfa0c1e200236fdc060dd62d766f0b51a0f46c7310c533a4fd198e36f8b7f3",
+      "illustrationScale": 4,
+      "rows": [
+        "1000",
+        "0100",
+        "0010",
+        "0001"
+      ],
+      "foregroundFraction": 0.25
+    },
+    {
+      "pattern": "lightGray",
+      "imageIndex": 10,
+      "imageRgbSha256": "e435b689bc6c1c842953f6b76ef1291596695279bff509ec8204ccc0eedb2490",
+      "illustrationScale": 4,
+      "rows": [
+        "0100",
+        "0001"
+      ],
+      "foregroundFraction": 0.25
+    },
+    {
+      "pattern": "lightGrid",
+      "imageIndex": 11,
+      "imageRgbSha256": "f9ac8686de88a6e11b9db0a5a98ad01bfdea1993c682e3b8450160281a7ab96c",
+      "illustrationScale": 4,
+      "rows": [
+        "0001",
+        "0001",
+        "0001",
+        "1111"
+      ],
+      "foregroundFraction": 0.4375
+    },
+    {
+      "pattern": "lightHorizontal",
+      "imageIndex": 12,
+      "imageRgbSha256": "01e05d165537c2cbd9d7ff25d1132d3fff6a613ae2049fa3b304fec3abc303d2",
+      "illustrationScale": 4,
+      "rows": [
+        "0",
+        "0",
+        "0",
+        "1"
+      ],
+      "foregroundFraction": 0.25
+    },
+    {
+      "pattern": "lightTrellis",
+      "imageIndex": 13,
+      "imageRgbSha256": "6921540cd24a8b86e288f3ceb85f34afdbd869ebfe42fde569aba37ae3b3fcac",
+      "illustrationScale": 4,
+      "rows": [
+        "1010",
+        "0100",
+        "1010",
+        "0001"
+      ],
+      "foregroundFraction": 0.375
+    },
+    {
+      "pattern": "lightUp",
+      "imageIndex": 14,
+      "imageRgbSha256": "dd7b5c2fe8583c71a2ac0b48a0807aa219d5ac9c2b2bf32f50881c5d3cb43399",
+      "illustrationScale": 4,
+      "rows": [
+        "0100",
+        "1000",
+        "0001",
+        "0010"
+      ],
+      "foregroundFraction": 0.25
+    },
+    {
+      "pattern": "mediumGray",
+      "imageIndex": 15,
+      "imageRgbSha256": "c78c28e8f57c3f5a0f73f7d2263ad1fdcf8f5c51abb3b7c9e96c4223620eedfd",
+      "illustrationScale": 4,
+      "rows": [
+        "10",
+        "01"
+      ],
+      "foregroundFraction": 0.5
+    },
+    {
+      "pattern": "lightVertical",
+      "basis": "Vertical counterpart of lightHorizontal; the standard names this direction but provides no separate illustration.",
+      "rows": [
+        "0001"
+      ],
+      "foregroundFraction": 0.25
+    }
+  ]
+}

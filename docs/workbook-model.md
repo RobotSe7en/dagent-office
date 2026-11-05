@@ -80,6 +80,8 @@ General 的内部宽度适配已按 [Excel General 说明](https://support.micro
 
 高级单元格外观的源映射已扩展为 19 种标准填充模式、线性／路径渐变、双向斜线边框，以及 0～180 和 255 的旋转／竖排参数。渐变保留原始色标顺序、重复位置、主题／索引色与明暗参数；斜线即使暂未启用也保留样式和颜色。参数继续以 CSS 为唯一外观来源，格式库与条件格式共用映射。旋转范围依据 [MS-OI29500 §2.1.693](https://officeprotocoldocs-f5hpbjgea6b8gneq.b02.azurefd.net/files/MS-OI29500/%5BMS-OI29500%5D.pdf)，填充结构依据固定的官方 Transitional XSD。
 
+内部填充绘制已覆盖上述 19 种模式和两类渐变。17 种非纯色图案的周期、方向和覆盖率以[原始标准示意图的独立测量](evidence/xlsx-fill-pattern-spec.json)核对，运行 `python3 scripts/check-xlsx-fill-patterns.py` 可从固定 ECMA 归档重核。图案点距采用 0.75 文档点；这不是 Excel/WPS 实机像素验收。路径渐变使用指定内部矩形到四边的等色轮廓，线性渐变使用文档物理角度。三浏览器检查 27 个原生填充来源、颜色、渐变方向、冻结／滚动裁剪连续性，以及超大逻辑单元格只生成可见片段、节点与色标预算和源不变。色标排序仅发生于派生绘制参数，原始顺序和重复色标保持不变。
+
 [42 项独立原生来源与固定 Calc 记录](evidence/xlsx-cell-appearance.json)由 `python3 scripts/check-xlsx-cell-appearance.py` 重核，`--record` 才更新证据；参考 PNG 写入 `.cache/xlsx-cell-appearance-reference/`。来源已通过官方 XSD／部件审计，SDK 内部读取与包重开保留全部参数。固定 Calc 将图案及渐变改写为纯色，该外部损失单列记录，不能用其纯色画面认定 SDK 的图案／渐变正确。实际高级网格绘制、编辑与原生输出仍需完成，本项尚不构成高级外观闭环验收。
 
 对齐缩进的原生读取范围为 0–255，251–255 不被截断或误拒绝，负数、小数及 256 明确失败；依据为 [MS-OI29500 v20260818 §2.1.693](https://officeprotocoldocs-f5hpbjgea6b8gneq.b02.azurefd.net/files/MS-OI29500/%5BMS-OI29500%5D.pdf#page=295)。实际缩进使用单独测量的 Normal 字体空格宽度，不随该单元格的字体改变。

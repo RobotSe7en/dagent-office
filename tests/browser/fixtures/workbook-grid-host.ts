@@ -14,6 +14,7 @@ import { WorkbookCellSources } from "../../../packages/render/src/workbook/cell-
 import { workbookTextFonts } from "../../../packages/render/src/workbook/text-fonts.js";
 import { createWorkbookTextView } from "../../../packages/render/src/workbook/text-view.js";
 import { workbookCellFill } from "../../../packages/render/src/workbook/cell-fill.js";
+import { createWorkbookFillView } from "../../../packages/render/src/workbook/cell-fill-view.js";
 import { createWorkbookBorderView } from "../../../packages/render/src/workbook/border-view.js";
 import type { WorkbookBorderEdge } from "../../../packages/render/src/workbook/border-view.js";
 import type { WorkbookBorderKind } from "../../../packages/render/src/workbook/border-priority.js";
@@ -26,6 +27,7 @@ import { borderSourceMeasurement } from "./workbook-border-source.js";
 import { projectWorkbookBorders } from "../../../packages/render/src/workbook/border-projection.js";
 import { workbookCellBorders } from "../../../packages/render/src/workbook/cell-borders.js";
 import { assetMeasurement } from "./workbook-assets.js";
+import { measureWorkbookFills } from "./workbook-fill.js";
 
 const encode = (text: string) => new TextEncoder().encode(text);
 async function main() {
@@ -55,6 +57,7 @@ async function main() {
     assetMeasurement(base64: string, mimeType: string) { return assetMeasurement(container, base64, mimeType); },
     borderSourceMeasurement() { return borderSourceMeasurement(container); },
     textLayoutMeasurement(cases: readonly TextLayoutCase[]) { return textLayoutMeasurement(container, cases); },
+    measureWorkbookFills,
     async render(viewport: WorkbookViewport, rtl = false) {
       const current = await loader.load('sheet-1', dimensions, viewport);
       if (current) {
@@ -75,9 +78,12 @@ async function main() {
             const source = sources.get(row, column); return source && workbookCellBorders(document, getComputedStyle(source.element), rtl);
           }, rtl);
           const borders = borderPanes.filter(pane => pane.edges.length).map(pane => createWorkbookBorderView(document, pane.bounds, pane.edges));
+          let fillId = 0;
           replaceWorkbookWindow(container, loader.frame!, (body, cell, projection) => {
             const source = sources.get(projection.row, projection.column)!;
-            body.style.backgroundColor = workbookCellFill(document, getComputedStyle(source.element));
+            const fill = workbookCellFill(document, getComputedStyle(source.element));
+            if (fill.kind === 'solid') body.style.backgroundColor = fill.color;
+            else body.prepend(createWorkbookFillView(document, fill, projection.rect.width, projection.rect.height, 'fill-' + ++fillId).element);
             if (cell?.value.type === 'text') body.append(laidOut.cells[texts.get(projection)]!.element);
           }, rtl, borders);
         } finally { sources.dispose(); }
@@ -150,7 +156,7 @@ async function main() {
           const node = document.createElement('span'); node.style.backgroundColor = 'rgb(1,2,3)'; node.style.setProperty('--office-cell-fill-kind', kind!);
           node.style.setProperty('--office-cell-fill-color', color!); node.style.setProperty('--office-cell-fill-tint', '.4'); wrapper.append(node);
           const before = node.style.cssText;
-          try { fills.push(workbookCellFill(document, getComputedStyle(node))); } catch (error) { fillErrors.push((error as { code: string }).code); }
+          try { const fill = workbookCellFill(document, getComputedStyle(node)); fills.push(fill.kind === 'solid' ? fill.color : fill.kind); } catch (error) { fillErrors.push((error as { code: string }).code); }
           unchanged &&= before === node.style.cssText;
         }
         return { values, errors, fills, fillErrors, unchanged };
