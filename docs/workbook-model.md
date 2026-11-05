@@ -169,7 +169,9 @@ DrawingML 主题的填充、背景填充、线条和效果列表也已映射为�
 
 原生智能表保留为 `tables` 定义：表身份和公式名称、区域、表头/汇总行、列身份、计算列、汇总函数/公式/标签、筛选、排序状态和表样式关联。按照 [SpreadsheetML 表定义](https://learn.microsoft.com/en-us/office/open-xml/spreadsheet/working-with-tables)，公式使用的原生 `displayName` 映射为 `name`；不同的对象模型名称另存 `objectName`。工作簿名称与表名不能冲突；列名/身份、区域宽高及表/合并/普通筛选的重叠均校验。显示表头时，列名称必须与实际单元格的常量文字一致；不猜测两者谁覆盖谁。计算列模板使用真实首行原点，不把越过工作表边界的原点截回末行。普通筛选保存值/日期选择、标量比较、前后 N 项/百分比和相对日期/平均值条件；导入不重新应用筛选或排序。原生已过滤行的隐藏状态仍由行维度保留。
 
-内建表样式使用原生名称引用，自定义 `tableStyles` 通过差异 CSS 定义区域和条带，不把表样式铺平成逐格格式。条带采用 Office 声明的 [1–9 范围](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/d91a5d31-0bf4-4801-9139-f6c13a690505)，普通前后 N 项筛选采用 [1–500 范围](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/2961ac37-0f8e-47a8-89f9-981403e619b6)，百分比另限 100。源文件和 Calc 重存文件都通过表格读取与保存重开；计算列执行、筛选重算、表格编辑和准确样式渲染仍属后续验收。原生命名单元格样式在表区域上的关联也按已定保留方案继续实现。
+内建表样式使用原生名称引用，自定义 `tableStyles` 通过差异 CSS 定义区域和条带，不把表样式铺平成逐格格式。条带采用 Office 声明的 [1–9 范围](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/d91a5d31-0bf4-4801-9139-f6c13a690505)，普通前后 N 项筛选采用 [1–500 范围](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/2961ac37-0f8e-47a8-89f9-981403e619b6)，百分比另限 100。源文件和 Calc 重存文件都通过表格读取与保存重开；计算列执行、筛选重算、表格编辑和准确样式渲染仍属后续验收。
+
+表与表列的原生 `headerRowCellStyle`、`dataCellStyle`、`totalsRowCellStyle` 按名称解析为 `headerCellStyleId`、`dataCellStyleId`、`totalCellStyleId`，引用工作簿 `cellStyles.definitions`，保留别名与同一份 CSS 外观源。公开导入及保存重开均检查关联；未知原生名称、缺失定义整包失败。差异格式的 `vertical`／`horizontal` 内部边框保留为 CSS 槽，由表区域组合器按位置选择；不展开成每个单元格四边。命名关联与内部边框的源保留已检查，最终显示组合和原生视觉验收仍待完成。
 
 每个块是完整的无脚本 HTML 文档，包含一个 table/tbody；以下是其内容示意：
 

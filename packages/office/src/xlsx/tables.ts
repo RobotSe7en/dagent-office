@@ -4,7 +4,7 @@ import type { OpcPackage } from "../ooxml/package.js";
 import { attr, check, elements, fail, R, S, text, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import { readAutoFilter, readSort } from "./filter.js";
-import type { DifferentialStyleReference, XlsxStyles } from "./styles.js";
+import type { XlsxStyles } from "./styles.js";
 import { attributes, boolean, integer, one, range, spreadsheetText, value } from "./values.js";
 
 export interface NativeTableStyles {
@@ -42,10 +42,14 @@ export function readTableStyles(styles: XlsxStyles): NativeTableStyles {
   const defaultName = value(root, "defaultTableStyle");
   return { definitions, resolve, ...(defaultName ? { defaultStyle: resolve(spreadsheetText(defaultName, root!, 255), root!) } : {}) };
 }
-function regionStyles(node: XmlNode, styles: XlsxStyles): Pick<WorkbookTable, "headerStyle" | "dataStyle" | "totalStyle"> {
-  const result: { headerStyle?: DifferentialStyleReference; dataStyle?: DifferentialStyleReference; totalStyle?: DifferentialStyleReference } = {};
+function regionStyles(node: XmlNode, styles: XlsxStyles): Pick<WorkbookTable, "headerStyle" | "dataStyle" | "totalStyle" | "headerCellStyleId" | "dataCellStyleId" | "totalCellStyleId"> {
+  const result: Pick<WorkbookTable, "headerStyle" | "dataStyle" | "totalStyle" | "headerCellStyleId" | "dataCellStyleId" | "totalCellStyleId"> = {};
   for (const [prefix, property] of [["headerRow", "headerStyle"], ["data", "dataStyle"], ["totalsRow", "totalStyle"]] as const) {
-    if (value(node, prefix + "CellStyle") !== undefined) unsupported(node, "Named cell styles on native table regions are not mapped yet.");
+    const name = value(node, prefix + "CellStyle");
+    if (name !== undefined) {
+      const key = property === "headerStyle" ? "headerCellStyleId" : property === "dataStyle" ? "dataCellStyleId" : "totalCellStyleId";
+      result[key] = styles.namedStyleId(spreadsheetText(name, node, 255), node);
+    }
     if (value(node, prefix + "DxfId") !== undefined) result[property] = styles.differential(integer(node, prefix + "DxfId"), node);
   }
   return result;

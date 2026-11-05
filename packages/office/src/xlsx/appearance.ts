@@ -76,7 +76,7 @@ export function borderDeclarations(node: XmlNode, colors: SpreadsheetColors, ful
     attributes(border, ["style"]); check(border, ["color"], S);
     const kind = value(border, "style") ?? "none", color = one(border, "color");
     if (!borderKinds.has(kind)) fail(border, "A native border style is invalid.");
-    if (["vertical", "horizontal"].includes(side)) {
+    if (full && ["vertical", "horizontal"].includes(side)) {
       if (kind !== "none") unsupported(border, "This internal cell border is not implemented.");
       if (color) colors.read(color); continue;
     }

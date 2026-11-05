@@ -13,6 +13,7 @@ import { textHtml } from "../src/xlsx/values.js";
 import { writeOpcZip } from "../src/document-zip.js";
 import { readXlsxRecords } from "../src/xlsx/read.js";
 import { projectXlsxRecords } from "./helpers/xlsx-record-model.js";
+import { importXlsx } from "../src/index.js";
 
 const encoder = new TextEncoder(), decoder = new TextDecoder();
 const source = (producer = false) => openOpc(readFileSync(`examples/xlsx/${producer ? "producer/" : ""}05-native-table.xlsx`), {});
@@ -57,6 +58,44 @@ describe("native tables and auto-filters", () => {
     expect(input.tableStyles.definitions[0]).toMatchObject({ name: "CustomBand", pivotCompatible: false, elements: [{ region: "wholeTable", size: 1 }, { region: "firstRowStripe", size: 2 }] });
     expect(input.tables[0]).toMatchObject({ objectName: "InternalObject", name: "SalesTable", style: { kind: "custom", styleId: "table-style-1" } });
     openDocument(packageWithTables(input));
+  });
+  it("preserves named cell style links on table and column regions through public import and source reopen", async () => {
+    const opc = variant({
+      'xl/styles.xml': s => s.replace('<cellStyles count="1">', '<cellStyles count="2"><cellStyle name="区域😀" xfId="0"/>'),
+      'xl/tables/table1.xml': s => s.replace('<table ', '<table headerRowCellStyle="区域😀" dataCellStyle="Normal" totalsRowCellStyle="区域😀" ')
+        .replace('<tableColumn ', '<tableColumn headerRowCellStyle="区域😀" dataCellStyle="normal" totalsRowCellStyle="区域😀" '),
+    });
+    const files = await importXlsx(writeOpcZip(opc.files), { documentId: 'named-table-regions' }), model = openDocument(files, { kind: 'workbook' });
+    const snapshot = model.snapshot(), table = snapshot.metadata.workbook.sheets[0]!.tables![0]!, expected = {
+      headerCellStyleId: 'xlsx-style-definition-0', dataCellStyleId: 'xlsx-style-definition-0', totalCellStyleId: 'xlsx-style-definition-0',
+    };
+    expect(table).toMatchObject(expected); expect(table.columns[0]).toMatchObject(expected);
+    expect(snapshot.metadata.workbook.cellStyles!.names).toContainEqual(expect.objectContaining({ name: '区域😀', styleId: expected.headerCellStyleId }));
+    expect(openDocument(model.serialize(), { kind: 'workbook' }).snapshot()).toEqual(snapshot);
+    for (const column of [false, true]) {
+      const changed = new Map(files), metadata = JSON.parse(decoder.decode(changed.get('metadata.json')!));
+      const target = metadata.workbook.sheets[0].tables[0]; (column ? target.columns[0] : target).dataCellStyleId = 'missing';
+      changed.set('metadata.json', encoder.encode(JSON.stringify(metadata)));
+      expect(() => openDocument(changed)).toThrowError(expect.objectContaining({ code: 'InvalidDocument' }));
+    }
+    for (const name of ['Missing', '']) {
+      const invalid = variant({ 'xl/tables/table1.xml': s => s.replace('<table ', `<table dataCellStyle="${name}" `) });
+      await expect(importXlsx(writeOpcZip(invalid.files), { documentId: 'missing-region-style' })).rejects.toMatchObject({ code: 'InvalidDocument' });
+    }
+  });
+  it("keeps inner table borders as differential slots without assigning them to every cell edge", async () => {
+    const opc = variant({
+      'xl/styles.xml': s => s.replace('</dxf>', '<border><vertical style="thin"><color rgb="FF123456"/></vertical><horizontal style="double"><color theme="4" tint="0.25"/></horizontal></border></dxf>')
+        .replace(/<tableStyles[^>]+\/>/, '<tableStyles count="1"><tableStyle name="InnerLines" table="1" count="1"><tableStyleElement type="wholeTable" dxfId="0"/></tableStyle></tableStyles>'),
+      'xl/tables/table1.xml': s => s.replace('name="TableStyleMedium2"', 'name="InnerLines"'),
+    });
+    const model = openDocument(await importXlsx(writeOpcZip(opc.files), { documentId: 'inner-table-borders' }), { kind: 'workbook' });
+    const snapshot = model.snapshot(), cssClass = snapshot.metadata.workbook.tableStyles![0]!.elements[0]!.style!.cssClass;
+    const css = snapshot.styles[0]!.css.split(`.${cssClass}{`)[1]!.split('}')[0]!;
+    expect(css).toContain('--office-cell-border-vertical-kind:thin;'); expect(css).toContain('--office-cell-border-horizontal-kind:double;');
+    expect(css).toContain('--office-cell-border-vertical-color:#123456;'); expect(css).toContain('--office-cell-border-horizontal-tint:0.25;');
+    expect(css).not.toContain('--office-cell-border-left-kind');
+    expect(openDocument(model.serialize(), { kind: 'workbook' }).snapshot()).toEqual(snapshot);
   });
   it("reads explicit selected values/dates, comparisons, top/relative criteria and current sort definitions", () => {
     expect(filter('<filterColumn colId="0"><filters blank="1"><filter val="甲"/><dateGroupItem dateTimeGrouping="month" year="2026" month="11"/></filters></filterColumn>').columns[0]?.criterion)

@@ -1,4 +1,4 @@
-import type { WorkbookAutoFilter, WorkbookFilterDate, WorkbookMetadata, WorkbookRange, WorkbookSort, WorkbookTableStyleReference } from "../contracts/workbook.js";
+import type { WorkbookAutoFilter, WorkbookFilterDate, WorkbookMetadata, WorkbookRange, WorkbookSort, WorkbookTable, WorkbookTableStyleReference } from "../contracts/workbook.js";
 import { checkLimit, invalid } from "../document/validation.js";
 import { parseFormula } from "./formula.js";
 import { checkRange, checkNonOverlappingRanges } from "./ranges.js";
@@ -40,6 +40,12 @@ function filterDefinition(filter: WorkbookAutoFilter, maxItems: number): number 
 }
 export function validateWorkbookTables(workbook: WorkbookMetadata, classExists: (name: string) => void, formatExists: (name: string | undefined) => void, maxItems: number): number {
   let count = 0;
+  const cellStyles = new Set(workbook.cellStyles?.definitions.map(style => style.styleId));
+  const regionCellStyles = (region: Pick<WorkbookTable, "headerCellStyleId" | "dataCellStyleId" | "totalCellStyleId">): void => {
+    for (const key of ["headerCellStyleId", "dataCellStyleId", "totalCellStyleId"] as const) if (region[key] !== undefined) {
+      count++; if (!cellStyles.has(region[key])) invalid("A table region refers to an undefined named cell style.");
+    }
+  };
   const styles = new Set<string>(), styleNames = new Set<string>(), tableIds = new Set<string>(), names = new Set((workbook.names ?? []).map(name => name.name.toUpperCase())), objectNames = new Set<string>();
   const differential = (style: { cssClass: string; numberFormatId?: string | undefined } | undefined): void => {
     if (style) { classExists(style.cssClass); formatExists(style.numberFormatId); count++; }
@@ -69,6 +75,7 @@ export function validateWorkbookTables(workbook: WorkbookMetadata, classExists: 
       const width = table.range.to.column - table.range.from.column + 1, height = table.range.to.row - table.range.from.row + 1;
       if (width !== table.columns.length || height < Number(table.header) + Number(table.totals) || table.totals && !table.totalsPreviouslyShown) invalid("Table dimensions, columns or total-row state are inconsistent.");
       styleReference(table.style);
+      regionCellStyles(table);
       for (const key of ["headerStyle", "dataStyle", "totalStyle", "borderStyle", "headerBorderStyle", "totalBorderStyle"] as const) differential(table[key]);
       if (table.autoFilter) {
         const range = table.autoFilter.range, first = table.range.from, last = table.range.to;
@@ -85,6 +92,7 @@ export function validateWorkbookTables(workbook: WorkbookMetadata, classExists: 
         if (column.calculatedFormula) parseFormula(column.calculatedFormula, { row: table.range.from.row + Number(table.header), column: table.range.from.column + index });
         if (column.totalFormula) parseFormula(column.totalFormula, { row: table.range.to.row, column: table.range.from.column + index });
         for (const key of ["headerStyle", "dataStyle", "totalStyle"] as const) differential(column[key]);
+        regionCellStyles(column);
       }
       checkLimit(count, maxItems);
     }
