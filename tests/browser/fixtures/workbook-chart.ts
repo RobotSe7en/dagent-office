@@ -41,10 +41,17 @@ export async function measureWorkbookCharts(snapshot: WorkbookSnapshot, plots: r
       const exact = createWorkbookChartView(source, chart, data, 360, 220, 'exact-' + index, { ...options(), maxNodes: result.peakNodes });
       const titleText = createWorkbookChartText(source, chart, 'title'), richSource = source.querySelector<HTMLElement>('[data-node-id="' + chart.titleNodeId + '"]')!;
       const titleProjection = titleText.projections.map(item => ({ from: item.from, to: item.to, text: item.node.data, owned: richSource.querySelector('[data-node-id="' + item.sourceNodeId + '"]') !== null }));
-      let negativePie = '';
+      const negativePies = [];
       if (chart.kind === 'pie') {
-        try { createWorkbookChartView(source, chart, { ...data, series: data.series.map(series => ({ ...series, values: [-2, ...series.values.slice(1)] })) }, 360, 220, 'negative-pie', options()); negativePie = 'accepted'; }
-        catch (error) { negativePie = (error as { code: string }).code; }
+        for (const values of [[-2, 5, 8], [2, -1, -1], [-Number.MAX_VALUE, Number.MAX_VALUE, 0], [-4, 0, null], [0, 0, null], [-Number.MIN_VALUE, Number.MIN_VALUE, 0]]) {
+          const signed = { ...data, series: [{ ...data.series[0]!, values }] }, positive = { ...data, series: [{ ...data.series[0]!, values: values.map(value => value === null ? null : Math.abs(value)) }] };
+          const numbers: number[] = [], appearance = { ...chart, showLabels: true, labelContents: ['value', 'percent'] as const };
+          const graphics = createWorkbookChartView(source, appearance, signed, 360, 220, 'negative-pie', { title: title(), formatNumber(value, format) { numbers.push(value); return formatNumber(value, format); } });
+          const absolute = createWorkbookChartView(source, { ...chart, showLabels: false }, positive, 360, 220, 'absolute-pie', options());
+          const geometry = (element: HTMLElement) => [...element.querySelectorAll('svg > path, svg > circle')].map(node => [node.tagName, node.getAttribute('d'), node.getAttribute('cx'), node.getAttribute('cy'), node.getAttribute('r')]);
+          negativePies.push({ values, labels: numbers.filter((_, index) => index % 2 === 0), fractions: numbers.filter((_, index) => index % 2 === 1), geometry: geometry(graphics.element), absolute: geometry(absolute.element),
+            diagnostics: graphics.diagnostics, positiveDiagnostics: absolute.diagnostics, immutable: Object.isFrozen(graphics.diagnostics) && graphics.diagnostics.every(Object.isFrozen) });
+        }
       }
       const smallScales = [], zeroScales = [];
       if (chart.kind === 'column') for (const sign of [1, -1, 0, null]) {
@@ -56,7 +63,7 @@ export async function measureWorkbookCharts(snapshot: WorkbookSnapshot, plots: r
         const fraction = Math.max(0, ...bars.map(node => Number(node.getAttribute('height')))) / Number(plot.getAttribute('height'));
         if (sign) smallScales.push(fraction); else zeroScales.push(fraction);
       }
-      results.push({ kind: chart.kind, nodes, reported: result.nodes, peak: result.peakNodes, exact: exact.nodes === nodes, unchanged: unchanged(), errors, negativePie, smallScales, zeroScales, titleProjection, titleText: richSource.textContent,
+      results.push({ kind: chart.kind, nodes, reported: result.nodes, peak: result.peakNodes, exact: exact.nodes === nodes, unchanged: unchanged(), errors, negativePies, smallScales, zeroScales, titleProjection, titleText: richSource.textContent,
         sourceClasses: result.element.querySelectorAll('[class],[data-node-id]').length,
         svgSize: [svg.clientWidth, svg.clientHeight], text: text.map(node => node.textContent),
         fonts: text.map(node => surface.document.defaultView!.getComputedStyle(node).fontSize), colors: text.map(node => surface.document.defaultView!.getComputedStyle(node).fill),

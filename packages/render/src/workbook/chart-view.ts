@@ -12,7 +12,13 @@ export interface WorkbookChartViewOptions {
   readonly title?: HTMLElement;
   readonly maxNodes?: number; readonly maxPoints?: number; readonly maxCodeUnits?: number;
 }
-export interface WorkbookChartView { readonly element: HTMLElement; readonly nodes: number; readonly peakNodes: number }
+export interface WorkbookChartViewDiagnostic {
+  readonly code: "negative-pie-magnitude"; readonly chartId: string; readonly negativePoints: number;
+}
+export interface WorkbookChartView {
+  readonly element: HTMLElement; readonly nodes: number; readonly peakNodes: number;
+  readonly diagnostics: readonly WorkbookChartViewDiagnostic[];
+}
 
 /** Materialize graphics from already bound and formatted plot data. Resolve
  * CSS against the connected source and remove all temporary probes on failure.
@@ -29,12 +35,14 @@ export function createWorkbookChartView(source: HTMLElement, chart: DeepReadonly
   if (chart.titleVisible !== false && (chart.titleNodeId || chart.titleReference) && !title) throw new DocumentError("InvalidOperation", "A visible chart title requires a materialized title view.");
   if (data.series.length !== chart.series.length || data.series.some((series, index) => series.seriesId !== chart.series[index]!.seriesId || series.values.length !== data.categories.length
     || series.values.some(value => value !== null && !Number.isFinite(value)))) throw new DocumentError("InvalidOperation", "Derived chart values must match their source series and category positions.");
-  if (chart.kind === "pie" && data.series.some(series => series.values.some(value => value !== null && value < 0))) throw new DocumentError("UnsupportedFeature", "Negative worksheet pie values require an explicit plot-value mapping before rendering.");
   let units = 0, points = data.categories.length;
   const accountText = (amount: number): void => { units += amount; if (units > maxCodeUnits) throw new DocumentError("ResourceLimitExceeded", "Chart text exceeds its source and display budget."); };
   for (const name of data.categories) accountText(name.length);
   for (const series of data.series) { accountText(series.name.length); points += series.values.length; }
   if (points > maxPoints) throw new DocumentError("ResourceLimitExceeded", "Derived chart data exceeds its point budget.");
+  const negativePoints = chart.kind === "pie" ? data.series.reduce((count, series) => count + series.values.filter(value => value !== null && value < 0).length, 0) : 0;
+  const diagnostics: readonly WorkbookChartViewDiagnostic[] = Object.freeze(negativePoints
+    ? [Object.freeze({ code: "negative-pie-magnitude" as const, chartId: chart.chartId, negativePoints })] : []);
   const element = markViewNode(document.createElement("div")), probes: HTMLElement[] = [];
   element.dataset.officeView = "workbook-chart"; element.dataset.sourceNodeId = chart.nodeId;
   element.style.cssText = `position:absolute;width:${widthPt}pt;height:${heightPt}pt`;
@@ -49,12 +57,12 @@ export function createWorkbookChartView(source: HTMLElement, chart: DeepReadonly
       do { account(1); if (walker.currentNode.nodeType === 3) accountText(walker.currentNode.textContent!.length); } while (walker.nextNode());
       element.append(title);
     }
-    renderBasicChart(element, chart, data, widthPt, heightPt, id, account, { formatNumber: options.formatNumber, accountText, ...(title ? { title } : {}), style(classes) {
+    renderBasicChart(element, chart, data, widthPt, heightPt, id, account, { formatNumber: options.formatNumber, pieValues: "magnitude", accountText, ...(title ? { title } : {}), style(classes) {
       account(1);
       const probe = markViewNode(document.createElement("span")); probe.className = classes ?? "";
       probe.style.cssText = "position:absolute;visibility:hidden"; source.append(probe); probes.push(probe); return view.getComputedStyle(probe);
     } });
-    return Object.freeze({ element, nodes: nodes - probes.length, peakNodes });
+    return Object.freeze({ element, nodes: nodes - probes.length, peakNodes, diagnostics });
   } catch (error) { element.replaceChildren(); throw error; }
   finally { for (const probe of probes) probe.remove(); }
 }

@@ -92,7 +92,15 @@ test('workbook chart graphics use current values and isolated source styles with
       expect(result.svgSize).toEqual([480, 293]); expect(result.fonts.every(value => Math.abs(parseFloat(value) - 13) < .02), JSON.stringify(result.fonts)).toBe(true);
       expect(result.colors.every(value => value.replace(/\s/g, '') === 'rgb(12,34,56)'), JSON.stringify(result.colors)).toBe(true);
       expect(result.errors).toEqual(['ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'format rejected', 'InvalidOperation', 'InvalidOperation', 'InvalidOperation', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded']);
-      expect(result.negativePie).toBe(result.kind === 'pie' ? 'UnsupportedFeature' : '');
+      expect(result.negativePies).toHaveLength(result.kind === 'pie' ? 6 : 0);
+      for (const pie of result.negativePies) {
+        expect(pie.geometry).toEqual(pie.absolute); expect(pie.labels).toEqual(pie.values.filter(value => value !== null && value !== 0));
+        expect(pie.fractions.every(value => value > 0 && value <= 1)).toBe(true);
+        expect(pie.fractions.reduce((a, b) => a + b, 0)).toBeCloseTo(pie.labels.length ? 1 : 0, 12);
+        const negativePoints = pie.values.filter(value => value !== null && value < 0).length;
+        expect(pie.diagnostics).toEqual(negativePoints ? [{ code: 'negative-pie-magnitude', chartId: expect.any(String), negativePoints }] : []);
+        expect(pie.positiveDiagnostics).toEqual([]); expect(pie.immutable).toBe(true);
+      }
       for (const fraction of result.smallScales) expect(fraction).toBeGreaterThan(.7);
       expect(result.zeroScales).toEqual(result.kind === 'column' ? [0, 0] : []);
       expect(result.titleProjection.map(part => part.text).join('')).toBe(result.titleText);

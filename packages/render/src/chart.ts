@@ -19,6 +19,9 @@ export interface BasicChartOptions {
   readonly formatNumber: (value: number, format?: string) => string;
   readonly accountText?: (codeUnits: number) => void;
   readonly title?: HTMLElement;
+  /** The owning format selects negative-value semantics explicitly. Value
+   * labels keep their signed source numbers under the magnitude policy. */
+  readonly pieValues?: "nonnegative" | "magnitude";
 }
 const palette = ["#4472c4", "#ed7d31", "#a5a5a5", "#ffc000", "#5b9bd5", "#70ad47"];
 export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartAppearance>, data: BasicChartData, width: number, height: number, serial: string, account: (amount: number) => void, options: BasicChartOptions): void {
@@ -90,12 +93,18 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     text(values.join(separator), x, y, s, anchor);
   };
   if (chart.kind === "pie") {
-    const series = data.series[0]!, normalizer = series.values.reduce<number>((max, v) => Math.max(max, v ?? 0), 0) || 1;
-    const sum = series.values.reduce<number>((total, v) => total + (v ?? 0) / normalizer, 0), cx = left + w / 2, cy = top + h / 2, radius = Math.min(w, h) / 2;
+    const series = data.series[0]!;
+    const magnitude = (value: number | null): number => {
+      if (value === null) return 0;
+      if (value < 0 && options.pieValues !== "magnitude") throw new DocumentError("InvalidDocument", "Negative pie values require an explicit magnitude policy.");
+      return Math.abs(value);
+    };
+    const normalizer = series.values.reduce<number>((max, value) => Math.max(max, magnitude(value)), 0) || 1;
+    const sum = series.values.reduce<number>((total, value) => total + magnitude(value) / normalizer, 0), cx = left + w / 2, cy = top + h / 2, radius = Math.min(w, h) / 2;
     let angle = (chart.firstSliceAngle ?? 0) * Math.PI / 180 - Math.PI / 2;
     series.values.forEach((value, index) => {
-      if (value === null || value <= 0 || !sum) return;
-      const fraction = value / normalizer / sum, sweep = fraction * Math.PI * 2, end = angle + sweep, middle = angle + sweep / 2;
+      if (value === null || value === 0 || !sum) return;
+      const fraction = magnitude(value) / normalizer / sum, sweep = fraction * Math.PI * 2, end = angle + sweep, middle = angle + sweep / 2;
       const points = [[cx, cy], [cx + radius * Math.cos(angle), cy + radius * Math.sin(angle)], [cx + radius * Math.cos(end), cy + radius * Math.sin(end)]];
       for (let quadrant = Math.ceil(angle / (Math.PI / 2)); quadrant * Math.PI / 2 <= end; quadrant++) points.push([cx + radius * Math.cos(quadrant * Math.PI / 2), cy + radius * Math.sin(quadrant * Math.PI / 2)]);
       const xs = points.map(point => point[0]!), ys = points.map(point => point[1]!);
