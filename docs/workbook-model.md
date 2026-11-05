@@ -338,3 +338,11 @@ preview.dispose();
 预览销毁后连接仍可查询。连接或服务的 `dispose()` 关闭专用端口、通知对端、取消待处理查询并释放所属监听与提供方；不会终止宿主 Worker，也不会影响同模型上的另一条连接。宿主取消候选导入时应关闭候选连接并终止其 Worker，保留当前已接受的来源。工作簿编辑、事务和计算命令尚未加入这个只读通道。
 
 [真实 XLSX Worker 记录](evidence/workbook-native-worker.json)使用公开导入、统一打开、公开读取通道和公开预览；独立扫描确认 10,000 × 20 个实际单元格、20,000 个公式、40 块，末行数值和导入缓存可查询，滚动后仍为有界窗口。三种现代浏览器及固定旧 Chromium 检查图片／图表读取、主线程导入期间持续运行、取消候选及释放；实现没有把整本来源序列化给主线程。此本机记录尚未固定 4 vCPU／8 GiB，未测浏览器加 Worker 的峰值内存，不作为完整 R3 性能门槛通过。
+
+### 智能表预定义样式数据
+
+内部样式目录已从 [ECMA-376 Part 1，第五版（2016）官方附件](https://www.ecma-international.org/wp-content/uploads/ECMA-376-1_5th_edition_december_2016.zip)的 `OfficeOpenXML-SpreadsheetMLStyles.zip/presetTableStyles.xml` 提取全部 60 种表格样式：Light 21 种、Medium 28 种、Dark 11 种；不引入透视表样式。434 份原始差异格式去重为 180 份只读定义，保留主题色、精确 tint、字体、实色填充、区域外框及内部边框。区域顺序按 §18.8.41 保存，不能用 CSS 文件顺序替代。
+
+[生成器](../scripts/generate-workbook-table-styles.py)固定完整 XML 摘要并检查所有消费字段。该附件的局部 `dxfId` 从 1 起；Light14 的 `dxfs@count` 写成 10 而实际及引用均为 9，内嵌样式名多一个尾空格；Dark9 的内嵌名误写为 `TableStyleDark9 2`。提取仅接受这份固定附件的已记录差异，使用外层元素及 Annex G.1 的规范名称；普通 XLSX 的零起始差异索引、计数及名称校验保持严格。来源摘要、许可与差异见[记录](evidence/xlsx-builtin-table-styles.json)，[Ecma 许可](../packages/render/ECMA-376-TABLE-STYLES-LICENSE.txt)随 render 打包并保留在生成数据注释中。
+
+可运行 `python3 scripts/generate-workbook-table-styles.py /path/to/presetTableStyles.xml --check` 重核。目录的完整名称、典型主题及边框、不可变性和附件差异有单元检查；表样式与直接格式、条件规则的组合和原生页面验收尚未完成，不能把这份定义目录当作完整智能表显示已实现。
