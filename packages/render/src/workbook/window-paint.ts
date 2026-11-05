@@ -61,8 +61,19 @@ export function paintWorkbookWindow(document: Document, frame: WorkbookWindowFra
       if (!row) {
         account(1); row = document.createElement("div"); row.setAttribute("role", "row"); row.setAttribute("aria-rowindex", String(projection.row + 1)); row.style.display = "contents"; rows.set(projection.row, row);
       }
-      account(1 + (text ? 1 + text.text.nodes : 0));
-      const clip = document.createElement("div"), key = projection.row * 16_384 + projection.column;
+      // The text's own clip enforces its row band. Sideways text may extend
+      // beyond the parallelogram because glyphs can exceed the cell width.
+      const textBounds = cell.textClip ? { ...cell.textClip, x: rightToLeft ? frame.layout.widthPt - cell.textClip.x - cell.textClip.width : cell.textClip.x }
+        : shape.topOffsetPt ? { x: pane.x, y: bounds.y, width: pane.width, height: bounds.height }
+        : { ...projection.clip, x: rightToLeft ? frame.layout.widthPt - projection.clip.x - projection.clip.width : projection.clip.x };
+      const contentRect = cell.textRect ?? rect, contentX = rightToLeft ? frame.layout.widthPt - contentRect.x - contentRect.width : contentRect.x;
+      // A complete rectangular cell already has exactly this text box. Reuse
+      // it as the accessible pane clip; partial edges and sideways overflow
+      // still need their independent outer clip and complete local geometry.
+      const sharedBox = !!text && !shape.topOffsetPt && !text.element.style.clipPath && textBounds.x === contentX && textBounds.y === contentRect.y
+        && textBounds.width === contentRect.width && textBounds.height === contentRect.height;
+      account(1 + (text ? (sharedBox ? 0 : 1) + text.text.nodes : 0));
+      const clip = sharedBox ? text!.element : document.createElement("div"), key = projection.row * 16_384 + projection.column;
       clip.dataset.officeView = "workbook-cell"; clip.dataset.row = String(projection.row); clip.dataset.column = String(projection.column); clip.dataset.pane = projection.pane;
       if (accessible.has(key)) clip.setAttribute("aria-hidden", "true");
       else {
@@ -70,16 +81,10 @@ export function paintWorkbookWindow(document: Document, frame: WorkbookWindowFra
         if (projection.range.to.row !== projection.row) clip.setAttribute("aria-rowspan", String(projection.range.to.row - projection.row + 1));
         if (projection.range.to.column !== projection.column) clip.setAttribute("aria-colspan", String(projection.range.to.column - projection.column + 1));
       }
-      // The text's own clip enforces its row band. Sideways text may extend
-      // beyond the parallelogram because glyphs can exceed the cell width.
-      const textBounds = cell.textClip ? { ...cell.textClip, x: rightToLeft ? frame.layout.widthPt - cell.textClip.x - cell.textClip.width : cell.textClip.x }
-        : shape.topOffsetPt ? { x: pane.x, y: bounds.y, width: pane.width, height: bounds.height }
-        : { ...projection.clip, x: rightToLeft ? frame.layout.widthPt - projection.clip.x - projection.clip.width : projection.clip.x };
-      clip.style.cssText = `position:absolute;overflow:hidden;left:${textBounds.x}pt;top:${textBounds.y}pt;width:${textBounds.width}pt;height:${textBounds.height}pt`;
-      const contentRect = cell.textRect ?? rect, contentX = rightToLeft ? frame.layout.widthPt - contentRect.x - contentRect.width : contentRect.x;
+      clip.style.cssText = `position:absolute;overflow:hidden;direction:ltr;left:${textBounds.x}pt;top:${textBounds.y}pt;width:${textBounds.width}pt;height:${textBounds.height}pt`;
       // The text layout already owns the complete source-cell box. Position
       // that box directly in its pane clip instead of nesting an identical box.
-      if (text) { Object.assign(text.element.style, { position: "absolute", left: `${contentX - textBounds.x}pt`, top: `${contentRect.y - textBounds.y}pt` }); clip.append(text.element); }
+      if (text && !sharedBox) { Object.assign(text.element.style, { position: "absolute", left: `${contentX - textBounds.x}pt`, top: `${contentRect.y - textBounds.y}pt` }); clip.append(text.element); }
       row.append(clip);
     }
     for (const [, row] of [...rows].sort((a, b) => a[0] - b[0])) root.append(row);

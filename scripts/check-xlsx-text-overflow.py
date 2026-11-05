@@ -69,7 +69,15 @@ def main():
     os.environ["PATH"] = str(ROOT / ".cache/acceptance-office/bin") + os.pathsep + os.environ["PATH"]
     os.environ["LD_LIBRARY_PATH"] = str(ROOT / ".cache/acceptance-office-deps/installed/usr/lib/x86_64-linux-gnu")
     environment = native.shared.environment(); assert environment["libreOffice"] == native.BUILD
-    fonts = json.loads((ROOT / "examples/xlsx/reference.json").read_text())["environment"]["fonts"]; assert environment["fonts"] == fonts
+    # Every painted character in these probes (including Case labels and the
+    # ellipsis) uses regular Liberation Sans. Pin its actual resolved file;
+    # unrelated installed fallback fonts must not block this Latin/ellipsis probe.
+    baseline_fonts = json.loads((ROOT / "examples/xlsx/reference.json").read_text())["environment"]["fonts"]
+    expected_font = next(font for font in baseline_fonts if font["file"] == "LiberationSans-Regular.ttf")
+    family, filename = native.shared.run(["fc-match", "-f", "%{family}|%{file}", "Liberation Sans:style=Regular"]).split("|")
+    assert "Liberation Sans" in family and Path(filename).name == expected_font["file"], "Required regular Liberation Sans did not resolve"
+    assert sha256(Path(filename).read_bytes()).hexdigest() == expected_font["sha256"], "Required reference font bytes differ"
+    fonts = [expected_font]
     cache = ROOT / ".cache/xlsx-text-overflow"; cache.mkdir(exist_ok=True)
     cases = inputs(); data = generate(cases)
     with TemporaryDirectory(dir=cache) as temporary:
@@ -80,7 +88,7 @@ def main():
         observations = observe(output / "overflow.pdf", output / "overflow.xlsx", cases, work)
     report = {"scope": "Pinned Calc observations of DrawingML horizontal/vertical overflow, wrapping and top/bottom anchors; PDF text extraction can include clipped glyphs. Excel/WPS unverified.",
               "office": native.BUILD, "archiveSha256": native.ARCHIVE_HASH, "sourceSha256": sha256(data).hexdigest(),
-              "fontManifest": {"source": "examples/xlsx/reference.json#environment.fonts", "sha256": sha256(json.dumps(fonts, sort_keys=True, separators=(",", ":")).encode()).hexdigest()},
+              "fontManifest": {"families": ["Liberation Sans"], "files": fonts, "sha256": sha256(json.dumps(fonts, sort_keys=True, separators=(",", ":")).encode()).hexdigest()},
               "cases": observations}
     if args.record:
         FIXTURE.write_bytes(data); REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")

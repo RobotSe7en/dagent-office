@@ -4,8 +4,16 @@
   "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
   "sourceSha256": "cfae12008b5a61ca6fb41810f2b26bab73e90f023be0b0cce1d15c8b81eeab5f",
   "fontManifest": {
-    "source": "examples/xlsx/reference.json#environment.fonts",
-    "sha256": "bda037c50b31e342e0e460755840725d14dd8bfaeccca8de54269277342a5119"
+    "families": [
+      "Liberation Sans"
+    ],
+    "files": [
+      {
+        "file": "LiberationSans-Regular.ttf",
+        "sha256": "4659bc0c58c5028dd488ec928d41d9265db43d9b669fc14ca8b0832daca7b144"
+      }
+    ],
+    "sha256": "6d113599a9cd5ac751523ab9b720daef0870e97623c1df9d84f17e173d43d42f"
   },
   "cases": [
     {
