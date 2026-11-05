@@ -14,6 +14,8 @@ import type { LayoutFields } from "./fields.js";
 import { SourceProjection } from "./projection.js";
 import { copyPreviewSelection } from "./clipboard.js";
 import { mountPresentationPreview } from "./presentation/preview.js";
+import { mountWorkbookPreview } from "./workbook/preview.js";
+import type { WorkbookPreview, WorkbookPreviewInput, WorkbookPreviewOptions } from "./workbook/preview-contracts.js";
 
 export interface DocumentPreview {
   readonly element: HTMLIFrameElement;
@@ -395,9 +397,12 @@ function prepareDocument(input: ContentDocumentModel): { model: ContentDocumentM
 export function mountDocumentPreview(
   container: HTMLElement,
   input: ContentDocumentModel,
-  options: DocumentPreviewOptions = {},
-): DocumentPreview {
-  return mountPreview(container, input, options);
+  options?: DocumentPreviewOptions,
+): DocumentPreview;
+export function mountDocumentPreview(container: HTMLElement, input: WorkbookPreviewInput, options?: WorkbookPreviewOptions): WorkbookPreview;
+export function mountDocumentPreview(container: HTMLElement, input: ContentDocumentModel | WorkbookPreviewInput, options?: DocumentPreviewOptions | WorkbookPreviewOptions): DocumentPreview | WorkbookPreview;
+export function mountDocumentPreview(container: HTMLElement, input: ContentDocumentModel | WorkbookPreviewInput, options: DocumentPreviewOptions | WorkbookPreviewOptions = {}): DocumentPreview | WorkbookPreview {
+  return input.kind === "workbook" ? mountWorkbookPreview(container, input, options as WorkbookPreviewOptions) : mountPreview(container, input, options as DocumentPreviewOptions);
 }
 
 /** Internal renderer connection; source positions never become a public document model. */

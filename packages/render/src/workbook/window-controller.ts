@@ -45,6 +45,13 @@ export interface WorkbookRenderedWindow {
   readonly diagnostics: WorkbookDrawingLayout["diagnostics"];
   readonly usedFallbackLineMetrics: boolean;
 }
+export interface WorkbookWindowDecoration {
+  /** May change as an owned panel/selection changes, within its assigned cap. */
+  readonly nodes: number;
+  readonly fonts?: readonly FontResolution[];
+  dispose(): void;
+}
+export type WorkbookWindowDecorator = (candidate: WorkbookRenderedWindow, content: WorkbookContentSources, maxNodes: number) => WorkbookWindowDecoration;
 
 /** Internal lifecycle for one immutable workbook. The owner supplies a ready,
  * dedicated surface and authorized providers, and owns their disposal. This
@@ -57,11 +64,11 @@ export class WorkbookWindowController {
   private readonly maxNodes: number;
   private readonly sheets = new Map<string, { readonly normal: WorkbookColumnFont; readonly dimensions: ReturnType<typeof worksheetDimensions> }>();
   private pending: { cancel(): void } | undefined;
-  private active: { readonly state: WorkbookRenderedWindow; readonly drawings: WorkbookDrawingLayout } | undefined;
+  private active: { readonly state: WorkbookRenderedWindow; readonly drawings: WorkbookDrawingLayout; readonly decoration?: WorkbookWindowDecoration } | undefined;
   private disposed = false;
 
   constructor(private readonly surface: WorkbookSurface, private readonly providers: WorkbookWindowProviders,
-    private readonly formatter: WorkbookNumberFormatter, input: WorkbookWindowControllerOptions = {}) {
+    private readonly formatter: WorkbookNumberFormatter, input: WorkbookWindowControllerOptions = {}, private readonly decorate: WorkbookWindowDecorator | undefined = undefined) {
     this.maxNodes = input.maxNodes ?? 50_000;
     if (!Number.isSafeInteger(this.maxNodes) || this.maxNodes < 1 || Object.keys(input).some(key => !["maxNodes", "read", "cells", "drawings", "annotations"].includes(key))
       || !surface.source.isConnected || !surface.view.isConnected || surface.source.ownerDocument !== surface.document || surface.view.ownerDocument !== surface.document
@@ -76,6 +83,9 @@ export class WorkbookWindowController {
   }
 
   get current(): WorkbookRenderedWindow | undefined { return this.active?.state; }
+
+  /** Cancel only unfinished work while retaining the accepted window. */
+  cancelPending(): void { this.pending?.cancel(); this.pending = undefined; }
 
   /** False means superseded/disposed; genuine failures reject. A newer request
    * also settles an older request whose provider ignores its AbortSignal. */
@@ -94,6 +104,7 @@ export class WorkbookWindowController {
     const request = { cancel }; this.pending = request;
     const current = (): boolean => !this.disposed && this.pending === request && !abort.signal.aborted;
     let drawings: WorkbookDrawingLayout | undefined;
+    let decoration: WorkbookWindowDecoration | undefined;
     try {
       let metrics = this.sheets.get(sheetId);
       if (!metrics) {
@@ -113,22 +124,29 @@ export class WorkbookWindowController {
         this.formatter, abort.signal, { ...this.options.drawings, maxNodes: Math.min(this.maxNodes - nodes, this.options.drawings?.maxNodes ?? this.maxNodes) });
       if (!current()) return false;
       nodes += drawings.nodes; cells.element.append(drawings.element);
-      const state: WorkbookRenderedWindow = Object.freeze({ frame, element: cells.element, nodes, dimensions, cells: cells.cells, objects: drawings.objects, annotations,
+      const base: WorkbookRenderedWindow = Object.freeze({ frame, element: cells.element, nodes, dimensions, cells: cells.cells, objects: drawings.objects, annotations,
         fonts: Object.freeze([...normal.fonts, ...cells.fonts, ...drawings.fonts]), diagnostics: drawings.diagnostics,
         usedFallbackLineMetrics: cells.usedFallbackLineMetrics || drawings.usedFallbackLineMetrics });
+      decoration = this.decorate?.(base, this.content, this.maxNodes - nodes);
+      if (decoration && (!Number.isSafeInteger(decoration.nodes) || decoration.nodes < 0 || nodes + decoration.nodes > this.maxNodes))
+        throw new DocumentError("ResourceLimitExceeded", "Workbook controls exceed their assigned window-node budget.");
+      if (!current()) return false;
+      const extra = decoration;
+      const state: WorkbookRenderedWindow = extra ? Object.freeze({ ...base, get nodes() { return base.nodes + extra.nodes; },
+        get fonts() { return extra.fonts?.length ? Object.freeze([...base.fonts, ...extra.fonts]) : base.fonts; } }) : base;
       const previous = this.active;
       this.surface.view.replaceChildren(cells.element);
       this.surface.frame.style.setProperty("width", viewport.widthPt + "pt", "important");
       this.surface.frame.style.setProperty("height", viewport.heightPt + "pt", "important");
       this.surface.frame.style.setProperty("visibility", "visible", "important");
-      this.active = { state, drawings }; drawings = undefined;
-      previous?.drawings.dispose(); previous?.state.element.replaceChildren();
+      this.active = { state, drawings, ...(decoration ? { decoration } : {}) }; drawings = undefined; decoration = undefined;
+      previous?.decoration?.dispose(); previous?.drawings.dispose(); previous?.state.element.replaceChildren();
       return true;
     } catch (error) {
       if (!current()) return false;
       throw error;
     } finally {
-      drawings?.dispose(); loader.dispose();
+      decoration?.dispose(); drawings?.dispose(); loader.dispose();
       if (this.pending === request) this.pending = undefined;
     }
   }
@@ -136,7 +154,7 @@ export class WorkbookWindowController {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true; this.pending?.cancel(); this.pending = undefined;
-    this.active?.drawings.dispose(); this.active?.state.element.remove(); this.active?.state.element.replaceChildren(); this.active = undefined;
+    this.active?.decoration?.dispose(); this.active?.drawings.dispose(); this.active?.state.element.remove(); this.active?.state.element.replaceChildren(); this.active = undefined;
     this.content.dispose(); this.sheets.clear();
   }
 }
