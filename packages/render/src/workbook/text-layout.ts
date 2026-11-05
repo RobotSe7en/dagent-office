@@ -12,6 +12,8 @@ import { measuredFontLineHeight } from "../font-line-height.js";
 import { workbookCellBorders } from "./cell-borders.js";
 import { workbookCellShape, workbookCellShapeOffset } from "./cell-shape.js";
 import type { WorkbookCellShape } from "./cell-shape.js";
+import { repeatWorkbookText } from "./text-repeat.js";
+import { distributeWorkbookTextLines } from "./text-lines.js";
 
 export interface WorkbookTextLayoutInput {
   readonly source: WorkbookSourceCell;
@@ -41,10 +43,10 @@ export interface WorkbookTextLayouts {
  * text views are private detached projections; source nodes are never changed.
  * Return full-cell geometry for later pane clipping. This does not yet compose
  * neighboring-cell overflow or choose formatted numeric/date display strings. */
-export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly WorkbookTextLayoutInput[], normalSpaceWidthPx: number, maxNodes = 50_000): WorkbookTextLayouts {
+export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly WorkbookTextLayoutInput[], normalSpaceWidthPx: number, maxNodes = 50_000, maxTextUnits: number = 8 * 1024 * 1024): WorkbookTextLayouts {
   const document = scope.ownerDocument, view = document.defaultView;
   if (!scope.isConnected || !view || document.fonts.status === "loading" || !Number.isFinite(normalSpaceWidthPx) || normalSpaceWidthPx < 0
-    || !Number.isSafeInteger(maxNodes) || maxNodes < 1) throw new DocumentError("InvalidOperation", "Worksheet text layout requires a connected surface, settled fonts and valid measurement limits.");
+    || ![maxNodes, maxTextUnits].every(value => Number.isSafeInteger(value) && value > 0)) throw new DocumentError("InvalidOperation", "Worksheet text layout requires a connected surface, settled fonts and valid measurement limits.");
   let nodes = 3;
   if (nodes > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Worksheet text layout exceeds its node budget.");
   const seen = new Set<HTMLElement>();
@@ -77,14 +79,17 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
       // width. Borders are a separate shared-edge layer, not CSS box borders.
       const { left, right } = workbookTextGutters(alignment, normalSpaceWidthPx);
       const available = Math.max(0, input.widthPt / .75 - left - right), text = textView.element;
+      const wrapped = alignment.wrap && !(alignment.flow === "fill" && input.valueType !== "text");
       Object.assign(text.style, { display: "block", position: "absolute", left: "0", top: "0", margin: "0", padding: "0", border: "0", boxSizing: "content-box", direction: textDirection,
         // Spreadsheet reference advances do not apply pair kerning. Explicit
         // OpenType control also covers engines that keep kerning despite the
         // high-level property on an inherited inline run.
         fontKerning: "none", fontFeatureSettings: '"kern" 0',
-        unicodeBidi: "isolate", whiteSpace: alignment.wrap ? "pre-wrap" : "pre", overflowWrap: alignment.wrap ? "anywhere" : "normal", wordBreak: "normal",
-        textAlign: alignment.stacked ? "center" : alignment.horizontal, width: alignment.wrap && !alignment.stacked ? `${available}px` : "max-content", height: "auto", transformOrigin: "0 0" });
-      element.append(text); root.append(element); return { input, textView, alignment, element, available, left, shape };
+        unicodeBidi: "isolate", whiteSpace: wrapped ? "pre-wrap" : "pre", overflowWrap: wrapped ? "anywhere" : "normal", wordBreak: "normal",
+        textAlign: alignment.stacked ? "center" : alignment.flow === "justify" || alignment.flow === "distributed" ? "justify" : alignment.horizontal,
+        textAlignLast: alignment.justifyLastLine ? "justify" : "auto", textJustify: "inter-word",
+        width: wrapped && !alignment.stacked ? `${available}px` : "max-content", height: "auto", transformOrigin: "0 0" });
+      element.append(text); root.append(element); return { input, textView, alignment, element, available, left, shape, naturalHeightPx: undefined as number | undefined };
     });
     scope.append(root);
     const fonts = resolvePreviewFontsInScope(document, root, "[data-office-text-style],[data-office-script]");
@@ -103,7 +108,20 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
         }
       }
     }
-    const cells = prepared.map(({ input, textView, alignment, element, available, left, shape }): WorkbookTextLayout => {
+    let units = 0;
+    for (const item of prepared) {
+      if (item.alignment.flow === "fill" && (!item.alignment.wrap || item.input.valueType !== "text")) {
+        const repeated = repeatWorkbookText(item.textView, item.available, maxNodes - nodes + item.textView.nodes);
+        nodes += repeated.nodes - item.textView.nodes; item.textView = repeated;
+      }
+      if (item.alignment.verticalFlow) {
+        const spaced = distributeWorkbookTextLines(item.textView, Math.max(0, item.input.heightPt / .75 - 2), maxNodes - nodes + item.textView.nodes);
+        nodes += spaced.text.nodes - item.textView.nodes; item.textView = spaced.text; item.naturalHeightPx = spaced.naturalHeight;
+      }
+      units += item.textView.element.textContent?.length ?? 0;
+      if (units > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Worksheet text exceeds its cumulative display-text budget.");
+    }
+    const cells = prepared.map(({ input, textView, alignment, element, available, left, shape, naturalHeightPx }): WorkbookTextLayout => {
       const text = textView.element, measured = view.getComputedStyle(text), width = Number.parseFloat(measured.width), height = Number.parseFloat(measured.height);
       if (![width, height].every(value => Number.isFinite(value) && value >= 0)) throw new DocumentError("UnsupportedFeature", "This browser cannot measure worksheet text geometry.");
       const angle = alignment.rotationDegrees * Math.PI / 180, cosine = Math.cos(angle), sine = Math.sin(angle);
@@ -124,7 +142,8 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
         element.style.clipPath = `inset(0 ${-Math.max(0, end - input.widthPt / .75)}px 0 ${Math.min(0, start)}px)`;
       }
       text.style.transform = alignment.rotationDegrees ? `rotate(${alignment.rotationDegrees}deg) scale(${scale})` : scale === 1 ? "none" : `scale(${scale})`;
-      return Object.freeze({ element, text: textView, requiredHeightPt: (rotatedHeight * scale + 2) * .75, scale, shape });
+      const naturalRotatedHeight = Math.abs(width * sine) + Math.abs((naturalHeightPx ?? height) * cosine);
+      return Object.freeze({ element, text: textView, requiredHeightPt: (naturalRotatedHeight * scale + 2) * .75, scale, shape });
     });
     for (const cell of cells) cell.element.remove();
     complete = true;

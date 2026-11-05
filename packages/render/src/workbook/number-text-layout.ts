@@ -96,6 +96,6 @@ export function layoutWorkbookNumbers(scope: HTMLElement, inputs: readonly Workb
         ...(input.bordered === undefined ? {} : { bordered: input.bordered }) }); overflow.push(reason); locales.push(display.locale);
     }
   } finally { root.remove(); root.replaceChildren(); }
-  const layout = layoutWorkbookTexts(scope, finals, normalSpaceWidthPx, maxNodes);
+  const layout = layoutWorkbookTexts(scope, finals, normalSpaceWidthPx, maxNodes, maxTextUnits);
   return Object.freeze({ ...layout, overflow: Object.freeze(overflow), locales: Object.freeze(locales) });
 }

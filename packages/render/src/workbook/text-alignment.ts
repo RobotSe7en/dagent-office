@@ -10,11 +10,14 @@ export interface WorkbookTextAlignment {
   readonly shrink: boolean;
   readonly rotationDegrees: number;
   readonly stacked: boolean;
+  readonly flow?: "fill" | "justify" | "distributed" | "centerContinuous";
+  readonly verticalFlow?: "justify" | "distributed";
+  readonly justifyLastLine?: boolean;
 }
 export function workbookTextGutters(alignment: WorkbookTextAlignment, normalSpaceWidthPx: number): { readonly left: number; readonly right: number } {
   const indent = alignment.indentSpaces * normalSpaceWidthPx;
   if (!Number.isFinite(normalSpaceWidthPx) || normalSpaceWidthPx < 0 || !Number.isFinite(indent)) throw new DocumentError("InvalidOperation", "Worksheet indentation requires finite nonnegative font metrics.");
-  return { left: 1.5 + (alignment.horizontal === "left" ? indent : 0), right: 1.5 + (alignment.horizontal === "right" ? indent : 0) };
+  return { left: 1.5 + (alignment.horizontal === "left" || alignment.flow === "distributed" ? indent : 0), right: 1.5 + (alignment.horizontal === "right" || alignment.flow === "distributed" ? indent : 0) };
 }
 const invalid = (): never => { throw new DocumentError("InvalidDocument", "Worksheet text alignment has an invalid value."); };
 function choice<T extends string>(style: CSSStyleDeclaration, name: string, values: readonly T[], fallback: T): T {
@@ -55,13 +58,15 @@ export function workbookTextAlignment(style: CSSStyleDeclaration, type: Workbook
     if (style.verticalAlign === "middle") vertical = "center";
     else if (style.verticalAlign === "top" || style.verticalAlign === "bottom") vertical = style.verticalAlign;
   }
-  if (!["left", "center", "right"].includes(horizontal) || !["top", "center", "bottom"].includes(vertical)) {
-    throw new DocumentError("UnsupportedFeature", "This worksheet alignment requires additional line or neighboring-cell layout.");
-  }
+  const flow = ["fill", "justify", "distributed", "centerContinuous"].includes(horizontal) ? horizontal as WorkbookTextAlignment["flow"] : undefined;
+  const verticalFlow = ["justify", "distributed"].includes(vertical) ? vertical as WorkbookTextAlignment["verticalFlow"] : undefined;
+  if (flow) horizontal = flow === "centerContinuous" ? "center" : "left";
+  if (verticalFlow) vertical = "top";
   const indent = integer(style, "indent", 0, 255), relative = integer(style, "relative-indent", -15, 15);
-  choice(style, "justify-last-line", ["true", "false"], "false");
-  const wrap = choice(style, "wrap", ["true", "false"], ["pre-wrap", "pre-line", "break-spaces"].includes(style.whiteSpace) ? "true" : "false") === "true";
+  const justifyLastLine = choice(style, "justify-last-line", ["true", "false"], "false") === "true";
+  const wrap = choice(style, "wrap", ["true", "false"], ["pre-wrap", "pre-line", "break-spaces"].includes(style.whiteSpace) ? "true" : "false") === "true" || flow === "justify" || flow === "distributed";
   const shrink = choice(style, "shrink-to-fit", ["true", "false"], "false") === "true";
   return Object.freeze({ horizontal: horizontal as WorkbookTextAlignment["horizontal"], vertical: vertical as WorkbookTextAlignment["vertical"],
-    indentSpaces: horizontal === "center" ? 0 : Math.max(0, indent * 3 + relative), wrap, shrink, ...workbookTextRotation(style) });
+    indentSpaces: horizontal === "center" ? 0 : Math.max(0, indent * 3 + relative), wrap, shrink, ...workbookTextRotation(style),
+    ...(flow ? { flow, justifyLastLine } : {}), ...(verticalFlow ? { verticalFlow } : {}) });
 }

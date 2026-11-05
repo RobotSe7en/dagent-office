@@ -78,7 +78,7 @@ async function main() {
     shapedFillMeasurement,
     assetMeasurement(base64: string, mimeType: string) { return assetMeasurement(container, base64, mimeType); },
     borderSourceMeasurement() { return borderSourceMeasurement(container); },
-    textLayoutMeasurement(cases: readonly TextLayoutCase[]) { return textLayoutMeasurement(container, cases); },
+    textLayoutMeasurement(cases: readonly TextLayoutCase[], limits?: { readonly maxNodes?: number; readonly maxTextUnits?: number }) { return textLayoutMeasurement(container, cases, limits); },
     measureWorkbookFills,
     diagonalMeasurement,
     async render(viewport: WorkbookViewport, rtl = false) {

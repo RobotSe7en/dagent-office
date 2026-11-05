@@ -95,7 +95,7 @@ export function layoutWorkbookFormattedTexts(scope: HTMLElement, inputs: readonl
       finals.push({ source: item.input.source, text, valueType: "text", widthPt: item.input.widthPt, heightPt: item.input.heightPt,
         ...(item.input.bordered === undefined ? {} : { bordered: item.input.bordered }) });
     }
-    const layout = layoutWorkbookTexts(scope, finals, normalSpaceWidthPx, maxNodes);
+    const layout = layoutWorkbookTexts(scope, finals, normalSpaceWidthPx, maxNodes, maxTextUnits);
     return Object.freeze({ ...layout, fonts });
   } finally { root.remove(); root.replaceChildren(); direction.dispose(); }
 }

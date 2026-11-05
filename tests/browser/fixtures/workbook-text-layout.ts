@@ -8,8 +8,9 @@ export interface TextLayoutCase {
   wrap?: boolean; shrink?: boolean;
   rotation?: number;
   splitOffsets?: readonly number[];
+  justifyLastLine?: boolean;
 }
-export async function textLayoutMeasurement(scope: HTMLElement, cases: readonly TextLayoutCase[]) {
+export async function textLayoutMeasurement(scope: HTMLElement, cases: readonly TextLayoutCase[], limits: { readonly maxNodes?: number; readonly maxTextUnits?: number } = {}) {
   await document.fonts.ready;
   const sources = document.createElement('div'); sources.style.cssText = 'position:absolute;visibility:hidden;width:0;height:0;overflow:hidden'; scope.append(sources);
   const gallery = document.createElement('div'); gallery.id = 'workbook-text-layout-probe';
@@ -25,13 +26,14 @@ export async function textLayoutMeasurement(scope: HTMLElement, cases: readonly 
     cell.style.setProperty('--office-cell-reading-order', item.readingOrder); cell.style.setProperty('--office-cell-indent', String(item.indent));
     cell.style.setProperty('--office-cell-wrap', String(item.wrap ?? false)); cell.style.setProperty('--office-cell-shrink-to-fit', String(item.shrink ?? false));
     cell.style.setProperty('--office-cell-text-rotation', String(item.rotation ?? 0));
+    cell.style.setProperty('--office-cell-justify-last-line', String(item.justifyLastLine ?? false));
     sources.append(table); const source = { element: cell, format: { cssClass: '' } };
     return { source, text: createWorkbookTextView(source), valueType: item.type, widthPt: item.widthPt, heightPt: item.heightPt };
   });
   const original = sources.innerHTML, canvas = document.createElement('canvas'), context = canvas.getContext('2d')!; context.font = '11pt "Liberation Sans"';
   const space = context.measureText(' ').width;
   try {
-    const layouts = layoutWorkbookTexts(scope, inputs, space);
+    const layouts = layoutWorkbookTexts(scope, inputs, space, limits.maxNodes ?? 50_000, limits.maxTextUnits ?? 8 * 1024 * 1024);
     for (const item of layouts.cells) { item.element.style.outline = '0.5px solid red'; gallery.append(item.element); }
     scope.append(gallery);
     const measurements = layouts.cells.map(item => {
@@ -42,6 +44,8 @@ export async function textLayoutMeasurement(scope: HTMLElement, cases: readonly 
         const range = document.createRange(), offset = end ? node.length - 1 : 0; range.setStart(node, offset); range.setEnd(node, offset + 1); return (range.getBoundingClientRect().x - cell.x) * .75;
       };
       return { scale: item.scale, requiredHeightPt: item.requiredHeightPt, horizontal: item.text.element.style.textAlign, direction: item.text.element.style.direction,
+        lastLine: item.text.element.style.textAlignLast, nodes: item.text.nodes,
+        lineRects: item.text.projections.flatMap(projection => { const range = document.createRange(); range.selectNode(projection.node); return [...range.getClientRects()].filter(rect => rect.width > .01 && rect.height > 0).map(rect => ({ text: projection.node.data, x: (rect.x - cell.x) * .75, y: (rect.y - cell.y) * .75, width: rect.width * .75, height: rect.height * .75 })); }),
         transform: item.text.element.style.transform, breaks: item.text.element.querySelectorAll('br').length,
         firstX: characterX(first, false), lastX: characterX(last, true),
         gapsPt: [(text.left - cell.left) * .75, (text.top - cell.top) * .75, (cell.right - text.right) * .75, (cell.bottom - text.bottom) * .75],
@@ -49,7 +53,7 @@ export async function textLayoutMeasurement(scope: HTMLElement, cases: readonly 
         offsets: item.text.projections.map(projection => [projection.from, projection.to]), font: getComputedStyle(item.text.projections[0]?.node.parentElement ?? item.text.element).fontFamily };
     });
     const failures: string[] = [], source = inputs[0]!.source;
-    for (const [name, value] of [['horizontal', 'fill'], ['vertical', 'distributed'], ['indent', '256'], ['wrap', 'yes'], ['reading-order', 'wrong']]) {
+    for (const [name, value] of [['horizontal', 'wrong'], ['vertical', 'wrong'], ['indent', '256'], ['wrap', 'yes'], ['reading-order', 'wrong']]) {
       const property = `--office-cell-${name}`, before = source.element.style.getPropertyValue(property); source.element.style.setProperty(property, value!);
       try { layoutWorkbookTexts(scope, [{ ...inputs[0]!, text: createWorkbookTextView(source) }], space); }
       catch (error) { failures.push((error as { code: string }).code); }

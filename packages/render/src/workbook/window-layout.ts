@@ -104,13 +104,17 @@ export function layoutWorkbookWindow(surface: Pick<WorkbookSurface, "source" | "
       if (units > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Workbook window text exceeds its cumulative source-text budget.");
       locations.set(projection, { kind: "text", index: texts.length }); texts.push({ source, text, valueType: value.type, ...size });
     }
-    const rich = layoutWorkbookTexts(surface.view, texts, options.normalSpaceWidthPx, maxNodes);
+    const rich = layoutWorkbookTexts(surface.view, texts, options.normalSpaceWidthPx, maxNodes, maxTextUnits);
     textNodes = rich.cells.reduce((sum, cell) => sum + cell.text.nodes + 1, 0);
+    units = rich.cells.reduce((sum, cell) => sum + (cell.text.element.textContent?.length ?? 0), 0);
     const formattedText = layoutWorkbookFormattedTexts(surface.view, formatted, formatter, options.normalSpaceWidthPx, remaining(), Math.max(1, maxTextUnits - units));
     textNodes += formattedText.cells.reduce((sum, cell) => sum + cell.text.nodes + 1, 0);
     units += formattedText.cells.reduce((sum, cell) => sum + (cell.text.element.textContent?.length ?? 0), 0);
+    if (units > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Workbook window exceeds its cumulative displayed-text budget.");
     const numeric = layoutWorkbookNumbers(surface.view, numbers, formatter, options.normalSpaceWidthPx, remaining(), Math.max(1, maxTextUnits - units));
     textNodes += numeric.cells.reduce((sum, cell) => sum + cell.text.nodes + 1, 0);
+    units += numeric.cells.reduce((sum, cell) => sum + (cell.text.element.textContent?.length ?? 0), 0);
+    if (units > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Workbook window exceeds its cumulative displayed-text budget.");
     remaining();
     const prepared = frame.projections.map(projection => {
       const computed = style(projection.row, projection.column), location = locations.get(projection);

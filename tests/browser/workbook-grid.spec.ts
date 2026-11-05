@@ -38,7 +38,7 @@ interface GridHost {
   measureWorkbookFills(css: string, classes: readonly string[]): ReturnType<typeof measureWorkbookFills>;
   assetMeasurement(base64: string, mimeType: string): ReturnType<typeof assetMeasurement>;
   borderSourceMeasurement(): ReturnType<typeof borderSourceMeasurement>;
-  textLayoutMeasurement(cases: readonly TextLayoutCase[]): ReturnType<typeof textLayoutMeasurement>;
+  textLayoutMeasurement(cases: readonly TextLayoutCase[], limits?: { readonly maxNodes?: number; readonly maxTextUnits?: number }): ReturnType<typeof textLayoutMeasurement>;
   render(viewport: WorkbookViewport, rtl?: boolean): Promise<boolean>;
   inspect(): { cellCount: number; borderLines: number; accessibleCells: number; rows: number[]; sourceUnchanged: boolean; merges: { pane?: string; text: string | null; clip: { x: number; y: number; width: number; height: number }; body: { x: number; y: number; width: number; height: number }; hit?: { row: number; column: number } }[] };
   failedPaint(): boolean; dispose(): void;
@@ -319,7 +319,7 @@ test('worksheet text layout measures native alignment, Normal indentation and lo
   const result = await page.evaluate(cases => window.workbookGridHost.textLayoutMeasurement(cases), cases);
   await testInfo.attach('alignment-measurements', { body: JSON.stringify(result, null, 2), contentType: 'application/json' });
   expect(result).toMatchObject({ unchanged: true, retained: 0, atomic: true, frozen: true,
-    failures: ['UnsupportedFeature', 'UnsupportedFeature', 'InvalidDocument', 'InvalidDocument', 'InvalidDocument', 'InvalidOperation', 'InvalidOperation', 'ResourceLimitExceeded', 'InvalidDocument'] });
+    failures: ['InvalidDocument', 'InvalidDocument', 'InvalidDocument', 'InvalidDocument', 'InvalidDocument', 'InvalidOperation', 'InvalidOperation', 'ResourceLimitExceeded', 'InvalidDocument'] });
   for (const [index, item] of cases.entries()) {
     const measured = result.measurements[index]!, native = alignmentReference.cases[index]!;
     expect(measured.text).toBe(item.text); expect(measured.scale).toBe(1);
@@ -728,5 +728,64 @@ test('conditional font attributes override rich runs while text-format explicit 
   const cells = report.results[0]!.cells;
   expect(cells.find(cell => cell.row === 10 && cell.column === 0)!.runs.map(run => [run.color, run.weight, run.style])).toEqual([['rgb(255, 0, 0)', '400', 'normal'], ['rgb(255, 0, 0)', '400', 'italic']]);
   expect(cells.find(cell => cell.row === 11 && cell.column === 0)!.runs.map(run => [run.color, run.weight, run.style])).toEqual([['rgb(17, 34, 51)', '400', 'normal'], ['rgb(17, 34, 51)', '400', 'italic']]);
+  expect(report.unchanged).toBe(true);
+});
+
+test('whole-value fill and horizontal line alignment retain exact source offsets and bounded display text', async ({ page }) => {
+  const base: TextLayoutCase = { text: 'Ab', type: 'text', family: 'Liberation Sans', sizePt: 11, widthPt: 80, heightPt: 70, horizontal: 'fill', vertical: 'bottom', readingOrder: 'context', indent: 0, rightToLeft: false };
+  const cases = [base, { ...base, text: '12', type: 'number' as const, wrap: true }, { ...base, wrap: true },
+    { ...base, text: 'Alpha beta gamma delta epsilon', horizontal: 'justify', widthPt: 80 },
+    { ...base, text: 'Alpha beta', horizontal: 'distributed', justifyLastLine: true },
+    { ...base, text: 'Alpha beta', horizontal: 'distributed', justifyLastLine: false }];
+  const report = await page.evaluate(cases => window.workbookGridHost.textLayoutMeasurement(cases), cases);
+  expect(report.unchanged).toBe(true); expect(report.retained).toBe(0);
+  for (const index of [0, 1]) {
+    const value = report.measurements[index]!; expect(value.text).toMatch(index === 0 ? /^(Ab){3,}$/ : /^(12){3,}$/);
+    expect(value.widthPt).toBeLessThanOrEqual(80 - 2.25 + .2); expect(value.offsets.every(range => range[0] === 0 && range[1] === 2)).toBe(true);
+  }
+  expect(report.measurements[2]!.text).toBe('Ab');
+  expect(report.measurements[3]!.horizontal).toBe('justify'); expect(report.measurements[3]!.heightPt).toBeGreaterThan(20);
+  expect(report.measurements[4]!.lastX).toBeGreaterThan(report.measurements[5]!.lastX + 20);
+});
+
+test('vertical line distribution preserves rich UTF-16 fragments and natural automatic-height measurements', async ({ page }) => {
+  const base: TextLayoutCase = { text: 'Alpha\nbeta\ngamma', type: 'text', family: 'Liberation Sans', sizePt: 11, widthPt: 100, heightPt: 100, horizontal: 'left', vertical: 'justify', readingOrder: 'context', indent: 0, rightToLeft: false, wrap: true };
+  const report = await page.evaluate(cases => window.workbookGridHost.textLayoutMeasurement(cases), [base, { ...base, vertical: 'distributed', splitOffsets: [2, 7, 12] }, { ...base, vertical: 'top' }]);
+  expect(report.unchanged).toBe(true); expect(report.retained).toBe(0);
+  for (const index of [0, 1]) {
+    const value = report.measurements[index]!, original = report.measurements[2]!;
+    expect(value.text).toBe(base.text); expect(value.requiredHeightPt).toBeCloseTo(original.requiredHeightPt, 1);
+    const ys = [...new Set(value.lineRects.map(rect => Math.round(rect.y)))].sort((a, b) => a - b);
+    expect(ys).toHaveLength(3); expect(ys[1]! - ys[0]!).toBeGreaterThan(35); expect(ys[2]! - ys[1]!).toBeGreaterThan(35);
+    expect(value.offsets[0]![0]).toBe(0); expect(value.offsets.at(-1)![1]).toBe(base.text.length);
+  }
+});
+
+test('filled and distributed displays reject excessive text and nodes while retaining the accepted gallery', async ({ page }) => {
+  const base: TextLayoutCase = { text: 'Ab', type: 'text', family: 'Liberation Sans', sizePt: 11, widthPt: 80, heightPt: 100, horizontal: 'fill', vertical: 'bottom', readingOrder: 'context', indent: 0, rightToLeft: false };
+  const result = await page.evaluate(async base => {
+    await window.workbookGridHost.textLayoutMeasurement([base]); const accepted = document.querySelector('#workbook-text-layout-probe')!;
+    const errors: string[] = [];
+    for (const input of [{ item: base, limits: { maxTextUnits: 2 } }, { item: { ...base, widthPt: 1_000_000 }, limits: { maxNodes: 50 } },
+      { item: { ...base, text: 'Alpha\nbeta\ngamma', horizontal: 'left', vertical: 'distributed' }, limits: { maxNodes: 12 } }]) {
+      try { await window.workbookGridHost.textLayoutMeasurement([input.item], input.limits); errors.push('accepted'); } catch (error) { errors.push((error as { code: string }).code); }
+    }
+    return { errors, retained: accepted.isConnected, galleries: document.querySelectorAll('#workbook-text-layout-probe').length,
+      probes: document.querySelectorAll('[data-office-view$="measurement"]').length };
+  }, base);
+  expect(result).toEqual({ errors: ['ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded'], retained: true, galleries: 1, probes: 0 });
+});
+
+test('native whole-value fills match independent fixed-font PDF words in both worksheet directions', async ({ page }) => {
+  const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-cell-flow.xlsx'), { documentId: 'native-cell-fills' });
+  const reference = JSON.parse(readFileSync('docs/evidence/xlsx-cell-flow.json', 'utf8')).cases as { group: string; horizontal: string; words: { text: string }[] }[];
+  const selected = reference.map((value, index) => ({ value, index })).filter(({ value }) => value.group === 'horizontal' && value.horizontal === 'fill');
+  const report = await page.evaluate(({ entries, ids }) => window.workbookGridHost.windowLayoutMeasurement(entries,
+    ids.map(sheetId => ({ sheetId, viewport: { widthPt: 280, heightPt: 130, scrollLeftPt: 0, scrollTopPt: 0 } }))),
+    { entries: [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]), ids: selected.map(({ index }) => 'sheet-' + (index + 1)) });
+  for (const [index, result] of report.results.entries()) {
+    const expected = selected[index]!.value.words.filter(word => !['Origin', 'After'].includes(word.text)).map(word => word.text).join('');
+    expect(result.cells.find(cell => cell.row === 1 && cell.column === 1)!.text).toBe(expected);
+  }
   expect(report.unchanged).toBe(true);
 });
