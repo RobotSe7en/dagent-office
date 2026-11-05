@@ -27,7 +27,9 @@ R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 P = "http://schemas.openxmlformats.org/package/2006/relationships"
 CT = "http://schemas.openxmlformats.org/package/2006/content-types"
 TC = "http://schemas.microsoft.com/office/spreadsheetml/2018/threadedcomments"
-GUID = re.compile(r"\{[\dA-Fa-f]{8}-(?:[\dA-Fa-f]{4}-){3}[\dA-Fa-f]{12}\}")
+XR = "http://schemas.microsoft.com/office/spreadsheetml/2014/revision"
+MC = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+GUID = re.compile(r"\{[0-9A-Fa-f]{8}-(?:[0-9A-Fa-f]{4}-){3}[0-9A-Fa-f]{12}\}")
 
 
 def coordinate(address):
@@ -113,15 +115,29 @@ def audit(file, standards):
         if namespace in standards:
             # The official electronic insert gives sml:t/a:t simple types, while
             # Office's documented shared strings use xml:space. Check that XML
-            # attribute separately, then validate a projection without it. Never
-            # alter source text or weaken the official schemas.
+            # attribute separately. Selected revision UIDs are also checked as
+            # MS-XLSX GUIDs before removing only those known extension attrs
+            # from the schema projection. Source roots remain unchanged.
             projection = root
             spaces = [n for n in root.iter() if n.get("{http://www.w3.org/XML/1998/namespace}space") is not None]
+            revision_attrs = []
+            for node in root.iter():
+                if node.get('{' + XR + '}uid') is not None:
+                    assert node.tag == '{' + S + '}comment' and GUID.fullmatch(node.get('{' + XR + '}uid')), 'Invalid comment revision UID'
+                    revision_attrs.append((node, '{' + XR + '}uid'))
+                if node.get('{' + MC + '}Ignorable') is not None:
+                    assert node.tag in ['{' + S + '}comments', '{' + S + '}comment'], 'Unexpected compatibility declaration'
+                    prefixes = re.split(r'[\t\r\n ]+', node.get('{' + MC + '}Ignorable').strip(' \t\r\n'))
+                    assert all(prefix and node.nsmap.get(prefix) == XR for prefix in prefixes), 'Unknown ignorable namespace'
+                    revision_attrs.append((node, '{' + MC + '}Ignorable'))
             if spaces:
                 for node in spaces:
                     assert node.tag in ["{" + S + "}t", "{" + A + "}t"] and node.get("{http://www.w3.org/XML/1998/namespace}space") in ["preserve", "default"], "Unexpected xml:space"
+            if spaces or revision_attrs:
                 projection = deepcopy(root)
-                for node in projection.iter(): node.attrib.pop("{http://www.w3.org/XML/1998/namespace}space", None)
+                for node in projection.iter():
+                    node.attrib.pop("{http://www.w3.org/XML/1998/namespace}space", None)
+                    node.attrib.pop('{' + XR + '}uid', None); node.attrib.pop('{' + MC + '}Ignorable', None)
             try: standards[namespace].assertValid(projection)
             except E.DocumentInvalid as error: raise AssertionError(str(file) + " / " + name + ": " + str(error)) from error
     types = roots["[Content_Types].xml"]
@@ -182,7 +198,7 @@ def check(directory):
                             "xmlSpaceAttributesChecked": sum(node.get("{http://www.w3.org/XML/1998/namespace}space") is not None for root in roots.values() for node in root.iter())})
     assert records, "No XLSX inputs found"
     print(json.dumps({"schemasSha256": EXPECTED, "lxml": E.LXML_VERSION,
-                      "profile": "Unmodified official Transitional XSD; sml:t/a:t xml:space checked separately and removed only from validation projection. OPC references and selected MS-XLSX threads checked separately. VML is checked for XML well-formedness and relationship integrity, not its full schema.",
+                      "profile": "Unmodified official Transitional XSD; sml:t/a:t xml:space and selected MS-XLSX comment revision UID/compatibility declarations checked separately and removed only from validation projection. OPC references and selected MS-XLSX threads checked separately. VML is checked for XML well-formedness and relationship integrity, not its full schema.",
                       "cases": records}, indent=2))
 
 

@@ -22,7 +22,7 @@ export interface WorkbookCommentView {
 const statuses = { open: "待处理", resolved: "已处理", closed: "已关闭", needs_reanchor: "需要重新定位" };
 const recoveryReasons = { "missing-location": "缺少原始单元格位置", "missing-placeholder": "缺少兼容位置记录", "mismatched-placeholder": "位置记录不一致",
   "duplicate-placeholder": "存在重复位置记录", "orphan-placeholder": "兼容记录对应的线程已缺失", "mismatched-reply-location": "回复与主评论的位置不一致",
-  "duplicate-thread-location": "多个线程记录了同一位置", "invalid-mention-range": "提及的文字范围需要重新定位" };
+  "duplicate-thread-location": "多个线程记录了同一位置", "invalid-mention-range": "提及的文字范围需要重新定位", "mismatched-placeholder-identity": "兼容记录的身份不一致" };
 
 /** One detached, read-only thread candidate. Only its requested body/reply
  * stories enter the source surface. The owner supplies panel width, placement,

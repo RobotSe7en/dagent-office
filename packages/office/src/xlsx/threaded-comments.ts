@@ -1,7 +1,7 @@
 import { DocumentError } from "@dagent-office/core";
 import type { WorkbookCoordinate } from "@dagent-office/core";
 import type { OpcPackage } from "../ooxml/package.js";
-import { check, elements, fail } from "../ooxml/xml.js";
+import { attr, check, elements, fail } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import { address, attributes, boolean, integer, one, spreadsheetText, value } from "./values.js";
 import { spreadsheetStringText } from "./strings.js";
@@ -35,8 +35,8 @@ export interface NativeThreads {
   readonly people: readonly NativeCommentPerson[];
   readonly threads: readonly NativeCommentThread[];
 }
-export function commentGuid(node: XmlNode, name: string): string {
-  const id = value(node, name);
+export function commentGuid(node: XmlNode, name: string, namespace = ""): string {
+  const id = attr(node, name, namespace);
   if (!id || !/^\{[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}\}$/i.test(id)) fail(node, "A spreadsheet comment GUID is invalid.");
   return id.toUpperCase();
 }

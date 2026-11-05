@@ -25,12 +25,13 @@ const identity = {
   annotationId: IdentifierSchema, authorId: IdentifierSchema.optional(),
   recoveryStatus: z.enum(["open", "resolved", "closed"]).optional(),
   recoveryReasons: z.array(z.enum(["missing-location", "missing-placeholder", "mismatched-placeholder", "duplicate-placeholder", "orphan-placeholder",
-    "mismatched-reply-location", "duplicate-thread-location", "invalid-mention-range"])).min(1).max(8).optional(),
+    "mismatched-reply-location", "duplicate-thread-location", "invalid-mention-range", "mismatched-placeholder-identity"])).min(1).max(9).optional(),
 };
 export const WorkbookCommentSchema = z.discriminatedUnion("format", [
   z.strictObject({ ...identity, format: z.literal("classic"), box: WorkbookNoteBoxSchema.optional(), nativeShapeId: z.number().int().min(0).max(4294967295).optional(),
-    compatibilityThreadId: IdentifierSchema.optional() }),
+    compatibilityThreadId: IdentifierSchema.optional(), nativeUid: IdentifierSchema.optional() }),
   z.strictObject({ ...identity, format: z.literal("modern"),
+    compatibilityUids: z.array(IdentifierSchema).optional(),
     mentions: z.array(WorkbookCommentMentionSchema).optional(),
     replies: z.array(z.strictObject({ replyId: IdentifierSchema, authorId: IdentifierSchema.optional(), parentReplyId: IdentifierSchema.optional(),
       nativeCell: WorkbookCoordinateSchema.optional(), mentions: z.array(WorkbookCommentMentionSchema).optional() })),

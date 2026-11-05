@@ -8,6 +8,7 @@ import { richString, spreadsheetStringText } from "./strings.js";
 import type { RichTextStyles } from "./strings.js";
 import type { NativeSheet } from "./workbook.js";
 import { commentGuid } from "./threaded-comments.js";
+import { classicCommentAttributes, COMMENT_REVISION } from "./comment-attributes.js";
 import { utf8Bytes } from "./chunks.js";
 
 export interface NativeClassicNote {
@@ -16,6 +17,7 @@ export interface NativeClassicNote {
   readonly authorId: string;
   readonly html: string;
   readonly guid?: string;
+  readonly uid?: string;
   readonly shapeId?: number;
   readonly placeholderId?: string;
   /** Still requires the object-anchor adapter before complete import. */
@@ -42,7 +44,7 @@ export function readClassicComments(opc: OpcPackage, sheets: readonly NativeShee
     if (opc.contentType(part) !== "application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml") fail({ part, name: "comments" }, "A classic comment part has the wrong content type.");
     const source = opc.read(part);
     if (source.uri !== S || source.name !== "comments") fail(source, "A classic comment part has an invalid root.");
-    attributes(source, []); check(source, ["authors", "commentList", "extLst"], S);
+    classicCommentAttributes(source, []); check(source, ["authors", "commentList", "extLst"], S);
     const extension = one(source, "extLst"); if (extension) { attributes(extension, []); check(extension, [], S); }
     const nativeAuthors = one(source, "authors"), list = one(source, "commentList");
     if (!nativeAuthors || !list) fail(source, "A classic comment part is missing its author or comment list.");
@@ -53,7 +55,7 @@ export function readClassicComments(opc: OpcPackage, sheets: readonly NativeShee
     for (const author of sheetAuthors) authors.push(author);
     const cells = new Set<number>();
     for (const node of elements(list, "comment", S)) {
-      count(); attributes(node, ["ref", "authorId", "guid", "shapeId"]); check(node, ["text", "commentPr"], S);
+      count(); classicCommentAttributes(node, ["ref", "authorId", "guid", "shapeId"], true); check(node, ["text", "commentPr"], S);
       const cell = address(value(node, "ref") ?? "", node), key = cell.row * 16384 + cell.column, author = sheetAuthors[integer(node, "authorId")];
       if (!author || cells.has(key)) fail(node, "A classic note author is missing or the cell already has a note."); cells.add(key);
       const content = one(node, "text"); if (!content) fail(node, "A classic note has no text container.");
@@ -61,12 +63,13 @@ export function readClassicComments(opc: OpcPackage, sheets: readonly NativeShee
       bytes += utf8Bytes(html);
       if (bytes > maxBodyBytes) throw new DocumentError("ResourceLimitExceeded", "Classic spreadsheet comment bodies exceed their cumulative source byte budget.");
       const guid = value(node, "guid") === undefined ? undefined : commentGuid(node, "guid");
+      const uid = node.attrs.has(COMMENT_REVISION + " uid") ? commentGuid(node, "uid", COMMENT_REVISION) : undefined;
       if (guid !== undefined) { if (guids.has(guid)) fail(node, "Classic note GUIDs are duplicated."); guids.add(guid); }
       const matches = [...author.name.matchAll(/tc=(\{[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}\})/gi)];
       if (matches.length > 1) fail(node, "A legacy threaded comment placeholder names multiple thread identities.");
       const placeholderId = matches[0]?.[1]?.toUpperCase(), properties = one(node, "commentPr");
       notes.push({ sheetId: sheet.sheetId, cell, authorId: author.authorId, html, source: node,
-        ...(guid === undefined ? {} : { guid }), ...(value(node, "shapeId") === undefined ? {} : { shapeId: integer(node, "shapeId") }),
+        ...(guid === undefined ? {} : { guid }), ...(uid === undefined ? {} : { uid }), ...(value(node, "shapeId") === undefined ? {} : { shapeId: integer(node, "shapeId") }),
         ...(placeholderId === undefined ? {} : { placeholderId }), ...(properties === undefined ? {} : { properties }) });
     }
   }

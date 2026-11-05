@@ -431,4 +431,13 @@ Playground 宿主目前保留最近一份已接受的工作簿预览，连同宿
 
 回复记录与主评论落在不同单元格、多个主线程记录同一单元格时，保留所有正文、回复、父关系与 nativeCell 来源，分别记录 mismatched-reply-location／duplicate-thread-location；主评论原锚点不猜测移动，原来的 open/resolved 状态保留为 recoveryStatus。缺失主位置仍使用空范围，不从回复或兼容记录补造位置。无父节点、循环、未知人员和重复身份继续是结构错误，不能用恢复状态掩盖。
 
-[独立提及来源](../packages/office/tests/fixtures/xlsx-comment-mentions.xlsx)和[固定 Calc 记录](evidence/xlsx-comment-mentions.json)包含 6 条现代消息、4 个提及及上述定位问题；官方 Transitional 部件和按 MS-XLSX 扩展的独立检查分别验证。固定 Calc 删除现代线程／人员部件，这项损失不能计为保真通过。SDK 公开导入与包重开保留完整来源，三引擎及旧版面板的精确投影、恢复提示、预算及失败保留另有定向检查。xr:uid、经典备注框与完整绘图／视觉门槛仍待实施。
+[独立提及来源](../packages/office/tests/fixtures/xlsx-comment-mentions.xlsx)和[固定 Calc 记录](evidence/xlsx-comment-mentions.json)包含 6 条现代消息、4 个提及及上述定位问题；官方 Transitional 部件和按 MS-XLSX 扩展的独立检查分别验证。固定 Calc 删除现代线程／人员部件，这项损失不能计为保真通过。SDK 公开导入与包重开保留完整来源，三引擎及旧版面板的精确投影、恢复提示、预算及失败保留另有定向检查。xr:uid 来源保留见下节；经典备注框与完整绘图／视觉门槛仍待实施。
+
+
+## 备注修订 UID 与兼容身份
+
+经典备注的 `xr:uid` 来自 `http://schemas.microsoft.com/office/spreadsheetml/2014/revision`，按 [MS-XLSX v20261016 §2.5.10、§2.3.7.3](https://officeprotocoldocs-f5hpbjgea6b8gneq.b02.azurefd.net/files/MS-XLSX/%5BMS-XLSX%5D.pdf)保留为 `nativeUid`，原有 guid／annotation.sourceId 独立保留。识别现代兼容占位后，UID 转入该线程的 compatibilityUids；身份与主线程不符时保留实际 UID，并记录 mismatched-placeholder-identity 恢复原因，现代正文和单元格不移动。UID 是不透明来源，不能代替 SDK 节点身份或任何授权。
+
+实现按命名空间 URI 识别属性，兼容不同前缀；仅接受已选修订命名空间的 Ignorable 声明。未知属性或其他兼容命名空间仍明确失败。核心再次校验 GUID，UID 数组逐项计入既有元数据条目和字节预算。独立规范检查先验证这些 UID／声明，再仅从验证投影移除已识别属性，官方 Transitional XSD 保持原样，原始 XML 根不修改。
+
+[独立 UID 来源](../packages/office/tests/fixtures/xlsx-comment-uids.xlsx)同时包含独立经典 guid／uid、匹配的现代兼容 UID 和冲突身份；[固定 Calc 记录](evidence/xlsx-comment-uids.json)显示生产者省略这些 guid／uid，不计为保真通过。SDK 公开导入和包重开完整保留，面板显示明确恢复原因；没有把这些来源身份显示成产品动作或通知入口。

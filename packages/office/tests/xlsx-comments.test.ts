@@ -28,6 +28,23 @@ function mapped(opc = source()) {
   files.set("content.html", encoder.encode(content.html()!)); return { files, native, content, mapped };
 }
 describe("native spreadsheet threaded comments", () => {
+  it('publicly preserves independent classic and compatibility revision UIDs without substituting native comment identities', async () => {
+    const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-comment-uids.xlsx'), { documentId: 'native-comment-uids' });
+    const model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
+    expect(snapshot.annotations).toHaveLength(3); expect(snapshot.annotations.map(annotation => annotation.status)).toEqual(['resolved', 'needs_reanchor', 'open']);
+    expect(snapshot.metadata.workbook.comments![0]).toMatchObject({ compatibilityUids: [rootId] });
+    expect(snapshot.metadata.workbook.comments![1]).toMatchObject({ compatibilityUids: ['{FFFFFFFF-FFFF-4FFF-8FFF-FFFFFFFFFFFF}'], recoveryReasons: ['mismatched-placeholder-identity'] });
+    expect(snapshot.metadata.workbook.comments![2]).toMatchObject({ nativeUid: '{DDDDDDDD-DDDD-4DDD-8DDD-DDDDDDDDDDDD}' });
+    expect(snapshot.annotations[2]!.sourceId).toBe('{EEEEEEEE-EEEE-4EEE-8EEE-EEEEEEEEEEEE}');
+    const metadata = JSON.parse(decoder.decode(files.get('metadata.json')!));
+    for (const target of [metadata.workbook.comments[0], metadata.workbook.comments[2]]) {
+      const changed = structuredClone(metadata), index = metadata.workbook.comments.indexOf(target);
+      if (target.format === 'modern') changed.workbook.comments[index].compatibilityUids[0] = 'bad'; else changed.workbook.comments[index].nativeUid = 'bad';
+      const altered = new Map(before); altered.set('metadata.json', encoder.encode(JSON.stringify(changed)));
+      expect(() => openDocument(altered)).toThrowError(expect.objectContaining({ code: 'InvalidDocument' }));
+    }
+    expect(openDocument(before).snapshot()).toEqual(snapshot); expect(model.serialize()).toEqual(before);
+  });
   it('publicly imports and reopens independent mentions and every conflicting or missing native location', async () => {
     const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-comment-mentions.xlsx'), { documentId: 'native-mentions' });
     const model = openDocument(files, { kind: 'workbook' }), before = model.serialize(), snapshot = model.snapshot();

@@ -25,7 +25,7 @@ class CommentMapper {
     const total = metadata ? this.metadataBytes += bytes : this.annotationBytes += bytes;
     if (total > this.content.limits.maxFileBytes || total > this.content.limits.maxPackageBytes) throw new DocumentError("ResourceLimitExceeded", "Workbook comment metadata exceeds its source byte budget.");
   }
-  modern(native: NativeThreads, threads: readonly NativeCommentThread[], recovery: ReadonlyMap<string, readonly RecoveryReason[]> = new Map()): void {
+  modern(native: NativeThreads, threads: readonly NativeCommentThread[], recovery: ReadonlyMap<string, readonly RecoveryReason[]> = new Map(), legacyUids: ReadonlyMap<string, readonly string[]> = new Map()): void {
     const authors: WorkbookCommentAuthor[] = [];
     for (const [index, person] of native.people.entries()) {
       const author: WorkbookCommentAuthor = { authorId: `xlsx-person-${index}`, format: "modern", nativeId: person.id, name: person.name,
@@ -70,6 +70,7 @@ class CommentMapper {
         anchor: { kind: "cells", sheetId: thread.sheetId, ranges: cell ? [{ from: { ...cell }, to: { ...cell } }] : [] } };
       this.account(annotation, false); if (replies.length) annotation.replies = replies; annotations.push(annotation);
       const identity: Omit<Extract<WorkbookComment, { format: "modern" }>, "replies"> = { annotationId, format: "modern", authorId: rootAuthor.authorId,
+        ...(legacyUids.get(thread.root.id)?.length ? { compatibilityUids: [...legacyUids.get(thread.root.id)!] } : {}),
         ...(thread.root.mentions?.length ? { mentions: mentions(thread.root)! } : {}),
         ...(reasons.length ? { recoveryStatus: originalStatus, recoveryReasons: reasons } : {}) };
       this.account({ ...identity, mentions: undefined }, true); comments.push({ ...identity, replies: bindings });
@@ -86,6 +87,7 @@ class CommentMapper {
       const annotation: Annotation = { annotationId, documentId: this.documentId, baseRevision: 0, status: compatibilityThreadId ? "needs_reanchor" : "open", author: { name: author.name },
         sourceId: note.guid ?? key, bodyNodeId: this.content.comment(note.sheetId, note.html), anchor: { kind: "cells", sheetId: note.sheetId, ranges: [{ from: { ...note.cell }, to: { ...note.cell } }] } };
       const comment: WorkbookComment = { annotationId, format: "classic", authorId: author.authorId, ...(box === undefined ? {} : { box }), ...(note.shapeId === undefined ? {} : { nativeShapeId: note.shapeId }),
+        ...(note.uid === undefined ? {} : { nativeUid: note.uid }),
         ...(compatibilityThreadId ? { compatibilityThreadId, recoveryStatus: "open", recoveryReasons: ["orphan-placeholder"] } : {}) };
       this.account(annotation, false); this.account(comment, true); this.records.annotations.push(annotation); this.records.comments.push(comment);
     }
@@ -96,7 +98,7 @@ export function mapThreadedComments(native: NativeThreads, threads: readonly Nat
 }
 export function mapWorkbookComments(native: NativeThreads, threads: readonly NativeCommentThread[], notes: NativeClassicNotes, boxes: ReadonlyMap<string, WorkbookNoteBox>, content: WorkbookContent, documentId: string): WorkbookCommentRecords {
   const roots = new Map(threads.map(thread => [thread.root.id, thread])), matched = new Set<string>();
-  const recovery = new Map<string, RecoveryReason[]>(), orphans = new Map<string, string>(), classic: NativeClassicNotes["notes"][number][] = [];
+  const recovery = new Map<string, RecoveryReason[]>(), orphans = new Map<string, string>(), legacyUids = new Map<string, string[]>(), classic: NativeClassicNotes["notes"][number][] = [];
   const issue = (id: string, reason: RecoveryReason): void => {
     let reasons = recovery.get(id); if (!reasons) { reasons = []; recovery.set(id, reasons); }
     if (!reasons.includes(reason)) reasons.push(reason);
@@ -111,6 +113,10 @@ export function mapWorkbookComments(native: NativeThreads, threads: readonly Nat
       orphans.set(`${note.sheetId}:${note.cell.row}:${note.cell.column}`, placeholderId); classic.push(orphan); continue;
     }
     if (matched.has(note.placeholderId)) issue(note.placeholderId, "duplicate-placeholder");
+    if (note.uid !== undefined) {
+      const uids = legacyUids.get(thread.root.id) ?? []; uids.push(note.uid); legacyUids.set(thread.root.id, uids);
+      if (note.uid !== thread.root.id) issue(thread.root.id, "mismatched-placeholder-identity");
+    }
     if (thread.sheetId !== note.sheetId || cell && (cell.row !== note.cell.row || cell.column !== note.cell.column)) issue(note.placeholderId, "mismatched-placeholder");
     // A recognized cache never replaces the modern body or changes its cell,
     // even if it was moved/copied. Reconciliation changes only recovery state.
@@ -119,5 +125,5 @@ export function mapWorkbookComments(native: NativeThreads, threads: readonly Nat
   for (const thread of threads) if (notes.parts.has(thread.sheetId) && !matched.has(thread.root.id)) {
     issue(thread.root.id, "missing-placeholder");
   }
-  const mapper = new CommentMapper(content, documentId); mapper.modern(native, threads, recovery); mapper.classic({ ...notes, notes: classic }, boxes, orphans); return mapper.records;
+  const mapper = new CommentMapper(content, documentId); mapper.modern(native, threads, recovery, legacyUids); mapper.classic({ ...notes, notes: classic }, boxes, orphans); return mapper.records;
 }

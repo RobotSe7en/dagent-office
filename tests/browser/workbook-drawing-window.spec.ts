@@ -43,6 +43,14 @@ test('modern mentions retain exact text and people in a non-interactive panel wh
   expect(result.results[2]!.text).toContain('提及的文字范围需要重新定位'); expect(result.results[3]!.text).toContain('缺少原始单元格位置');
   expect(result.results[4]!.status).toBe('open');
 });
+test('revision UIDs remain opaque source metadata while compatibility identity conflicts have a visible recovery explanation', async ({ page }) => {
+  const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-comment-uids.xlsx'), { documentId: 'uid-panel' });
+  const result = await page.evaluate(entries => window.workbookDrawingWindow.mentionPanelMeasurement(entries), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  expect(result).toMatchObject({ unchanged: true, released: true });
+  expect(result.results.map(item => item.status)).toEqual(['resolved', 'needs_reanchor', 'open']);
+  expect(result.results.every(item => item.exact && item.interactive === 0 && !item.labels.length)).toBe(true);
+  expect(result.results[1]!.text).toContain('兼容记录的身份不一致'); expect(result.results[2]!.text).toContain('请确认：预算😀禰󠄀');
+});
 for (const rtl of [false, true]) test(`worksheet objects compose above cells across four ${rtl ? 'RTL' : 'LTR'} panes with isolated candidate resources`, async ({ page }) => {
   for (const input of inputs) {
     const result = await page.evaluate(({ files, rtl }) => window.workbookDrawingWindow.drawingWindowMeasurement(files, rtl), { files: input.files, rtl });

@@ -22,6 +22,26 @@ function source(edit: (xml: string) => string = value => value, editNative: (fil
 }
 async function read(bytes: Uint8Array) { return projectXlsxRecords(await readXlsxRecords(bytes)).model; }
 describe('legacy thread placeholder reconciliation', () => {
+  it('preserves revision UIDs separately from classic GUIDs and modern source identities, independent of the namespace prefix', async () => {
+    const uid = '{DDDDDDDD-DDDD-4DDD-8DDD-DDDDDDDDDDDD}', guid = '{EEEEEEEE-EEEE-4EEE-8EEE-EEEEEEEEEEEE}';
+    const model = await read(source(xml => xml.replace('<comments ', '<comments xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:revision="http://schemas.microsoft.com/office/spreadsheetml/2014/revision" mc:Ignorable="revision" ')
+      .replace('<comment ref="B2"', `<comment revision:uid="${root}" ref="B2"`).replace('<comment ref="C3"', `<comment revision:uid="${uid}" ref="C3"`)
+      .replace('<comment ref="D4"', `<comment revision:uid="${uid}" guid="${guid}" ref="D4"`)));
+    const snapshot = model.snapshot();
+    expect(snapshot.metadata.workbook.comments?.[0]).toMatchObject({ compatibilityUids: [root] }); expect(snapshot.annotations[0]!.status).toBe('resolved');
+    expect(snapshot.metadata.workbook.comments?.[1]).toMatchObject({ compatibilityUids: [uid], recoveryReasons: ['mismatched-placeholder-identity'], recoveryStatus: 'open' });
+    expect(snapshot.annotations[1]!.status).toBe('needs_reanchor');
+    expect(snapshot.metadata.workbook.comments?.[2]).toMatchObject({ nativeUid: uid }); expect(snapshot.annotations[2]!.sourceId).toBe(guid);
+    expect(openDocument(model.serialize()).snapshot()).toEqual(snapshot);
+  });
+  it.each(['bad-uid', 'unknown-attribute', 'unknown-namespace', 'unknown-mc-attribute', 'non-xml-whitespace'])('rejects %s despite an Ignorable declaration', async kind => {
+    const bytes = source(xml => {
+      const uid = kind === 'bad-uid' ? 'bad' : root, namespace = kind === 'unknown-namespace' ? 'urn:unselected-revision' : 'http://schemas.microsoft.com/office/spreadsheetml/2014/revision';
+      return xml.replace('<comments ', `<comments xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:rev="${namespace}" mc:Ignorable="${kind === 'non-xml-whitespace' ? '\u00a0' : ''}rev"${kind === 'unknown-mc-attribute' ? ' mc:PreserveAttributes="rev:uid"' : ''} `)
+        .replace('<comment ref="B2"', `<comment rev:uid="${uid}"${kind === 'unknown-attribute' ? ' rev:unknown="1"' : ''} ref="B2"`);
+    });
+    await expect(read(bytes)).rejects.toMatchObject({ code: kind === 'bad-uid' ? 'InvalidDocument' : 'UnsupportedFeature' });
+  });
   it('maps one authoritative thread and retains genuine classic notes without duplicating compatibility text', async () => {
     const model = await read(source()), snapshot = model.snapshot();
     expect(snapshot.annotations).toHaveLength(3); expect(snapshot.metadata.workbook.comments?.map(comment => comment.format)).toEqual(['modern', 'modern', 'classic']);

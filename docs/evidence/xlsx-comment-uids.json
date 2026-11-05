@@ -1,0 +1,52 @@
+{
+  "scope": "Independent revision UIDs, classic GUIDs and modern compatibility identities.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "sourceSha256": "e597231cb88a27a676e9695dccc7a56307187a7b779440c3af37a8160d554d38",
+  "standard": "MS-XLSX v20261016 sections 2.5.10 and 2.3.7.3; ISO/IEC 29500 comment guid remains separate.",
+  "source": [
+    {
+      "cell": "A1",
+      "guid": "{EEEEEEEE-EEEE-4EEE-8EEE-EEEEEEEEEEEE}",
+      "uid": "{DDDDDDDD-DDDD-4DDD-8DDD-DDDDDDDDDDDD}",
+      "text": "请确认：预算😀禰󠄀"
+    },
+    {
+      "cell": "B2",
+      "guid": null,
+      "uid": "{33333333-3333-4333-8333-333333333333}",
+      "text": "旧版兼容缓存"
+    },
+    {
+      "cell": "C3",
+      "guid": null,
+      "uid": "{FFFFFFFF-FFFF-4FFF-8FFF-FFFFFFFFFFFF}",
+      "text": "身份冲突的兼容缓存"
+    }
+  ],
+  "producer": [
+    {
+      "cell": "A1",
+      "guid": null,
+      "uid": null,
+      "text": "请确认：预算😀禰󠄀"
+    },
+    {
+      "cell": "B2",
+      "guid": null,
+      "uid": null,
+      "text": "旧版兼容缓存"
+    },
+    {
+      "cell": "C3",
+      "guid": null,
+      "uid": null,
+      "text": "身份冲突的兼容缓存"
+    }
+  ],
+  "limits": [
+    "Source identities are opaque provenance, never authority.",
+    "UID mismatch is preserved for explicit thread recovery rather than moving or deleting a canonical modern thread.",
+    "Calc changes are recorded; Excel/WPS unverified."
+  ]
+}
