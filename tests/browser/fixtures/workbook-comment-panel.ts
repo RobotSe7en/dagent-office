@@ -5,6 +5,27 @@ import { createWorkbookSurface } from '../../../packages/render/src/workbook/sur
 import { openDocument } from '@dagent-office/core';
 import type { Annotation, WorkbookDocumentMetadata } from '@dagent-office/core';
 
+export async function mentionPanelMeasurement(entries: readonly [string, number[]][]) {
+  const model = openDocument(new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
+  const container = document.createElement('div'); document.body.append(container);
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 420, heightPt: 300 }), sources = new WorkbookContentSources(surface.document, snapshot);
+  const results = [];
+  try {
+    for (const annotation of snapshot.annotations) {
+      const view = createWorkbookCommentView(surface, snapshot, sources, annotation.annotationId);
+      try {
+        surface.view.append(view.element);
+        results.push({ status: annotation.status, text: view.element.textContent, labels: [...view.element.querySelectorAll('[data-office-view="workbook-comment-mention"]')].map(node => node.textContent),
+          interactive: view.element.querySelectorAll('a,button,input').length,
+          exact: view.bodies.every(({ body }) => body.projections.every(part => view.element.contains(part.node) && part.node.data === model.getNode(part.sourceNodeId)!.text.slice(part.from, part.to))) });
+      } finally { view.dispose(); }
+    }
+    const after = model.serialize(); sources.dispose();
+    return { results, unchanged: [...before].every(([path, bytes]) => bytes.length === after.get(path)!.length && bytes.every((byte, index) => byte === after.get(path)![index])),
+      released: !surface.source.childNodes.length && !surface.view.childNodes.length };
+  } finally { sources.dispose(); surface.dispose(); container.remove(); }
+}
+
 export async function commentPanelMeasurement(entries: readonly [string, number[]][], recovered: boolean) {
   const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), decoder = new TextDecoder(), encoder = new TextEncoder();
   const annotations = JSON.parse(decoder.decode(files.get('annotations.json')!)) as Annotation[], metadata = JSON.parse(decoder.decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata;

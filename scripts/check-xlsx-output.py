@@ -55,7 +55,7 @@ def schemas():
 
 
 def check_threads(roots):
-    people, messages = {}, {}
+    people, messages, mentions = {}, {}, {}
     for root in roots.values():
         if E.QName(root).namespace != TC: continue
         assert E.QName(root).localname in ["personList", "ThreadedComments"]
@@ -69,11 +69,24 @@ def check_threads(roots):
                 people[identifier] = item
             else:
                 assert item.tag == "{" + TC + "}threadedComment" and identifier not in messages
-                coordinate(item.get("ref"))
+                if item.get("ref") is not None: coordinate(item.get("ref"))
                 assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)", item.get("dT", ""))
                 assert item.get("done", "0") in ["0", "1", "false", "true"]
-                assert len(item) == 1 and item[0].tag == "{" + TC + "}text"
+                assert [E.QName(child).localname for child in item] in [[], ['text'], ['mentions'], ['text', 'mentions']]
+                for child in item:
+                    assert E.QName(child).namespace == TC
+                    if E.QName(child).localname != 'mentions': continue
+                    assert not child.attrib
+                    for mention in child:
+                        assert mention.tag == '{' + TC + '}mention' and not list(mention)
+                        assert set(mention.attrib) == {'mentionpersonId', 'mentionId', 'startIndex', 'length'}
+                        mention_id = mention.get('mentionId'); assert GUID.fullmatch(mention_id) and mention_id not in mentions
+                        assert GUID.fullmatch(mention.get('mentionpersonId', ''))
+                        for field in ['startIndex', 'length']:
+                            assert re.fullmatch(r'[+]?[0-9]+', mention.get(field, '')) and int(mention.get(field)) <= 4294967295
+                        mentions[mention_id] = mention
                 messages[identifier] = item
+    for mention in mentions.values(): assert mention.get('mentionpersonId') in people, 'Unknown mentioned person'
     for identifier, item in messages.items():
         assert item.get("personId") in people, "Unknown comment author"
         seen = {identifier}
@@ -82,7 +95,8 @@ def check_threads(roots):
             parent = current.get("parentId")
             assert parent in messages and parent not in seen, "Invalid thread parent"
             seen.add(parent); current = messages[parent]
-            assert current.get("ref") == item.get("ref"), "Reply location differs"
+            # CT_ThreadedComment ref is optional. Conflicting native locations
+            # remain schema-valid source facts for explicit SDK recovery.
 
 
 def audit(file, standards):

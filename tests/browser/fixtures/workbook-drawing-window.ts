@@ -15,7 +15,7 @@ import { layoutWorkbookDrawings } from '../../../packages/render/src/workbook/dr
 import { WorkbookWindowController } from '../../../packages/render/src/workbook/window-controller.js';
 import type { WorkbookDrawingLayout } from '../../../packages/render/src/workbook/drawing-layout.js';
 import { annotationWindowMeasurement, commentTextMeasurement, windowControllerMeasurement } from './workbook-window-controller.js';
-import { commentPanelMeasurement } from './workbook-comment-panel.js';
+import { commentPanelMeasurement, mentionPanelMeasurement } from './workbook-comment-panel.js';
 import { annotationControlsAction, mountAnnotationControls } from './workbook-annotation-controls.js';
 
 export async function currentChartWindowMeasurement(entries: readonly [string, number[]][]) {
@@ -144,4 +144,4 @@ export async function drawingWindowMeasurement(entries: readonly [string, number
     URL.createObjectURL = originalCreate; URL.revokeObjectURL = originalRevoke; window.removeEventListener('unhandledrejection', rejection);
   }
 }
-Object.assign(window, { workbookDrawingWindow: { drawingWindowMeasurement, currentChartWindowMeasurement, windowControllerMeasurement, annotationWindowMeasurement, commentTextMeasurement, commentPanelMeasurement, annotationControlsAction, mountAnnotationControls } });
+Object.assign(window, { workbookDrawingWindow: { drawingWindowMeasurement, currentChartWindowMeasurement, windowControllerMeasurement, annotationWindowMeasurement, commentTextMeasurement, commentPanelMeasurement, mentionPanelMeasurement, annotationControlsAction, mountAnnotationControls } });

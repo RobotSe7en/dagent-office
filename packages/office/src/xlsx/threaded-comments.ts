@@ -1,9 +1,9 @@
 import { DocumentError } from "@dagent-office/core";
 import type { WorkbookCoordinate } from "@dagent-office/core";
 import type { OpcPackage } from "../ooxml/package.js";
-import { check, elements, fail, unsupported } from "../ooxml/xml.js";
+import { check, elements, fail } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
-import { address, attributes, boolean, one, spreadsheetText, value } from "./values.js";
+import { address, attributes, boolean, integer, one, spreadsheetText, value } from "./values.js";
 import { spreadsheetStringText } from "./strings.js";
 import type { NativeSheet } from "./workbook.js";
 
@@ -22,6 +22,7 @@ export interface NativeThreadedComment {
   readonly date?: string;
   readonly resolved: boolean;
   readonly text: string;
+  readonly mentions?: readonly { readonly mentionId: string; readonly personId: string; readonly startIndex: number; readonly length: number }[];
   readonly source: XmlNode;
 }
 export interface NativeCommentThread {
@@ -65,7 +66,7 @@ function root(node: XmlNode, name: string): void {
  * reconciliation. In particular, never delete threads solely because a legacy
  * comments part has not yet been read. */
 export function readThreadedComments(opc: OpcPackage, workbookPart: string, sheets: readonly NativeSheet[], maxItems: number): NativeThreads {
-  const people = new Map<string, NativeCommentPerson>(), identities = new Set<string>(), parts = new Set<string>(), threads: NativeCommentThread[] = [];
+  const people = new Map<string, NativeCommentPerson>(), identities = new Set<string>(), mentionIds = new Set<string>(), parts = new Set<string>(), threads: NativeCommentThread[] = [];
   let items = 0;
   const count = (): void => { if (++items > maxItems) throw new DocumentError("ResourceLimitExceeded", "Workbook comment records exceed their cumulative budget."); };
   const personPart = opc.related(workbookPart, "person");
@@ -88,13 +89,22 @@ export function readThreadedComments(opc: OpcPackage, workbookPart: string, shee
     const comments = new Map<string, NativeThreadedComment>();
     for (const node of elements(source, "threadedComment", THREADED_COMMENTS)) {
       count(); attributes(node, ["ref", "dT", "personId", "id", "parentId", "done"]); check(node, ["text", "mentions", "extLst"], THREADED_COMMENTS); emptyExtension(one(node, "extLst", THREADED_COMMENTS));
-      const mentions = one(node, "mentions", THREADED_COMMENTS);
-      if (mentions) { attributes(mentions, []); if (mentions.content.some(item => typeof item !== "string" || item.trim())) unsupported(mentions, "Threaded comment mentions are outside the current reading boundary."); }
+      const mentionList = one(node, "mentions", THREADED_COMMENTS), mentions: NonNullable<NativeThreadedComment["mentions"]>[number][] = [];
+      if (mentionList) {
+        attributes(mentionList, []); check(mentionList, ["mention"], THREADED_COMMENTS);
+        for (const mention of elements(mentionList, "mention", THREADED_COMMENTS)) {
+          count(); attributes(mention, ["mentionpersonId", "mentionId", "startIndex", "length"]); check(mention, [], THREADED_COMMENTS);
+          const mentionId = commentGuid(mention, "mentionId"), personId = commentGuid(mention, "mentionpersonId");
+          if (mentionIds.has(mentionId) || !people.has(personId)) fail(mention, "A comment mention is duplicate or its person is undefined.");
+          mentionIds.add(mentionId);
+          mentions.push({ mentionId, personId, startIndex: integer(mention, "startIndex", 0, 4294967295), length: integer(mention, "length", 0, 4294967295) });
+        }
+      }
       const id = commentGuid(node, "id"), personId = commentGuid(node, "personId"), parentId = value(node, "parentId") === undefined ? undefined : commentGuid(node, "parentId"), ref = value(node, "ref");
       if (identities.has(id) || !people.has(personId)) fail(node, "A threaded comment identity is duplicate or its author is undefined."); identities.add(id);
       const text = one(node, "text", THREADED_COMMENTS), date = commentDate(node, "dT");
       comments.set(id, { id, personId, ...(parentId === undefined ? {} : { parentId }), ...(ref === undefined ? {} : { cell: address(ref, node) }),
-        ...(date === undefined ? {} : { date }), resolved: boolean(node, "done"), text: text ? spreadsheetStringText(text) : "", source: node });
+        ...(date === undefined ? {} : { date }), resolved: boolean(node, "done"), text: text ? spreadsheetStringText(text) : "", ...(mentions.length ? { mentions } : {}), source: node });
     }
     if (!comments.size) fail(source, "A threaded comment part must contain at least one comment.");
     // Path compression validates arbitrary XML order and nested parent chains
@@ -111,17 +121,12 @@ export function readThreadedComments(opc: OpcPackage, workbookPart: string, shee
       const parent = roots.get(cursor.id)!;
       for (const item of path) roots.set(item.id, parent);
     }
-    const groups = new Map<string, NativeThreadedComment[]>(), cells = new Set<number>();
+    const groups = new Map<string, NativeThreadedComment[]>();
     for (const comment of comments.values()) {
       const parent = roots.get(comment.id)!;
       if (comment === parent) {
-        if (comment.cell) {
-          const key = comment.cell.row * 16384 + comment.cell.column;
-          if (cells.has(key)) fail(comment.source, "Multiple top-level threaded comments target the same cell."); cells.add(key);
-        }
         continue;
       }
-      if (comment.cell && parent.cell && (comment.cell.row !== parent.cell.row || comment.cell.column !== parent.cell.column)) fail(comment.source, "A threaded reply targets a different cell from its thread.");
       const group = groups.get(parent.id) ?? []; group.push(comment); groups.set(parent.id, group);
     }
     for (const comment of comments.values()) if (comment.parentId === undefined) threads.push({ sheetId: sheet.sheetId, root: comment, replies: groups.get(comment.id) ?? [] });

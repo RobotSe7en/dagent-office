@@ -21,7 +21,8 @@ export interface WorkbookCommentView {
 }
 const statuses = { open: "待处理", resolved: "已处理", closed: "已关闭", needs_reanchor: "需要重新定位" };
 const recoveryReasons = { "missing-location": "缺少原始单元格位置", "missing-placeholder": "缺少兼容位置记录", "mismatched-placeholder": "位置记录不一致",
-  "duplicate-placeholder": "存在重复位置记录", "orphan-placeholder": "兼容记录对应的线程已缺失" };
+  "duplicate-placeholder": "存在重复位置记录", "orphan-placeholder": "兼容记录对应的线程已缺失", "mismatched-reply-location": "回复与主评论的位置不一致",
+  "duplicate-thread-location": "多个线程记录了同一位置", "invalid-mention-range": "提及的文字范围需要重新定位" };
 
 /** One detached, read-only thread candidate. Only its requested body/reply
  * stories enter the source surface. The owner supplies panel width, placement,
@@ -44,6 +45,8 @@ export function createWorkbookCommentView(surface: Pick<WorkbookSurface, "source
   element.setAttribute("role", "region"); element.setAttribute("aria-label", "批注与回复");
   element.style.cssText = "box-sizing:border-box;overflow-wrap:anywhere;white-space:normal;direction:ltr;text-align:start;font:11pt sans-serif;color:#20242a;background:#fff;padding:12px;border:1px solid #dce0e6";
   const native = snapshot.metadata.workbook.comments?.find(comment => comment.annotationId === annotationId);
+  const people = new Map(snapshot.metadata.workbook.commentAuthors?.map(author => [author.authorId, author.name]));
+  const nativeReplies = new Map(native?.format === "modern" ? native.replies.map(reply => [reply.replyId, reply]) : []);
   const bodies: { replyId?: string; body: WorkbookCommentText }[] = [];
   let nodes = 1, units = 0, disposed = false;
   const account = (count: number): void => { nodes += count; if (nodes > limits.maxNodes) throw new DocumentError("ResourceLimitExceeded", "Comment views exceed their cumulative node budget."); };
@@ -60,6 +63,15 @@ export function createWorkbookCommentView(surface: Pick<WorkbookSurface, "source
     account(text.nodes); units += text.sourceCodeUnits; textUnits(text.element.textContent ?? "");
     parent.append(text.element); bodies.push(Object.freeze({ ...(replyId ? { replyId } : {}), body: text }));
   };
+  const mentions = (parent: HTMLElement, replyId?: string): void => {
+    const values = native?.format === "modern" ? replyId ? nativeReplies.get(replyId)?.mentions : native.mentions : undefined;
+    for (const mention of values ?? []) {
+      const name = people.get(mention.authorId);
+      if (name === undefined) throw new DocumentError("InvalidDocument", "A comment mention has no preserved person.");
+      const labelNode = label(parent, "提及：" + name);
+      labelNode.dataset.officeView = "workbook-comment-mention"; labelNode.dataset.officeMentionId = mention.mentionId;
+    }
+  };
   const dispose = (): void => { if (disposed) return; disposed = true; element.remove(); element.replaceChildren(); };
   try {
     label(element, (native?.format === "classic" ? "经典批注" : native?.format === "modern" ? "现代批注" : "批注") + " · " + statuses[annotation.status], "h3");
@@ -69,7 +81,7 @@ export function createWorkbookCommentView(surface: Pick<WorkbookSurface, "source
       const warning = label(element, "当前定位不可用" + (reasons ? "：" + reasons : "") + (native?.recoveryStatus ? "。原状态：" + statuses[native.recoveryStatus] : ""));
       warning.dataset.officeView = "workbook-comment-recovery"; warning.style.color = "#8a4600";
     }
-    body(element, annotation.bodyNodeId, annotation.instruction);
+    body(element, annotation.bodyNodeId, annotation.instruction); mentions(element);
     const parents = new Map(native?.format === "modern" ? native.replies.map(reply => [reply.replyId, reply.parentReplyId]) : []);
     const replyById = new Map(replies.map(reply => [reply.replyId, reply]));
     for (const reply of replies) {
@@ -78,7 +90,7 @@ export function createWorkbookCommentView(surface: Pick<WorkbookSurface, "source
       const parentId = parents.get(reply.replyId); if (parentId) section.dataset.parentReplyId = parentId;
       label(section, (reply.author?.name ?? "未署名") + (parentId ? " · 回复 " + (replyById.get(parentId)?.author?.name ?? "未署名") : "")
         + (reply.status ? " · " + statuses[reply.status] : "") + (reply.date ? " · " + reply.date : ""));
-      body(section, reply.bodyNodeId, reply.instruction, reply.replyId); element.append(section);
+      body(section, reply.bodyNodeId, reply.instruction, reply.replyId); mentions(section, reply.replyId); element.append(section);
     }
     // Resolve fonts on the isolated display surface, then detach the complete
     // candidate. Measurement never replaces an already published comment.

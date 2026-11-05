@@ -1,0 +1,105 @@
+{
+  "scope": "Independent modern mentions and conflicting cell provenance; no notifications.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "sourceSha256": "b0685c19dadabb9f5864c5d01bdf79b721eacdfcd43f8d0ec5a1108ce69bd607",
+  "standard": "https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/b03ed619-e307-4d3e-9c67-b68612274128",
+  "people": [
+    {
+      "displayName": "预算负责人",
+      "id": "{11111111-1111-4111-8111-111111111111}",
+      "userId": "opaque-owner",
+      "providerId": "None"
+    },
+    {
+      "displayName": "复核人",
+      "id": "{22222222-2222-4222-8222-222222222222}",
+      "userId": "opaque-reviewer",
+      "providerId": "None"
+    },
+    {
+      "displayName": "只被提及",
+      "id": "{DDDDDDDD-DDDD-4DDD-8DDD-DDDDDDDDDDDD}",
+      "userId": "opaque-mentioned-only",
+      "providerId": "AD"
+    }
+  ],
+  "messages": [
+    {
+      "id": "{33333333-3333-4333-8333-333333333333}",
+      "cell": "B2",
+      "parentId": null,
+      "text": "请复核预算😀禰󠄀",
+      "mentions": [
+        {
+          "mentionpersonId": "{22222222-2222-4222-8222-222222222222}",
+          "mentionId": "{66666666-6666-4666-8666-666666666666}",
+          "startIndex": "5",
+          "length": "5"
+        }
+      ]
+    },
+    {
+      "id": "{44444444-4444-4444-8444-444444444444}",
+      "cell": "B3",
+      "parentId": "{33333333-3333-4333-8333-333333333333}",
+      "text": "已复核并补充。",
+      "mentions": [
+        {
+          "mentionpersonId": "{22222222-2222-4222-8222-222222222222}",
+          "mentionId": "{AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA}",
+          "startIndex": "0",
+          "length": "3"
+        }
+      ]
+    },
+    {
+      "id": "{55555555-5555-4555-8555-555555555555}",
+      "cell": "B2",
+      "parentId": null,
+      "text": "待确认。",
+      "mentions": []
+    },
+    {
+      "id": "{88888888-8888-4888-8888-888888888888}",
+      "cell": "D4",
+      "parentId": null,
+      "text": "@复核人😀禰󠄀",
+      "mentions": [
+        {
+          "mentionpersonId": "{22222222-2222-4222-8222-222222222222}",
+          "mentionId": "{BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB}",
+          "startIndex": "5",
+          "length": "1"
+        }
+      ]
+    },
+    {
+      "id": "{99999999-9999-4999-8999-999999999999}",
+      "cell": null,
+      "parentId": null,
+      "text": "缺少位置的线程",
+      "mentions": []
+    },
+    {
+      "id": "{77777777-7777-4777-8777-777777777777}",
+      "cell": "E5",
+      "parentId": null,
+      "text": "@只被提及 请看😀",
+      "mentions": [
+        {
+          "mentionpersonId": "{DDDDDDDD-DDDD-4DDD-8DDD-DDDDDDDDDDDD}",
+          "mentionId": "{CCCCCCCC-CCCC-4CCC-8CCC-CCCCCCCCCCCC}",
+          "startIndex": "0",
+          "length": "5"
+        }
+      ]
+    }
+  ],
+  "producerRetainedThreadParts": [],
+  "limits": [
+    "Calc removes the modern source; this is an external loss, not fidelity acceptance.",
+    "Native offsets are retained as UTF-16 units. Splitting a surrogate pair or variation sequence requires reanchoring.",
+    "Excel/WPS unverified."
+  ]
+}

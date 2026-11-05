@@ -219,7 +219,7 @@ pnpm probe:workbook-model
 
 现代批注的内部读取现在校验工作簿人员、全局 GUID、按表回复图、原生可选时间、正文及解决状态；嵌套回复的父身份保存在格式元数据中。正文仍是辅助 HTML 的唯一可编辑来源。身份、作者显示名和回复关系在打开 HTML 包时重新校验，重复、循环、跨线程父引用及未来修订不接受；导入映射按条目核算重复作者文本后的 JSON 字节，防止共享长名称放大输出。32 份内部记录链路继续通过；固定 Calc 重存的现代线程丢失仍作为外部差异记录。
 
-经典兼容占位备注的核对及缺失定位恢复已在内部管线实现；备注框预览和完整交互仍未完成，不能据此宣称两类原生批注已验收。非空提及/扩展当前明确拒绝，不会触发通知或忽略其元数据；完整读取边界仍需最终复核。格式依据为 Microsoft 的 [CT_ThreadedComment](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/42f9b03d-9662-4204-9783-dbeb324a691c)、[CT_Person](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/6274371e-7c5c-46e3-b661-cbeb4abfe968) 和[兼容占位备注](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/6383f002-c90b-401c-a1d7-66b97b14cb3e)。
+经典兼容占位备注的核对及缺失定位恢复已在内部管线实现；备注框预览和完整交互仍未完成，不能据此宣称两类原生批注已验收。现代提及现在按同一包中的人员身份、原生 GUID 和 UTF-16 范围保留，详见下文；未知扩展仍明确拒绝。完整读取边界仍需最终复核。格式依据为 Microsoft 的 [CT_ThreadedComment](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/42f9b03d-9662-4204-9783-dbeb324a691c)、[CT_Person](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/6274371e-7c5c-46e3-b661-cbeb4abfe968) 和[兼容占位备注](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/6383f002-c90b-401c-a1d7-66b97b14cb3e)。
 
 经典备注的内部记录也已读取作者、单元格、富文本和兼容线程标记，保留待处理的原生几何属性。线程身份、工作表和位置一致的兼容备注按照[原生占位规则](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/6383f002-c90b-401c-a1d7-66b97b14cb3e)作为缓存消费，不重复显示现代线程；真正的经典备注仍保留。缺失、移位或复制的占位情况保留现代线程的原位置、正文、回复和原解决状态，标记 `needs_reanchor` 并保存具体恢复原因，不自动迁移或复制线程。原生根批注没有位置时，仅在此状态允许空单元格范围，不补造 A1；正常锚点和请求仍要求非空范围。无法匹配的兼容备注保留其完整经典正文与原线程身份，等待恢复，不凭缓存合成现代线程。完全没有旧版备注部件的独立线程继续可读。严格契约、JSON Schema 及保存重开共同核对恢复状态和来源。独立来源的加粗中文与 Calc 重存的普通字重分别按实际来源保存，不互相补造。VML 几何与基础外观现已接入内部管线；[固定 Calc 探针](evidence/xlsx-note-semantics.json)验证其单元格锚点优先于 VML 位置数值，验证脚本为 `python scripts/check-xlsx-note-semantics.py`，仅 `--record` 更新证据。固定 Office 归档和字体清单均检查摘要；此探针不代表 Excel/WPS 或 SDK 视觉验收。
 
@@ -421,3 +421,14 @@ Playground 宿主目前保留最近一份已接受的工作簿预览，连同宿
 [9 项条件／表格来源](evidence/xlsx-row-appearance.json)覆盖只有隐式空白的匹配／未匹配／相对条件字体、表自定义字体、数据差异格式、命名单元格样式及优先覆盖。区域发现保留这些完整声明范围，合并重叠列区间，跳过已存储坐标、隐藏列和合并，所有逐行区域检查计入现有 800 万发现额度；不能靠多条稀疏范围制造未计量循环。只含原生简单类的纯颜色规则不可能改变空白行框，直接排除其全列区域；一般选择器仍逐坐标解析。列字体仍限于实际使用行，新增区域不会把其他列格式扩张到使用区外。
 
 仅有数据验证时，行高也向同一修订的规则提供者请求当前公式值，与实际窗口显示一致；原来的错误缓存保持原字节。来源空白没有伪造值或源偏移。固定 Calc 在其中若干条件字体和表样式探针未产生对应的行高变化；证据明确保留生产者观测，不能据此宣称其视觉无差异或 Excel/WPS 已验证。三引擎与旧 Chromium 的定向行高／当前值检查通过，完整读取及固定资源门槛仍未完成。
+
+
+## 现代提及和原始定位恢复
+
+`WorkbookCommentMention` 保留原生 mentionId、已绑定的本包现代 authorId、startIndex 和 length；主评论和回复分别保存自己的提及。依据 [MS-XLSX CT_Mention](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/b03ed619-e307-4d3e-9c67-b68612274128)逐项校验 GUID、人员引用及 unsignedInt，提及计入原生条目、元数据字节和核心对象总额。人员/provider/user 身份均为不透明来源，不授予访问权限；只读面板展示提及的姓名，没有通知或云任务入口。
+
+`resolveWorkbookCommentMention(text, mention)` 将本项目 UTF-16 偏移解析为 from/to，越界、切开代理对或分离变体序列时返回 undefined。导入保留这类原始数字并以 invalid-mention-range 将整个线程标记 needs_reanchor；不会截断、猜测目标或改写正文。核心仅允许有明确恢复原因和原状态的线程保留无效范围。原始公式／单元格区域锚点仍独立于提及的正文范围。
+
+回复记录与主评论落在不同单元格、多个主线程记录同一单元格时，保留所有正文、回复、父关系与 nativeCell 来源，分别记录 mismatched-reply-location／duplicate-thread-location；主评论原锚点不猜测移动，原来的 open/resolved 状态保留为 recoveryStatus。缺失主位置仍使用空范围，不从回复或兼容记录补造位置。无父节点、循环、未知人员和重复身份继续是结构错误，不能用恢复状态掩盖。
+
+[独立提及来源](../packages/office/tests/fixtures/xlsx-comment-mentions.xlsx)和[固定 Calc 记录](evidence/xlsx-comment-mentions.json)包含 6 条现代消息、4 个提及及上述定位问题；官方 Transitional 部件和按 MS-XLSX 扩展的独立检查分别验证。固定 Calc 删除现代线程／人员部件，这项损失不能计为保真通过。SDK 公开导入与包重开保留完整来源，三引擎及旧版面板的精确投影、恢复提示、预算及失败保留另有定向检查。xr:uid、经典备注框与完整绘图／视觉门槛仍待实施。

@@ -9,6 +9,7 @@ import { readWorkbook } from "../src/xlsx/workbook.js";
 import { readThreadedComments } from "../src/xlsx/threaded-comments.js";
 import { WorkbookContent } from "../src/xlsx/content.js";
 import { mapThreadedComments } from "../src/xlsx/comment-mapping.js";
+import { importXlsx } from "../src/xlsx-import.js";
 
 const encoder = new TextEncoder(), decoder = new TextDecoder(), threadPart = "xl/threadedComments/threadedComment1.xml", personPart = "xl/persons/person.xml";
 const rootId = "{33333333-3333-4333-8333-333333333333}", replyId = "{44444444-4444-4444-8444-444444444444}", otherId = "{55555555-5555-4555-8555-555555555555}";
@@ -27,6 +28,18 @@ function mapped(opc = source()) {
   files.set("content.html", encoder.encode(content.html()!)); return { files, native, content, mapped };
 }
 describe("native spreadsheet threaded comments", () => {
+  it('publicly imports and reopens independent mentions and every conflicting or missing native location', async () => {
+    const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-comment-mentions.xlsx'), { documentId: 'native-mentions' });
+    const model = openDocument(files, { kind: 'workbook' }), before = model.serialize(), snapshot = model.snapshot();
+    expect(snapshot.annotations).toHaveLength(5); expect(snapshot.annotations.flatMap(annotation => annotation.replies ?? [])).toHaveLength(1);
+    expect(snapshot.metadata.workbook.commentAuthors![2]).toMatchObject({ name: '只被提及', userId: 'opaque-mentioned-only', providerId: 'AD' });
+    expect(snapshot.annotations.map(annotation => annotation.status)).toEqual(['needs_reanchor', 'needs_reanchor', 'needs_reanchor', 'needs_reanchor', 'open']);
+    expect(snapshot.metadata.workbook.comments!.flatMap(comment => comment.format === 'modern' ? [...comment.mentions ?? [], ...comment.replies.flatMap(reply => reply.mentions ?? [])] : [])).toHaveLength(4);
+    expect(snapshot.annotations[3]!.anchor).toMatchObject({ kind: 'cells', ranges: [] });
+    expect(snapshot.metadata.workbook.comments![0]).toMatchObject({ recoveryReasons: ['duplicate-thread-location', 'mismatched-reply-location'], replies: [{ nativeCell: { row: 2, column: 1 } }] });
+    expect(model.getNode(snapshot.annotations[0]!.bodyNodeId!)!.text).toBe('请复核预算😀禰󠄀');
+    expect(openDocument(before, { kind: 'workbook' }).snapshot()).toEqual(snapshot); expect(model.serialize()).toEqual(before);
+  });
   it("preserves author identity, Unicode, replies, timestamps and resolved state in the same workbook package", () => {
     const { files, native } = mapped(); expect(native.threads).toHaveLength(2); expect(native.people).toHaveLength(2);
     const model = openDocument(files, { kind: "workbook" }), annotations = model.snapshot().annotations;
@@ -62,13 +75,50 @@ describe("native spreadsheet threaded comments", () => {
     ["bad GUID", (s: string) => s.replace(`id="${otherId}"`, 'id="x"')],
     ["missing parent", (s: string) => s.replace(`parentId="${rootId}"`, 'parentId="{66666666-6666-4666-8666-666666666666}"')],
     ["self cycle", (s: string) => s.replace(`parentId="${rootId}"`, `parentId="${replyId}"`)],
-    ["cross-cell reply", (s: string) => s.replace('ref="B2" dT="2026-11-04T08:01:00Z"', 'ref="B3" dT="2026-11-04T08:01:00Z"')],
-    ["duplicate root cell", (s: string) => s.replace('ref="C3"', 'ref="B2"')],
     ["invalid boolean", (s: string) => s.replace('done="1"', 'done="yes"')],
     ["normalized invalid calendar", (s: string) => s.replace('2026-11-04T08:00:00Z', '2026-02-30T08:00:00Z')],
     ["invalid zone", (s: string) => s.replace('2026-11-04T08:00:00Z', '2026-11-04T08:00:00+14:01')],
   ])("rejects %s instead of returning a partial comment set", (_name, edit) => {
     expect(() => parsed(variant({ [threadPart]: edit }))).toThrowError(expect.objectContaining({ code: "InvalidDocument" }));
+  });
+  it('retains mismatched reply locations and duplicate root locations for explicit recovery', () => {
+    const { files } = mapped(variant({ [threadPart]: s => s.replace('ref="B2" dT="2026-11-04T08:01:00Z"', 'ref="B3" dT="2026-11-04T08:01:00Z"').replace('ref="C3"', 'ref="B2"') }));
+    const model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot();
+    expect(snapshot.annotations).toHaveLength(2); expect(snapshot.annotations.every(annotation => annotation.status === 'needs_reanchor')).toBe(true);
+    expect(snapshot.metadata.workbook.comments![0]).toMatchObject({ recoveryStatus: 'resolved', recoveryReasons: ['duplicate-thread-location', 'mismatched-reply-location'],
+      replies: [{ nativeCell: { row: 2, column: 1 } }] });
+    expect(snapshot.metadata.workbook.comments![1]).toMatchObject({ recoveryStatus: 'open', recoveryReasons: ['duplicate-thread-location'] });
+    expect(snapshot.annotations[0]!.anchor).toMatchObject({ ranges: [{ from: { row: 1, column: 1 } }] });
+    expect(model.getNode(snapshot.annotations[0]!.replies![0]!.bodyNodeId!)!.text).toBe('已复核并补充。');
+    expect(openDocument(model.serialize()).snapshot()).toEqual(snapshot);
+  });
+  it('preserves root and reply mentions with exact Unicode offsets, people, cloneability and cumulative admission', () => {
+    const mention = (id: string, start: number, length: number) => `<mentions><mention mentionpersonId="{22222222-2222-4222-8222-222222222222}" mentionId="${id}" startIndex="${start}" length="${length}"/></mentions>`;
+    const opc = variant({ [threadPart]: s => s.replace('</text>', '</text>' + mention('{66666666-6666-4666-8666-666666666666}', 5, 5))
+      .replace('<text>已复核并补充。</text>', '<text>已复核并补充。</text>' + mention('{77777777-7777-4777-8777-777777777777}', 0, 3)) });
+    const { files } = mapped(opc), model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot();
+    expect(snapshot.metadata.workbook.comments![0]).toMatchObject({ mentions: [{ mentionId: '{66666666-6666-4666-8666-666666666666}', authorId: 'xlsx-person-1', startIndex: 5, length: 5 }],
+      replies: [{ mentions: [{ startIndex: 0, length: 3, authorId: 'xlsx-person-1' }] }] });
+    expect(snapshot.annotations[0]!.status).toBe('resolved'); expect(structuredClone(snapshot)).toEqual(snapshot);
+    expect(openDocument(model.serialize()).snapshot()).toEqual(snapshot);
+    expect(() => parsed(opc, 6)).toThrowError(expect.objectContaining({ code: 'ResourceLimitExceeded' }));
+    for (const change of [(s: string) => s.replace('mentionpersonId="{22222222-2222-4222-8222-222222222222}"', `mentionpersonId="${otherId}"`),
+      (s: string) => s.replace('startIndex="5"', 'startIndex="4294967296"'), (s: string) => s.replace('length="5"', 'length="1.5"'),
+      (s: string) => s.replace('{77777777-7777-4777-8777-777777777777}', '{66666666-6666-4666-8666-666666666666}')]) {
+      const files = new Map(opc.files); files.set(threadPart, encoder.encode(change(decoder.decode(files.get(threadPart)!))));
+      expect(() => parsed(openOpcFiles(files, {}))).toThrowError(expect.objectContaining({ code: 'InvalidDocument' }));
+    }
+  });
+  it.each([6, 8, 4294967295])('keeps a mention at invalid UTF-16 offset %s without clamping its raw provenance', startIndex => {
+    const { files } = mapped(variant({ [threadPart]: s => s.replace('</text>', `</text><mentions><mention mentionpersonId="{22222222-2222-4222-8222-222222222222}" mentionId="{66666666-6666-4666-8666-666666666666}" startIndex="${startIndex}" length="1"/></mentions>`) }));
+    const model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot();
+    expect(snapshot.annotations[0]!.status).toBe('needs_reanchor');
+    expect(snapshot.metadata.workbook.comments![0]).toMatchObject({ recoveryStatus: 'resolved', recoveryReasons: ['invalid-mention-range'], mentions: [{ startIndex, length: 1 }] });
+    const metadata = JSON.parse(decoder.decode(files.get('metadata.json')!)), annotations = JSON.parse(decoder.decode(files.get('annotations.json')!));
+    delete metadata.workbook.comments[0].recoveryReasons; delete metadata.workbook.comments[0].recoveryStatus; annotations[0].status = 'resolved';
+    files.set('metadata.json', encoder.encode(JSON.stringify(metadata))); files.set('annotations.json', encoder.encode(JSON.stringify(annotations)));
+    expect(() => openDocument(files, { kind: 'workbook' })).toThrowError(expect.objectContaining({ code: 'InvalidDocument' }));
+    expect(openDocument(model.serialize()).snapshot()).toEqual(snapshot);
   });
   it("rejects cyclic fixture, duplicated people, undeclared attributes/extensions and exceeds cumulative records before mapping", () => {
     expect(() => parsed(source("invalid/thread-parent-cycle"))).toThrowError(expect.objectContaining({ code: "InvalidDocument" }));

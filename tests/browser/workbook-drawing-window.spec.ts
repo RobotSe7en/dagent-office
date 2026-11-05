@@ -5,10 +5,10 @@ import { build } from 'vite';
 import { importXlsx } from '../../packages/office/src/xlsx-import.js';
 import type { currentChartWindowMeasurement, drawingWindowMeasurement } from './fixtures/workbook-drawing-window.js';
 import type { annotationWindowMeasurement, commentTextMeasurement, windowControllerMeasurement } from './fixtures/workbook-window-controller.js';
-import type { commentPanelMeasurement } from './fixtures/workbook-comment-panel.js';
+import type { commentPanelMeasurement, mentionPanelMeasurement } from './fixtures/workbook-comment-panel.js';
 import type { annotationControlsAction, mountAnnotationControls } from './fixtures/workbook-annotation-controls.js';
 
-declare global { interface Window { workbookDrawingWindow: { drawingWindowMeasurement: typeof drawingWindowMeasurement; currentChartWindowMeasurement: typeof currentChartWindowMeasurement; windowControllerMeasurement: typeof windowControllerMeasurement; annotationWindowMeasurement: typeof annotationWindowMeasurement; commentTextMeasurement: typeof commentTextMeasurement; commentPanelMeasurement: typeof commentPanelMeasurement; annotationControlsAction: typeof annotationControlsAction; mountAnnotationControls: typeof mountAnnotationControls } } }
+declare global { interface Window { workbookDrawingWindow: { drawingWindowMeasurement: typeof drawingWindowMeasurement; currentChartWindowMeasurement: typeof currentChartWindowMeasurement; windowControllerMeasurement: typeof windowControllerMeasurement; annotationWindowMeasurement: typeof annotationWindowMeasurement; commentTextMeasurement: typeof commentTextMeasurement; commentPanelMeasurement: typeof commentPanelMeasurement; mentionPanelMeasurement: typeof mentionPanelMeasurement; annotationControlsAction: typeof annotationControlsAction; mountAnnotationControls: typeof mountAnnotationControls } } }
 let code = '';
 const inputs: { name: string; files: [string, number[]][] }[] = [];
 const comments: typeof inputs = [];
@@ -32,6 +32,16 @@ test('native chart labels and points use current formulas while wrong cell and c
   expect(result).toMatchObject({ objects: 1, unavailable: 0, sourceUnchanged: true, released: true });
   expect(result.text).toContain('Current values'); expect(result.text).toContain('Point0'); expect(result.text).not.toContain('Cache');
   expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: 'error-point', detail: '#DIV/0!' }));
+});
+test('modern mentions retain exact text and people in a non-interactive panel while conflicting locations require recovery', async ({ page }) => {
+  const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-comment-mentions.xlsx'), { documentId: 'mention-panel' });
+  const result = await page.evaluate(entries => window.workbookDrawingWindow.mentionPanelMeasurement(entries), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  expect(result).toMatchObject({ unchanged: true, released: true }); expect(result.results).toHaveLength(5);
+  expect(result.results.every(item => item.exact && item.interactive === 0)).toBe(true);
+  expect(result.results.flatMap(item => item.labels)).toEqual([...Array(3).fill('提及：复核人'), '提及：只被提及']);
+  expect(result.results[0]!.text).toContain('回复与主评论的位置不一致'); expect(result.results[0]!.text).toContain('请复核预算😀禰󠄀');
+  expect(result.results[2]!.text).toContain('提及的文字范围需要重新定位'); expect(result.results[3]!.text).toContain('缺少原始单元格位置');
+  expect(result.results[4]!.status).toBe('open');
 });
 for (const rtl of [false, true]) test(`worksheet objects compose above cells across four ${rtl ? 'RTL' : 'LTR'} panes with isolated candidate resources`, async ({ page }) => {
   for (const input of inputs) {

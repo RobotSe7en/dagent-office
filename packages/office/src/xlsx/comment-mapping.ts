@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { Annotation, AnnotationReply, WorkbookComment, WorkbookCommentAuthor, WorkbookNoteBox } from "@dagent-office/core";
+import { DocumentError, resolveWorkbookCommentMention } from "@dagent-office/core";
+import type { Annotation, AnnotationReply, WorkbookComment, WorkbookCommentAuthor, WorkbookCommentMention, WorkbookNoteBox } from "@dagent-office/core";
 import { fail } from "../ooxml/xml.js";
 import type { NativeCommentThread, NativeThreads } from "./threaded-comments.js";
 import type { NativeClassicNotes } from "./classic-comments.js";
@@ -33,11 +33,27 @@ class CommentMapper {
       this.account(author, true); authors.push(author);
     }
     const people = new Map(authors.map(author => [author.nativeId!, author])), { annotations, comments } = this.records;
+    const locations = new Map<string, number>();
+    for (const thread of threads) if (thread.root.cell) {
+      const key = JSON.stringify([thread.sheetId, thread.root.cell.row, thread.root.cell.column]); locations.set(key, (locations.get(key) ?? 0) + 1);
+    }
+    const mentions = (message: NativeCommentThread["root"]): WorkbookCommentMention[] | undefined => {
+      if (!message.mentions?.length) return undefined;
+      const result: WorkbookCommentMention[] = []; this.account({ mentions: [] }, true);
+      for (const mention of message.mentions) {
+        const mapped = { mentionId: mention.mentionId, authorId: people.get(mention.personId)!.authorId, startIndex: mention.startIndex, length: mention.length };
+        this.account(mapped, true); result.push(mapped);
+      }
+      return result;
+    };
     for (const author of authors) this.records.authors.push(author);
     for (const thread of threads) {
       const cell = thread.root.cell;
       const reasons = [...(recovery.get(thread.root.id) ?? [])];
       if (!cell) reasons.unshift("missing-location");
+      if (cell && locations.get(JSON.stringify([thread.sheetId, cell.row, cell.column]))! > 1) reasons.push("duplicate-thread-location");
+      if (cell && thread.replies.some(reply => reply.cell && (reply.cell.row !== cell.row || reply.cell.column !== cell.column))) reasons.push("mismatched-reply-location");
+      if ([thread.root, ...thread.replies].some(message => message.mentions?.some(mention => !resolveWorkbookCommentMention(message.text, mention)))) reasons.push("invalid-mention-range");
       const originalStatus: "resolved" | "open" = thread.root.resolved ? "resolved" : "open";
       const annotationId = `xlsx-thread-${thread.root.id}`, rootAuthor = people.get(thread.root.personId)!;
       const replies: AnnotationReply[] = [], bindings: Extract<WorkbookComment, { format: "modern" }>["replies"] = [];
@@ -45,16 +61,18 @@ class CommentMapper {
         const replyId = `xlsx-reply-${reply.id}`, person = people.get(reply.personId)!;
         const mappedReply: AnnotationReply = { replyId, author: { name: person.name }, ...(reply.date === undefined ? {} : { date: reply.date }), sourceId: reply.id, status: reply.resolved ? "resolved" : "open", bodyNodeId: this.content.comment(thread.sheetId, textHtml(reply.text)) };
         this.account(mappedReply, false); replies.push(mappedReply);
-        const binding = { replyId, authorId: person.authorId, ...(reply.parentId === thread.root.id ? {} : { parentReplyId: `xlsx-reply-${reply.parentId}` }) };
-        this.account(binding, true); bindings.push(binding);
+        const binding = { replyId, authorId: person.authorId, ...(reply.parentId === thread.root.id ? {} : { parentReplyId: `xlsx-reply-${reply.parentId}` }),
+          ...(reply.cell ? { nativeCell: { ...reply.cell } } : {}), ...(reply.mentions?.length ? { mentions: mentions(reply)! } : {}) };
+        this.account({ ...binding, mentions: undefined }, true); bindings.push(binding);
       }
       const annotation: Annotation = { annotationId, documentId: this.documentId, baseRevision: 0, status: reasons.length ? "needs_reanchor" : originalStatus, author: { name: rootAuthor.name }, sourceId: thread.root.id,
         ...(thread.root.date === undefined ? {} : { date: thread.root.date }), bodyNodeId: this.content.comment(thread.sheetId, textHtml(thread.root.text)),
         anchor: { kind: "cells", sheetId: thread.sheetId, ranges: cell ? [{ from: { ...cell }, to: { ...cell } }] : [] } };
       this.account(annotation, false); if (replies.length) annotation.replies = replies; annotations.push(annotation);
       const identity: Omit<Extract<WorkbookComment, { format: "modern" }>, "replies"> = { annotationId, format: "modern", authorId: rootAuthor.authorId,
+        ...(thread.root.mentions?.length ? { mentions: mentions(thread.root)! } : {}),
         ...(reasons.length ? { recoveryStatus: originalStatus, recoveryReasons: reasons } : {}) };
-      this.account(identity, true); comments.push({ ...identity, replies: bindings });
+      this.account({ ...identity, mentions: undefined }, true); comments.push({ ...identity, replies: bindings });
     }
   }
   classic(native: NativeClassicNotes, boxes: ReadonlyMap<string, WorkbookNoteBox>, orphans: ReadonlyMap<string, string>): void {

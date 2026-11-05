@@ -1,10 +1,12 @@
 import type { Annotation } from "../contracts/annotations.js";
-import type { WorkbookCommentAuthor, WorkbookMetadata } from "../contracts/workbook.js";
+import type { WorkbookCommentAuthor, WorkbookCommentMention, WorkbookMetadata } from "../contracts/workbook.js";
+import type { ParsedHtml } from "../document/html.js";
 import { checkLimit, invalid } from "../document/validation.js";
+import { resolveWorkbookCommentMention } from "./comment-mentions.js";
 
 /** Validate the optional native comment bindings without requiring every host
  * annotation to adopt an Office author or export format. */
-export function validateWorkbookComments(workbook: WorkbookMetadata, annotations: readonly Annotation[], maxItems: number, classes: ReadonlySet<string>): number {
+export function validateWorkbookComments(workbook: WorkbookMetadata, annotations: readonly Annotation[], maxItems: number, classes: ReadonlySet<string>, html: ParsedHtml | undefined): number {
   const authors = new Map<string, WorkbookCommentAuthor>(), nativeAuthors = new Set<string>(), bindings = new Set<string>();
   let items = 0;
   for (const author of workbook.commentAuthors ?? []) {
@@ -20,6 +22,19 @@ export function validateWorkbookComments(workbook: WorkbookMetadata, annotations
     if (!source || source.format !== format || source.name !== display?.name) invalid("A workbook comment author binding disagrees with its displayed author.");
   };
   const nativeComments = new Set<string>();
+  const mentionIds = new Set<string>();
+  const mentions = (values: readonly WorkbookCommentMention[] | undefined, body: { instruction?: string | undefined; bodyNodeId?: string | undefined }, recoverable: boolean): void => {
+    if (!values?.length) return;
+    const text = body.instruction ?? (body.bodyNodeId ? html?.getNode(body.bodyNodeId)?.text : undefined);
+    if (text === undefined) invalid("Comment mentions require their exact source body.");
+    for (const mention of values) {
+      checkLimit(++items, maxItems);
+      const id = mention.mentionId.toUpperCase();
+      if (mentionIds.has(id) || authors.get(mention.authorId)?.format !== "modern") invalid("Comment mentions require unique identities and an existing modern person.");
+      mentionIds.add(id);
+      if (!resolveWorkbookCommentMention(text, mention) && !recoverable) invalid("Invalid comment mention ranges require explicit thread recovery.");
+    }
+  };
   const nativeIdentity = (id: string | undefined): void => {
     if (id === undefined) return;
     const key = id.toUpperCase();
@@ -43,11 +58,14 @@ export function validateWorkbookComments(workbook: WorkbookMetadata, annotations
     if (comment.recoveryReasons?.includes("orphan-placeholder")) invalid("An existing modern thread is not an orphaned compatibility placeholder.");
     if (comment.recoveryReasons?.includes("missing-location") && (annotation.anchor.kind !== "cells" || annotation.anchor.ranges.length)) invalid("A missing native location must not invent a cell range.");
     nativeIdentity(annotation.sourceId);
+    const recoverable = comment.recoveryReasons?.includes("invalid-mention-range") ?? false;
+    mentions(comment.mentions, annotation, recoverable);
     const replies = new Map(annotation.replies?.map(reply => [reply.replyId, reply]) ?? []), links = new Map<string, string | undefined>();
     for (const binding of comment.replies) {
       const reply = replies.get(binding.replyId);
       if (!reply || links.has(binding.replyId)) invalid("A threaded comment reply binding is missing or duplicate.");
       nativeIdentity(reply.sourceId); author(binding.authorId, "modern", reply.author); links.set(binding.replyId, binding.parentReplyId); items++;
+      mentions(binding.mentions, reply, recoverable);
     }
     if (links.size !== replies.size) invalid("Every threaded comment reply requires a native binding.");
     const visited = new Set<string>();

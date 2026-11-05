@@ -20,6 +20,7 @@ export type { CreatePresentationOptions } from "./presentation.js";
 export { createWorkbook } from "./workbook.js";
 export type { CreateWorkbookOptions } from "./workbook.js";
 export { DEFAULT_WORKBOOK_READ_LIMITS } from "./workbook/model.js";
+export { resolveWorkbookCommentMention } from "./workbook/comment-mentions.js";
 export type { NumberDisplayPart as WorkbookNumberDisplayPart } from "./workbook/format-numeric.js";
 export { createWorkbookNumberFormatter } from "./workbook/number-formatter.js";
 export type { WorkbookNumberFormatter, WorkbookNumberFormatterOptions, WorkbookDisplayFormat, WorkbookNumberDisplay } from "./workbook/number-formatter.js";
