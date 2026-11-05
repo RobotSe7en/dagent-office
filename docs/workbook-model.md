@@ -346,3 +346,7 @@ preview.dispose();
 [生成器](../scripts/generate-workbook-table-styles.py)固定完整 XML 摘要并检查所有消费字段。该附件的局部 `dxfId` 从 1 起；Light14 的 `dxfs@count` 写成 10 而实际及引用均为 9，内嵌样式名多一个尾空格；Dark9 的内嵌名误写为 `TableStyleDark9 2`。提取仅接受这份固定附件的已记录差异，使用外层元素及 Annex G.1 的规范名称；普通 XLSX 的零起始差异索引、计数及名称校验保持严格。来源摘要、许可与差异见[记录](evidence/xlsx-builtin-table-styles.json)，[Ecma 许可](../packages/render/ECMA-376-TABLE-STYLES-LICENSE.txt)随 render 打包并保留在生成数据注释中。
 
 可运行 `python3 scripts/generate-workbook-table-styles.py /path/to/presetTableStyles.xml --check` 重核。目录的完整名称、典型主题及边框、不可变性和附件差异有单元检查；表样式与直接格式、条件规则的组合和原生页面验收尚未完成，不能把这份定义目录当作完整智能表显示已实现。
+
+内部区域投影按 §18.8.41 的顺序处理十三类区域，并按 §18.18.77 的结构图区分数据条纹、表头和汇总行。条纹大小与缺省空白带独立保留，末带裁到所属区域；列方向使用源坐标，视口和 RTL 不改变区域身份。内边框只作用于区域内部，外边框只作用于区域边界，显式 `none` 与缺省不混同。独立预期覆盖可变条纹、无表头／无汇总行、单列角落重叠及整张工作表尺寸查询；此层不展开全表单元格。隐藏／筛选后的条纹、实际 CSS 层组合和显示接入仍待完成。
+
+[独立原生探针](../scripts/check-xlsx-table-styles.py)包含十七种表开关和直接格式组合，输入通过官方 Transitional XSD 与关系检查。固定 Calc 25.8.1.1 在这些输入上没有显示被引用的 `TableStyleMedium9`，因此不能用其输出证明表样式优先级或隐藏行条纹；[记录](evidence/xlsx-table-style-semantics.json)保留所有单元格观察及这一限制。直接粗体、字体颜色和填充的对照仍有效。可运行 `python3 scripts/check-xlsx-table-styles.py` 重核；Excel/WPS 未实机验证。
