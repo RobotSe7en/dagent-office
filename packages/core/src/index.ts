@@ -32,6 +32,9 @@ export { printFormula as printWorkbookFormula } from "./workbook/formula-print.j
 export type { WorkbookReferenceLocation, WorkbookReferenceArea, WorkbookReferenceResult } from "./workbook/reference.js";
 export { createWorkbookScalarEvaluator } from "./workbook/scalar.js";
 export type { WorkbookScalarEvaluator, WorkbookScalarResult, WorkbookScalarUnavailable, WorkbookScalarLimits, WorkbookScalarQueryOptions } from "./workbook/scalar.js";
+export { readWorkbookRules, DEFAULT_WORKBOOK_RULE_LIMITS } from "./workbook/rule-reader.js";
+export type { WorkbookRuleReadLimits, WorkbookRuleReadRequest, WorkbookRuleReadOptions, WorkbookRuleReadResponse, WorkbookRuleCell, WorkbookRuleValue, WorkbookRuleIssue,
+  WorkbookConditionalEvaluation, WorkbookValidationEvaluation } from "./workbook/rule-reader.js";
 export { createSharedFormulaTable as createSharedWorkbookFormulas } from "./workbook/shared-formula.js";
 export type { SharedFormulaTable as SharedWorkbookFormulas } from "./workbook/shared-formula.js";
 export { readPresentationGeometry,isPresentationCommentPoint } from "./document/presentation.js";

@@ -21,10 +21,12 @@ export interface WorkbookScalarQueryOptions {
   /** Shift a parsed template without editing its source expression. */
   readonly at?: WorkbookReferenceLocation;
   readonly signal?: { readonly aborted: boolean };
+  /** A batch reader may lower the instance's step cap for this query. */
+  readonly maxSteps?: number;
 }
 export interface WorkbookScalarEvaluator {
   evaluate(expression: string, origin: WorkbookReferenceLocation, options?: WorkbookScalarQueryOptions): WorkbookScalarResult;
-  cell(location: WorkbookReferenceLocation, options?: Pick<WorkbookScalarQueryOptions, "signal">): WorkbookScalarResult;
+  cell(location: WorkbookReferenceLocation, options?: Pick<WorkbookScalarQueryOptions, "signal" | "maxSteps">): WorkbookScalarResult;
   dispose(): void;
 }
 export type ScalarEvaluation = ScalarValue | WorkbookScalarUnavailable | { readonly kind: "references"; readonly areas: readonly DeepReadonly<WorkbookReferenceArea>[] };
@@ -72,14 +74,16 @@ export function createWorkbookScalarEvaluator(model: WorkbookModel, input: Parti
     return ast;
   };
   function query(start: (visit: (node: FormulaExpression, location: WorkbookReferenceLocation, depth: number, nameContext?: Name) => ScalarEvaluation,
-    readCell: (location: WorkbookReferenceLocation, depth: number) => ScalarResolved) => ScalarEvaluation, location: WorkbookReferenceLocation, options: WorkbookScalarQueryOptions, initialUnits = 0): WorkbookScalarResult {
+    readCell: (location: WorkbookReferenceLocation, depth: number) => ScalarResolved) => ScalarEvaluation, location: WorkbookReferenceLocation, options: WorkbookScalarQueryOptions, initialUnits = 0, preserveBlank = false): WorkbookScalarResult {
     checkLocation(location);
-    if (Object.keys(options).some(key => !["at", "signal"].includes(key))) throw new DocumentError("InvalidOperation", "Scalar query received an unsupported option.");
+    if (Object.keys(options).some(key => !["at", "signal", "maxSteps"].includes(key)) || options.maxSteps !== undefined
+      && (!Number.isSafeInteger(options.maxSteps) || options.maxSteps <= 0 || options.maxSteps > limits.maxSteps)) throw new DocumentError("InvalidOperation", "Scalar query received unsupported options or step limits.");
+    const maxSteps = options.maxSteps ?? limits.maxSteps;
     const memo = new Map<number, ScalarResolved>(), sources = new Map<number, SourceCell | undefined>(), path = new Set<number>(), namePath = new Map<string, Set<number>>();
     let steps = 0, units = initialUnits, readCells = 0; checkLimit(units, limits.maxCodeUnits);
     const step = (depth = 0): void => {
       if (options.signal?.aborted) throw new DocumentError("OperationCancelled", "Scalar evaluation was cancelled.");
-      checkLimit(++steps, limits.maxSteps); checkLimit(depth, limits.maxDepth);
+      checkLimit(++steps, maxSteps); checkLimit(depth, limits.maxDepth);
     };
     const account = (amount: number): void => { units += amount; checkLimit(units, limits.maxCodeUnits); };
     const key = (at: WorkbookReferenceLocation): number => sheets.get(at.sheetId)!.index * 17_179_869_184 + at.row * 16_384 + at.column;
@@ -171,7 +175,7 @@ export function createWorkbookScalarEvaluator(model: WorkbookModel, input: Parti
         scalar: value => scalar(value, at, depth + 1), entries: (value, presenceOnly) => entries(value, depth + 1, presenceOnly) });
     }
     step(); const result = scalar(start(visit, readCell), location, 0), identity = { documentId, revision, steps, readCells };
-    return freeze("type" in result ? { ...identity, kind: "value", value: result.type === "blank" ? scalarNumber(0) : result } : { ...identity, ...result });
+    return freeze("type" in result ? { ...identity, kind: "value", value: result.type === "blank" && !preserveBlank ? scalarNumber(0) : result } : { ...identity, ...result });
   }
   return Object.freeze({
     evaluate(expression: string, origin: WorkbookReferenceLocation, options: WorkbookScalarQueryOptions = {}) {
@@ -179,9 +183,9 @@ export function createWorkbookScalarEvaluator(model: WorkbookModel, input: Parti
       checkLocation(origin); const location = options.at ?? origin; checkLocation(location);
       return query(visit => visit(parse(expression, origin), location, 0), location, options, expression.length);
     },
-    cell(location: WorkbookReferenceLocation, options: Pick<WorkbookScalarQueryOptions, "signal"> = {}) {
-      if (!options || typeof options !== "object" || Object.keys(options).some(key => key !== "signal")) throw new DocumentError("InvalidOperation", "Scalar cell query received unsupported options.");
-      return query((_visit, readCell) => readCell(location, 0), location, options);
+    cell(location: WorkbookReferenceLocation, options: Pick<WorkbookScalarQueryOptions, "signal" | "maxSteps"> = {}) {
+      if (!options || typeof options !== "object" || Object.keys(options).some(key => key !== "signal" && key !== "maxSteps")) throw new DocumentError("InvalidOperation", "Scalar cell query received unsupported options.");
+      return query((_visit, readCell) => readCell(location, 0), location, options, 0, true);
     },
     dispose() { disposed = true; sourceModel = undefined; parsed.clear(); parseUnits = 0; sheets.clear(); sheetNames.clear(); names.clear(); localNames.clear(); chunks.clear(); },
   });

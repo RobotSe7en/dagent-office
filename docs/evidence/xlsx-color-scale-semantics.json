@@ -1,0 +1,110 @@
+{
+  "scope": "Pinned Calc PDF path paints for constant and repeated color-scale thresholds. Not Excel/WPS or SDK acceptance.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "sourceSha256": "9bb11e33ad4d61d796f6935ed9d617dff72a8a24bf21bc2fdd50f09faa3f47a3",
+  "cases": [
+    {
+      "name": "two_constant",
+      "values": [
+        5,
+        5,
+        5
+      ],
+      "stops": 2,
+      "pdfPathFills": [
+        "rgb(100%, 0%, 0%)"
+      ]
+    },
+    {
+      "name": "two_zero",
+      "values": [
+        0,
+        0,
+        0
+      ],
+      "stops": 2,
+      "pdfPathFills": [
+        "rgb(100%, 0%, 0%)"
+      ]
+    },
+    {
+      "name": "two_mixed",
+      "values": [
+        -100,
+        0,
+        100
+      ],
+      "stops": 2,
+      "pdfPathFills": [
+        "rgb(100%, 0%, 0%)",
+        "rgb(50.195312%, 49.803162%, 0%)",
+        "rgb(0%, 100%, 0%)"
+      ]
+    },
+    {
+      "name": "three_constant",
+      "values": [
+        5,
+        5,
+        5
+      ],
+      "stops": 3,
+      "pdfPathFills": [
+        "rgb(0%, 100%, 0%)"
+      ]
+    },
+    {
+      "name": "three_zero",
+      "values": [
+        0,
+        0,
+        0
+      ],
+      "stops": 3,
+      "pdfPathFills": [
+        "rgb(0%, 100%, 0%)"
+      ]
+    },
+    {
+      "name": "three_mixed",
+      "values": [
+        -100,
+        0,
+        100
+      ],
+      "stops": 3,
+      "pdfPathFills": [
+        "rgb(100%, 0%, 0%)",
+        "rgb(100%, 100%, 0%)",
+        "rgb(0%, 100%, 0%)"
+      ]
+    },
+    {
+      "name": "three_repeated_min",
+      "values": [
+        0,
+        0,
+        100
+      ],
+      "stops": 3,
+      "pdfPathFills": [
+        "rgb(100%, 0%, 0%)",
+        "rgb(0%, 100%, 0%)"
+      ]
+    },
+    {
+      "name": "three_repeated_max",
+      "values": [
+        0,
+        100,
+        100
+      ],
+      "stops": 3,
+      "pdfPathFills": [
+        "rgb(100%, 0%, 0%)",
+        "rgb(0%, 100%, 0%)"
+      ]
+    }
+  ]
+}
