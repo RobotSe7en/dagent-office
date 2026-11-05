@@ -9,6 +9,9 @@ import { WorkbookTextDirection } from "./text-direction.js";
 import { workbookReadingOrder, workbookTextAlignment, workbookTextGutters } from "./text-alignment.js";
 import { stackWorkbookText } from "./stacked-text.js";
 import { measuredFontLineHeight } from "../font-line-height.js";
+import { workbookCellBorders } from "./cell-borders.js";
+import { workbookCellShape, workbookCellShapeOffset } from "./cell-shape.js";
+import type { WorkbookCellShape } from "./cell-shape.js";
 
 export interface WorkbookTextLayoutInput {
   readonly source: WorkbookSourceCell;
@@ -23,6 +26,8 @@ export interface WorkbookTextLayout {
   /** Unclipped height, including the vertical cell gutter, for row measurement. */
   readonly requiredHeightPt: number;
   readonly scale: number;
+  /** Full-cell outline shared by fill/border composition. */
+  readonly shape: WorkbookCellShape;
 }
 export interface WorkbookTextLayouts {
   readonly cells: readonly WorkbookTextLayout[];
@@ -61,7 +66,10 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
       const alignment = workbookTextAlignment(style, input.valueType, textDirection), element = markViewNode(document.createElement("div"));
       const textView = alignment.stacked ? stackWorkbookText(input.text, maxNodes - nodes + input.text.nodes) : input.text;
       nodes += textView.nodes - input.text.nodes;
-      element.style.cssText = `position:relative;overflow:hidden;direction:ltr;width:${input.widthPt}pt;height:${input.heightPt}pt`;
+      const slanted = alignment.rotationDegrees !== 0 && Math.abs(alignment.rotationDegrees) !== 90;
+      const bordered = slanted && Object.keys(workbookCellBorders(document, style, false)).length > 0;
+      const shape = workbookCellShape(input.widthPt, input.heightPt, alignment.rotationDegrees, bordered);
+      element.style.cssText = `position:relative;overflow:${shape.topOffsetPt ? "visible" : "hidden"};direction:ltr;width:${input.widthPt}pt;height:${input.heightPt}pt`;
       // Gutter is part of cell content geometry, independent of border stroke
       // width. Borders are a separate shared-edge layer, not CSS box borders.
       const { left, right } = workbookTextGutters(alignment, normalSpaceWidthPx);
@@ -73,7 +81,7 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
         fontKerning: "none", fontFeatureSettings: '"kern" 0',
         unicodeBidi: "isolate", whiteSpace: alignment.wrap ? "pre-wrap" : "pre", overflowWrap: alignment.wrap ? "anywhere" : "normal", wordBreak: "normal",
         textAlign: alignment.stacked ? "center" : alignment.horizontal, width: alignment.wrap && !alignment.stacked ? `${available}px` : "max-content", height: "auto", transformOrigin: "0 0" });
-      element.append(text); root.append(element); return { input, textView, alignment, element, available, left };
+      element.append(text); root.append(element); return { input, textView, alignment, element, available, left, shape };
     });
     scope.append(root);
     const fonts = resolvePreviewFontsInScope(document, root, "[data-office-text-style],[data-office-script]");
@@ -92,7 +100,7 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
         }
       }
     }
-    const cells = prepared.map(({ input, textView, alignment, element, available, left }): WorkbookTextLayout => {
+    const cells = prepared.map(({ input, textView, alignment, element, available, left, shape }): WorkbookTextLayout => {
       const text = textView.element, measured = view.getComputedStyle(text), width = Number.parseFloat(measured.width), height = Number.parseFloat(measured.height);
       if (![width, height].every(value => Number.isFinite(value) && value >= 0)) throw new DocumentError("UnsupportedFeature", "This browser cannot measure worksheet text geometry.");
       const angle = alignment.rotationDegrees * Math.PI / 180, cosine = Math.cos(angle), sine = Math.sin(angle);
@@ -102,9 +110,18 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
       const extra = available - rotatedWidth * scale, x = left + (alignment.horizontal === "center" ? extra / 2 : alignment.horizontal === "right" ? extra : 0) - minimumX * scale;
       const remaining = input.heightPt / .75 - 2 - rotatedHeight * scale;
       const y = 1 + (alignment.vertical === "center" ? remaining / 2 : alignment.vertical === "bottom" ? remaining : 0);
-      text.style.left = `${x}px`; text.style.top = `${y - minimumY * scale}px`;
+      // Keep the one-pixel vertical text gutter on the slanted side of the
+      // alignment center as well. It belongs to content, not to fill geometry.
+      const offset = workbookCellShapeOffset(shape, (y + rotatedHeight * scale / 2 + Math.sign(shape.topOffsetPt)) * .75) / .75;
+      text.style.left = `${x + offset}px`; text.style.top = `${y - minimumY * scale}px`;
+      if (shape.topOffsetPt) {
+        // Slanted text may extend sideways, but stays inside the source row's
+        // vertical band. A pane clip alone would let tall text cover other rows.
+        const start = x + offset + minimumX * scale, end = start + rotatedWidth * scale;
+        element.style.clipPath = `inset(0 ${-Math.max(0, end - input.widthPt / .75)}px 0 ${Math.min(0, start)}px)`;
+      }
       text.style.transform = alignment.rotationDegrees ? `rotate(${alignment.rotationDegrees}deg) scale(${scale})` : scale === 1 ? "none" : `scale(${scale})`;
-      return Object.freeze({ element, text: textView, requiredHeightPt: (rotatedHeight * scale + 2) * .75, scale });
+      return Object.freeze({ element, text: textView, requiredHeightPt: (rotatedHeight * scale + 2) * .75, scale, shape });
     });
     for (const cell of cells) cell.element.remove();
     complete = true;

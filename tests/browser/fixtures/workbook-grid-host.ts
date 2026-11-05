@@ -32,6 +32,8 @@ import { diagonalMeasurement } from "./workbook-diagonals.js";
 import { workbookCellDiagonals } from "../../../packages/render/src/workbook/cell-borders.js";
 import { projectWorkbookDiagonals } from "../../../packages/render/src/workbook/diagonal-projection.js";
 import { numberTextMeasurement } from "./workbook-number-text.js";
+import { rotatedCellMeasurement, shapedFillMeasurement } from "./workbook-rotated-cell.js";
+import type { RotatedCellCase } from "./workbook-rotated-cell.js";
 import type { NumberTextCase } from "./workbook-number-text.js";
 import { layoutWorkbookNumbers } from "../../../packages/render/src/workbook/number-text-layout.js";
 import type { WorkbookNumberLayoutInput } from "../../../packages/render/src/workbook/number-text-layout.js";
@@ -69,6 +71,8 @@ async function main() {
   let rightToLeft = false;
   const host = {
     numberTextMeasurement(cases: readonly NumberTextCase[], locale?: string) { return numberTextMeasurement(container, cases, locale); },
+    rotatedCellMeasurement(cases: readonly RotatedCellCase[]) { return rotatedCellMeasurement(container, cases); },
+    shapedFillMeasurement,
     assetMeasurement(base64: string, mimeType: string) { return assetMeasurement(container, base64, mimeType); },
     borderSourceMeasurement() { return borderSourceMeasurement(container); },
     textLayoutMeasurement(cases: readonly TextLayoutCase[]) { return textLayoutMeasurement(container, cases); },

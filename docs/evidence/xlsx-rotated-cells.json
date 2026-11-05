@@ -1,0 +1,1310 @@
+{
+  "scope": "Record independent native rotated-cell outlines, fill and text placement.\n\nPinned Calc observations complement Microsoft's rotated-header instructions;\nthey do not constitute Excel/WPS verification. No SDK renderer is used.",
+  "sourceSha256": "3188b564063c2d79fcc81d2753fb662e013e8008b635f981fbf7eded48af68a9",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "environment": {
+    "libreOffice": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+    "poppler": "pdfinfo version 25.03.0\nCopyright 2005-2025 The Poppler Developers - http://poppler.freedesktop.org\nCopyright 1996-2011, 2022 Glyph & Cog, LLC",
+    "fontconfig": "fontconfig version 2.15.0",
+    "dpi": 96,
+    "fontManifestSha256": "c69980066d071afe8f248c7774f5265a6eb82990db1f2f78843580df8d2325b4",
+    "fontCount": 424
+  },
+  "localeEnvironment": {
+    "LC_ALL": "C.UTF-8",
+    "LANG": "C.UTF-8",
+    "TZ": "UTC"
+  },
+  "font": {
+    "family": "Noto Sans CJK SC",
+    "sizePt": 12
+  },
+  "cases": [
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 0,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          1.2e-05,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          59.94132
+        ],
+        [
+          1.2e-05,
+          59.94132
+        ]
+      ],
+      "coverageBoundsPt": [
+        32.1172,
+        24.406164,
+        47.1172,
+        34.906164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 30,
+      "mode": "none",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          1.2e-05,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          59.94132
+        ],
+        [
+          1.2e-05,
+          59.94132
+        ]
+      ],
+      "coverageBoundsPt": [
+        33.6172,
+        23.656164,
+        47.1172,
+        37.156164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 30,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          103.769544,
+          -8.6e-05
+        ],
+        [
+          183.468762,
+          -8.6e-05
+        ],
+        [
+          79.699231,
+          59.91007
+        ],
+        [
+          1.2e-05,
+          59.91007
+        ]
+      ],
+      "coverageBoundsPt": [
+        83.8672,
+        23.656164,
+        97.3672,
+        37.156164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 30,
+      "mode": "top",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          103.769544,
+          -8.6e-05
+        ],
+        [
+          183.468762,
+          -8.6e-05
+        ],
+        [
+          79.699231,
+          59.91007
+        ],
+        [
+          1.2e-05,
+          59.91007
+        ]
+      ],
+      "coverageBoundsPt": [
+        83.8672,
+        23.656164,
+        97.3672,
+        37.156164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 30,
+      "mode": "left",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          103.769544,
+          -8.6e-05
+        ],
+        [
+          183.468762,
+          -8.6e-05
+        ],
+        [
+          79.699231,
+          59.91007
+        ],
+        [
+          1.2e-05,
+          59.91007
+        ]
+      ],
+      "coverageBoundsPt": [
+        83.8672,
+        23.656164,
+        97.3672,
+        37.156164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 30,
+      "mode": "diagonal",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          1.2e-05,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          59.94132
+        ],
+        [
+          1.2e-05,
+          59.94132
+        ]
+      ],
+      "coverageBoundsPt": [
+        33.6172,
+        23.656164,
+        47.1172,
+        37.156164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 45,
+      "mode": "none",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          1.2e-05,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          59.94132
+        ],
+        [
+          1.2e-05,
+          59.94132
+        ]
+      ],
+      "coverageBoundsPt": [
+        33.6172,
+        23.656164,
+        47.1172,
+        37.906164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 45,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          59.91015,
+          0.0
+        ],
+        [
+          139.613266,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        62.8672,
+        23.656164,
+        76.3672,
+        37.906164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 45,
+      "mode": "top",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          59.91015,
+          0.0
+        ],
+        [
+          139.613266,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        62.8672,
+        23.656164,
+        76.3672,
+        37.906164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 45,
+      "mode": "left",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          59.91015,
+          0.0
+        ],
+        [
+          139.613266,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        62.8672,
+        23.656164,
+        76.3672,
+        37.906164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 45,
+      "mode": "diagonal",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          1.2e-05,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          59.94132
+        ],
+        [
+          1.2e-05,
+          59.94132
+        ]
+      ],
+      "coverageBoundsPt": [
+        33.6172,
+        23.656164,
+        47.1172,
+        37.906164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 60,
+      "mode": "none",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          1.2e-05,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          59.94132
+        ],
+        [
+          1.2e-05,
+          59.94132
+        ]
+      ],
+      "coverageBoundsPt": [
+        34.3672,
+        23.656164,
+        47.1172,
+        37.906164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 60,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          34.570309,
+          0.0
+        ],
+        [
+          114.269519,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        50.8672,
+        23.656164,
+        63.6172,
+        37.906164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 60,
+      "mode": "top",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          34.570309,
+          0.0
+        ],
+        [
+          114.269519,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        50.8672,
+        23.656164,
+        63.6172,
+        37.906164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 60,
+      "mode": "left",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          34.570309,
+          0.0
+        ],
+        [
+          114.269519,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        50.8672,
+        23.656164,
+        63.6172,
+        37.906164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 60,
+      "mode": "diagonal",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          1.2e-05,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          59.94132
+        ],
+        [
+          1.2e-05,
+          59.94132
+        ]
+      ],
+      "coverageBoundsPt": [
+        34.3672,
+        23.656164,
+        47.1172,
+        37.906164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 135,
+      "mode": "none",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          1.2e-05,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          59.94132
+        ],
+        [
+          1.2e-05,
+          59.94132
+        ]
+      ],
+      "coverageBoundsPt": [
+        30.6172,
+        22.906164,
+        44.8672,
+        36.406164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 135,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          -59.882806,
+          0.0
+        ],
+        [
+          19.816404,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        -0.1328,
+        22.906164,
+        14.1172,
+        36.406164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 135,
+      "mode": "top",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          -59.882806,
+          0.0
+        ],
+        [
+          19.816404,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        -0.1328,
+        22.906164,
+        14.1172,
+        36.406164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 135,
+      "mode": "left",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          -59.882806,
+          0.0
+        ],
+        [
+          19.816404,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        -0.1328,
+        22.906164,
+        14.1172,
+        36.406164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 135,
+      "mode": "diagonal",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          1.2e-05,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          59.94132
+        ],
+        [
+          1.2e-05,
+          59.94132
+        ]
+      ],
+      "coverageBoundsPt": [
+        30.6172,
+        22.906164,
+        44.8672,
+        36.406164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "left",
+      "vertical": "bottom",
+      "rotation": 45,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          59.91015,
+          0.0
+        ],
+        [
+          139.613266,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        18.6172,
+        41.656164,
+        32.1172,
+        55.906164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "right",
+      "vertical": "bottom",
+      "rotation": 45,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          59.91015,
+          0.0
+        ],
+        [
+          139.613266,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        71.8672,
+        41.656164,
+        84.6172,
+        55.906164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "left",
+      "vertical": "bottom",
+      "rotation": 135,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          -59.882806,
+          0.0
+        ],
+        [
+          19.816404,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        -9.1328,
+        40.906164,
+        5.1172,
+        54.406164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "right",
+      "vertical": "bottom",
+      "rotation": 135,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          -59.882806,
+          0.0
+        ],
+        [
+          19.816404,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        44.1172,
+        40.906164,
+        58.3672,
+        54.406164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "top",
+      "rotation": 45,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          59.91015,
+          0.0
+        ],
+        [
+          139.613266,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        80.1172,
+        6.406164,
+        93.6172,
+        20.656164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "bottom",
+      "rotation": 45,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          59.91015,
+          0.0
+        ],
+        [
+          139.613266,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        44.8672,
+        41.656164,
+        58.3672,
+        55.906164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "top",
+      "rotation": 135,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          -59.882806,
+          0.0
+        ],
+        [
+          19.816404,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        -18.1328,
+        5.656164,
+        -3.8828,
+        19.156164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "bottom",
+      "rotation": 135,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          -59.882806,
+          0.0
+        ],
+        [
+          19.816404,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        17.8672,
+        40.906164,
+        31.3672,
+        54.406164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 1,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          3432.285169,
+          -8.6e-05
+        ],
+        [
+          3511.988294,
+          -8.6e-05
+        ],
+        [
+          79.699231,
+          59.91007
+        ],
+        [
+          1.2e-05,
+          59.91007
+        ]
+      ],
+      "coverageBoundsPt": null
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 89,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          1.019531,
+          0.0
+        ],
+        [
+          80.718741,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        35.8672,
+        22.906164,
+        46.3672,
+        36.406164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 90,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          1.2e-05,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          59.94132
+        ],
+        [
+          1.2e-05,
+          59.94132
+        ]
+      ],
+      "coverageBoundsPt": [
+        35.1172,
+        22.906164,
+        45.6172,
+        36.406164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 91,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          -3432.285144,
+          -8.6e-05
+        ],
+        [
+          -3352.585925,
+          -8.6e-05
+        ],
+        [
+          79.699231,
+          59.91007
+        ],
+        [
+          1.2e-05,
+          59.91007
+        ]
+      ],
+      "coverageBoundsPt": null
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 179,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          -1.019531,
+          0.0
+        ],
+        [
+          78.683585,
+          0.0
+        ],
+        [
+          79.699209,
+          59.910149
+        ],
+        [
+          0.0,
+          59.910149
+        ]
+      ],
+      "coverageBoundsPt": [
+        33.6172,
+        22.156164,
+        43.3672,
+        35.656164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 180,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          1.2e-05,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          59.94132
+        ],
+        [
+          1.2e-05,
+          59.94132
+        ]
+      ],
+      "coverageBoundsPt": [
+        33.6172,
+        22.156164,
+        44.1172,
+        35.656164
+      ]
+    },
+    {
+      "kind": "rotation",
+      "text": "Ab",
+      "horizontal": "center",
+      "vertical": "center",
+      "rotation": 255,
+      "mode": "frame",
+      "cellSizePt": [
+        79.699209,
+        59.910149
+      ],
+      "fillPointsPt": [
+        [
+          1.2e-05,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          -8.6e-05
+        ],
+        [
+          79.730481,
+          59.94132
+        ],
+        [
+          1.2e-05,
+          59.94132
+        ]
+      ],
+      "coverageBoundsPt": [
+        35.1172,
+        16.906164,
+        42.6172,
+        43.906164
+      ]
+    }
+  ]
+}

@@ -21,9 +21,13 @@ import borderSpec from "../../docs/evidence/xlsx-border-spec.json" with { type: 
 import type { diagonalMeasurement } from "./fixtures/workbook-diagonals.js";
 import rotationReference from "../../docs/evidence/xlsx-rotation-semantics.json" with { type: "json" };
 import type { numberTextMeasurement, NumberTextCase } from "./fixtures/workbook-number-text.js";
+import type { rotatedCellMeasurement, RotatedCellCase, shapedFillMeasurement } from "./fixtures/workbook-rotated-cell.js";
+import rotatedCellsReference from "../../docs/evidence/xlsx-rotated-cells.json" with { type: "json" };
 
 interface GridHost {
   numberTextMeasurement(cases: readonly NumberTextCase[], locale?: string): ReturnType<typeof numberTextMeasurement>;
+  rotatedCellMeasurement(cases: readonly RotatedCellCase[]): ReturnType<typeof rotatedCellMeasurement>;
+  shapedFillMeasurement(): ReturnType<typeof shapedFillMeasurement>;
   diagonalMeasurement(css: string, classes: readonly string[]): ReturnType<typeof diagonalMeasurement>;
   measureWorkbookFills(css: string, classes: readonly string[]): ReturnType<typeof measureWorkbookFills>;
   assetMeasurement(base64: string, mimeType: string): ReturnType<typeof assetMeasurement>;
@@ -377,6 +381,51 @@ test('rotated and stacked text matches native ink bounds while retaining complet
   }
   await testInfo.attach('rotation-measurements', { body: JSON.stringify({ report, inks }, null, 2), contentType: 'application/json' });
   await testInfo.attach('rotation-gallery', { body: await page.locator('#workbook-text-layout-probe').screenshot(), contentType: 'image/png' });
+});
+
+test('rotated cell borders, fill and text share native bottom-anchored geometry', async ({ page }, testInfo) => {
+  const report = await page.evaluate(cases => window.workbookGridHost.rotatedCellMeasurement(cases), rotatedCellsReference.cases);
+  expect(report).toMatchObject({ unchanged: true, retained: 0 });
+  const inks = [];
+  for (const [index, reference] of rotatedCellsReference.cases.entries()) {
+    const measured = report.measurements[index]!;
+    expect(measured.projections[0]![0]).toBe(0); expect(measured.projections.at(-1)![1]).toBe(2);
+    for (let part = 1; part < measured.projections.length; part++) expect(measured.projections[part]![0]).toBe(measured.projections[part - 1]![1]);
+    for (let point = 0; point < 4; point++) for (let axis = 0; axis < 2; axis++) expect.soft(Math.abs(measured.points[point]![axis]! - reference.fillPointsPt[point]![axis]!), `fill ${index}, ${point}/${axis}`).toBeLessThan(.12);
+    const cell = page.locator('#workbook-rotated-cell-probe > div').nth(index);
+    // Pin every crop to the same device-pixel origin; scrolling a long gallery
+    // otherwise changes glyph antialias phase and screenshot rounding per row.
+    await cell.evaluate(element => { Object.assign(element.style, { position: 'fixed', top: '0', left: '0', zIndex: '1000' }); });
+    const bytes = await cell.screenshot();
+    await cell.evaluate(element => { element.style.position = 'relative'; element.style.removeProperty('top'); element.style.removeProperty('left'); element.style.removeProperty('z-index'); });
+    const ink = await page.evaluate(async base64 => {
+      const image = new Image(); image.src = 'data:image/png;base64,' + base64; await image.decode();
+      const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height; const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
+      const pixels = context.getImageData(0, 0, image.width, image.height).data; let left = Infinity, top = Infinity, right = 0, bottom = 0;
+      for (let y = 1; y < image.height - 1; y++) for (let x = 0; x < image.width; x++) {
+        const offset = (y * image.width + x) * 4, red = pixels[offset]!, green = pixels[offset + 1]!, blue = pixels[offset + 2]!;
+        if (Math.max(red, green, blue) < 224 && !(red > green + 8 && blue > green + 8)) { left = Math.min(left, x); top = Math.min(top, y); right = Math.max(right, x + 1); bottom = Math.max(bottom, y + 1); }
+      }
+      return Number.isFinite(left) ? [left * .75 - 100, top * .75, right * .75 - 100, bottom * .75] : null;
+    }, bytes.toString('base64'));
+    inks.push(ink);
+    if (!reference.coverageBoundsPt) expect(ink, `offscreen rotated text ${index}`).toBe(null);
+    else {
+      expect(ink).not.toBe(null);
+      for (let side = 0; side < 4; side++) expect.soft(Math.abs(ink![side]! - reference.coverageBoundsPt[side]!), `text ${index}, rotation ${reference.rotation}, ${reference.mode}, side ${side}: ${JSON.stringify(ink)}`).toBeLessThanOrEqual(2);
+    }
+  }
+  await testInfo.attach('rotated-cells', { body: JSON.stringify({ report, inks }, null, 2), contentType: 'application/json' });
+});
+
+test('rotated fill fragments retain pattern and gradient phase with bounded visible geometry', async ({ page }) => {
+  const reports = await page.evaluate(() => window.workbookGridHost.shapedFillMeasurement());
+  expect(reports).toHaveLength(8);
+  for (const report of reports) {
+    expect(report.difference, JSON.stringify(report)).toBeLessThanOrEqual(3);
+    expect(report.hugeNodes).toBeLessThan(20); expect(report.extent).toEqual(['54pt', '30pt']);
+    expect(report.failures).toEqual(['ResourceLimitExceeded']);
+  }
 });
 
 test('worksheet wrapping and shrink preserve text offsets and report missing fonts without changing source', async ({ page }) => {

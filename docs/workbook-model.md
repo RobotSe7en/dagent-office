@@ -100,7 +100,7 @@ formatter.dispose();
 
 内部填充绘制已覆盖上述 19 种模式和两类渐变。17 种非纯色图案的周期、方向和覆盖率以[原始标准示意图的独立测量](evidence/xlsx-fill-pattern-spec.json)核对，运行 `python3 scripts/check-xlsx-fill-patterns.py` 可从固定 ECMA 归档重核。图案点距采用 0.75 文档点；这不是 Excel/WPS 实机像素验收。路径渐变使用指定内部矩形到四边的等色轮廓，线性渐变使用文档物理角度。三浏览器检查 27 个原生填充来源、颜色、渐变方向、冻结／滚动裁剪连续性，以及超大逻辑单元格只生成可见片段、节点与色标预算和源不变。色标排序仅发生于派生绘制参数，原始顺序和重复色标保持不变。
 
-[42 项独立原生来源与固定 Calc 记录](evidence/xlsx-cell-appearance.json)由 `python3 scripts/check-xlsx-cell-appearance.py` 重核，`--record` 才更新证据；参考 PNG 写入 `.cache/xlsx-cell-appearance-reference/`。来源已通过官方 XSD／部件审计，SDK 内部读取与包重开保留全部参数。固定 Calc 将图案及渐变改写为纯色，该外部损失单列记录，不能用其纯色画面认定 SDK 的图案／渐变正确。旋转文字与边框／填充的联动、最终整窗组合、编辑与原生输出仍需完成，本项尚不构成高级外观闭环验收。
+[42 项独立原生来源与固定 Calc 记录](evidence/xlsx-cell-appearance.json)由 `python3 scripts/check-xlsx-cell-appearance.py` 重核，`--record` 才更新证据；参考 PNG 写入 `.cache/xlsx-cell-appearance-reference/`。来源已通过官方 XSD／部件审计，SDK 内部读取与包重开保留全部参数。固定 Calc 将图案及渐变改写为纯色，该外部损失单列记录，不能用其纯色画面认定 SDK 的图案／渐变正确。单格旋转与边框／填充的联动已接入下述内部绘制；最终整窗组合、编辑与原生输出仍需完成，本项尚不构成高级外观闭环验收。
 
 对齐缩进的原生读取范围为 0–255，251–255 不被截断或误拒绝，负数、小数及 256 明确失败；依据为 [MS-OI29500 v20260818 §2.1.693](https://officeprotocoldocs-f5hpbjgea6b8gneq.b02.azurefd.net/files/MS-OI29500/%5BMS-OI29500%5D.pdf#page=295)。实际缩进使用单独测量的 Normal 字体空格宽度，不随该单元格的字体改变。
 
@@ -108,7 +108,13 @@ formatter.dispose();
 
 内部文字布局现保留 0～180 的原生角度映射及 255 的逐字符竖排。旋转后的完整包围盒参与对齐、缩小和行高测量，不在每个可见片段重新居中。竖排按完整 Unicode 字素分行，保留跨样式片段的异体字选择符、组合符和代理对；派生换行不占用源偏移，原始换行仍保留其 UTF-16 单位。默认竖排行距复用绘图文字的可缩放字体度量，避免浏览器逐行取整；缺少精确度量时显式返回回退标志。节点预算在字素遍历及拆分过程中检查，失败候选不会进入已接受的显示树。
 
-[13 项固定字体原生旋转记录](evidence/xlsx-rotation-semantics.json)及其独立 XLSX 由 `python3 scripts/check-xlsx-rotation.py` 重核。三浏览器及固定旧 Chromium 核对其中 12 项有效文字的实际像素覆盖边界（灰度阈值 224，每边允许 2 文档点的字体／栅格差异），并另验收完整字素及跨片段的偏移。记录同时保留阈值 64 的深色像素边界；旧 Chromium 的旋转抗锯齿边缘不能仅按深色像素确定文字范围，浏览器截图保留 LCD 子像素覆盖，原生参考排除洋红色定位边框。Calc 在最后一个竖排样例中拆开 UTF-16 单位、输出替代字符；该损失记录保留，但不作为 SDK 的文字预期。文字样例使用无边框单元格，边界来自同尺寸未旋转的第一张表；[Excel 的文字与边框联动](https://support.microsoft.com/en-au/excel/fit-more-text-in-column-headings-in-excel-for-mac)仍需在最终组合器中实现，不能把当前文字旋转称为完整外观验收。
+[13 项固定字体原生旋转记录](evidence/xlsx-rotation-semantics.json)及其独立 XLSX 由 `python3 scripts/check-xlsx-rotation.py` 重核。三浏览器及固定旧 Chromium 核对其中 12 项有效文字的实际像素覆盖边界（灰度阈值 224，每边允许 2 文档点的字体／栅格差异），并另验收完整字素及跨片段的偏移。记录同时保留阈值 64 的深色像素边界；旧 Chromium 的旋转抗锯齿边缘不能仅按深色像素确定文字范围，浏览器截图保留 LCD 子像素覆盖，原生参考排除洋红色定位边框。Calc 在最后一个竖排样例中拆开 UTF-16 单位、输出替代字符；该损失记录保留，但不作为 SDK 的文字预期。文字样例使用无边框单元格，边界来自同尺寸未旋转的第一张表；带边框的联动另按下列样例检查，不能把这些局部检查称为完整外观验收。
+
+带普通外框的旋转单元格现使用共用的底边固定轮廓；只有填充或只有斜线边框时保留矩形。侧边按文字物理角度倾斜，上下边仍水平；0°、±90° 和逐字竖排保持矩形，RTL 不反转物理旋转角度。文字的横向位置跟随所在高度的斜移并保留内容边距，竖向仍裁剪在源行范围内。合并边框使用整块高度而非分片高度，虚线相位按真实斜边长度累计。此行为依据 [Microsoft 的旋转表头说明](https://support.microsoft.com/en-au/excel/fit-more-text-in-column-headings-in-excel-for-mac)及[36 项独立固定 Calc 观察](evidence/xlsx-rotated-cells.json)，`python3 scripts/check-xlsx-rotated-cells.py` 可重核；独立 XLSX 另通过官方 XSD／部件审计和包保存重开。
+
+旋转填充先将可见片段反投影到源单元格，再绘制图案／渐变并施加同一仿射映射，超大逻辑单元格不分配完整轮廓大小的表面。普通填充与裁剪片段的实际像素对照覆盖正负角度、纯色、图案及两类渐变，允许最多 3 个颜色通道单位的栅格差异；节点额度包含临时 SVG。原生固色填充角点误差限为 0.12 文档点，文字覆盖边界误差限为 2 文档点；截图统一像素原点，避免长列表滚动改变抗锯齿相位。接近水平时文字可能位于页面之外，参考保留该事实。原生网格尺寸取边框中心线，不能用略大的填充像素覆盖反推行高，否则 1° 的余切会放大误差。
+
+这些几何与单格显示检查尚未完成旋转溢出单元格的整窗发现、跨格边框交叠优先级及完整合并内容组合；图案／渐变在旋转后的原生视觉仍未实机验证，固定 Calc 的原始图案／渐变扁平化损失不能作为该项视觉参考。完整只读门槛保持未通过。
 
 [94 项独立原生 PDF 记录](evidence/xlsx-alignment-semantics.json)可用 `python3 scripts/check-xlsx-alignment.py` 重核，覆盖固定的三种字体、General 类型、显式方向、缩进及横纵对齐。三浏览器对照字宽和物理位置，并检查换行、缩小、字体替代与失败清理；使用关闭字偶距的原生文字度量，WebKit 同时需要显式关闭 OpenType `kern`。这些局部校准不等同于完整页面视觉验收。Calc 的布尔／错误值右对齐与 [OOXML General 居中规则](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.numberingformat?view=openxml-2.8.1)不同，SDK 遵循后者；Calc 的显式 LTR 希伯来文字和 RTL PDF 边框相对文字位置也单独记录，不能当作 Excel 实测。数值负号和错误值标点按类型显示方向保持顺序，普通文本仍遵循显式阅读方向。日期和默认地区语义没有由此推定。
 

@@ -1,7 +1,7 @@
 import { workbookCellFill } from '../../../packages/render/src/workbook/cell-fill.js';
 import { createWorkbookFillView } from '../../../packages/render/src/workbook/cell-fill-view.js';
 
-async function raster(svg: SVGSVGElement, width: number, height: number): Promise<Uint8ClampedArray> {
+export async function rasterWorkbookFill(svg: SVGSVGElement, width: number, height: number): Promise<Uint8ClampedArray> {
   const clone = svg.cloneNode(true) as SVGSVGElement; clone.setAttribute('width', String(width)); clone.setAttribute('height', String(height));
   clone.style.width = width + 'px'; clone.style.height = height + 'px';
   const image = new Image(); image.src = 'data:image/svg+xml,' + encodeURIComponent(new XMLSerializer().serializeToString(clone)); await image.decode();
@@ -15,9 +15,9 @@ export async function measureWorkbookFills(css: string, classes: readonly string
     for (const [index, cssClass] of classes.entries()) {
       const source = document.createElement('span'); source.className = cssClass; root.append(source); const before = source.outerHTML;
       const paint = workbookCellFill(document, getComputedStyle(source)), view = createWorkbookFillView(document, paint, 72, 54, 'paint-' + index);
-      const pixels = await raster(view.element, 96, 72), at = (x: number, y: number) => [...pixels.slice((y * 96 + x) * 4, (y * 96 + x) * 4 + 4)];
+      const pixels = await rasterWorkbookFill(view.element, 96, 72), at = (x: number, y: number) => [...pixels.slice((y * 96 + x) * 4, (y * 96 + x) * 4 + 4)];
       const fragment = createWorkbookFillView(document, paint, 72, 54, 'fragment-' + index, { xPt: 15.75, yPt: 12.75, widthPt: 24, heightPt: 18 });
-      const clipped = await raster(fragment.element, 32, 24); let difference = 0;
+      const clipped = await rasterWorkbookFill(fragment.element, 32, 24); let difference = 0;
       for (let y = 0; y < 24; y++) for (let x = 0; x < 32; x++) for (let c = 0; c < 4; c++) difference = Math.max(difference, Math.abs(clipped[(y * 32 + x) * 4 + c]! - pixels[((y + 17) * 96 + x + 21) * 4 + c]!));
       const rows = Array.from({ length: 32 }, (_, y) => Array.from({ length: 32 }, (_, x) => at(x, y).slice(0, 3).join(',') === '32,64,128' ? '1' : '0').join(''));
       const samples = [[12, 9], [48, 9], [84, 9], [12, 36], [48, 36], [84, 36], [12, 63], [48, 63], [84, 63]].map(([x, y]) => ({ x: x!, y: y!, color: at(x!, y!) }));
