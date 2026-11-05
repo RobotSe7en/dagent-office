@@ -1,6 +1,6 @@
 import { DocumentError } from "@dagent-office/core";
 import type { WorkbookRange } from "@dagent-office/core";
-import type { AxisDimensions } from "./dimensions.js";
+import type { AxisCell, AxisDimensions } from "./dimensions.js";
 import type { WorkbookCellBorders } from "./cell-borders.js";
 import type { WorkbookBorderPaint } from "./border-style.js";
 import type { WorkbookBorderEdge } from "./border-view.js";
@@ -20,7 +20,8 @@ type Owner = WorkbookBorderPaint & { readonly range: Readonly<WorkbookRange> };
  * or a merged interior; use the appearance query's auxiliary source records. */
 export function projectWorkbookBorders(dimensions: { readonly rows: AxisDimensions; readonly columns: AxisDimensions }, layout: WorkbookViewportLayout, merges: WorkbookMergeIndex,
   read: (row: number, column: number) => WorkbookCellBorders | undefined, rightToLeft: boolean, maxEdges = 20_000,
-  readRotation?: (row: number, column: number) => number): readonly WorkbookPaneBorders[] {
+  readRotation?: (row: number, column: number) => number,
+  sourceColumns?: ReadonlyMap<WorkbookPane["kind"], readonly AxisCell[]>): readonly WorkbookPaneBorders[] {
   if (!Number.isSafeInteger(maxEdges) || maxEdges < 1) throw new DocumentError("InvalidOperation", "Worksheet border projection requires a positive edge budget.");
   let count = 0;
   const cache = new Map<number, WorkbookCellBorders>();
@@ -45,6 +46,7 @@ export function projectWorkbookBorders(dimensions: { readonly rows: AxisDimensio
     return border ? { ...border, range } : undefined;
   };
   const panes = layout.panes.map(pane => {
+    const columns = sourceColumns?.get(pane.kind) ?? pane.columns;
     const edges: WorkbookBorderEdge[] = [], seenRows = new Set<number>(), seenColumns = new Set<number>();
     const x = (position: number): number => {
       const logical = position - pane.sourceLeftPt + pane.inlineStartPt; return rightToLeft ? layout.widthPt - logical : logical;
@@ -72,7 +74,7 @@ export function projectWorkbookBorders(dimensions: { readonly rows: AxisDimensio
       ] as const) {
         const key = second ?? dimensions.rows.count;
         if (seenRows.has(key)) continue; seenRows.add(key);
-        for (const column of pane.columns) {
+        for (const column of columns) {
           const merge = first === undefined ? undefined : merges.at(first, column.index);
           if (merge && second !== undefined && merge === merges.at(second, column.index)) continue;
           const selected = selectWorkbookBorder(owner(first, column.index, "bottom"), owner(second, column.index, "top"), "row", rightToLeft);
@@ -81,7 +83,7 @@ export function projectWorkbookBorders(dimensions: { readonly rows: AxisDimensio
         }
       }
     }
-    for (const column of pane.columns) {
+    for (const column of columns) {
       for (const [first, second, boundary] of [
         [dimensions.columns.neighbor(column.index, -1), column.index, column.startPt],
         [column.index, dimensions.columns.neighbor(column.index, 1), column.startPt + column.sizePt],

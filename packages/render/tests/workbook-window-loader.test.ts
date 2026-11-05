@@ -34,6 +34,30 @@ function queued(input: WorkbookWindowSource) {
   return { provider, requests, complete };
 }
 describe('bounded immutable workbook viewport reads', () => {
+  it('discovers offscreen anchors through actual row chunks in separately bounded endpoint batches', async () => {
+    const input = source(), requests: WorkbookWindowRequest[] = [], loader = new WorkbookWindowLoader({ snapshot: input.snapshot,
+      read(request, signal) { requests.push(request); return input.read(request, signal); } }, { maxSourceCells: 100, maxRowReadCells: 1000 }, true);
+    expect(await loader.load('sheet-1', dimensions, { ...viewport, scrollLeftPt: 10_000, scrollTopPt: 0 })).toBe(true);
+    const frame = loader.frame!;
+    expect(frame.projections.every(cell => cell.column > 400)).toBe(true); expect(frame.getCell(0, 0)?.text).toBe('首格😀');
+    expect(frame.completeRows).toEqual([0, 1, 2, 3, 4, 5, 6, 7]); expect(frame.storedCellCount).toBe(1);
+    expect(requests.length).toBeGreaterThan(1);
+    expect(requests.every(request => request.windows.reduce((count, window) => count + window.rows * window.columns, 0) <= 100)).toBe(true);
+    expect(requests.reduce((sum, request) => sum + request.windows.reduce((count, window) => count + window.rows * window.columns, 0), 0)).toBeGreaterThan(frame.sourceCoordinates.length);
+    expect(frame.sourceCoordinates.length).toBeLessThanOrEqual(100); expect(Object.isFrozen(frame.completeRows)).toBe(true);
+  });
+  it('checks row-discovery slots before reading and rejects responses that belong to another batch', async () => {
+    const input = source(), requests: WorkbookWindowRequest[] = [], bounded = new WorkbookWindowLoader({ snapshot: input.snapshot,
+      read(request, signal) { requests.push(request); return input.read(request, signal); } }, { maxSourceCells: 100, maxRowReadCells: 10 }, true);
+    const small = { widthPt: 20, heightPt: 10, scrollLeftPt: 10_000, scrollTopPt: 6000 };
+    expect(await bounded.load('sheet-1', dimensions, small)).toBe(true); const accepted = bounded.frame, count = requests.length;
+    await expect(bounded.load('sheet-1', dimensions, { ...small, scrollTopPt: 0 })).rejects.toMatchObject({ code: 'ResourceLimitExceeded' });
+    expect(requests).toHaveLength(count); expect(bounded.frame).toBe(accepted);
+    const later = (await input.read({ documentId: 'windows', revision: 0, windows: [{ sheetId: 'sheet-1', row: 9, column: 9, rows: 1, columns: 1 }], maxCells: 1, maxCodeUnits: 8192 }, new AbortController().signal)).cells[0]!;
+    const mixed = new WorkbookWindowLoader({ snapshot: input.snapshot, async read(request, signal) { const response = await input.read(request, signal); return { ...response, cells: [...response.cells, later] }; } }, { maxSourceCells: 100 }, true);
+    await expect(mixed.load('sheet-1', dimensions, { ...small, widthPt: 100, heightPt: 100, scrollTopPt: 0 })).rejects.toMatchObject({ code: 'InvalidDocument' });
+    expect(mixed.frame).toBeUndefined();
+  });
   it('keeps one content anchor for four merged pane projections and also reads covered border sources', async () => {
     const input = source(true), queries: WorkbookWindowRequest[] = [];
     const loader = new WorkbookWindowLoader({ snapshot: input.snapshot, read(request, signal) { queries.push(request); return input.read(request, signal); } }, { maxCells: 40 });

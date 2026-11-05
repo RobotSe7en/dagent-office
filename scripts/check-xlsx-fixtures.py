@@ -64,6 +64,13 @@ with check.schemas() as standards:
             assert ("1904" if wb.find("{" + S + "}workbookPr").get("date1904") == "1" else "1900") == case["dateSystem"]
         print(case["file"], len(cells), "cells;", formula_count, "formulas; native structure passed")
 
+    # Focused independent layout/style/formula probes are native positive
+    # sources too. Audit them with the same unmodified official schemas and OPC
+    # relationship checks instead of limiting CI to the example catalogue.
+    for path in sorted((ROOT / "packages/office/tests/fixtures").glob("*.xlsx")):
+        roots, relations = check.audit(path, standards)
+        print(path.name, len(roots), "XML parts; focused native structure passed")
+
 for case in expected["negativeCases"]:
     path = SAMPLES / case["file"]
     if path.stem == "truncated-zip":

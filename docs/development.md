@@ -71,6 +71,8 @@ DAGENT_OFFICE_BROWSER_CHANNEL=chrome pnpm test:browser
 
 第三轮工作簿的当前内部检查使用 `node scripts/playwright.mjs test workbook-storage.spec.ts workbook-grid.spec.ts workbook-drawing.spec.ts`。CI 在 Chromium、Firefox、WebKit 和固定旧 Chromium 上执行，现代与旧引擎的结果分别保存在 `.cache/workbook-browser/modern`、`.cache/workbook-browser/legacy`，并上传 `workbook-reading-checks`。其中一万行 Worker 用例保留 20 万实际单元格、2 万公式、取消后旧窗口及传输大小报告；它仍是存储原型检查，不代表完整 XLSX 首屏或固定 4 vCPU／8 GiB 性能验收已经通过。
 
+浏览器 CI 任务包含 Word／PPT、工作簿的三引擎与旧 Chromium，以及固定原生页面比较，任务时限为 45 分钟。CI #70 的 Word／PPT 438 项已耗时 11.2 分钟，随后工作簿 276 项及后续比较尚未完成时触及原 20 分钟上限；该取消不是产品性能验收结果。产品的 4 vCPU／8 GiB、首屏 30 秒、交互 p95 100 ms 和内存目标仍按第三轮单独验收。
+
 ## 本地打包
 
 ```bash

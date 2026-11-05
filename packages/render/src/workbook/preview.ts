@@ -38,7 +38,7 @@ function reportOf(window: WorkbookRenderedWindow): WorkbookRenderReport {
   for (const cell of window.rules?.cells ?? []) if (seen.has(cell.row * 16_384 + cell.column) && window.frame.getCell(cell.row, cell.column)?.formula)
     ruleFormulaValues[cell.current.kind === "value" ? "current" : "unavailable"]++;
   return Object.freeze({ kind: "workbook", layout: "grid", documentId, revision, sheetId, viewport: viewportOf(window),
-    maxScrollLeftPt: layout.maxScrollLeftPt, maxScrollTopPt: layout.maxScrollTopPt, visibleCellCount: seen.size, storedCellCount,
+    maxScrollLeftPt: layout.maxScrollLeftPt, maxScrollTopPt: layout.maxScrollTopPt, visibleCellCount: seen.size, cellFragmentCount: window.cells.length, storedCellCount,
     objectFragmentCount: window.objects.length, formulaCaches: Object.freeze(counts), ruleFormulaValues: Object.freeze(ruleFormulaValues), diagnostics: window.diagnostics, fonts: window.fonts,
     usedFallbackLineMetrics: window.usedFallbackLineMetrics });
 }

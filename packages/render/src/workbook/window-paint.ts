@@ -1,6 +1,6 @@
 import { DocumentError } from "@dagent-office/core";
 import type { WorkbookWindowFrame } from "./window-loader.js";
-import type { WorkbookGridCell } from "./projection.js";
+import type { WorkbookGridCell, WorkbookRect } from "./projection.js";
 import { intersectRect, paneRect } from "./projection.js";
 import type { WorkbookCellFill } from "./cell-fill.js";
 import type { WorkbookCellShape } from "./cell-shape.js";
@@ -13,6 +13,8 @@ export interface WorkbookPaintedCell {
   readonly shape: WorkbookCellShape;
   readonly fill: WorkbookCellFill;
   readonly text?: WorkbookTextLayout;
+  readonly textRect?: WorkbookRect;
+  readonly textClip?: WorkbookRect;
 }
 
 /** Compose detached layers, retaining full-cell text geometry but allocating
@@ -20,7 +22,7 @@ export interface WorkbookPaintedCell {
  * pane; the row band, frozen boundaries and viewport still clip its display.
  * The caller publishes this whole result only after all other layers succeed. */
 export function paintWorkbookWindow(document: Document, frame: WorkbookWindowFrame, cells: readonly WorkbookPaintedCell[], rightToLeft: boolean,
-  borders: readonly SVGSVGElement[], maxNodes = 50_000, gridLines: readonly SVGSVGElement[] = []): HTMLElement {
+  borders: readonly SVGSVGElement[], maxNodes = 50_000, gridLines: readonly SVGSVGElement[] = [], overflowCells: readonly WorkbookPaintedCell[] = []): HTMLElement {
   if (!Number.isSafeInteger(maxNodes) || maxNodes < 1 || cells.length !== frame.projections.length
     || cells.some((cell, index) => cell.projection !== frame.projections[index])) throw new DocumentError("InvalidOperation", "Workbook paint requires one prepared cell per projection and a positive node budget.");
   const root = markViewNode(document.createElement("div")), fills = document.createElement("div"), rows = new Map<number, HTMLElement>(), accessible = new Set<number>();
@@ -61,14 +63,38 @@ export function paintWorkbookWindow(document: Document, frame: WorkbookWindowFra
       }
       // The text's own clip enforces its row band. Sideways text may extend
       // beyond the parallelogram because glyphs can exceed the cell width.
-      const textBounds = shape.topOffsetPt ? { x: pane.x, y: bounds.y, width: pane.width, height: bounds.height }
+      const textBounds = cell.textClip ? { ...cell.textClip, x: rightToLeft ? frame.layout.widthPt - cell.textClip.x - cell.textClip.width : cell.textClip.x }
+        : shape.topOffsetPt ? { x: pane.x, y: bounds.y, width: pane.width, height: bounds.height }
         : { ...projection.clip, x: rightToLeft ? frame.layout.widthPt - projection.clip.x - projection.clip.width : projection.clip.x };
       clip.style.cssText = `position:absolute;overflow:hidden;left:${textBounds.x}pt;top:${textBounds.y}pt;width:${textBounds.width}pt;height:${textBounds.height}pt`;
-      body.style.cssText = `position:absolute;left:${x - textBounds.x}pt;top:${rect.y - textBounds.y}pt;width:${rect.width}pt;height:${rect.height}pt`;
+      const contentRect = cell.textRect ?? rect, contentX = rightToLeft ? frame.layout.widthPt - contentRect.x - contentRect.width : contentRect.x;
+      body.style.cssText = `position:absolute;left:${contentX - textBounds.x}pt;top:${contentRect.y - textBounds.y}pt;width:${contentRect.width}pt;height:${contentRect.height}pt`;
       if (text) body.append(text.element);
       clip.append(body); row.append(clip);
     }
     for (const [, row] of [...rows].sort((a, b) => a[0] - b[0])) root.append(row);
+    for (const cell of overflowCells) {
+      const pane = panes.get(cell.projection.pane)!, rect = cell.projection.rect;
+      const x = rightToLeft ? frame.layout.widthPt - rect.x - rect.width : rect.x;
+      if (cell.shape.topOffsetPt) {
+        const bounds = intersectRect({ x: x + Math.min(0, cell.shape.topOffsetPt), y: rect.y, width: rect.width + Math.abs(cell.shape.topOffsetPt), height: rect.height }, pane);
+        if (bounds) {
+          const fill = createWorkbookShapedFillView(document, cell.fill, cell.shape, `workbook-fill-${++id}`, {
+            xPt: bounds.x - x, yPt: bounds.y - rect.y, widthPt: bounds.width, heightPt: bounds.height,
+          }, Math.max(1, maxNodes - nodes));
+          account(fill.nodes); fill.element.dataset.officeOverflowFill = "true";
+          fill.element.style.left = bounds.x + "pt"; fill.element.style.top = bounds.y + "pt"; fills.append(fill.element);
+        }
+      }
+      if (!cell.text || !cell.textClip || !cell.textRect) continue;
+      account(3 + cell.text.text.nodes);
+      const clip = document.createElement("div"), body = document.createElement("div"), bounds = cell.textClip, contentRect = cell.textRect;
+      const clipX = rightToLeft ? frame.layout.widthPt - bounds.x - bounds.width : bounds.x, bodyX = rightToLeft ? frame.layout.widthPt - contentRect.x - contentRect.width : contentRect.x;
+      clip.dataset.officeView = "workbook-text-overflow"; clip.dataset.row = String(cell.projection.row); clip.dataset.column = String(cell.projection.column); clip.dataset.pane = cell.projection.pane;
+      clip.style.cssText = `position:absolute;overflow:hidden;left:${clipX}pt;top:${bounds.y}pt;width:${bounds.width}pt;height:${bounds.height}pt`;
+      body.style.cssText = `position:absolute;left:${bodyX - clipX}pt;top:${contentRect.y - bounds.y}pt;width:${contentRect.width}pt;height:${contentRect.height}pt`;
+      body.append(cell.text.element); clip.append(body); root.append(clip);
+    }
     for (const border of borders) { account(1 + border.querySelectorAll("*").length); root.append(border); }
     return root;
   } catch (error) { root.replaceChildren(); throw error; }

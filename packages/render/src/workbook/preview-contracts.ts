@@ -40,6 +40,8 @@ export interface WorkbookRenderReport {
   readonly maxScrollLeftPt: number;
   readonly maxScrollTopPt: number;
   readonly visibleCellCount: number;
+  /** Includes repeated frozen-pane and offscreen source fragments. */
+  readonly cellFragmentCount: number;
   readonly storedCellCount: number;
   readonly objectFragmentCount: number;
   readonly formulaCaches: Readonly<Record<"imported" | "valid" | "stale" | "unavailable", number>>;

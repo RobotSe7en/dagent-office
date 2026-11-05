@@ -22,6 +22,7 @@ import type { WorkbookWindowSource } from "./window-source.js";
 import { checkedWorkbookRules } from "./rule-response.js";
 import { workbookRuleDiagnostics } from "./rule-source.js";
 import type { WorkbookRuleSource, WorkbookRuleDiagnostic } from "./rule-source.js";
+import { maximumWorkbookSkew } from "./skew-sources.js";
 
 export interface WorkbookWindowProviders {
   readonly cells: WorkbookWindowSource;
@@ -69,6 +70,7 @@ export class WorkbookWindowController {
   private readonly options: WorkbookWindowControllerOptions;
   private readonly maxNodes: number;
   private readonly ruleLimits: WorkbookRuleReadLimits;
+  private readonly skewCoefficient: number;
   private readonly sheets = new Map<string, { readonly normal: WorkbookColumnFont; readonly dimensions: ReturnType<typeof worksheetDimensions> }>();
   private pending: { cancel(): void } | undefined;
   private active: { readonly state: WorkbookRenderedWindow; readonly drawings: WorkbookDrawingLayout; readonly decoration?: WorkbookWindowDecoration } | undefined;
@@ -84,12 +86,13 @@ export class WorkbookWindowController {
       || !surface.source.isConnected || !surface.view.isConnected || surface.source.ownerDocument !== surface.document || surface.view.ownerDocument !== surface.document
       || surface.view.childNodes.length) throw new DocumentError("InvalidOperation", "A workbook controller requires its own empty connected surface and supported node budget.");
     this.snapshot = providers.cells.snapshot;
+    this.skewCoefficient = maximumWorkbookSkew(surface.document);
     checkWindowIdentity(providers.assets.snapshot.manifest, this.snapshot); checkWindowIdentity(providers.charts.snapshot.manifest, this.snapshot);
     if (providers.rules) checkWindowIdentity(providers.rules.snapshot.manifest, this.snapshot);
     this.options = Object.freeze({ ...input, read: Object.freeze({ ...input.read }), cells: Object.freeze({ ...input.cells }), annotations: Object.freeze({ ...input.annotations }),
       drawings: Object.freeze({ ...input.drawings, ...(input.drawings?.assets ? { assets: Object.freeze({ ...input.drawings.assets }) } : {}) }) });
     // Validate read limits before retaining auxiliary content or starting work.
-    const probe = new WorkbookWindowLoader(providers.cells, this.options.read); probe.dispose();
+    const probe = new WorkbookWindowLoader(providers.cells, this.options.read, true); probe.dispose();
     this.content = new WorkbookContentSources(surface.document, this.snapshot);
   }
 
@@ -109,7 +112,7 @@ export class WorkbookWindowController {
     const sheet = this.snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === sheetId);
     if (!sheet) throw new DocumentError("InvalidOperation", "The requested worksheet is not part of this workbook.");
     this.pending?.cancel();
-    const abort = new AbortController(), loader = new WorkbookWindowLoader(this.providers.cells, this.options.read);
+    const abort = new AbortController(), loader = new WorkbookWindowLoader(this.providers.cells, this.options.read, true, this.skewCoefficient);
     let cancel!: () => void;
     const cancelled = new Promise<false>(resolve => { cancel = () => { abort.abort(); loader.dispose(); resolve(false); }; });
     const request = { cancel }; this.pending = request;
@@ -136,7 +139,8 @@ export class WorkbookWindowController {
       }
       const annotations = projectWorkbookAnnotations(this.snapshot, frame, dimensions, this.options.annotations);
       const cells = layoutWorkbookWindow(this.surface, this.snapshot, frame, dimensions, this.formatter,
-        { ...this.options.cells, normalSpaceWidthPx: normal.spaceWidthPx, maxNodes: Math.min(this.maxNodes, this.options.cells?.maxNodes ?? this.maxNodes) }, rules);
+        { ...this.options.cells, normalSpaceWidthPx: normal.spaceWidthPx, maxNodes: Math.min(this.maxNodes, this.options.cells?.maxNodes ?? this.maxNodes),
+          maxCellFragments: Math.min(this.options.read?.maxCells ?? 5000, this.options.cells?.maxCellFragments ?? this.options.read?.maxCells ?? 5000) }, rules);
       const walker = this.surface.document.createTreeWalker(cells.element, 0xffff_ffff); let nodes = 1;
       while (walker.nextNode()) if (++nodes >= this.maxNodes) throw new DocumentError("ResourceLimitExceeded", "The combined workbook window exceeds its node budget.");
       if (nodes >= this.maxNodes) throw new DocumentError("ResourceLimitExceeded", "The combined workbook window has no remaining object-layer budget.");

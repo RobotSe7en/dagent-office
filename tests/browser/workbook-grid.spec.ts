@@ -789,3 +789,86 @@ test('native whole-value fills match independent fixed-font PDF words in both wo
   }
   expect(report.unchanged).toBe(true);
 });
+
+test('native text spills through true blanks and styled blanks while values, formulas and merges block it', async ({ page }) => {
+  const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-cell-flow.xlsx'), { documentId: 'native-text-overflow' });
+  const report = await page.evaluate(entries => window.workbookGridHost.windowLayoutMeasurement(entries,
+    [1, 2, 3, 4, 5].map(index => ({ sheetId: 'sheet-' + index, viewport: { widthPt: 280, heightPt: 120, scrollLeftPt: 0, scrollTopPt: 0 } }))), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  for (const [index, result] of report.results.entries()) {
+    const cell = result.cells.find(cell => cell.row === 1 && cell.column === 1)!;
+    expect(cell.text).toBe('Alpha beta gamma delta epsilon'); expect(cell.offsets.map(item => item[2]).join('')).toBe(cell.text);
+    if ([0, 2].includes(index)) expect(cell.clipWidthPt).toBeGreaterThan(cell.rect.width * 3);
+    else expect(cell.clipWidthPt).toBeCloseTo(cell.rect.width, 1);
+  }
+  expect(report.unchanged).toBe(true);
+});
+
+test('offscreen source anchors remain visible only when their bounded ink reaches an unblocked pane', async ({ page }) => {
+  const files = new Map(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-cell-flow.xlsx'), { documentId: 'offscreen-overflow' }));
+  const encoded = [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]);
+  const report = await page.evaluate(entries => window.workbookGridHost.windowLayoutMeasurement(entries,
+    [1, 2, 3, 4, 5, 6].map(index => ({ sheetId: 'sheet-' + index, viewport: { widthPt: 120, heightPt: 110, scrollLeftPt: index === 6 ? 110 : 160, scrollTopPt: 0 } }))), encoded);
+  for (const [index, result] of report.results.entries()) {
+    const cell = result.cells.find(cell => cell.row === 1 && cell.column === 1);
+    if ([0, 2, 5].includes(index)) {
+      expect(cell, result.sheetId).toBeDefined(); expect(cell!.rect.x + cell!.rect.width).toBeLessThan(0); expect(result.overflowCount).toBeGreaterThan(0);
+      expect(cell!.clipWidthPt).toBeLessThanOrEqual(120); expect(cell!.offsets.map(part => part[2]).join('')).toBe(index === 5 ? 'Ab' : 'Alpha beta gamma delta epsilon');
+    } else expect(cell).toBeUndefined();
+    expect(result.completeRows).toContain(1); expect(result.retainedSources).toBe(0);
+  }
+  const encoder = new TextEncoder(); files.set('styles.css', encoder.encode(new TextDecoder().decode(files.get('styles.css')!) + 'tr[data-row="1"] td[data-column="1"]{--office-cell-text-rotation:135}'));
+  const rotated = await page.evaluate(entries => window.workbookGridHost.windowLayoutMeasurement(entries,
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 120, heightPt: 110, scrollLeftPt: 140, scrollTopPt: 0 } }]), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  expect(rotated.results[0]!.overflowCount).toBeGreaterThan(0); expect(rotated.results[0]!.cells.find(cell => cell.row === 1 && cell.column === 1)).toBeDefined();
+  expect(rotated.unchanged).toBe(true); expect(report.unchanged).toBe(true);
+});
+
+for (const rtl of [false, true]) test(`native center across selection preserves cell geometry and source in ${rtl ? 'RTL' : 'LTR'}`, async ({ page }) => {
+  const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-cell-flow.xlsx'), { documentId: 'continuous-span' });
+  const report = await page.evaluate(({ entries, rtl }) => window.workbookGridHost.windowLayoutMeasurement(entries,
+    [{ sheetId: 'sheet-6', viewport: { widthPt: 300, heightPt: 120, scrollLeftPt: 0, scrollTopPt: 0 } }], rtl), { entries: [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]), rtl });
+  const cell = report.results[0]!.cells.find(cell => cell.row === 1 && cell.column === 1)!;
+  expect(cell.shape.widthPt).toBeCloseTo(cell.rect.width * 3, 1); expect(cell.clipWidthPt).toBeCloseTo(cell.shape.widthPt, 1);
+  expect(cell.text).toBe('Ab'); expect(cell.offsets).toEqual([[0, 2, 'Ab']]);
+  expect(report.unchanged).toBe(true);
+});
+
+test('RTL overflow follows physical text direction even when the offscreen source is in a later logical column', async ({ page }) => {
+  const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-cell-flow.xlsx'), { documentId: 'rtl-offscreen' });
+  const report = await page.evaluate(entries => window.workbookGridHost.windowLayoutMeasurement(entries,
+    [25, 26, 27, 28, 29].map(index => ({ sheetId: 'sheet-' + index, viewport: { widthPt: 30, heightPt: 110, scrollLeftPt: 0, scrollTopPt: 0 } })), true), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  for (const result of report.results) {
+    const cell = result.cells.find(cell => cell.row === 1 && cell.column === 1)!;
+    expect(cell, result.sheetId).toBeDefined(); expect(cell.rect.x).toBeGreaterThan(30); expect(cell.clipWidthPt).toBeLessThanOrEqual(30);
+    expect(result.overflowCount).toBeGreaterThan(0); expect(cell.offsets.map(part => part[2]).join('')).toBe('Alpha beta gamma delta epsilon');
+  }
+  expect(report.unchanged).toBe(true);
+});
+
+test('offscreen implicit rotated cells keep their skewed fills and shared borders within the pane budget', async ({ page }) => {
+  const files = new Map(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-cell-flow.xlsx'), { documentId: 'implicit-skew' }));
+  const encoder = new TextEncoder(), decoder = new TextDecoder(), metadata = JSON.parse(decoder.decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata;
+  metadata.workbook.sheets[0]!.columnDimensions = [{ from: 0, to: 0, unit: 'characters', cssClass: 'blank-skew' }];
+  files.set('metadata.json', encoder.encode(JSON.stringify(metadata)));
+  files.set('styles.css', encoder.encode(decoder.decode(files.get('styles.css')!) + '.blank-skew{--office-cell-text-rotation:15;--office-cell-fill-kind:solid;--office-cell-fill-color:#123456;'
+    + ['left', 'right', 'top', 'bottom'].map(side => `--office-cell-border-${side}-kind:thin;--office-cell-border-${side}-color:#ff00ff;`).join('') + '}'));
+  const model = openDocument(files, { kind: 'workbook' }); expect(model.getCell('sheet-1', 1, 0)).toBeUndefined();
+  const report = await page.evaluate(entries => window.workbookGridHost.windowLayoutMeasurement(entries,
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 120, heightPt: 110, scrollLeftPt: 160, scrollTopPt: 0 } }]), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  const result = report.results[0]!;
+  expect(result.overflowFills).toEqual(expect.arrayContaining([expect.objectContaining({ color: 'rgba(18,52,86,1)' })]));
+  expect(result.overflowFills.every(fill => fill.widthPt <= 120)).toBe(true); expect(result.borderColors).toContain('rgba(255,0,255,1)');
+  expect(result.accessible).toBeLessThan(100); expect(result.retainedSources).toBe(0); expect(report.unchanged).toBe(true);
+});
+
+test('the combined cell-fragment budget counts offscreen origins in addition to the visible grid', async ({ page }) => {
+  const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-cell-flow.xlsx'), { documentId: 'fragment-budget' });
+  const entries = [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]);
+  const result = await page.evaluate(async entries => {
+    const view = { sheetId: 'sheet-25', viewport: { widthPt: 30, heightPt: 60, scrollLeftPt: 0, scrollTopPt: 15 }, maxCellFragments: 1 };
+    let error = ''; try { await window.workbookGridHost.windowLayoutMeasurement(entries, [view], true); error = 'accepted'; } catch (failure) { error = (failure as { code: string }).code; }
+    const accepted = await window.workbookGridHost.windowLayoutMeasurement(entries, [{ ...view, maxCellFragments: 2 }], true);
+    return { error, count: accepted.results[0]!.accessible, overflow: accepted.results[0]!.overflowCount, unchanged: accepted.unchanged };
+  }, entries);
+  expect(result).toEqual({ error: 'ResourceLimitExceeded', count: 1, overflow: 1, unchanged: true });
+});

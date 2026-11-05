@@ -10,7 +10,8 @@ import type { WorkbookViewportLayout } from "./viewport.js";
  * entries and its corners; hidden runs and the merge interior are not expanded.
  * This supplies source facts without deciding merge/CF border precedence. */
 export function workbookAppearanceCoordinates(dimensions: { readonly rows: AxisDimensions; readonly columns: AxisDimensions }, layout: WorkbookViewportLayout,
-  projections: readonly WorkbookGridCell[], merges: WorkbookMergeIndex, maxCells: number): readonly Readonly<WorkbookCoordinate>[] {
+  projections: readonly WorkbookGridCell[], merges: WorkbookMergeIndex, maxCells: number,
+  extraColumns?: ReadonlyMap<WorkbookGridCell["pane"], readonly AxisCell[]>): readonly Readonly<WorkbookCoordinate>[] {
   if (!Number.isSafeInteger(maxCells) || maxCells <= 0) throw new DocumentError("InvalidOperation", "Worksheet appearance requires a positive source-cell budget.");
   const coordinates = new Map<number, Readonly<WorkbookCoordinate>>(), panes = new Map(layout.panes.map(pane => [pane.kind, pane]));
   const add = (row: number, column: number): void => {
@@ -26,22 +27,33 @@ export function workbookAppearanceCoordinates(dimensions: { readonly rows: AxisD
     if (row === undefined || column === undefined) return;
     add(row, column); const merge = merges.at(row, column); if (merge) corners(merge);
   };
-  for (const projection of projections) {
-    const range = projection.range, pane = panes.get(projection.pane);
-    if (!pane) throw new DocumentError("InvalidOperation", "A worksheet appearance projection has no matching pane.");
+  const collect = (range: WorkbookGridCell["range"], pane: WorkbookViewportLayout["panes"][number]): void => {
     const beforeRow = dimensions.rows.neighbor(range.from.row, -1), afterRow = dimensions.rows.neighbor(range.to.row, 1);
     const beforeColumn = dimensions.columns.neighbor(range.from.column, -1), afterColumn = dimensions.columns.neighbor(range.to.column, 1);
     if (range.from.row === range.to.row && range.from.column === range.to.column) {
-      add(projection.row, projection.column);
-      neighbor(beforeRow, projection.column); neighbor(afterRow, projection.column); neighbor(projection.row, beforeColumn); neighbor(projection.row, afterColumn);
-      continue;
+      add(range.from.row, range.from.column);
+      neighbor(beforeRow, range.from.column); neighbor(afterRow, range.from.column); neighbor(range.from.row, beforeColumn); neighbor(range.from.row, afterColumn);
+      return;
     }
     corners(range);
-    for (const column of within(pane.columns, range.from.column, range.to.column)) {
+    for (const column of within(extraColumns?.get(pane.kind) ?? pane.columns, range.from.column, range.to.column)) {
       add(range.from.row, column); add(range.to.row, column); neighbor(beforeRow, column); neighbor(afterRow, column);
     }
     for (const row of within(pane.rows, range.from.row, range.to.row)) {
       add(row, range.from.column); add(row, range.to.column); neighbor(row, beforeColumn); neighbor(row, afterColumn);
+    }
+  };
+  for (const projection of projections) {
+    const pane = panes.get(projection.pane);
+    if (!pane) throw new DocumentError("InvalidOperation", "A worksheet appearance projection has no matching pane.");
+    collect(projection.range, pane);
+  }
+  if (extraColumns) for (const pane of layout.panes) {
+    const seen = new Set<WorkbookGridCell["range"]>();
+    for (const row of pane.rows) for (const column of extraColumns.get(pane.kind) ?? []) {
+      const merge = merges.at(row.index, column.index); if (merge && seen.has(merge)) continue;
+      if (merge) seen.add(merge);
+      collect(merge ?? { from: { row: row.index, column: column.index }, to: { row: row.index, column: column.index } }, pane);
     }
   }
   return Object.freeze([...coordinates.values()].sort((a, b) => a.row - b.row || a.column - b.column));

@@ -32,6 +32,8 @@ export interface WorkbookTextLayout {
   readonly scale: number;
   /** Full-cell outline shared by fill/border composition. */
   readonly shape: WorkbookCellShape;
+  /** Unclipped physical bounds relative to the complete source cell. */
+  readonly ink: { readonly xPt: number; readonly yPt: number; readonly widthPt: number; readonly heightPt: number };
 }
 export interface WorkbookTextLayouts {
   readonly cells: readonly WorkbookTextLayout[];
@@ -143,7 +145,8 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
       }
       text.style.transform = alignment.rotationDegrees ? `rotate(${alignment.rotationDegrees}deg) scale(${scale})` : scale === 1 ? "none" : `scale(${scale})`;
       const naturalRotatedHeight = Math.abs(width * sine) + Math.abs((naturalHeightPx ?? height) * cosine);
-      return Object.freeze({ element, text: textView, requiredHeightPt: (naturalRotatedHeight * scale + 2) * .75, scale, shape });
+      const ink = Object.freeze({ xPt: (x + offset + minimumX * scale) * .75, yPt: y * .75, widthPt: rotatedWidth * scale * .75, heightPt: rotatedHeight * scale * .75 });
+      return Object.freeze({ element, text: textView, requiredHeightPt: (naturalRotatedHeight * scale + 2) * .75, scale, shape, ink });
     });
     for (const cell of cells) cell.element.remove();
     complete = true;

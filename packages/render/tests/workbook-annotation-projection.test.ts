@@ -20,7 +20,7 @@ const dimensions = { rows: new AxisDimensions(1_048_576, 10, []), columns: new A
 function frame(input = dimensions, frozen = { rows: 2, columns: 1 }, scroll = { left: 40, top: 30 }, size = { width: 100, height: 80 }): WorkbookWindowFrame {
   return { documentId: 'annotations', revision: 0, sheetId: 'sheet-1',
     layout: workbookViewport(input, frozen, { widthPt: size.width, heightPt: size.height, scrollLeftPt: scroll.left, scrollTopPt: scroll.top }, 100),
-    projections: [], sourceCoordinates: [], storedCellCount: 0, getCell: () => undefined };
+    projections: [], sourceCoordinates: [], completeRows: [], skewColumns: [], storedCellCount: 0, getCell: () => undefined };
 }
 
 describe('workbook annotation windows', () => {

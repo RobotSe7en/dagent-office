@@ -7,8 +7,9 @@ import { WorkbookWindowLoader } from '../../../packages/render/src/workbook/wind
 import { modelWindowSource } from '../../../packages/render/src/workbook/window-source.js';
 import { layoutWorkbookWindow } from '../../../packages/render/src/workbook/window-layout.js';
 import type { WorkbookViewport } from '../../../packages/render/src/workbook/viewport.js';
+import { maximumWorkbookSkew } from '../../../packages/render/src/workbook/skew-sources.js';
 
-export async function windowLayoutMeasurement(entries: readonly [string, number[]][], views: readonly { sheetId: string; viewport: WorkbookViewport }[], rtl = false) {
+export async function windowLayoutMeasurement(entries: readonly [string, number[]][], views: readonly { sheetId: string; viewport: WorkbookViewport; maxCellFragments?: number }[], rtl = false) {
   const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)]));
   const metadata = JSON.parse(new TextDecoder().decode(files.get('metadata.json'))) as WorkbookDocumentMetadata;
   for (const sheet of metadata.workbook.sheets) sheet.rightToLeft = rtl;
@@ -18,26 +19,28 @@ export async function windowLayoutMeasurement(entries: readonly [string, number[
   const formatter = createWorkbookNumberFormatter({ dateSystem: metadata.workbook.dateSystem, hostLocale: 'zh-CN' });
   const container = document.createElement('div'); container.style.cssText = 'position:relative;width:1000px;height:800px'; document.body.append(container);
   const surface = await createWorkbookSurface(container, snapshot, { widthPt: 750, heightPt: 600 });
-  const loader = new WorkbookWindowLoader(modelWindowSource(model)), results = [];
+  const loader = new WorkbookWindowLoader(modelWindowSource(model), {}, true, maximumWorkbookSkew(surface.document)), results = [];
   try {
-    for (const { sheetId, viewport } of views) {
+    for (const { sheetId, viewport, maxCellFragments } of views) {
       const normal = measureWorkbookColumnFont(surface.source, snapshot.metadata.workbook, sheetId);
       const dimensions = worksheetDimensions(snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === sheetId)!, normal.maximumDigitWidthPx);
       await loader.load(sheetId, dimensions, viewport);
       const sheet = snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === sheetId)!;
       const rules = sheet.conditionalRules?.length || sheet.dataValidations?.length ? await readWorkbookRules(model, { documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision,
         sheetId, coordinates: loader.frame!.sourceCoordinates, ...DEFAULT_WORKBOOK_RULE_LIMITS }) : undefined;
-      const rendered = layoutWorkbookWindow(surface, snapshot, loader.frame!, dimensions, formatter, { normalSpaceWidthPx: normal.spaceWidthPx }, rules);
+      const rendered = layoutWorkbookWindow(surface, snapshot, loader.frame!, dimensions, formatter, { normalSpaceWidthPx: normal.spaceWidthPx, ...(maxCellFragments === undefined ? {} : { maxCellFragments }) }, rules);
       const before = surface.view.firstChild; const detached = !rendered.element.isConnected && surface.view.firstChild === before;
       surface.view.replaceChildren(rendered.element); surface.frame.style.setProperty('visibility', 'visible', 'important');
       const view = surface.document.defaultView!;
       const cells = rendered.cells.filter(cell => cell.text).map(cell => {
         const text = cell.text!, bounds = text.text.element.getBoundingClientRect();
+        const clipBounds = text.element.parentElement!.parentElement!.getBoundingClientRect();
         return { row: cell.projection.row, column: cell.projection.column, pane: cell.projection.pane, text: text.text.element.textContent,
           rect: cell.projection.rect, clipRect: cell.projection.clip, offsets: text.text.projections.map(part => [part.from, part.to, part.node.data]), shape: text.shape, scale: text.scale,
           runs: text.text.projections.map(part => { const style = view.getComputedStyle(part.node.parentElement!); return { from: part.from, to: part.to, text: part.node.data, color: style.color, weight: style.fontWeight, style: style.fontStyle, family: style.fontFamily }; }),
           color: view.getComputedStyle(text.text.element).color, weight: view.getComputedStyle(text.text.element).fontWeight, family: view.getComputedStyle(text.text.element).fontFamily,
           breaks: text.text.element.querySelectorAll("br").length, spaces: [...text.text.element.querySelectorAll<HTMLElement>("[data-office-number-space]")].map(node => node.getBoundingClientRect().width), bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+          clipWidthPt: clipBounds.width * .75, clipHeightPt: clipBounds.height * .75,
           clip: text.element.parentElement!.parentElement!.style.cssText };
       });
       const errors: string[] = [];
@@ -47,7 +50,9 @@ export async function windowLayoutMeasurement(entries: readonly [string, number[
       }
       const same = rendered.element === surface.view.firstChild;
       const fillNodes = [...rendered.element.querySelector('[data-office-view="workbook-fills"]')!.children];
-      results.push({ sheetId, cells, detached, same, errors, fonts: rendered.fonts.length, rules,
+      results.push({ sheetId, cells, detached, same, errors, fonts: rendered.fonts.length, rules, completeRows: loader.frame!.completeRows,
+        overflowCount: rendered.element.querySelectorAll('[data-office-view="workbook-text-overflow"]').length,
+        overflowFills: [...rendered.element.querySelectorAll<SVGSVGElement>('[data-office-overflow-fill]')].map(fill => ({ color: fill.querySelector('rect')?.getAttribute('fill'), widthPt: fill.getBoundingClientRect().width * .75 })),
         fillPaints: frameFills(),
         borderColors: [...rendered.element.querySelectorAll('line')].filter(line => !line.closest('[data-office-view="workbook-gridlines"]')).map(line => line.getAttribute('stroke')),
         gridLines: rendered.element.querySelectorAll('[data-office-view="workbook-gridlines"]').length,
