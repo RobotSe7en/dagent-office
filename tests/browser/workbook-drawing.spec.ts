@@ -17,12 +17,12 @@ import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
 import type { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback, measureDrawingTextOverflow, measureDrawingOverflowEdges } from './fixtures/workbook-drawing-text.js';
 import type { measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } from './fixtures/workbook-surface.js';
 import type { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } from './fixtures/workbook-shadow.js';
-import type { measureWorkbookCharts, measureWorkbookChartColors, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } from './fixtures/workbook-chart.js';
+import type { measureWorkbookCharts, measureWorkbookChartMarkers, measureWorkbookChartColors, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } from './fixtures/workbook-chart.js';
 import { bindWorkbookChartData } from "../../packages/render/src/workbook/chart-values.js";
 import type { BasicChartData } from '../../packages/render/src/chart.js';
 import { modelChartSource, DEFAULT_CHART_READ_LIMITS } from '../../packages/render/src/workbook/chart-source.js';
 
-declare global { interface Window { workbookChartHost: { measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartColors: typeof measureWorkbookChartColors; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
+declare global { interface Window { workbookChartHost: { measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartMarkers: typeof measureWorkbookChartMarkers; measureWorkbookChartColors: typeof measureWorkbookChartColors; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
 
 declare global { interface Window { workbookShadowHost: { measureWorkbookShadows: typeof measureWorkbookShadows; mountWorkbookShadowPixels: typeof mountWorkbookShadowPixels; disposeWorkbookShadowPixels: typeof disposeWorkbookShadowPixels } } }
 
@@ -32,6 +32,7 @@ const chartPlots = new Map<string, BasicChartData[]>();
 let referenceTitles: { snapshot: WorkbookSnapshot; bindings: ReturnType<typeof bindWorkbookChartData> };
 let formatCharts: typeof referenceTitles;
 let code = '';
+const markerCharts: { producer: boolean; snapshot: WorkbookSnapshot; plots: BasicChartData[] }[] = [];
 const colorCharts: { theme: string; snapshot: WorkbookSnapshot; plots: BasicChartData[] }[] = [];
 let nativeText: WorkbookSnapshot;
 let overflowText: WorkbookSnapshot;
@@ -42,6 +43,13 @@ const textEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-drawing-text-se
 const shadowEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-drawing-shadow-semantics.json', 'utf8')) as { sourceSha256: string; cases: { rotation: number; flipH: boolean; flipV: boolean; rotateWithShape: boolean; direction: number; distancePt: number; observed: { offsetPt: number[] } }[] };
 const blurEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-shadow-blur-semantics.json', 'utf8')) as { sourceSha256: string; cases: { blurPt: number; observed: { sharpEdgeOffsetPt?: number; samples: { offsetPt: number; rgb: number[] }[] } }[] };
 test.beforeAll(async () => {
+  for (const producer of [false, true]) {
+    const model = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-markers' + (producer ? '-producer' : '') + '.xlsx'), { documentId: 'markers-' + producer }), { kind: 'workbook' }), snapshot = model.snapshot();
+    const response = await modelChartSource(model).read({ ...DEFAULT_CHART_READ_LIMITS, documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, chartIds: snapshot.metadata.workbook.charts!.map(chart => chart.chartId) }, new AbortController().signal);
+    const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
+    const plots = bindWorkbookChartData(snapshot, response, formatter).map(binding => { if (binding.kind !== 'available') throw Error('Marker data unavailable'); return binding.data; });
+    formatter.dispose(); markerCharts.push({ producer, snapshot, plots });
+  }
   for (const theme of ['default', 'alternate']) {
     const model = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-colors-' + theme + '.xlsx'), { documentId: 'chart-colors-' + theme }), { kind: 'workbook' }), snapshot = model.snapshot();
     const response = await modelChartSource(model).read({ ...DEFAULT_CHART_READ_LIMITS, documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, chartIds: snapshot.metadata.workbook.charts!.map(chart => chart.chartId) }, new AbortController().signal);
@@ -577,5 +585,38 @@ test('native automatic chart colors follow document themes, single-series variat
     }
     expect(actual.hidden).toMatchObject({ points: [palette[0], palette[0], palette[0]], keys: [palette[0]], text: ['Series1'] });
     expect(actual.compacted).toMatchObject({ points: [palette[0], palette[2]], keys: [palette[0], palette[2]], text: ['One', 'Three'] });
+  }
+});
+
+
+test('native point marker geometry, independent paint and inherited properties retain source indexes and exact budgets', async ({ page }) => {
+  const cases = JSON.parse(readFileSync('docs/evidence/xlsx-chart-markers.json', 'utf8')).cases as { marker?: string; size?: number; appearance?: string }[];
+  for (const input of markerCharts) {
+    const result = await page.evaluate(({ snapshot, plots }) => window.workbookChartHost.measureWorkbookChartMarkers(snapshot, plots), input);
+    expect(result.unchanged).toBe(true); expect(result.budget).toBe('ResourceLimitExceeded');
+    for (const [index, item] of result.normal.entries()) {
+      expect(item.nodes).toBe(item.declared);
+      if (input.producer) continue;
+      const expected = cases[index]!, symbol = expected.marker ?? 'circle', size = expected.size ?? 10;
+      const points = item.markers.filter(marker => marker.role === 'point'), legend = item.markers.filter(marker => marker.role === 'legend');
+      expect(points.map(marker => marker.sourceIndex)).toEqual(symbol === 'none' ? ['0'] : ['0', '1']);
+      expect(legend).toHaveLength(1); expect(legend[0]).toMatchObject({ symbol: 'circle', width: 10, height: 10, fill: 'rgb(34, 136, 51)', stroke: 'rgb(17, 17, 17)' });
+      expect(points[0]).toMatchObject({ symbol: 'circle', width: 10, height: 10, fill: 'rgb(34, 136, 51)', stroke: 'rgb(17, 17, 17)' });
+      if (symbol === 'none') { expect(result.compacted[index]!.markers.filter(marker => marker.role === 'point')).toHaveLength(0); continue; }
+      const point = points[1]!;
+      expect(point).toMatchObject({ symbol, width: symbol === 'dot' ? size / 2 : size, height: symbol === 'dot' || symbol === 'dash' ? size / 5 : size });
+      expect(point.gradient).toBe(expected.appearance === 'gradient');
+      if (point.gradient) expect(point.stops).toEqual([{ offset: '0', color: 'rgb(255, 0, 0)' }, { offset: '1', color: 'rgb(0, 0, 255)' }]);
+      if (expected.appearance !== 'gradient') expect(point.fill).toBe(expected.appearance === 'none' ? 'none' : expected.appearance ? 'rgb(255, 0, 0)' : 'rgb(34, 136, 51)');
+      expect(point.stroke).toBe(expected.appearance ? 'rgb(0, 0, 255)' : 'rgb(17, 17, 17)');
+      expect(parseFloat(point.strokeWidth)).toBe(expected.appearance === 'zero-line' ? 0 : 1.5);
+      if (['star', 'plus', 'x'].includes(symbol)) expect(point.paths.join('').match(/M/g)).toHaveLength(symbol === 'star' ? 4 : 2);
+      expect(result.compacted[index]!.nodes).toBe(result.compacted[index]!.declared);
+      const { paths, fill, ...appearance } = point;
+      const compacted = result.compacted[index]!.markers.filter(marker => marker.role === 'point');
+      expect(compacted).toHaveLength(1); expect(compacted[0]).toMatchObject(appearance);
+      if (!point.gradient) expect(compacted[0]!.fill).toBe(fill);
+      expect(compacted[0]!.paths.map(path => path?.match(/M/g)?.length)).toEqual(paths.map(path => path?.match(/M/g)?.length));
+    }
   }
 });

@@ -4,6 +4,7 @@ import { markViewNode, ownViewAttribute } from "./view-nodes.js";
 import { cssStringValue, numeric, property, resolvedColor, strokeAttributes, svgFill } from "./presentation/appearance.js";
 import { svgElement as createSvgElement } from "./presentation/svg.js";
 import type { DrawingGradientBounds } from "./drawing-gradient.js";
+import { appendChartMarker } from "./chart-marker.js";
 import { chartAxisTicks } from "./chart-axis.js";
 
 /** Derived plot values. The owning format adapter supplies its authoritative
@@ -101,6 +102,19 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     return point ? style([series?.cssClass, point.cssClass].filter(Boolean).join(" ")) : seriesStyle.get(seriesId)!;
   };
   const fill = (seriesId: string, index: number, s: CSSStyleDeclaration, bounds: DrawingGradientBounds): string => svgFill(document, s, svg, serial + "-paint-" + ++paintSerial, bounds, "--office-fill", palette[(varyColors ? sourceIndex(index) : seriesIndexes.get(seriesId)!) % palette.length]!, account);
+  const marker = (seriesId: string, index: number, x: number, y: number, role: "point" | "legend"): void => {
+    const definition = seriesDefinitions.get(seriesId), override = index < 0 ? undefined : pointDefinitions.get(pointKey(seriesId, sourceIndex(index)));
+    const symbol = override?.marker ?? definition?.marker ?? "none", size = override?.markerSize ?? definition?.markerSize ?? 5;
+    if (symbol === "none") return;
+    const point = index < 0 ? seriesStyle.get(seriesId)! : pointStyle(seriesId, index), position = Math.max(0, index);
+    const bounds = { x: x - size / 2, y: y - size / 2, width: size, height: size };
+    const automatic = palette[(varyColors ? sourceIndex(position) : seriesIndexes.get(seriesId)!) % palette.length]!;
+    const color = property(point, "--office-marker-fill-kind") || property(point, "--office-marker-fill-color")
+      ? svgFill(document, point, svg, serial + "-marker-" + ++paintSerial, bounds, "--office-marker-fill", automatic, account)
+      : fill(seriesId, position, point, bounds);
+    const group = appendChartMarker(svg, symbol, size, x, y, color, strokeAttributes(document, point, "--office-marker-line", automatic), svgElement)!;
+    group.dataset.sdkChartMarkerRole = role; if (index >= 0) group.dataset.sdkChartSourceIndex = String(sourceIndex(index));
+  };
   const label = (series: BasicChartData["series"][number], index: number, value: number, x: number, y: number, percent?: number, baseline?: number): void => {
     if (!chart.showLabels) return;
     const seriesDefinition = seriesDefinitions.get(series.seriesId), point = pointDefinitions.get(pointKey(series.seriesId, sourceIndex(index)));
@@ -204,17 +218,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
         }
         else {
           segments.push((connected ? "L" : "M") + px + " " + py); connected = true;
-          const definition = seriesDefinitions.get(series.seriesId), marker = definition?.marker ?? "none", radius = (definition?.markerSize ?? 5) / 2;
-          if (marker !== "none") {
-            const extent = marker === "dot" ? 1 : radius;
-            const color = fill(series.seriesId, index, point, { x: px - extent, y: py - extent, width: extent * 2, height: extent * 2 });
-            if (marker === "circle" || marker === "dot") svg.append(svgElement(document, "circle", { cx: px, cy: py, r: marker === "dot" ? 1 : radius, fill: color }));
-            else if (marker === "square") svg.append(svgElement(document, "rect", { x: px - radius, y: py - radius, width: radius * 2, height: radius * 2, fill: color }));
-            else {
-              const d = marker === "triangle" ? `M${px} ${py - radius}L${px + radius} ${py + radius}L${px - radius} ${py + radius}Z` : marker === "diamond" ? `M${px} ${py - radius}L${px + radius} ${py}L${px} ${py + radius}L${px - radius} ${py}Z` : marker === "dash" ? `M${px - radius} ${py}L${px + radius} ${py}` : marker === "x" ? `M${px - radius} ${py - radius}L${px + radius} ${py + radius}M${px - radius} ${py + radius}L${px + radius} ${py - radius}` : `M${px - radius} ${py}L${px + radius} ${py}M${px} ${py - radius}L${px} ${py + radius}`;
-              svg.append(svgElement(document, "path", { d, fill: marker === "triangle" || marker === "diamond" ? color : "none", stroke: color }));
-            }
-          }
+          marker(series.seriesId, index, px, py, "point");
         }
         label(series, index, value, chart.kind === "column" ? px - total / 2 + seriesIndex * bar * (1 - overlap) + bar / 2 : px, py, undefined, baseline);
       });
@@ -232,7 +236,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
       const y = horizontal ? legend ? legend.y + legend.height / 2 : chart.legend === "top" ? top - 14 : height - 14
         : (legend ? legend.y + legend.height / 2 : top + h / 2) + (index - (entries.length - 1) / 2) * slot;
       const s = entry.index >= 0 ? pointStyle(entry.series.seriesId, entry.index) : seriesStyle.get(entry.series.seriesId)!;
-      if (chart.kind === "line") svg.append(svgElement(document, "line", { x1: x, y1: y, x2: x + keyWidth, y2: y, ...strokeAttributes(document, s, "--office-line", palette[(varyColors && entry.index >= 0 ? sourceIndex(entry.index) : seriesIndexes.get(entry.series.seriesId)!) % palette.length]!) }));
+      if (chart.kind === "line") { svg.append(svgElement(document, "line", { x1: x, y1: y, x2: x + keyWidth, y2: y, ...strokeAttributes(document, s, "--office-line", palette[(varyColors && entry.index >= 0 ? sourceIndex(entry.index) : seriesIndexes.get(entry.series.seriesId)!) % palette.length]!) })); marker(entry.series.seriesId, entry.index, x + keyWidth / 2, y, "legend"); }
       else svg.append(svgElement(document, "rect", { x, y: y - 3, width: keyWidth, height: 7, fill: fill(entry.series.seriesId, Math.max(0, entry.index), s, { x, y: y - 3, width: keyWidth, height: 7 }) }));
       text(entry.name, x + keyWidth + 3, y + 1, legendStyle, "start");
     });

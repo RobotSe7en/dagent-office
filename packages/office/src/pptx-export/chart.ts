@@ -1,4 +1,4 @@
-import type { DeepReadonly, PresentationChart, PresentationObject } from "@dagent-office/core";
+import type { ChartAppearance, DeepReadonly, PresentationChart, PresentationObject } from "@dagent-office/core";
 import type { Css } from "../export/css.js";
 import type { SourceElement } from "../export/source.js";
 import { attributes, declaration, empty, escapeXml } from "../export/xml.js";
@@ -27,6 +27,15 @@ export class PresentationChartWriter {
     }, fallback?: string): string {
         const css = fallback && !style.css["--office-fill-kind"] ? { ...style.css, "--office-fill-kind": "solid", "--office-fill-color": fallback } : style.css;
         return "<c:spPr>" + (css["--office-fill-kind"] || css["--office-fill-color"] ? fillXml(css, "--office-fill", style.raw) : "") + (css["--office-line-kind"] || css["--office-line-color"] ? lineXml(css, "--office-line", style.raw) : "") + (css["--office-shadow-kind"] ? effectXml(css, style.raw) : "") + "</c:spPr>";
+    }
+    private marker(definition: { marker?: NonNullable<ChartAppearance["seriesStyles"]>[number]["marker"]; markerSize?: number | undefined } | undefined,
+        style: { css: Css; raw: Css }, series = false): string {
+        const remap = (css: Css): Css => Object.fromEntries(Object.entries(css).filter(([key]) => key.startsWith("--office-marker-")).map(([key, value]) => [key.replace("--office-marker-", "--office-"), value]));
+        const css = remap(style.css), raw = remap(style.raw);
+        if (!series && definition?.marker === undefined && definition?.markerSize === undefined && !Object.keys(css).length) return "";
+        return "<c:marker>" + cv("symbol", definition?.marker ?? (series ? "none" : undefined))
+            + cv("size", definition?.markerSize === undefined ? undefined : integer(definition.markerSize, 1, 2, 72))
+            + (Object.keys(css).length ? this.appearance({ css, raw }) : "") + "</c:marker>";
     }
     private textStyle(style: {
         css: Css;
@@ -91,11 +100,11 @@ export class PresentationChartWriter {
             const s = seriesStyle.css["--office-fill-kind"] ? seriesStyle : { css: { ...seriesStyle.css, "--office-fill-kind": "solid", "--office-fill-color": palette }, raw: { ...seriesStyle.raw, "--office-fill-color": fallback } };
             out.add("<c:ser>" + cv("idx", index) + cv("order", index) + "<c:tx>" + vector([series.name], false, ranges.nameFormula) + "</c:tx>" + this.appearance(s));
             if (chart.kind === "line")
-                out.add("<c:marker>" + cv("symbol", style?.marker ?? "none") + cv("size", style?.markerSize === undefined ? undefined : integer(style.markerSize, 1, 2, 72)) + "</c:marker>");
+                out.add(this.marker(style, seriesStyle, true));
             else if (chart.kind === "column")
                 out.add(cv("invertIfNegative", seriesStyle.css["--office-invert-negative"] === "true"));
             for (const point of points)
-                out.add("<c:dPt>" + cv("idx", point.index) + this.appearance(this.style([style?.cssClass, point.cssClass].filter(Boolean).join(" "), node, surface)) + "</c:dPt>");
+                out.add("<c:dPt>" + cv("idx", point.index) + this.marker(point, this.style(point.cssClass, node, surface)) + this.appearance(this.style([style?.cssClass, point.cssClass].filter(Boolean).join(" "), node, surface)) + "</c:dPt>");
             if (style?.labelCssClass || points.some(point => point.labelCssClass))
                 out.add(this.labels(chart, style?.labelCssClass ?? chart.labelCssClass, node, surface, points));
             out.add("<c:cat>" + vector(data.categories, false, embedded.book.categoryFormula) + "</c:cat><c:val>" + vector(series.values, true, ranges.valueFormula) + "</c:val>" + (chart.kind === "line" ? cv("smooth", false) : "") + "</c:ser>");

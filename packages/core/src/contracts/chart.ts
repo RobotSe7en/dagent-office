@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { IdentifierSchema } from "./primitives.js";
 
+const marker = z.enum(["none", "circle", "square", "diamond", "triangle", "x", "star", "plus", "dot", "dash"]);
 /** Shared basic chart appearance, independent of the authoritative data source. */
 export const ChartAppearanceSchema = z.strictObject({
   kind: z.enum(["column", "line", "pie"]),
@@ -16,7 +17,8 @@ export const ChartAppearanceSchema = z.strictObject({
   labelContents: z.array(z.enum(["value", "category", "series", "percent"])).optional(),
   seriesStyles: z.array(z.strictObject({ seriesId: IdentifierSchema, cssClass: IdentifierSchema,
     labelCssClass: IdentifierSchema.optional(),
-    marker: z.enum(["none", "circle", "square", "diamond", "triangle", "x", "star", "plus", "dot", "dash"]).optional(), markerSize: z.number().positive().optional() })).optional(),
-  pointStyles: z.array(z.strictObject({ seriesId: IdentifierSchema, index: z.number().int().min(0), cssClass: IdentifierSchema, labelCssClass: IdentifierSchema.optional() })).optional(),
+    marker: marker.optional(), markerSize: z.number().positive().optional() })).optional(),
+  pointStyles: z.array(z.strictObject({ seriesId: IdentifierSchema, index: z.number().int().min(0), cssClass: IdentifierSchema, labelCssClass: IdentifierSchema.optional(),
+    marker: marker.optional(), markerSize: z.number().positive().optional() })).optional(),
 });
 export type ChartAppearance = z.infer<typeof ChartAppearanceSchema>;

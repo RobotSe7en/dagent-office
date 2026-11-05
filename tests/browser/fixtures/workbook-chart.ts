@@ -7,6 +7,35 @@ import { WorkbookContentSources } from '../../../packages/render/src/workbook/co
 import { createWorkbookChartText } from '../../../packages/render/src/workbook/drawing-text.js';
 import type { WorkbookChartTextRole } from '../../../packages/render/src/workbook/drawing-text.js';
 
+export async function measureWorkbookChartMarkers(snapshot: WorkbookSnapshot, plots: readonly BasicChartData[]) {
+  const container = document.createElement('div'); document.body.append(container);
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 520, heightPt: 340 }), sources = new WorkbookContentSources(surface.document, snapshot);
+  const charts = snapshot.metadata.workbook.charts!, projected = sources.project(surface.source, charts.map(chart => chart.nodeId)), before = surface.source.innerHTML;
+  const read = (index: number, compact = false) => {
+    const chart = charts[index]!, source = projected.get(chart.nodeId)!, original = plots[index]!;
+    const data = compact ? { ...original, categories: original.categories.slice(1), sourceIndexes: [1, 2], series: original.series.map(series => ({ ...series, values: series.values.slice(1), ...(series.missing ? { missing: series.missing.slice(1) } : {}) })) } : original;
+    const result = createWorkbookChartView(source, chart, data, 480, 300, 'chart-markers-' + index, { formatNumber: value => String(value) });
+    surface.view.append(result.element);
+    const markers = [...result.element.querySelectorAll<SVGGElement>('[data-sdk-chart-marker]')].map(group => {
+      const box = group.getBBox(), filled = group.firstElementChild!, stroked = group.lastElementChild!, css = surface.document.defaultView!;
+      return { symbol: group.dataset.sdkChartMarker, role: group.dataset.sdkChartMarkerRole, sourceIndex: group.dataset.sdkChartSourceIndex,
+        width: box.width, height: box.height, fill: css.getComputedStyle(filled).fill, stroke: css.getComputedStyle(stroked).stroke,
+        strokeWidth: css.getComputedStyle(stroked).strokeWidth, paths: [...group.querySelectorAll('path')].map(node => node.getAttribute('d')),
+        gradient: (filled.getAttribute('fill') ?? '').startsWith('url('),
+        stops: (filled.getAttribute('fill') ?? '').startsWith('url(') ? [...result.element.querySelector('[id="' + (filled.getAttribute('fill') ?? '').slice(5, -1) + '"]')!.querySelectorAll('stop')].map(stop => ({ offset: stop.getAttribute('offset'), color: css.getComputedStyle(stop).stopColor })) : [] };
+    });
+    const walker = surface.document.createTreeWalker(result.element, 0xffff_ffff); let nodes = 1; while (walker.nextNode()) nodes++;
+    result.element.remove(); return { markers, nodes, declared: result.nodes };
+  };
+  try {
+    const normal = charts.map((_, index) => read(index)), compacted = charts.map((_, index) => read(index, true));
+    let budget = '';
+    try { createWorkbookChartView(projected.get(charts[0]!.nodeId)!, charts[0]!, plots[0]!, 480, 300, 'marker-budget', { formatNumber: String, maxNodes: 2 }); }
+    catch (error) { budget = (error as { code: string }).code; }
+    return { normal, compacted, budget, unchanged: surface.source.innerHTML === before };
+  } finally { sources.dispose(); surface.dispose(); container.remove(); }
+}
+
 export async function measureWorkbookChartColors(snapshot: WorkbookSnapshot, plots: readonly BasicChartData[]) {
   const container = document.createElement('div'); document.body.append(container);
   const surface = await createWorkbookSurface(container, snapshot, { widthPt: 520, heightPt: 340 }), sources = new WorkbookContentSources(surface.document, snapshot);
@@ -19,7 +48,7 @@ export async function measureWorkbookChartColors(snapshot: WorkbookSnapshot, plo
     const entries = chart.kind === 'pie' || varied && visible.length === 1 ? data.categories.length : visible.length;
     const color = (node: Element) => surface.document.defaultView!.getComputedStyle(node).getPropertyValue('fill');
     const points = chart.kind === 'column' ? [...svg.querySelectorAll('rect')].slice(1, 1 + visible.length * data.categories.length)
-      : chart.kind === 'line' ? [...svg.querySelectorAll('circle')] : [...svg.querySelectorAll('path,circle')].filter(node => node.getAttribute('fill') !== 'none');
+      : chart.kind === 'line' ? [...svg.querySelectorAll('[data-sdk-chart-marker-role=point] > circle')] : [...svg.querySelectorAll('path,circle')].filter(node => node.getAttribute('fill') !== 'none');
     const keys = chart.kind === 'line' ? [...svg.querySelectorAll('line')].slice(-entries).map(node => surface.document.defaultView!.getComputedStyle(node).stroke)
       : [...svg.querySelectorAll('rect')].slice(-entries).map(color);
     const text = [...svg.querySelectorAll('text')].slice(-entries).map(node => node.textContent);

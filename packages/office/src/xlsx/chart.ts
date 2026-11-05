@@ -10,6 +10,7 @@ import { attributes, boolean, integer, one, spreadsheetText, value } from "./val
 import { readChartLabel, readChartReference, readChartVector } from "./chart-data.js";
 import type { ChartDataBudget } from "./chart-data.js";
 import { drawingTextStyle, readDrawingText } from "./drawing-text.js";
+import { chartMarker } from "../drawingml/chart-marker.js";
 import { chartLabelLeaderLines, validateWorksheetChart } from "./chart-validation.js";
 import type { XlsxStyles } from "./styles.js";
 import type { WorkbookContent } from "./content.js";
@@ -86,22 +87,18 @@ export class WorkbookCharts {
       else if (categoryKey !== key) unsupported(s, "Basic chart series must share one category source.");
       const seriesId = `series-${position}`;
       definition.series.push({ seriesId, nativeIndex: index, values: readChartVector(values, this.budget, true), ...(name ? { name: readChartLabel(name, this.budget) } : {}) });
-      const marker = one(s, "marker", C), symbol = val(marker, "symbol", "none")!;
-      if (!marker && kind === "line" && flag(native, "marker")) unsupported(native, "Implicit automatic marker shapes are not supported.");
-      if (!["none", "circle", "square", "diamond", "triangle", "x", "star", "plus", "dot", "dash"].includes(symbol)) unsupported(marker ?? s, "This chart marker shape is not supported.");
-      const markerSize = marker ? decimal(marker, "size") ?? 5 : 5;
-      if (!Number.isInteger(markerSize) || markerSize < 2 || markerSize > 72) fail(marker ?? s, "A chart marker size exceeds native bounds.");
-      const markerCss: Css = {};
-      for (const [key, value] of Object.entries(appearance(one(marker, "spPr", C)))) markerCss[key.replace("--office-", "--office-marker-")] = value;
+      const markerSource = one(s, "marker", C), { css: markerCss, ...marker } = chartMarker(markerSource);
+      if (!markerSource && kind === "line" && flag(native, "marker")) unsupported(native, "Implicit automatic marker shapes are not supported.");
       const seriesCss = style(this, s, "series-style", { ...markerCss, "--office-invert-negative": String(flag(s, "invertIfNegative")) });
       const seriesLabels = one(s, "dLbls", C), seriesLabelStyle = this.labelStyle(seriesLabels);
-      definition.seriesStyles!.push({ seriesId, cssClass: seriesCss, marker: symbol as NonNullable<WorkbookChart["seriesStyles"]>[number]["marker"] & string, markerSize, ...(seriesLabelStyle ? { labelCssClass: seriesLabelStyle } : {}) });
+      definition.seriesStyles!.push({ seriesId, cssClass: seriesCss, marker: marker.marker ?? "none", markerSize: marker.markerSize ?? 5, ...(seriesLabelStyle ? { labelCssClass: seriesLabelStyle } : {}) });
       const points = new Set<number>();
       for (const point of elements(s, "dPt", C)) {
         const idx = one(point, "idx", C); if (!idx) fail(point, "A chart point override is missing its index."); const index = integer(idx, "val");
         if (points.has(index)) fail(point, "A chart point override is repeated."); points.add(index);
-        if ((decimal(point, "explosion") ?? 0) !== 0 || flag(point, "bubble3D") || one(point, "marker", C)) unsupported(point, "This point override is outside the basic chart scope.");
-        definition.pointStyles!.push({ seriesId, index, cssClass: style(this, point, "point-style", { "--office-invert-negative": String(flag(point, "invertIfNegative", flag(s, "invertIfNegative"))) }) });
+        if ((decimal(point, "explosion") ?? 0) !== 0 || flag(point, "bubble3D")) unsupported(point, "This point override is outside the basic chart scope.");
+        const { css, ...marker } = chartMarker(one(point, "marker", C));
+        definition.pointStyles!.push({ seriesId, index, ...marker, cssClass: style(this, point, "point-style", { ...css, "--office-invert-negative": String(flag(point, "invertIfNegative", flag(s, "invertIfNegative"))) }) });
       }
       const contents = labels(seriesLabels, globalContents), selected = JSON.stringify(contents);
       if (labelKey !== undefined && labelKey !== selected) unsupported(s, "Different label contents per series are not supported."); labelKey = selected; definition.labelContents = contents;

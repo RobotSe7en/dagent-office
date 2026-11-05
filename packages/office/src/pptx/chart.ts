@@ -5,6 +5,7 @@ import { Context, integer, value } from "./context.js";
 import type { Html } from "./context.js";
 import { importText } from "./text.js";
 import { val, flag, decimal, textStyle, style, noLayout, labels, labelStyle, axisStyle } from "../drawingml/chart-style.js";
+import { chartMarker } from "../drawingml/chart-marker.js";
 import { cachedVector, constants } from "./workbook.js";
 
 export function importChart(context: Context, reference: XmlNode, frame: Html): string {
@@ -68,17 +69,16 @@ export function importChart(context: Context, reference: XmlNode, frame: Html): 
     }
     const seriesId = "series-" + index;
     data.series.push({ seriesId, name, values: numbers });
-    const marker = child(s, "marker", C), symbol = val(marker, "symbol", kind === "line" ? "none" : "none")!;
-    if (!["none", "circle", "square", "diamond", "triangle", "x", "star", "plus", "dot", "dash"].includes(symbol)) unsupported(marker ?? s, "This chart marker is not supported.");
-    const markerSize = decimal(marker ?? s, "size") ?? 5;
-    const seriesCss = style(context, s, "series-style", { "--office-invert-negative": String(flag(s, "invertIfNegative")) });
+    const { css: markerCss, ...marker } = chartMarker(child(s, "marker", C));
+    const seriesCss = style(context, s, "series-style", { ...markerCss, "--office-invert-negative": String(flag(s, "invertIfNegative")) });
     const seriesLabel = child(s, "dLbls", C), labelCssClass = labelStyle(context, seriesLabel);
-    definition.seriesStyles.push({ seriesId, cssClass: seriesCss, marker: symbol as NonNullable<PresentationChart["seriesStyles"]>[number]["marker"] & string, markerSize, ...(labelCssClass ? { labelCssClass } : {}) });
+    definition.seriesStyles.push({ seriesId, cssClass: seriesCss, marker: marker.marker ?? "none", markerSize: marker.markerSize ?? 5, ...(labelCssClass ? { labelCssClass } : {}) });
     for (const point of elements(s, "dPt", C)) {
       check(point, ["idx", "invertIfNegative", "marker", "bubble3D", "explosion", "spPr", "extLst"], C);
-      if ((decimal(point, "explosion") ?? 0) !== 0 || flag(point, "bubble3D") || child(point, "marker", C)) unsupported(point, "This point override is outside the basic chart scope.");
+      if ((decimal(point, "explosion") ?? 0) !== 0 || flag(point, "bubble3D")) unsupported(point, "This point override is outside the basic chart scope.");
       const pointIndex = integer(child(point, "idx", C) ?? point, "val");
-      definition.pointStyles.push({ seriesId, index: pointIndex, cssClass: style(context, point, "point-style") });
+      const { css, ...marker } = chartMarker(child(point, "marker", C));
+      definition.pointStyles.push({ seriesId, index: pointIndex, ...marker, cssClass: style(context, point, "point-style", css) });
     }
     const label = labels(seriesLabel, globalLabelContents);
     for (const pointLabel of elements(seriesLabel ?? globalLabels, "dLbl", C)) {

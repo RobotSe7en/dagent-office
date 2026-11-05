@@ -1215,7 +1215,7 @@
   "limits": [
     "No font geometry or pixel equivalence is claimed by these structural colors, PDF vector fill colors and words.",
     "PDF fill colors are normalized as sets, independent of a PDF-to-SVG tool's subdivision of one colored shape into paths.",
-    "Calc varied lines add per-point markers outside the current explicit point-override reading profile; producer reopen is not claimed here.",
+    "Calc varied lines add per-point appearance. Producer reopen is verified separately in xlsx-chart-markers evidence; this color-only report does not claim it.",
     "Calc varied-line marker colors and explicit-series-color legend keys differ from the source-themed point colors; these cases are not color-fidelity acceptance.",
     "Excel/WPS unverified."
   ]

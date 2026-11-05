@@ -128,7 +128,7 @@ def main():
         if args.record: fixture.write_bytes(data)
         else: assert fixture.read_bytes() == data, "Independent chart color source changed"
     report = {"scope": __doc__, "office": native.BUILD, "archiveSha256": native.ARCHIVE_HASH, "workbooks": results,
-              "limits": ["No font geometry or pixel equivalence is claimed by these structural colors, PDF vector fill colors and words.", "PDF fill colors are normalized as sets, independent of a PDF-to-SVG tool's subdivision of one colored shape into paths.", "Calc varied lines add per-point markers outside the current explicit point-override reading profile; producer reopen is not claimed here.", "Calc varied-line marker colors and explicit-series-color legend keys differ from the source-themed point colors; these cases are not color-fidelity acceptance.", "Excel/WPS unverified."]}
+              "limits": ["No font geometry or pixel equivalence is claimed by these structural colors, PDF vector fill colors and words.", "PDF fill colors are normalized as sets, independent of a PDF-to-SVG tool's subdivision of one colored shape into paths.", "Calc varied lines add per-point appearance. Producer reopen is verified separately in xlsx-chart-markers evidence; this color-only report does not claim it.", "Calc varied-line marker colors and explicit-series-color legend keys differ from the source-themed point colors; these cases are not color-fidelity acceptance.", "Excel/WPS unverified."]}
     if args.record: REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     else: assert json.loads(REPORT.read_text()) == report, "Pinned chart color observations changed"
     print(f"Verified {len(cases) * len(results)} independent chart color and legend observations")
