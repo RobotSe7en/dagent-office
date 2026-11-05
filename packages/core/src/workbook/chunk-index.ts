@@ -18,6 +18,7 @@ export interface IndexedCellSource { readonly row: number; readonly column: numb
 export interface ChunkValidation {
   readonly formulas?: FormulaTemplatePool;
   readonly cssClasses?: ReadonlySet<string>;
+  readonly cellStyleClasses?: ReadonlySet<string>;
   readonly numberFormats?: ReadonlySet<string>;
   readonly maxNodes?: number;
   readonly maxDepth?: number;
@@ -85,6 +86,10 @@ function validateCell(cell: Element, validation?: ChunkValidation): { column: nu
   const attrs = attributes(cell, ["data-column", "data-value-type", "data-value", "data-formula", "data-cache-state", "data-format-id", "class"]);
   const column = integer(attrs["data-column"]), type = attrs["data-value-type"], value = attrs["data-value"];
   validateClass(attrs["class"], validation?.cssClasses);
+  if (validation?.cellStyleClasses?.size && attrs["class"] !== undefined) {
+    const bindings = new Set(attrs["class"].split(/[\t\n\f\r ]+/).filter(name => validation.cellStyleClasses!.has(name)));
+    if (bindings.size > 1) invalid("A workbook cell cannot select competing named style bindings.");
+  }
   if (attrs["data-format-id"] !== undefined && validation?.numberFormats && !validation.numberFormats.has(attrs["data-format-id"])) invalid("A workbook number format is not defined.");
   const text = textContent(cell, validation?.cssClasses);
   checkLimit(text.length, 32_767);

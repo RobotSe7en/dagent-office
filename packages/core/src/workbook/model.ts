@@ -32,7 +32,7 @@ export function openWorkbookModel(files: Map<string, Uint8Array>, manifest: Work
   const cssBudget = { nodes: 0 }, classes = new Set<string>();
   const styles = manifest.styles.map(path => ({ path, css: normalizeCss(readText(files, path), "stylesheet", documentLimits, cssBudget) }));
   for (const style of styles) walk(parse(style.css), node => { if (node.type === "ClassSelector") classes.add(ident.decode(node.name)); });
-  const { formats, items } = validateWorkbookMetadata(metadata.workbook, classes, documentLimits.maxNodes);
+  const { formats, cellStyleClasses, items } = validateWorkbookMetadata(metadata.workbook, classes, documentLimits.maxNodes);
   const content = manifest.content === undefined ? undefined : parseHtml(readText(files, manifest.content), { kind: "workbook-content", entrypoint: manifest.content, styles: manifest.styles, assets: manifest.assets }, files, documentLimits, cssBudget);
   validateWorkbookContent(metadata.workbook, manifest, annotations, content, classes, documentLimits.maxNodes, items);
   const sheets = new Map(metadata.workbook.sheets.map(sheet => [sheet.sheetId, new Map<number, ChunkIndex>()]));
@@ -43,7 +43,7 @@ export function openWorkbookModel(files: Map<string, Uint8Array>, manifest: Work
     if (!sheet || sheet.has(key)) invalid("Workbook chunks must have unique positions on existing worksheets.");
     const bytes = files.get(chunk.path);
     if (!bytes || assetDigest(bytes) !== chunk.sha256) invalid("Workbook chunk bytes do not match their digest.");
-    const index = indexWorkbookChunk(bytes, chunk, documentLimits.maxFileBytes, { formulas, cssClasses: classes, numberFormats: formats, maxNodes: documentLimits.maxNodes, maxDepth: documentLimits.maxDepth });
+    const index = indexWorkbookChunk(bytes, chunk, documentLimits.maxFileBytes, { formulas, cssClasses: classes, cellStyleClasses, numberFormats: formats, maxNodes: documentLimits.maxNodes, maxDepth: documentLimits.maxDepth });
     cellCount += index.cellCount; formulaCount += index.formulaCount;
     checkLimit(cellCount, limits.maxCells); checkLimit(formulaCount, limits.maxFormulas);
     sheet.set(key, index); chunks.push({ path: chunk.path, index }); files.delete(chunk.path);

@@ -1,5 +1,5 @@
 import { DocumentError } from "@dagent-office/core";
-import type { WorkbookNumberFormat } from "@dagent-office/core";
+import type { WorkbookCellStyles, WorkbookNumberFormat, WorkbookStyleApplication } from "@dagent-office/core";
 import type { OpcPackage } from "../ooxml/package.js";
 import { declarations } from "../ooxml/styles.js";
 import type { Css } from "../ooxml/styles.js";
@@ -24,7 +24,7 @@ export interface NativeFormat extends CellStyleReference {
   readonly apply: Readonly<Record<FormatGroup, boolean>>;
 }
 export interface NativeNamedStyle {
-  readonly name: string; readonly format: number; readonly builtinId?: number; readonly hidden: boolean; readonly customBuiltin: boolean;
+  readonly name: string; readonly format: number; readonly builtinId?: number; readonly level?: number; readonly hidden: boolean; readonly customBuiltin: boolean;
 }
 export interface DifferentialStyleReference { readonly cssClass: string; readonly numberFormatId?: string }
 function table(root: XmlNode, name: string, child: string): XmlNode[] | undefined {
@@ -44,7 +44,9 @@ const defaultFont: Css = {
 const defaultBorder = Object.fromEntries(["left", "right", "top", "bottom"].map(side => [`--office-cell-border-${side}-kind`, "none"]));
 
 /** Native style records are transient input. Their only saved appearance values
- * are CSS declarations; number-format definitions remain typed source metadata. */
+ * are CSS declarations; number-format definitions remain typed source metadata.
+ * Named definitions, aliases and update bindings persist without duplicating
+ * effective cell appearance in the metadata. */
 export class XlsxStyles implements SheetStyles, RichTextStyles {
   readonly theme: WorkbookTheme;
   readonly drawingTheme: WorkbookDrawingTheme;
@@ -113,11 +115,12 @@ export class XlsxStyles implements SheetStyles, RichTextStyles {
     this.cellFormats = cells ? cells.map((node, index) => format(node, index, false, named.length)) : [format(this.fallbackNode, 0, false, named.length)];
     const names = new Set<string>();
     this.namedStyles = (root ? table(root, "cellStyles", "cellStyle") ?? [] : []).map(node => {
-      attributes(node, ["name", "xfId", "builtinId", "hidden", "customBuiltin"]); check(node, [], S);
+      attributes(node, ["name", "xfId", "builtinId", "iLevel", "hidden", "customBuiltin"]); check(node, [], S);
       const name = spreadsheetText(value(node, "name") ?? "", node, 255);
       if (!name || names.has(name.toUpperCase())) fail(node, "Named cell styles must have unique names."); names.add(name.toUpperCase());
       return { name, format: integer(node, "xfId", 0, named.length - 1), hidden: boolean(node, "hidden"), customBuiltin: boolean(node, "customBuiltin"),
-        ...(value(node, "builtinId") === undefined ? {} : { builtinId: integer(node, "builtinId", 0, 255) }) };
+        ...(value(node, "builtinId") === undefined ? {} : { builtinId: integer(node, "builtinId") }),
+        ...(value(node, "iLevel") === undefined ? {} : { level: integer(node, "iLevel") }) };
     });
     const normal = this.namedStyles.filter(style => style.builtinId === 0);
     if (normal.length > 1) fail(root!, "A workbook must not declare competing built-in Normal styles.");
@@ -182,5 +185,15 @@ export class XlsxStyles implements SheetStyles, RichTextStyles {
     const result = { cssClass, ...(numberFormatId === undefined ? {} : { numberFormatId }) }; this.dxfCache.set(index, result); return result;
   }
   numberFormats(): WorkbookNumberFormat[] { return [...this.formats.values()]; }
+  cellStyles(): WorkbookCellStyles {
+    const id = (index: number): string => `xlsx-style-definition-${index}`;
+    const apply = (format: NativeFormat): WorkbookStyleApplication => ({ font: format.apply.Font, fill: format.apply.Fill, border: format.apply.Border,
+      alignment: format.apply.Alignment, numberFormat: format.apply.NumberFormat, protection: format.apply.Protection });
+    return {
+      definitions: this.styleFormats.map((format, index) => ({ styleId: id(index), cssClass: format.cssClass, numberFormatId: format.numberFormatId, apply: apply(format) })),
+      names: this.namedStyles.map(({ format, ...style }) => ({ ...style, styleId: id(format) })),
+      bindings: this.cellFormats.flatMap(format => format.parent === undefined ? [] : [{ cssClass: format.cssClass, styleId: id(format.parent), apply: apply(format) }]),
+    };
+  }
   stylesheet(): string { return this.rules.join("\n"); }
 }

@@ -6,7 +6,7 @@ import { mapWorkbookComments } from "../../src/xlsx/comment-mapping.js";
 import { auditXlsxPartCoverage } from "../../src/xlsx/package.js";
 
 /** Test projection of the completed record adapters. Full native-part coverage,
- * named-style decisions and compatibility-comment reconciliation still gate
+ * appearance/format rendering and full read acceptance still gate
  * the public importer; this helper does not expose a partial SDK import API. */
 export function projectXlsxRecords(records: XlsxRecords) {
   const encoder = new TextEncoder(), decoder = new TextDecoder(), documentId = "native-records";
@@ -22,6 +22,7 @@ export function projectXlsxRecords(records: XlsxRecords) {
   const metadata = { ...records.properties, workbook: { dateSystem: records.native.dateSystem, calculationMode: records.native.calculationMode, activeSheetId: records.native.activeSheetId,
     sheets: records.sheets.map(sheet => sheet.metadata), names: records.native.names, themeCssClass: "xlsx-theme", numberFormats: records.styles.numberFormats(),
     columnWidthFontCssClass: records.styles.columnWidthFontCssClass(),
+    cellStyles: records.styles.cellStyles(),
     stories: content.stories, comments: comments.comments, commentAuthors: comments.authors,
     objects: drawings.objects, objectHyperlinks: drawings.hyperlinks, charts: drawings.charts.definitions,
     tableStyles: records.tableStyles.definitions, ...(records.tableStyles.defaultStyle ? { defaultTableStyle: records.tableStyles.defaultStyle } : {}) } };

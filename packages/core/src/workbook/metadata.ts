@@ -5,8 +5,9 @@ import { checkRange, checkNonOverlappingRanges } from "./ranges.js";
 import { validateWorkbookRules } from "./rules.js";
 import { validateWorkbookTables } from "./tables.js";
 import { parseFormula } from "./formula.js";
+import { validateWorkbookCellStyles } from "./cell-styles.js";
 
-export function validateWorkbookMetadata(workbook: WorkbookMetadata, classes: ReadonlySet<string>, maxItems: number): { formats: Set<string>; items: number } {
+export function validateWorkbookMetadata(workbook: WorkbookMetadata, classes: ReadonlySet<string>, maxItems: number): { formats: Set<string>; cellStyleClasses: Set<string>; items: number } {
   const ids = new Set<string>(), names = new Set<string>(); let visible = 0, items = 0;
   const classExists = (name: string): void => { if (/[\t\n\f\r ]/.test(name) || !classes.has(name)) invalid("A workbook dimension style is not defined."); };
   if (workbook.themeCssClass !== undefined) classExists(workbook.themeCssClass);
@@ -14,6 +15,7 @@ export function validateWorkbookMetadata(workbook: WorkbookMetadata, classes: Re
   const formats = new Set<string>(), ruleIds = new Set<string>();
   for (const format of workbook.numberFormats) { if (formats.has(format.formatId)) invalid("Number format identities must be unique."); formats.add(format.formatId); }
   const formatExists = (id: string | undefined): void => { if (id !== undefined && !formats.has(id)) invalid("A workbook number format is not defined."); };
+  const cellStyles = validateWorkbookCellStyles(workbook.cellStyles, classExists, formatExists, maxItems); items += cellStyles.items;
   for (const sheet of workbook.sheets) {
     if (ids.has(sheet.sheetId) || names.has(sheet.name.toUpperCase()) || sheet.name.startsWith("'") || sheet.name.endsWith("'")) invalid("Worksheet identities and names must be unique and valid.");
     ids.add(sheet.sheetId); names.add(sheet.name.toUpperCase()); if (sheet.visibility === "visible") visible++;
@@ -53,7 +55,7 @@ export function validateWorkbookMetadata(workbook: WorkbookMetadata, classes: Re
   items += nameIds.size;
   items += validateWorkbookTables(workbook, classExists, formatExists, maxItems);
   checkLimit(items + formats.size, maxItems);
-  return { formats, items: items + formats.size };
+  return { formats, cellStyleClasses: cellStyles.classes, items: items + formats.size };
 }
 
 function validatePrint(print: WorkbookPrint, classExists: (name: string) => void): number {

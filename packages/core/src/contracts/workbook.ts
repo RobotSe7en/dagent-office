@@ -7,6 +7,8 @@ import { WorkbookAutoFilterSchema, WorkbookTableSchema, WorkbookTableStyleRefere
 import { WorkbookCommentAuthorSchema, WorkbookCommentSchema } from "./workbook-comments.js";
 import { WorkbookObjectSchema } from "./workbook-drawing.js";
 import { WorkbookChartSchema } from "./workbook-charts.js";
+import { WorkbookCellStylesSchema } from "./workbook-cell-styles.js";
+export * from "./workbook-cell-styles.js";
 export * from "./workbook-charts.js";
 export * from "./workbook-comments.js";
 export * from "./workbook-drawing.js";
@@ -117,6 +119,7 @@ export const WorkbookMetadataSchema = z.strictObject({
   activeSheetId: IdentifierSchema,
   sheets: z.array(WorkbookSheetSchema).min(1),
   numberFormats: z.array(WorkbookNumberFormatSchema),
+  cellStyles: WorkbookCellStylesSchema.optional(),
   /** CSS font used to interpret character-based column widths (native Normal).
    * Older packages without this reference use the worksheet default font. */
   columnWidthFontCssClass: IdentifierSchema.optional(),

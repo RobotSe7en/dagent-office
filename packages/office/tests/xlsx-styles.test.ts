@@ -4,6 +4,9 @@ import { createWorkbook, DEFAULT_DOCUMENT_READ_LIMITS, openDocument } from "@dag
 import { openOpc, openOpcFiles } from "../src/ooxml/package.js";
 import { S, xml } from "../src/ooxml/xml.js";
 import { XlsxStyles } from "../src/xlsx/styles.js";
+import { readXlsxRecords } from "../src/xlsx/read.js";
+import { writeOpcZip } from "../src/document-zip.js";
+import { projectXlsxRecords } from "./helpers/xlsx-record-model.js";
 
 const encoder = new TextEncoder(), decoder = new TextDecoder(), options = { limits: { maxFileBytes: 32 * 1024 * 1024 } };
 const dummy = xml(encoder.encode(`<c xmlns="${S}"/>`), "cell.xml", DEFAULT_DOCUMENT_READ_LIMITS, { nodes: 0 });
@@ -19,11 +22,24 @@ describe("native workbook style tables", () => {
       const files = new Map(createWorkbook({ documentId: "style-tables" })), metadata = JSON.parse(decoder.decode(files.get("metadata.json")!));
       metadata.workbook.themeCssClass = "xlsx-theme"; metadata.workbook.numberFormats = styles.numberFormats();
       metadata.workbook.columnWidthFontCssClass = styles.columnWidthFontCssClass();
+      metadata.workbook.cellStyles = styles.cellStyles();
       metadata.workbook.sheets[0].defaultCssClass = styles.defaultCell().cssClass; metadata.workbook.sheets[0].defaultNumberFormatId = styles.defaultCell().numberFormatId;
       files.set("metadata.json", encoder.encode(JSON.stringify(metadata))); files.set("styles.css", encoder.encode(styles.stylesheet()));
       const model = openDocument(files, { kind: "workbook" }); expect(openDocument(model.serialize(), { kind: "workbook" }).snapshot()).toEqual(model.snapshot()); checked++;
     }
     expect(checked).toBe(32);
+  });
+  it("persists native named definitions and cell associations without changing their current appearance", async () => {
+    const opc = variant(source => source.replace('<cellStyles count="1">', '<cellStyles count="2"><cellStyle name="汇总😀" xfId="0" builtinId="1" iLevel="2" hidden="1" customBuiltin="1"/>')
+      .replace('numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1"', 'numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="0"'));
+    const records = await readXlsxRecords(writeOpcZip(opc.files)), { model } = projectXlsxRecords(records), snapshot = model.snapshot();
+    const styles = snapshot.metadata.workbook.cellStyles!;
+    expect(styles.names).toContainEqual({ name: '汇总😀', styleId: 'xlsx-style-definition-0', builtinId: 1, level: 2, hidden: true, customBuiltin: true });
+    expect(styles.definitions).toHaveLength(1); expect(styles.definitions[0]).toMatchObject({ styleId: 'xlsx-style-definition-0', cssClass: 'xlsx-named-0', numberFormatId: 'num-0' });
+    expect(styles.bindings.find(binding => binding.cssClass === 'xlsx-cell-2')).toMatchObject({ styleId: 'xlsx-style-definition-0', apply: { numberFormat: false } });
+    const cell = model.readWindow({ sheetId: 'sheet-1', row: 0, column: 0, rows: 20, columns: 10 }).find(cell => cell.cssClass === 'xlsx-cell-2');
+    expect(cell).toMatchObject({ cssClass: 'xlsx-cell-2', formatId: 'num-164' });
+    expect(openDocument(model.serialize(), { kind: 'workbook' }).snapshot()).toEqual(snapshot);
   });
   it("keeps effective cell formats independent of future named-style update flags", () => {
     const styles = new XlsxStyles(variant(source => source.replace('numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1"', 'numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="0"')), "xl/workbook.xml", 1_000_000);
