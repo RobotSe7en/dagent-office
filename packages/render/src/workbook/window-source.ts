@@ -63,7 +63,7 @@ export function modelWindowSource(model: WorkbookModel): WorkbookWindowSource {
     const request = { documentId: input.documentId, revision: input.revision, ...limits,
       windows: input.windows.map(window => ({ sheetId: window.sheetId, row: window.row, column: window.column, rows: window.rows, columns: window.columns })) };
     validateRequest(request, snapshot);
-    const cells: WorkbookCell[] = []; let units = 0, visited = 0, yielded = 0;
+    const cells: WorkbookCell[] = []; let units = 0, visited = 0, checkpoint = performance.now(), firstYield = true;
     const total = request.windows.reduce((sum, window) => sum + window.rows * window.columns, 0);
     for (const window of request.windows) {
       const columns = Math.min(256, window.columns), rows = Math.floor(256 / columns);
@@ -78,7 +78,7 @@ export function modelWindowSource(model: WorkbookModel): WorkbookWindowSource {
         visited += query.rows * query.columns;
         // Yield a task, not only a microtask, so a host/Worker cancellation
         // message can interrupt a large or highly fragmented viewport read.
-        if (visited < total && visited - yielded >= 256) { yielded = visited; await new Promise<void>(resolve => setTimeout(resolve, 0)); }
+        if (visited < total && (firstYield || performance.now() - checkpoint >= 8)) { firstYield = false; await new Promise<void>(resolve => setTimeout(resolve, 0)); checkpoint = performance.now(); }
       }
     }
     checkWindowCancellation(signal);

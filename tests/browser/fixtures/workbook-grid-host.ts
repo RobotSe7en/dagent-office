@@ -38,7 +38,7 @@ import type { NumberTextCase } from "./workbook-number-text.js";
 import { layoutWorkbookNumbers } from "../../../packages/render/src/workbook/number-text-layout.js";
 import type { WorkbookNumberLayoutInput } from "../../../packages/render/src/workbook/number-text-layout.js";
 
-import { windowLayoutMeasurement } from './workbook-window.js';
+import { autoRowMeasurement, windowLayoutMeasurement } from './workbook-window.js';
 
 const encode = (text: string) => new TextEncoder().encode(text);
 async function main() {
@@ -72,7 +72,7 @@ async function main() {
   const style = document.createElement('style'); style.textContent = model.snapshot().styles.map(style => style.css).join('\n'); document.head.append(style);
   let rightToLeft = false;
   const host = {
-    windowLayoutMeasurement,
+    windowLayoutMeasurement, autoRowMeasurement,
     numberTextMeasurement(cases: readonly NumberTextCase[], locale?: string) { return numberTextMeasurement(container, cases, locale); },
     rotatedCellMeasurement(cases: readonly RotatedCellCase[]) { return rotatedCellMeasurement(container, cases); },
     shapedFillMeasurement,

@@ -20,7 +20,7 @@ export class WorkbookCellSources {
   private readonly root: HTMLElement;
   private readonly cells = new Map<number, WorkbookSourceCell>();
   private disposed = false;
-  constructor(scope: HTMLElement, snapshot: WorkbookSnapshot, frame: WorkbookWindowFrame, maxNodes = 50_000, rules?: WorkbookRuleReadResponse) {
+  constructor(scope: HTMLElement, snapshot: WorkbookSnapshot, frame: Pick<WorkbookWindowFrame, "documentId" | "revision" | "sheetId" | "sourceCoordinates" | "getCell">, maxNodes = 50_000, rules?: WorkbookRuleReadResponse) {
     const document = scope.ownerDocument, sheet = snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === frame.sheetId);
     if (!sheet || snapshot.manifest.documentId !== frame.documentId || snapshot.manifest.revision !== frame.revision) throw new DocumentError("RevisionConflict", "Cell source styles require the same workbook revision as their window.");
     if (!scope.isConnected || !document.defaultView || !Number.isSafeInteger(maxNodes) || maxNodes < 1) throw new DocumentError("InvalidOperation", "Cell source measurement requires a connected surface and a positive node budget.");

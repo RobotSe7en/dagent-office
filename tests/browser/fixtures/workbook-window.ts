@@ -71,3 +71,36 @@ export async function windowLayoutMeasurement(entries: readonly [string, number[
     return { results, unchanged };
   } finally { loader.dispose(); formatter.dispose(); surface.dispose(); container.remove(); }
 }
+
+export async function autoRowMeasurement(entries: readonly [string, number[]][], ids: readonly string[]) {
+  const { measureWorkbookAutoRows } = await import('../../../packages/render/src/workbook/auto-rows.js');
+  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)]));
+  const model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
+  const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem, hostLocale: 'zh-CN' });
+  const container = document.createElement('div'); document.body.append(container);
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 600, heightPt: 360 });
+  const provider = modelWindowSource(model), results = [], errors: string[] = [];
+  let reads = 0, largest = 0;
+  const source = { snapshot, async read(request: Parameters<typeof provider.read>[0], signal: AbortSignal) {
+    reads++; largest = Math.max(largest, request.windows.reduce((sum, window) => sum + window.rows * window.columns, 0));
+    return provider.read(request, signal);
+  } };
+  try {
+    for (const sheetId of ids) {
+      const normal = measureWorkbookColumnFont(surface.source, snapshot.metadata.workbook, sheetId);
+      const result = await measureWorkbookAutoRows(surface, source, sheetId, normal, formatter, new AbortController().signal);
+      results.push({ sheetId, heights: Array.from({ length: 4 }, (_, row) => result.dimensions.rows.size(row)), after: result.dimensions.rows.position(2),
+        farHeight: result.dimensions.rows.size(299), cells: result.measuredCells, fonts: result.fonts.length, segments: result.dimensions.rows.segmentCount });
+    }
+    const sheetId = ids[0]!, normal = measureWorkbookColumnFont(surface.source, snapshot.metadata.workbook, sheetId);
+    for (const limits of [{ maxReadCells: 1 }, { maxCells: 1 }, { maxCodeUnits: 1 }]) {
+      try { await measureWorkbookAutoRows(surface, source, sheetId, normal, formatter, new AbortController().signal, limits); errors.push('accepted'); }
+      catch (error) { errors.push((error as { code: string }).code); }
+    }
+    const abort = new AbortController(); abort.abort();
+    try { await measureWorkbookAutoRows(surface, source, sheetId, normal, formatter, abort.signal); errors.push('accepted'); }
+    catch (error) { errors.push((error as { code: string }).code); }
+    const after = model.serialize(), unchanged = [...before].every(([path, bytes]) => bytes.every((byte, i) => byte === after.get(path)![i]));
+    return { results, reads, largest, errors, unchanged, retained: surface.source.querySelectorAll('[data-office-view$="measurement"]').length + surface.view.querySelectorAll('[data-office-view$="measurement"]').length };
+  } finally { formatter.dispose(); surface.dispose(); container.remove(); }
+}

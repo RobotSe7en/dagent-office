@@ -23,6 +23,8 @@ import { checkedWorkbookRules } from "./rule-response.js";
 import { workbookRuleDiagnostics } from "./rule-source.js";
 import type { WorkbookRuleSource, WorkbookRuleDiagnostic } from "./rule-source.js";
 import { maximumWorkbookSkew } from "./skew-sources.js";
+import { measureWorkbookAutoRows } from "./auto-rows.js";
+import type { WorkbookAutoRowLimits, WorkbookAutoRows } from "./auto-rows.js";
 
 export interface WorkbookWindowProviders {
   readonly cells: WorkbookWindowSource;
@@ -38,6 +40,7 @@ export interface WorkbookWindowControllerOptions {
   readonly drawings?: WorkbookDrawingLayoutLimits;
   readonly annotations?: WorkbookAnnotationProjectionLimits;
   readonly rules?: Partial<WorkbookRuleReadLimits>;
+  readonly autoRows?: Partial<WorkbookAutoRowLimits>;
 }
 export interface WorkbookRenderedWindow {
   readonly frame: WorkbookWindowFrame;
@@ -71,7 +74,7 @@ export class WorkbookWindowController {
   private readonly maxNodes: number;
   private readonly ruleLimits: WorkbookRuleReadLimits;
   private readonly skewCoefficient: number;
-  private readonly sheets = new Map<string, { readonly normal: WorkbookColumnFont; readonly dimensions: ReturnType<typeof worksheetDimensions> }>();
+  private readonly sheets = new Map<string, WorkbookAutoRows & { readonly normal: WorkbookColumnFont }>();
   private pending: { cancel(): void } | undefined;
   private active: { readonly state: WorkbookRenderedWindow; readonly drawings: WorkbookDrawingLayout; readonly decoration?: WorkbookWindowDecoration } | undefined;
   private disposed = false;
@@ -82,14 +85,14 @@ export class WorkbookWindowController {
     this.ruleLimits = Object.freeze({ ...DEFAULT_WORKBOOK_RULE_LIMITS, ...input.rules });
     if (Object.keys(this.ruleLimits).some(key => !Object.hasOwn(DEFAULT_WORKBOOK_RULE_LIMITS, key)) || !Object.values(this.ruleLimits).every(value => Number.isSafeInteger(value) && value > 0))
       throw new DocumentError("InvalidOperation", "Workbook rules require supported positive safe-integer budgets.");
-    if (!Number.isSafeInteger(this.maxNodes) || this.maxNodes < 1 || Object.keys(input).some(key => !["maxNodes", "read", "cells", "drawings", "annotations", "rules"].includes(key))
+    if (!Number.isSafeInteger(this.maxNodes) || this.maxNodes < 1 || Object.keys(input).some(key => !["maxNodes", "read", "cells", "drawings", "annotations", "rules", "autoRows"].includes(key))
       || !surface.source.isConnected || !surface.view.isConnected || surface.source.ownerDocument !== surface.document || surface.view.ownerDocument !== surface.document
       || surface.view.childNodes.length) throw new DocumentError("InvalidOperation", "A workbook controller requires its own empty connected surface and supported node budget.");
     this.snapshot = providers.cells.snapshot;
     this.skewCoefficient = maximumWorkbookSkew(surface.document);
     checkWindowIdentity(providers.assets.snapshot.manifest, this.snapshot); checkWindowIdentity(providers.charts.snapshot.manifest, this.snapshot);
     if (providers.rules) checkWindowIdentity(providers.rules.snapshot.manifest, this.snapshot);
-    this.options = Object.freeze({ ...input, read: Object.freeze({ ...input.read }), cells: Object.freeze({ ...input.cells }), annotations: Object.freeze({ ...input.annotations }),
+    this.options = Object.freeze({ ...input, read: Object.freeze({ ...input.read }), cells: Object.freeze({ ...input.cells }), annotations: Object.freeze({ ...input.annotations }), autoRows: Object.freeze({ ...input.autoRows }),
       drawings: Object.freeze({ ...input.drawings, ...(input.drawings?.assets ? { assets: Object.freeze({ ...input.drawings.assets }) } : {}) }) });
     // Validate read limits before retaining auxiliary content or starting work.
     const probe = new WorkbookWindowLoader(providers.cells, this.options.read, true); probe.dispose();
@@ -123,7 +126,10 @@ export class WorkbookWindowController {
       let metrics = this.sheets.get(sheetId);
       if (!metrics) {
         const normal = measureWorkbookColumnFont(this.surface.source, this.snapshot.metadata.workbook, sheetId);
-        metrics = { normal, dimensions: worksheetDimensions(sheet, normal.maximumDigitWidthPx) }; this.sheets.set(sheetId, metrics);
+        const measured = await Promise.race([measureWorkbookAutoRows(this.surface, this.providers.cells, sheetId, normal, this.formatter, abort.signal, this.options.autoRows,
+          this.providers.rules ? { source: this.providers.rules, limits: this.ruleLimits } : undefined), cancelled]);
+        if (measured === false || !current()) return false;
+        metrics = { normal, ...measured }; this.sheets.set(sheetId, metrics);
       }
       const { normal, dimensions } = metrics;
       if (!await Promise.race([loader.load(sheetId, dimensions, viewport), cancelled]) || !current()) return false;
@@ -149,8 +155,8 @@ export class WorkbookWindowController {
       if (!current()) return false;
       nodes += drawings.nodes; cells.element.append(drawings.element);
       const base: WorkbookRenderedWindow = Object.freeze({ frame, element: cells.element, nodes, dimensions, cells: cells.cells, objects: drawings.objects, annotations,
-        fonts: Object.freeze([...normal.fonts, ...cells.fonts, ...drawings.fonts]), diagnostics: Object.freeze([...drawings.diagnostics, ...rules ? workbookRuleDiagnostics(rules) : []]), ...(rules ? { rules } : {}),
-        usedFallbackLineMetrics: cells.usedFallbackLineMetrics || drawings.usedFallbackLineMetrics });
+        fonts: Object.freeze([...normal.fonts, ...metrics.fonts, ...cells.fonts, ...drawings.fonts]), diagnostics: Object.freeze([...drawings.diagnostics, ...rules ? workbookRuleDiagnostics(rules) : []]), ...(rules ? { rules } : {}),
+        usedFallbackLineMetrics: metrics.usedFallbackLineMetrics || cells.usedFallbackLineMetrics || drawings.usedFallbackLineMetrics });
       decoration = this.decorate?.(base, this.content, this.maxNodes - nodes);
       if (decoration && (!Number.isSafeInteger(decoration.nodes) || decoration.nodes < 0 || nodes + decoration.nodes > this.maxNodes))
         throw new DocumentError("ResourceLimitExceeded", "Workbook controls exceed their assigned window-node budget.");

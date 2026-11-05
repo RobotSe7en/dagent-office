@@ -7,7 +7,7 @@ import { readWorkbook } from "../src/xlsx/workbook.js";
 import { readSheet, rowDimension } from "../src/xlsx/sheet.js";
 import { scanWorksheet } from "../src/xlsx/scan.js";
 import { ImportControl } from "../src/import-control.js";
-import { S } from "../src/ooxml/xml.js";
+import { S, xml } from "../src/ooxml/xml.js";
 
 const limits = { ...DEFAULT_DOCUMENT_READ_LIMITS, maxFileBytes: 32 * 1024 * 1024, maxPackageBytes: 128 * 1024 * 1024, maxNodes: 2_000_000 };
 const styles = { defaultCell: () => ({ cssClass: "cell-default", numberFormatId: "general" }), cell: () => ({ cssClass: "cell-default", numberFormatId: "general" }), tabStyle: () => "cell-default" };
@@ -38,6 +38,15 @@ describe("streaming native sheet geometry", () => {
     expect(sheet.hyperlinks?.[0]).toEqual({ range: { from: { row: 1, column: 0 }, to: { row: 1, column: 0 } }, url: "https://example.com/authorized-link", display: "文档链接", tooltip: "外部链接，不自动访问" });
     const large = await read("examples/xlsx/15-ten-thousand-rows.xlsx"); expect(large.cells).toBe(200000);
     expect(large.model.snapshot().metadata.workbook.sheets[0]!.rowDimensions).toEqual([]);
+  });
+  it("distinguishes a fixed sheet default, an explicit automatic row and a native automatic-height cache", () => {
+    const parse = (source: string) => xml(encoder.encode(source), "sheet.xml", limits, { nodes: 0 });
+    expect(rowDimension(parse(`<row xmlns="${S}" r="2" ht="80" customHeight="0"/>`), 1, styles)).toEqual({ from: 1, to: 1, autoHeight: true });
+    expect(rowDimension(parse(`<row xmlns="${S}" r="2" ht="12" customHeight="1"/>`), 1, styles)).toEqual({ from: 1, to: 1, heightPt: 12 });
+    expect(rowDimension(parse(`<row xmlns="${S}" r="2" ht="80"/>`), 1, styles)).toBeUndefined();
+    const opc = openOpc(readFileSync("examples/xlsx/01-values-text.xlsx"), { limits }), source = readWorkbook(opc).sheets[0]!;
+    const sheet = readSheet(parse(`<worksheet xmlns="${S}"><sheetFormatPr defaultRowHeight="18" customHeight="1"/><sheetData/></worksheet>`), source, [{ from: 1, to: 1, autoHeight: true }], opc, styles);
+    expect(sheet.defaultRowHeightCustom).toBe(true); expect(sheet.defaultRowHeightPt).toBe(18); expect(sheet.rowDimensions[0]?.autoHeight).toBe(true);
   });
   it("infers omitted addresses and rejects duplicate, misplaced, unordered and out-of-bounds cells", async () => {
     const scan = async (content: string) => {

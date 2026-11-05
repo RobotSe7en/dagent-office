@@ -1,17 +1,12 @@
 import { DocumentError } from "@dagent-office/core";
-import type { WorkbookDisplayFormat, WorkbookNumberFormatter, WorkbookRuleReadResponse, WorkbookSnapshot } from "@dagent-office/core";
+import type { WorkbookNumberFormatter, WorkbookRuleReadResponse, WorkbookSnapshot } from "@dagent-office/core";
 import type { WorkbookFormulaSource, WorkbookNumberDisplay } from "@dagent-office/core";
 import type { FontResolution } from "../contracts.js";
 import { WorkbookCellSources } from "./cell-source.js";
 import { workbookCellBorders, workbookCellDiagonals } from "./cell-borders.js";
 import { workbookCellFill } from "./cell-fill.js";
 import { workbookCellShape } from "./cell-shape.js";
-import { createWorkbookTextView } from "./text-view.js";
-import { createWorkbookNumberText } from "./number-text.js";
-import { layoutWorkbookTexts } from "./text-layout.js";
-import type { WorkbookTextLayout, WorkbookTextLayoutInput } from "./text-layout.js";
-import { layoutWorkbookNumbers } from "./number-text-layout.js";
-import type { WorkbookNumberLayoutInput } from "./number-text-layout.js";
+import type { WorkbookTextLayout } from "./text-layout.js";
 import { workbookTextRotation } from "./text-alignment.js";
 import { projectWorkbookBorders } from "./border-projection.js";
 import { projectWorkbookDiagonals } from "./diagonal-projection.js";
@@ -22,8 +17,7 @@ import type { WorkbookGridCell } from "./projection.js";
 import type { WorkbookSurface } from "./surface.js";
 import type { WorkbookWindowFrame } from "./window-loader.js";
 import { paintWorkbookWindow } from "./window-paint.js";
-import { layoutWorkbookFormattedTexts } from "./formatted-text.js";
-import type { WorkbookFormattedTextInput } from "./formatted-text.js";
+import { layoutWorkbookCellTexts } from "./cell-text-layout.js";
 import { WorkbookTextFlow } from "./text-flow.js";
 import { intersectRect } from "./projection.js";
 import type { WorkbookRect } from "./projection.js";
@@ -80,56 +74,21 @@ export function layoutWorkbookWindow(surface: Pick<WorkbookSurface, "source" | "
       const calculated = current.get(row * 16_384 + column); return calculated?.kind === "value" ? calculated.value : frame.getCell(row, column)?.value;
     };
     const projections = [...frame.projections, ...flow.candidates(valueAt)], textRects = new Map<WorkbookGridCell, WorkbookRect>();
-    const formats = new Map(snapshot.metadata.workbook.numberFormats.map(format => [format.formatId, format]));
-    const texts: WorkbookTextLayoutInput[] = [], numbers: WorkbookNumberLayoutInput[] = [], formatted: WorkbookFormattedTextInput[] = [];
-    const locations = new Map<WorkbookGridCell, { kind: "text" | "number" | "formatted"; index: number }>();
-    let textNodes = 0, units = 0;
+    const textInputs = projections.map(projection => {
+      const source = sources.get(projection.row, projection.column)!, cell = frame.getCell(projection.row, projection.column);
+      const value = valueAt(projection.row, projection.column), rect = value && value.type !== "blank" ? flow.textRect(projection) : projection.rect;
+      textRects.set(projection, rect);
+      return { source, value, formula: Boolean(cell?.formula), widthPt: rect.width, heightPt: rect.height, bordered: bordered(projection) };
+    });
+    const textLayout = layoutWorkbookCellTexts(surface.view, snapshot, textInputs, formatter, options, maxNodes, maxTextUnits);
+    let textNodes = textLayout.nodes;
     const remaining = (): number => {
       if (textNodes >= maxNodes) throw new DocumentError("ResourceLimitExceeded", "Workbook window text exceeds its cumulative node budget.");
       return maxNodes - textNodes;
     };
-    for (const projection of projections) {
-      const cell = frame.getCell(projection.row, projection.column), source = sources.get(projection.row, projection.column)!;
-      const calculated = current.get(projection.row * 16_384 + projection.column);
-      const value = calculated?.kind === "value" ? calculated.value : cell?.value;
-      if (!cell || !value || value.type === "blank") continue;
-      const format: WorkbookDisplayFormat | undefined = source.format.numberFormatId ? formats.get(source.format.numberFormatId) : undefined;
-      const rect = flow.textRect(projection); textRects.set(projection, rect);
-      const size = { widthPt: rect.width, heightPt: rect.height, bordered: bordered(projection) };
-      if (value.type === "number") {
-        locations.set(projection, { kind: "number", index: numbers.length }); numbers.push({ source, value: value.value, ...(format ? { format } : {}), ...size });
-        continue;
-      }
-      if (value.type === "text" && format) {
-        const display = formatter.format(value.value, format);
-        if (display.kind !== "parts" || display.color || display.parts.some(part => part.kind !== "text")
-          || display.parts.length !== 1 || display.parts[0]?.kind !== "text" || !display.parts[0].source) {
-          // Text formats apply to both plain and rich values. @ fields retain
-          // source runs; affixes are derived and a format color overrides runs.
-          locations.set(projection, { kind: "formatted", index: formatted.length }); formatted.push({ source, value: value.value, format, derived: Boolean(cell.formula), ...size }); continue;
-        }
-      }
-      const text = value.type === "text" && !cell.formula ? createWorkbookTextView(source, remaining())
-        : createWorkbookNumberText(source, [{ kind: "text", text: value.type === "boolean" ? value.value ? "TRUE" : "FALSE" : value.value }], undefined, remaining());
-      textNodes += text.nodes + 1; units += text.element.textContent?.length ?? 0;
-      if (units > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Workbook window text exceeds its cumulative source-text budget.");
-      locations.set(projection, { kind: "text", index: texts.length }); texts.push({ source, text, valueType: value.type, ...size });
-    }
-    const rich = layoutWorkbookTexts(surface.view, texts, options.normalSpaceWidthPx, maxNodes, maxTextUnits);
-    textNodes = rich.cells.reduce((sum, cell) => sum + cell.text.nodes + 1, 0);
-    units = rich.cells.reduce((sum, cell) => sum + (cell.text.element.textContent?.length ?? 0), 0);
-    const formattedText = layoutWorkbookFormattedTexts(surface.view, formatted, formatter, options.normalSpaceWidthPx, remaining(), Math.max(1, maxTextUnits - units));
-    textNodes += formattedText.cells.reduce((sum, cell) => sum + cell.text.nodes + 1, 0);
-    units += formattedText.cells.reduce((sum, cell) => sum + (cell.text.element.textContent?.length ?? 0), 0);
-    if (units > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Workbook window exceeds its cumulative displayed-text budget.");
-    const numeric = layoutWorkbookNumbers(surface.view, numbers, formatter, options.normalSpaceWidthPx, remaining(), Math.max(1, maxTextUnits - units));
-    textNodes += numeric.cells.reduce((sum, cell) => sum + cell.text.nodes + 1, 0);
-    units += numeric.cells.reduce((sum, cell) => sum + (cell.text.element.textContent?.length ?? 0), 0);
-    if (units > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Workbook window exceeds its cumulative displayed-text budget.");
-    remaining();
-    const all = projections.map(projection => {
-      const computed = style(projection.row, projection.column), location = locations.get(projection);
-      const text = location ? (location.kind === "number" ? numeric : location.kind === "formatted" ? formattedText : rich).cells[location.index]! : undefined;
+    const textIndices = new Map(projections.map((projection, index) => [projection, index]));
+    const all = projections.map((projection, index) => {
+      const computed = style(projection.row, projection.column), text = textLayout.cells[index]!.text;
       const shape = workbookCellShape(projection.rect.width, projection.rect.height,
         workbookTextRotation(computed).rotationDegrees, bordered(projection));
       const textRect = textRects.get(projection) ?? projection.rect, value = valueAt(projection.row, projection.column);
@@ -160,10 +119,10 @@ export function layoutWorkbookWindow(surface: Pick<WorkbookSurface, "source" | "
       () => ({ before: gridPaint, after: gridPaint, top: gridPaint, bottom: gridPaint }), sheet.rightToLeft, maxNodes)) : [];
     for (const grid of gridLines) grid.dataset.officeView = "workbook-gridlines";
     const element = paintWorkbookWindow(document, frame, prepared, sheet.rightToLeft, views, maxNodes, gridLines, overflow);
-    return Object.freeze({ element, fonts: Object.freeze([...rich.fonts, ...formattedText.fonts, ...numeric.fonts]), usedFallbackLineMetrics: rich.usedFallbackLineMetrics || formattedText.usedFallbackLineMetrics || numeric.usedFallbackLineMetrics,
+    return Object.freeze({ element, fonts: textLayout.fonts, usedFallbackLineMetrics: textLayout.usedFallbackLineMetrics,
       cells: Object.freeze([...prepared, ...overflow].map(cell => {
-        const stored = frame.getCell(cell.projection.row, cell.projection.column), location = locations.get(cell.projection);
-        const overflow = location?.kind === "number" ? numeric.overflow[location.index] : undefined;
+        const stored = frame.getCell(cell.projection.row, cell.projection.column);
+        const overflow = textLayout.cells[textIndices.get(cell.projection)!]?.numberOverflow;
         return Object.freeze({ projection: cell.projection, ...(cell.text ? { text: cell.text } : {}), ...(stored?.formula ? { cacheState: stored.formula.cacheState } : {}),
           ...(overflow ? { numberOverflow: overflow } : {}) });
       })) });

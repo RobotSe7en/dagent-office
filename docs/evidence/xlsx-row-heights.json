@@ -1,0 +1,687 @@
+{
+  "scope": "Independent automatic/fixed row-height sources and pinned Calc observations.",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "environment": {
+    "libreOffice": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+    "poppler": "pdfinfo version 25.03.0\nCopyright 2005-2025 The Poppler Developers - http://poppler.freedesktop.org\nCopyright 1996-2011, 2022 Glyph & Cog, LLC",
+    "fontconfig": "fontconfig version 2.15.0",
+    "dpi": 96,
+    "fontCount": 424,
+    "fontManifestSha256": "c69980066d071afe8f248c7774f5265a6eb82990db1f2f78843580df8d2325b4"
+  },
+  "sourceSha256": "88c7d7a0c77094ae55b3c1ff83238c2e59c8ed355b187f3653936fc79f91ec5e",
+  "cases": [
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "wrapped",
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "64.9",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "fixed-sheet",
+      "defaultHeight": 18,
+      "customDefault": true,
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "18",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "18",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "64.9",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "18",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "automatic-exception",
+      "defaultHeight": 18,
+      "customDefault": true,
+      "automatic": true,
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "18",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "18",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "64.9",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "18",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "manual-row",
+      "manual": 12,
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "12",
+          "hidden": "false",
+          "customHeight": "true",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "hidden-row",
+      "hidden": true,
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "64.9",
+          "hidden": "true",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "offscreen-column",
+      "column": "D",
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "64.9",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "merged-columns",
+      "merge": "B2:C2",
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "26.85",
+          "hidden": "false",
+          "customHeight": "true",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "merged-rows",
+      "merge": "B2:B3",
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "true",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": false,
+      "name": "rotation-45",
+      "rotation": 45,
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "118.65",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "ABC",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": false,
+      "name": "vertical",
+      "rotation": 255,
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "39.55",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Ab",
+      "size": 20,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": false,
+      "name": "large-font",
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "24.45",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha\nbeta\ngamma",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "explicit-lines",
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "39.55",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "hidden-column",
+      "hiddenColumn": true,
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "52.2",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "far-row",
+      "row": 300,
+      "producerFormat": {
+        "defaultColWidth": "8.4296875",
+        "defaultRowHeight": "15",
+        "customHeight": "true",
+        "zeroHeight": "false",
+        "outlineLevelRow": "0",
+        "outlineLevelCol": "0"
+      },
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "300",
+          "customFormat": "false",
+          "ht": "64.9",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    }
+  ]
+}

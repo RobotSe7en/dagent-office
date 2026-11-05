@@ -29,10 +29,13 @@ test('native conditional and validation states reach the public preview through 
   expect(result.ruleStates!.cells.map(cell => cell.validation?.state)).toEqual(['valid', 'invalid', 'valid', 'valid', 'valid', 'valid', 'valid']);
   expect(result.largestReplyUnits).toBeLessThan(1024 * 1024);
 });
-test('10,000 actual XLSX rows open and scroll through the production read transport without moving full cell chunks to the main thread', async ({ page }, info) => {
+test('10,000 actual XLSX rows open and scroll through the production read transport without moving full cell chunks to the main thread', async ({ page, browserName }, info) => {
   test.setTimeout(120_000);
   const bytes = [...readFileSync('examples/xlsx/15-ten-thousand-rows.xlsx')];
+  const profile = process.env.DAGENT_WORKBOOK_CPU_PROFILE && browserName === 'chromium' ? await page.context().newCDPSession(page) : undefined;
+  if (profile) { await profile.send('Profiler.enable'); await profile.send('Profiler.start'); }
   const result = await page.evaluate(({ code, bytes }) => window.workbookReadHost.nativeWorkerRead(code, bytes, 'ten-thousand-native', true), { code: workerCode, bytes });
+  if (profile) { writeFileSync(info.outputPath('workbook-main.cpuprofile'), JSON.stringify((await profile.send('Profiler.stop')).profile)); await profile.detach(); }
   expect(result.counts).toEqual({ kind: 'audit', cells: 200_000, formulas: 20_000, chunks: 40 });
   expect(result.last).toHaveLength(20); expect(result.last.at(-1)?.value).toEqual({ type: 'number', value: 3_400_152 });
   expect(result).toMatchObject({ frozen: true, retained: true, detachedInput: true, failures: [] });

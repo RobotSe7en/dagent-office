@@ -45,4 +45,20 @@ describe("sparse worksheet dimensions", () => {
     expect(axis.segmentCount).toBe(1); expect(() => axis.visible(0, axis.extentPt, 5000)).toThrowError(expect.objectContaining({ code: "ResourceLimitExceeded" }));
     expect(() => axis.position(-1)).toThrow(); expect(() => axis.hit(Infinity)).toThrow(); expect(axis.hit(-1)).toBeUndefined();
   });
+  it("composes measured rows with fixed defaults, explicit automatic exceptions and hidden spans", () => {
+    const source = openDocument(createWorkbook({ documentId: "measured-rows" }), { kind: "workbook" }).snapshot().metadata.workbook.sheets[0]!;
+    const measured = new Map([[1, 25.5], [2, 40], [3, 60], [4, 80], [20, 30]]);
+    const sheet = { ...source, defaultRowHeightPt: 15, rowDimensions: [
+      { from: 1, to: 2, heightPt: 20 }, { from: 3, to: 3, hidden: true }, { from: 4, to: 6, autoHeight: true },
+    ] };
+    const automatic = worksheetDimensions(sheet, 7, measured).rows;
+    expect(Array.from({ length: 8 }, (_, row) => automatic.size(row))).toEqual([15, 20, 20, 0, 80, 15, 15, 15]);
+    expect(automatic.size(20)).toBe(30); expect(automatic.position(5)).toBe(135);
+    const fixed = worksheetDimensions({ ...sheet, defaultRowHeightCustom: true }, 7, measured).rows;
+    expect(fixed.size(4)).toBe(80); expect(fixed.size(20)).toBe(15); expect(fixed.size(1)).toBe(20);
+    const hidden = worksheetDimensions({ ...sheet, defaultRowsHidden: true, rowDimensions: [{ from: 20, to: 20, hidden: false, autoHeight: true }] }, 7, measured).rows;
+    expect(hidden.extentPt).toBe(30); expect(hidden.hit(0)).toBe(20);
+    expect(() => worksheetDimensions(source, 7, new Map([[1_048_576, 20]]))).toThrow();
+    expect(() => worksheetDimensions(source, 7, new Map([[2, 410]]))).toThrow();
+  });
 });

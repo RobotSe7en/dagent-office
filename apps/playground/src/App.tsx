@@ -46,6 +46,9 @@ export function App() {
   const [progress, setProgress] = useState<OfficeImportProgress>();
   const loadRef = useRef<AbortController>(undefined);
   const activeDocument = useRef<OpenedWorkspaceDocument>(undefined);
+  // The workspace owns one inactive preview alongside its cached Worker.
+  // Keeping this view retains its local-font row index across format switches.
+  const lastWorkbookPane = useRef<HostedWorkbook>(undefined);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [layout, setLayout] = useState<"pages" | "continuous">(() => {
@@ -96,6 +99,7 @@ export function App() {
       sessions.current.clear();
       for (const document of opened.current.values()) if (document.kind === "workbook") document.dispose();
       opened.current.clear();
+      lastWorkbookPane.current = undefined;
     },
     [],
   );
@@ -124,7 +128,7 @@ export function App() {
         setCandidate(value => value === next ? undefined : value);
         if (error) { reject(error); return; }
         opened.current.set(file.id, document); setFiles(files => files.some(item => item.id === file.id) ? files : [...files, { ...file, kind: "workbook" }]);
-        activeDocument.current = document;
+        activeDocument.current = document; lastWorkbookPane.current = document;
         setActiveId(file.id); setWorkbook(document); setModel(undefined); setSnapshot(undefined); setSession(undefined); sessionRef.current = undefined;
         setDocxReport(undefined); setPptxReport(undefined); setSubmitted(false); resolve();
       };
@@ -377,9 +381,10 @@ export function App() {
       </section>}
       </div>
       {!model && !workbook && <div className="empty-workspace"><div className="empty-paper"><div className="paper-lines"><i /><i /><i /><i /></div><span className="empty-comment"><Icon name="comment" size={24} /></span></div><span className="empty-eyebrow">YOUR NEXT IDEA STARTS HERE</span><h2>让文档成为协作的起点</h2><p>从左侧选择一份样例，或打开自己的 Office 文档。<br />选中内容、写下批注，让每一个修改想法都有迹可循。</p><div className="format-tags"><span><i className="word-dot" />Word · DOCX</span><span><i className="ppt-dot" />PowerPoint · PPTX</span><span><i className="html-dot" />HTML 文档包</span></div></div>}
-      {(workbook || candidate) && <WorkbookPane source={(candidate?.document ?? workbook)!.source} preparing={!workbook}
+      {(workbook || candidate || lastWorkbookPane.current) && <div style={{ display: workbook || candidate ? "contents" : "none" }}>
+        <WorkbookPane source={(candidate?.document ?? workbook ?? lastWorkbookPane.current)!.source} preparing={!workbook} activation={candidate}
         onReady={source => { if (candidate?.document.source === source) candidate.accept(); }}
-        onError={(source, error) => { if (candidate?.document.source === source) candidate.reject(error); else if (workbook?.source === source) setError(error.message); }} />}
+        onError={(source, error) => { if (candidate?.document.source === source) candidate.reject(error); else if (workbook?.source === source) setError(error.message); }} /></div>}
       {model&&session&&isPresentation&&<PresentationWorkbench session={session} appearance="workspace" className="preview" onViewChange={view=>{presentationRef.current=view;}} onSubmitAnnotations={()=>{setSubmitted(true);}} onError={reason=>setError(reason.message)}/>}
       {model && session && !isPresentation && <DocumentWorkbench session={session} appearance="workspace" layout={layout} className="preview"
         onViewChange={(view) => { workbenchRef.current = view; }}

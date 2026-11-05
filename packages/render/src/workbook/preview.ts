@@ -49,7 +49,7 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
   if (Object.keys(options).some(key => !["title", "widthPt", "heightPt", "sheetId", "locale", "limits", "onError", "onSelectionChange"].includes(key)))
     throw new DocumentError("InvalidOperation", "Workbook preview received an unsupported option.");
   const config = { ...options, limits: { ...options.limits, read: { ...options.limits?.read }, cells: { ...options.limits?.cells },
-    annotations: { ...options.limits?.annotations }, rules: { ...options.limits?.rules }, drawings: { ...options.limits?.drawings, assets: { ...options.limits?.drawings?.assets } } } };
+    annotations: { ...options.limits?.annotations }, rules: { ...options.limits?.rules }, autoRows: { ...options.limits?.autoRows }, drawings: { ...options.limits?.drawings, assets: { ...options.limits?.drawings?.assets } } } };
   let desired: WorkbookViewport = Object.freeze({ widthPt: config.widthPt ?? 600, heightPt: config.heightPt ?? 360, scrollLeftPt: 0, scrollTopPt: 0 });
   let active: PreviewContext | undefined, pending: { cancel(): void } | undefined, disposed = false, generation = 0;
   let selection: DocumentSelection | undefined, latest: Promise<void> = Promise.resolve();

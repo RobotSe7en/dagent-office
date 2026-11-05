@@ -22,6 +22,8 @@ export function validateWorkbookMetadata(workbook: WorkbookMetadata, classes: Re
     classExists(sheet.defaultCssClass);
     if (sheet.tabCssClass !== undefined) { classExists(sheet.tabCssClass); if (sheet.tabColor !== undefined) invalid("A worksheet tab color must have one source."); }
     formatExists(sheet.defaultNumberFormatId);
+    for (const row of sheet.rowDimensions) if (row.autoHeight === true && row.heightPt !== undefined)
+      invalid("An automatic workbook row cannot also have a fixed source height.");
     for (const dimensions of [sheet.rowDimensions, sheet.columnDimensions]) {
       let previous = -1;
       for (const dimension of dimensions) {

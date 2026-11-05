@@ -108,6 +108,7 @@ export async function readXlsxRecords(bytes: Uint8Array, options: XlsxReadOption
     metadata.rowDimensions = [];
     for (const row of rows) {
       if (row.hidden === metadata.defaultRowsHidden) delete row.hidden;
+      if (row.autoHeight === true && !metadata.defaultRowHeightCustom) delete row.autoHeight;
       if (Object.keys(row).length > 2) appendRow(metadata.rowDimensions, row);
     }
     sheets.push({ source, root, metadata });

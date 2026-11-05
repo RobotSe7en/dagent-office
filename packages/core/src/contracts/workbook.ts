@@ -80,6 +80,8 @@ export const WorkbookNumberFormatSchema = z.union([
 export type WorkbookNumberFormat = z.infer<typeof WorkbookNumberFormatSchema>;
 export const WorkbookRowDimensionSchema = z.strictObject({
   from: WorkbookRowSchema, to: WorkbookRowSchema,
+  /** Explicit automatic sizing can override a manually fixed sheet default. */
+  autoHeight: z.boolean().optional(),
   heightPt: z.number().min(0).max(409).optional(), hidden: z.boolean().optional(), cssClass: IdentifierSchema.optional(), numberFormatId: IdentifierSchema.optional(),
 });
 export const WorkbookColumnDimensionSchema = z.strictObject({
@@ -91,6 +93,7 @@ export const WorkbookSheetSchema = z.strictObject({
   name: z.string().min(1).max(31).regex(/^[^\\/\[\]:?*\u0000-\u001f]+(?![\s\S])/),
   visibility: z.enum(["visible", "hidden", "veryHidden"]),
   defaultRowHeightPt: z.number().positive().max(409),
+  defaultRowHeightCustom: z.boolean().optional(),
   defaultColumnWidth: z.number().positive().max(255),
   defaultColumnWidthUnit: z.enum(["characters", "baseCharacters"]).optional(),
   defaultRowsHidden: z.boolean().optional(),

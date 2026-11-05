@@ -19,6 +19,7 @@ export function rowDimension(node: XmlNode, row: number, styles: SheetStyles): W
   attributes(node, ["r", "spans", "s", "customFormat", "ht", "hidden", "customHeight", "outlineLevel", "collapsed", "thickTop", "thickBot", "ph"]);
   if (integer(node, "outlineLevel", 0, 7, 0) || boolean(node, "collapsed") || boolean(node, "thickTop") || boolean(node, "thickBot") || boolean(node, "ph")) unsupported(node, "Worksheet outline or phonetic row properties are not supported.");
   const result: WorkbookSheet["rowDimensions"][number] = { from: row, to: row };
+  if (value(node, "customHeight") !== undefined && !boolean(node, "customHeight")) result.autoHeight = true;
   if (value(node, "hidden") !== undefined) result.hidden = boolean(node, "hidden");
   if (value(node, "ht") !== undefined) {
     const height = number(node, "ht"); if (height < 0 || height > 409) fail(node, "A worksheet row height is invalid.");
@@ -120,6 +121,7 @@ export function readSheet(root: XmlNode, source: NativeSheet, rows: WorkbookShee
   return {
     sheetId: source.sheetId, name: source.name, visibility: source.visibility,
     defaultRowHeightPt: format ? number(format, "defaultRowHeight") : 15,
+    ...(value(format, "customHeight") !== undefined ? { defaultRowHeightCustom: boolean(format, "customHeight") } : {}),
     defaultColumnWidth: nativeWidth !== undefined ? number(format!, "defaultColWidth") : format ? integer(format, "baseColWidth", 1, 255, 8) : 8,
     defaultColumnWidthUnit: nativeWidth === undefined ? "baseCharacters" : "characters", defaultRowsHidden: boolean(format, "zeroHeight"),
     defaultCssClass: defaultStyle.cssClass, defaultNumberFormatId: defaultStyle.numberFormatId,
