@@ -31,6 +31,7 @@ export async function windowLayoutMeasurement(entries: readonly [string, number[
         const text = cell.text!, bounds = text.text.element.getBoundingClientRect();
         return { row: cell.projection.row, column: cell.projection.column, pane: cell.projection.pane, text: text.text.element.textContent,
           rect: cell.projection.rect, clipRect: cell.projection.clip, offsets: text.text.projections.map(part => [part.from, part.to, part.node.data]), shape: text.shape, scale: text.scale,
+          runs: text.text.projections.map(part => { const style = view.getComputedStyle(part.node.parentElement!); return { from: part.from, to: part.to, text: part.node.data, color: style.color, weight: style.fontWeight, style: style.fontStyle, family: style.fontFamily }; }),
           color: view.getComputedStyle(text.text.element).color, breaks: text.text.element.querySelectorAll("br").length, spaces: [...text.text.element.querySelectorAll<HTMLElement>("[data-office-number-space]")].map(node => node.getBoundingClientRect().width), bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
           clip: text.element.parentElement!.parentElement!.style.cssText };
       });

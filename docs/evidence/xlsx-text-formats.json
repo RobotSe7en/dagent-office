@@ -2,7 +2,7 @@
   "scope": "Record plain/rich text-format behavior from independent XLSX and pinned Calc.\n\nRich text and format precedence differ in this producer; the observations do\nnot claim Excel/WPS behavior and do not decide the SDK's product policy.",
   "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
   "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
-  "sourceSha256": "d9ce3aa3f7aa7996704e4184c627064935e68fc44b722dbe15723f41a8796959",
+  "sourceSha256": "645eac31be31412ac4ea8f2d1989f1e0658bc40ca193e7923edb10f8721e2010",
   "localeEnvironment": {
     "LC_ALL": "C.UTF-8",
     "LANG": "C.UTF-8",

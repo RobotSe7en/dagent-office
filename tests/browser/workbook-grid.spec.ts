@@ -559,10 +559,10 @@ test('composed rotated merge uses its covered perimeter for text and fill coupli
   expect(result.retainedSources).toBe(0); expect(result.same).toBe(true); expect(report.unchanged).toBe(true);
 });
 
-test('composed native plain text formats preserve source fields through affixes, repetition and stacking', async ({ page }) => {
+test('composed native plain and rich text formats preserve source styles and fields through affixes, repetition and stacking', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-text-formats.xlsx'), { documentId: 'text-format-window' });
   const report = await page.evaluate(async entries => window.workbookGridHost.windowLayoutMeasurement(entries,
-    [{ sheetId: 'sheet-1', viewport: { widthPt: 300, heightPt: 235, scrollLeftPt: 0, scrollTopPt: 0 } }]), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 300, heightPt: 400, scrollLeftPt: 0, scrollTopPt: 0 } }]), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
   const result = report.results[0]!, cell = (row: number) => result.cells.find(cell => cell.row === row && cell.column === 0)!;
   expect(result.same).toBe(true); expect(result.detached).toBe(true); expect(report.unchanged).toBe(true);
   expect(cell(0).text).toBe('ID 001😀'); expect(cell(0).offsets.map(part => part[2]).join('')).toBe('001😀');
@@ -573,5 +573,14 @@ test('composed native plain text formats preserve source fields through affixes,
   expect(cell(6).text).toMatch(/^x+AB$/); expect(cell(7).text).toMatch(/^ABx+$/); expect(cell(8).text).toMatch(/^AB\.+$/);
   for (const row of [5, 6, 7, 8]) { expect(cell(row).offsets).toEqual([[0, 2, 'AB']]); expect(cell(row).bounds.width * .75).toBeLessThanOrEqual(cell(row).shape.widthPt - 2.25 + .1); }
   expect(cell(9).text).toBe('ID A😀'); expect(cell(9).breaks).toBe(4); expect(cell(9).offsets).toEqual([[0, 1, 'A'], [1, 3, '😀']]);
+  expect(cell(10).text).toBe('ID AB'); expect(cell(10).offsets).toEqual([[0, 1, 'A'], [1, 2, 'B']]);
+  expect(cell(10).runs.map(run => run.color)).toEqual(['rgb(255, 0, 0)', 'rgb(255, 0, 0)']);
+  expect(cell(11).text).toBe('ID AB'); expect(cell(11).offsets).toEqual([[0, 1, 'A'], [1, 2, 'B']]);
+  expect(cell(11).runs.map(run => [run.color, run.weight, run.style])).toEqual([['rgb(0, 0, 255)', '700', 'normal'], ['rgb(0, 170, 0)', '400', 'italic']]);
+  expect(cell(12).text).toBe('AB/AB'); expect(cell(12).offsets).toEqual([[0, 1, 'A'], [1, 2, 'B'], [0, 1, 'A'], [1, 2, 'B']]);
+  for (const row of [10, 11, 12]) {
+    expect(cell(row).runs.map(run => run.weight)).toEqual(row === 12 ? ['700', '400', '700', '400'] : ['700', '400']);
+    expect(cell(row).runs.filter(run => run.text === 'A').every(run => run.family.includes('Liberation Serif'))).toBe(true);
+  }
   expect(result.retainedMeasurements).toBe(0); expect(result.retainedSources).toBe(0);
 });

@@ -54,6 +54,8 @@ def generate():
             cell.set("t", "inlineStr"); value = ET.SubElement(cell, ns + "is")
             for text, color in [("A", "FF0000FF"), ("B", "FF00AA00")]:
                 run = ET.SubElement(value, ns + "r"); properties = ET.SubElement(run, ns + "rPr")
+                ET.SubElement(properties, ns + ("b" if text == "A" else "i"))
+                ET.SubElement(properties, ns + "rFont", {"val": "Liberation Serif" if text == "A" else "Liberation Sans"})
                 ET.SubElement(properties, ns + "color", {"rgb": color}); ET.SubElement(run, ns + "t").text = text
     parts["xl/styles.xml"] = ET.tostring(styles, encoding="unicode")
     parts["xl/worksheets/sheet1.xml"] = ET.tostring(sheet, encoding="unicode")

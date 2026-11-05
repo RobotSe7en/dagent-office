@@ -90,9 +90,8 @@ export function layoutWorkbookWindow(surface: Pick<WorkbookSurface, "source" | "
         const display = formatter.format(cell.value.value, format);
         if (display.kind !== "parts" || display.color || display.parts.some(part => part.kind !== "text")
           || display.parts.length !== 1 || display.parts[0]?.kind !== "text" || !display.parts[0].source) {
-          // Rich-text/native-format precedence is a pending product choice.
-          // Plain text already uses precise source fields and derived affixes.
-          if (source.element.querySelector("span")) throw new DocumentError("UnsupportedFeature", "Rich text combined with a text number format awaits its display policy.");
+          // Text formats apply to both plain and rich values. @ fields retain
+          // source runs; affixes are derived and a format color overrides runs.
           locations.set(projection, { kind: "formatted", index: formatted.length }); formatted.push({ source, value: cell.value.value, format, ...size }); continue;
         }
       }
