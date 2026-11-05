@@ -9,6 +9,7 @@ import { decorateDrawingLists } from "../presentation/text.js";
 import { workbookDrawingOrientation } from "./drawing-view.js";
 import { createWorkbookChartText, createWorkbookDerivedDrawingText, workbookChartTextSource } from "./drawing-text.js";
 import type { WorkbookChartTextRole, WorkbookDrawingTextView } from "./drawing-text.js";
+import type { WorkbookRect } from "./projection.js";
 
 export interface WorkbookDrawingTextLayoutInput {
   readonly source: HTMLElement; readonly object: DeepReadonly<WorkbookObject>; readonly text: WorkbookDrawingTextView;
@@ -17,6 +18,8 @@ export interface WorkbookDrawingTextLayoutInput {
 export interface WorkbookDrawingTextLayout {
   readonly element: HTMLElement; readonly text: WorkbookDrawingTextView; readonly widthPt: number; readonly heightPt: number;
   readonly geometry: PresentationPresetGeometry; readonly scale: number; readonly overflow: boolean;
+  /** Measured local text bounds, including source reflection and overflow. */
+  readonly paintBounds: WorkbookRect;
   readonly nodes: number;
 }
 export interface WorkbookDrawingTextLimits { readonly maxNodes?: number; readonly maxPasses?: number; readonly maxExtentPt?: number }
@@ -228,7 +231,27 @@ function layoutTextBodies<T>(scope: HTMLElement, inputs: readonly T[], limits: W
       }
       const exceeded = overflow();
       text.style.justifyContent = item.anchor === "ctr" ? "center" : item.anchor === "b" ? "flex-end" : item.anchor === "just" ? "space-between" : item.anchor === "dist" ? "space-around" : "flex-start";
-      item.element.remove(); return Object.freeze({ element: item.element, text: item.input.text, widthPt: item.width, heightPt: item.height, geometry: item.geometry, scale, overflow: exceeded, nodes: item.nodes });
+      const origin = item.element.getBoundingClientRect();
+      let left = 0, top = 0, right = item.width, bottom = item.height;
+      // Element rectangles include paragraph/run backgrounds and reflected
+      // line boxes. Text ranges also include visible unbroken text overflowing
+      // its containing block, including negative-side/right-aligned overflow.
+      const include = (rect: DOMRect): void => {
+        left = Math.min(left, (rect.left - origin.left) * .75); top = Math.min(top, (rect.top - origin.top) * .75);
+        right = Math.max(right, (rect.right - origin.left) * .75); bottom = Math.max(bottom, (rect.bottom - origin.top) * .75);
+      };
+      if (text.style.display !== "none") {
+        const walker = document.createTreeWalker(text, view.NodeFilter.SHOW_ELEMENT | view.NodeFilter.SHOW_TEXT), range = document.createRange();
+        include(text.getBoundingClientRect());
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          if (node.nodeType === 1) for (const rect of (node as Element).getClientRects()) include(rect);
+          else { range.selectNodeContents(node); for (const rect of range.getClientRects()) include(rect); }
+        }
+      }
+      if (![left, top, right, bottom].every(Number.isFinite) || Math.max(Math.abs(left), Math.abs(top), Math.abs(right), Math.abs(bottom)) > maxExtent)
+        throw new DocumentError("ResourceLimitExceeded", "Drawing text overflow exceeds its measurable extent budget.");
+      const paintBounds = Object.freeze({ x: left, y: top, width: right - left, height: bottom - top });
+      item.element.remove(); return Object.freeze({ element: item.element, text: item.input.text, widthPt: item.width, heightPt: item.height, geometry: item.geometry, scale, overflow: exceeded, paintBounds, nodes: item.nodes });
     });
     complete = true;
     return Object.freeze({ objects: Object.freeze(objects), fonts, usedFallbackLineMetrics });

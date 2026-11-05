@@ -5,7 +5,7 @@ import { markViewNode } from "../view-nodes.js";
 
 /** Only the raster payload. The object compositor owns its fill, outline,
  * shadow, orientation and pane clipping, independently of this source crop. */
-export function createWorkbookImageContent(source: HTMLElement, path: string, assets: WorkbookPreparedAssets, maxCropScale = 1_000_000): { readonly element: HTMLElement; readonly image: HTMLImageElement } {
+export function createWorkbookImageContent(source: HTMLElement, path: string, assets: WorkbookPreparedAssets, maxCropScale = 1_000_000): { readonly element: HTMLElement; readonly image: HTMLImageElement; readonly scaleX: number; readonly scaleY: number } {
   if (!Number.isFinite(maxCropScale) || maxCropScale < 1) throw new DocumentError("InvalidOperation", "Image cropping requires a finite scale budget of at least one.");
   const sourceImage = source.children[0];
   if (source.dataset.officeKind !== "image" || source.children.length !== 1 || sourceImage?.localName !== "img") throw new DocumentError("InvalidDocument", "A workbook image requires exactly one source raster element.");
@@ -22,7 +22,7 @@ export function createWorkbookImageContent(source: HTMLElement, path: string, as
   root.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;overflow:hidden";
   image.dataset.sourceNodeId = sourceImage.getAttribute("data-node-id")!; image.alt = sourceImage.getAttribute("alt") ?? source.getAttribute("data-office-alt") ?? "";
   image.style.cssText = `position:absolute;max-width:none;max-height:none;left:${-left / width * 100}%;top:${-top / height * 100}%;width:${100 / width}%;height:${100 / height}%;object-fit:fill`;
-  image.src = url; root.append(image); return Object.freeze({ element: root, image });
+  image.src = url; root.append(image); return Object.freeze({ element: root, image, scaleX: 1 / width, scaleY: 1 / height });
 }
 
 /** Decode a detached candidate before an atomic window replacement. Failure or
