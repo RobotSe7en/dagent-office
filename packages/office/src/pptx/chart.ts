@@ -137,7 +137,10 @@ export function importChart(context: Context, reference: XmlNode, frame: Html): 
     check(scaling, ["orientation", "max", "min", "logBase", "extLst"], C);
     if (child(scaling, "logBase", C)) unsupported(axis, "Logarithmic axes are not supported.");
     const reverse = val(scaling, "orientation", "minMax") === "maxMin";
-    if (axis.name === "catAx") { definition.categoryAxisCssClass = axisStyle(context, axis, "chart-category-axis"); definition.showCategoryAxis = !flag(axis, "delete"); definition.reverseCategories = reverse; }
+    if (axis.name === "catAx") {
+      definition.categoryAxisCssClass = axisStyle(context, axis, "chart-category-axis"); definition.showCategoryAxis = !flag(axis, "delete"); definition.reverseCategories = reverse;
+      const grid = child(axis, "majorGridlines", C); if (grid) definition.categoryGridCssClass = style(context, grid, "chart-category-grid-style");
+    }
     else {
       definition.valueAxisCssClass = axisStyle(context, axis, "chart-value-axis"); definition.showValueAxis = !flag(axis, "delete"); definition.reverseValues = reverse;
       for (const [native, key] of [["min", "minimum"], ["max", "maximum"]] as const) { const n = scaling && decimal(scaling, native); if (n !== undefined) definition[key] = n; }

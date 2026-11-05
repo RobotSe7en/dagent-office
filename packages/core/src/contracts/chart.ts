@@ -9,7 +9,7 @@ export const ChartAppearanceSchema = z.strictObject({
   showLabels: z.boolean(), numberFormat: z.string().optional(),
   minimum: z.number().optional(), maximum: z.number().optional(), majorUnit: z.number().positive().optional(),
   plotCssClass: IdentifierSchema.optional(), legendCssClass: IdentifierSchema.optional(), textCssClass: IdentifierSchema.optional(), labelCssClass: IdentifierSchema.optional(),
-  categoryAxisCssClass: IdentifierSchema.optional(), valueAxisCssClass: IdentifierSchema.optional(), gridCssClass: IdentifierSchema.optional(),
+  categoryAxisCssClass: IdentifierSchema.optional(), valueAxisCssClass: IdentifierSchema.optional(), gridCssClass: IdentifierSchema.optional(), categoryGridCssClass: IdentifierSchema.optional(),
   showCategoryAxis: z.boolean().optional(), showValueAxis: z.boolean().optional(),
   blankAs: z.enum(["gap", "zero", "span"]).optional(),
   reverseCategories: z.boolean().optional(), reverseValues: z.boolean().optional(),

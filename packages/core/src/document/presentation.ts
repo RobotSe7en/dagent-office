@@ -254,7 +254,7 @@ export function validatePresentation(presentation: PresentationMetadata, annotat
       stack.push(...value.childNodeIds);
     }
     if (chart.minimum !== undefined && chart.maximum !== undefined && chart.minimum >= chart.maximum) invalid("Chart axis bounds are invalid.");
-    for (const cssClass of [chart.plotCssClass, chart.legendCssClass, chart.textCssClass, chart.labelCssClass, chart.categoryAxisCssClass, chart.valueAxisCssClass, chart.gridCssClass]) if (cssClass !== undefined && !classes.has(cssClass)) invalid("Chart styles must refer to defined CSS classes.");
+    for (const cssClass of [chart.plotCssClass, chart.legendCssClass, chart.textCssClass, chart.labelCssClass, chart.categoryAxisCssClass, chart.valueAxisCssClass, chart.gridCssClass, chart.categoryGridCssClass]) if (cssClass !== undefined && !classes.has(cssClass)) invalid("Chart styles must refer to defined CSS classes.");
     const seriesIds = new Set(dataSet.series.map(item => item.seriesId));
     for (const style of unique(chart.seriesStyles ?? [], item => item.seriesId).values()) if (!seriesIds.has(style.seriesId) || !classes.has(style.cssClass) || style.labelCssClass !== undefined && !classes.has(style.labelCssClass)) invalid("Chart series styles must reference data and CSS classes.");
     for (const style of unique(chart.pointStyles ?? [], item => item.seriesId + ":" + item.index).values()) if (!seriesIds.has(style.seriesId) || style.index >= dataSet.categories.length || !classes.has(style.cssClass) || style.labelCssClass !== undefined && !classes.has(style.labelCssClass)) invalid("Chart point styles must reference data and CSS classes.");

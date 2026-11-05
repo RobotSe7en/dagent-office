@@ -121,8 +121,8 @@ export class PresentationChartWriter {
             for (const category of [true, false]) {
                 const name = category ? "catAx" : "valAx", style = this.style(category ? chart.categoryAxisCssClass : chart.valueAxisCssClass, node, surface), css = style.css;
                 out.add("<c:" + name + ">" + cv("axId", category ? 1 : 2) + "<c:scaling>" + cv("orientation", (category ? chart.reverseCategories : chart.reverseValues) ? "maxMin" : "minMax") + (category ? "" : cv("max", chart.maximum) + cv("min", chart.minimum)) + "</c:scaling>" + cv("delete", (category ? chart.showCategoryAxis : chart.showValueAxis) === false) + cv("axPos", css["--office-axis-position"] ?? (category ? "b" : "l")));
-                if (!category && chart.gridCssClass)
-                    out.add("<c:majorGridlines>" + this.appearance(this.style(chart.gridCssClass, node, surface)) + "</c:majorGridlines>");
+                const gridClass = category ? chart.categoryGridCssClass : chart.gridCssClass;
+                if (gridClass) out.add("<c:majorGridlines>" + this.appearance(this.style(gridClass, node, surface)) + "</c:majorGridlines>");
                 if (!category)
                     out.add(empty("c:numFmt", { formatCode: chart.numberFormat ?? "General", sourceLinked: 0 }));
                 for (const [native, key, fallback] of [["majorTickMark", "major-tick", "cross"], ["minorTickMark", "minor-tick", "cross"], ["tickLblPos", "label-position", "nextTo"]])

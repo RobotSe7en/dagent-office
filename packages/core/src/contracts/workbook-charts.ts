@@ -39,7 +39,7 @@ export const WorkbookChartSchema = ChartAppearanceSchema.extend({
   categories: WorkbookChartVectorSchema.optional(),
   series: z.array(z.strictObject({ seriesId: IdentifierSchema, nativeIndex: index.optional(), name: WorkbookChartLabelSchema.optional(), values: WorkbookChartVectorSchema })).min(1),
   titleReference: WorkbookChartReferenceSchema.optional(),
-  titleCssClass: IdentifierSchema.optional(), titleText: DrawingTextPropertiesSchema.optional(), categoryGridCssClass: IdentifierSchema.optional(),
+  titleCssClass: IdentifierSchema.optional(), titleText: DrawingTextPropertiesSchema.optional(),
   categoryAxisTitle: axisTitle.optional(), valueAxisTitle: axisTitle.optional(),
   visibleCellsOnly: z.boolean().optional(), varyColors: z.boolean().optional(), showLabelsOverMaximum: z.boolean().optional(),
   language: z.string().max(255).optional(), dateSystem: z.enum(["1900", "1904"]).optional(),

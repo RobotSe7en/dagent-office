@@ -1,0 +1,202 @@
+{
+  "scope": "Independent native category grid positions and crossing states.\n\nNormalized PDF vector positions do not claim whole-chart auto-layout or pixels.\n",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "sourceSha256": "8632e6f0c7e4883116cef2cfa13815f7bcc3867d063667365e794dd04d7fadd6",
+  "cases": [
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "pdfCategoryGridPositions": [
+        0.0,
+        0.3334,
+        0.6666,
+        1.0
+      ],
+      "producer": {
+        "crossBetween": "between",
+        "grid": true,
+        "delete": "0"
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": true,
+      "pdfCategoryGridPositions": [
+        0.0,
+        0.3334,
+        0.6666,
+        1.0
+      ],
+      "producer": {
+        "crossBetween": "between",
+        "grid": true,
+        "delete": "0"
+      }
+    },
+    {
+      "kind": "column",
+      "between": "midCat",
+      "reverse": false,
+      "pdfCategoryGridPositions": [
+        0.0,
+        0.3334,
+        0.6666,
+        1.0
+      ],
+      "producer": {
+        "crossBetween": "midCat",
+        "grid": true,
+        "delete": "0"
+      }
+    },
+    {
+      "kind": "column",
+      "between": "midCat",
+      "reverse": true,
+      "pdfCategoryGridPositions": [
+        0.0,
+        0.3334,
+        0.6666,
+        1.0
+      ],
+      "producer": {
+        "crossBetween": "midCat",
+        "grid": true,
+        "delete": "0"
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "pdfCategoryGridPositions": [
+        0.0,
+        0.3334,
+        0.6666,
+        1.0
+      ],
+      "producer": {
+        "crossBetween": "between",
+        "grid": true,
+        "delete": "0"
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": true,
+      "pdfCategoryGridPositions": [
+        0.0,
+        0.3334,
+        0.6666,
+        1.0
+      ],
+      "producer": {
+        "crossBetween": "between",
+        "grid": true,
+        "delete": "0"
+      }
+    },
+    {
+      "kind": "line",
+      "between": "midCat",
+      "reverse": false,
+      "pdfCategoryGridPositions": [
+        0.0,
+        0.5,
+        1.0
+      ],
+      "producer": {
+        "crossBetween": "midCat",
+        "grid": true,
+        "delete": "0"
+      }
+    },
+    {
+      "kind": "line",
+      "between": "midCat",
+      "reverse": true,
+      "pdfCategoryGridPositions": [
+        0.0,
+        0.5,
+        1.0
+      ],
+      "producer": {
+        "crossBetween": "midCat",
+        "grid": true,
+        "delete": "0"
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "delete": true,
+      "pdfCategoryGridPositions": [
+        0.0,
+        0.3334,
+        0.6666,
+        1.0
+      ],
+      "producer": {
+        "crossBetween": "between",
+        "grid": true,
+        "delete": "1"
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "delete": true,
+      "pdfCategoryGridPositions": [
+        0.0,
+        0.3334,
+        0.6666,
+        1.0
+      ],
+      "producer": {
+        "crossBetween": "between",
+        "grid": true,
+        "delete": "1"
+      }
+    },
+    {
+      "kind": "column",
+      "between": "midCat",
+      "reverse": false,
+      "single": true,
+      "pdfCategoryGridPositions": [
+        0.0,
+        1.0
+      ],
+      "producer": {
+        "crossBetween": "midCat",
+        "grid": true,
+        "delete": "0"
+      }
+    },
+    {
+      "kind": "line",
+      "between": "midCat",
+      "reverse": false,
+      "single": true,
+      "pdfCategoryGridPositions": [
+        0.0,
+        1.0
+      ],
+      "producer": {
+        "crossBetween": "midCat",
+        "grid": true,
+        "delete": "0"
+      }
+    }
+  ],
+  "limits": [
+    "Calc ignores midCat for columns in these files while retaining the source flag. Normative source projection and producer display are checked separately.",
+    "No full-chart layout, font geometry, pixels or Excel/WPS acceptance is claimed."
+  ]
+}

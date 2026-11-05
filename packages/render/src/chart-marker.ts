@@ -5,7 +5,7 @@ import { svgElement } from "./presentation/svg.js";
 type Marker = NonNullable<DeepReadonly<ChartAppearance>["seriesStyles"]>[number]["marker"];
 /** ECMA-376 §21.2.3.27: dash/dot are filled rectangles; open symbols have
  * a square fill beneath their internal strokes. All coordinates are points. */
-export function appendChartMarker(svg: SVGSVGElement, marker: Marker, size: number, x: number, y: number,
+export function appendChartMarker(svg: SVGElement, marker: Marker, size: number, x: number, y: number,
   fill: string, stroke: Readonly<Record<string, string | number>>, create: typeof svgElement): SVGGElement | undefined {
   if (!marker || marker === "none") return;
   if (!Number.isFinite(size) || size <= 0 || size > 1_000_000) throw new DocumentError("ResourceLimitExceeded", "A chart marker exceeds its finite coordinate budget.");

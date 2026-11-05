@@ -7,6 +7,49 @@ import { WorkbookContentSources } from '../../../packages/render/src/workbook/co
 import { createWorkbookChartText } from '../../../packages/render/src/workbook/drawing-text.js';
 import type { WorkbookChartTextRole } from '../../../packages/render/src/workbook/drawing-text.js';
 
+export async function measureWorkbookChartGrid(snapshot: WorkbookSnapshot, plots: readonly BasicChartData[]) {
+  const container = document.createElement('div'); document.body.append(container);
+  const css = '.grid-data-magenta{--office-fill-kind:solid;--office-fill-color:#ff00ff;--office-line-kind:solid;--office-line-color:#ff00ff;--office-marker-fill-kind:solid;--office-marker-fill-color:#ff00ff;--office-marker-line-kind:none}';
+  const surface = await createWorkbookSurface(container, { ...snapshot, styles: [...snapshot.styles, { path: 'grid-paint.css', css }] }, { widthPt: 520, heightPt: 340 }), sources = new WorkbookContentSources(surface.document, snapshot);
+  const charts = snapshot.metadata.workbook.charts!, projected = sources.project(surface.source, charts.map(chart => chart.nodeId)), before = surface.source.innerHTML;
+  const read = (index: number, overflow = false) => {
+    const original = charts[index]!, source = projected.get(original.nodeId)!, chart = overflow ? { ...original, seriesStyles: original.seriesStyles!.map(series => ({ ...series, cssClass: 'grid-data-magenta' })) } : original;
+    const data = overflow ? { ...plots[index]!, series: plots[index]!.series.map(series => ({ ...series, values: [-8, 2, 8] })) } : plots[index]!;
+    const result = createWorkbookChartView(source, chart, data, 480, 300, 'grid-' + index, { formatNumber: String }); surface.view.append(result.element);
+    const svg = result.element.querySelector('svg')!, frame = svg.querySelector('rect')!;
+    const left = frame.x.baseVal.value, top = frame.y.baseVal.value, width = frame.width.baseVal.value, height = frame.height.baseVal.value;
+    const grid = [...svg.querySelectorAll<SVGLineElement>('[data-sdk-chart-grid=category]')].map(line => ({ position: (line.x1.baseVal.value - left) / width, from: (line.y1.baseVal.value - top) / height, to: (line.y2.baseVal.value - top) / height, color: surface.document.defaultView!.getComputedStyle(line).stroke }));
+    const points = chart.kind === 'column' ? [...svg.querySelectorAll<SVGRectElement>('[data-sdk-chart-point=column]')].map(node => (node.x.baseVal.value + node.width.baseVal.value / 2 - left) / width)
+      : [...svg.querySelectorAll<SVGGElement>('[data-sdk-chart-marker-role=point]')].map(node => { const rect = node.getBBox(); return (rect.x + rect.width / 2 - left) / width; });
+    const layer = svg.querySelector('[data-sdk-chart-plot]')!, clip = layer.getAttribute('clip-path')!, clipRect = svg.querySelector<SVGRectElement>('[id="' + clip.slice(5, -1) + '"] > rect')!;
+    const walker = surface.document.createTreeWalker(result.element, 0xffff_ffff); let nodes = 1; while (walker.nextNode()) nodes++;
+    return { result, svg, summary: { grid, points, nodes, declared: result.nodes, left, top, width, height,
+      clip: [clipRect.x.baseVal.value, clipRect.y.baseVal.value, clipRect.width.baseVal.value, clipRect.height.baseVal.value],
+      dataClipped: [...svg.querySelectorAll('[data-sdk-chart-point=column],[data-sdk-chart-marker-role=point]')].every(node => layer.contains(node)) } };
+  };
+  try {
+    const normal = charts.map((_, index) => { const item = read(index); item.result.element.remove(); return item.summary; });
+    const paints = [];
+    for (const index of [0, 4]) {
+      const item = read(index, true), clone = item.svg.cloneNode(true) as SVGSVGElement; clone.setAttribute('width', '480'); clone.setAttribute('height', '300');
+      const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(clone)], { type: 'image/svg+xml' }));
+      try {
+        const image = new Image(); image.src = url; await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(Error('Cannot rasterize bounded chart')); });
+        const canvas = document.createElement('canvas'); canvas.width = 480; canvas.height = 300; const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
+        const pixels = context.getImageData(0, 0, 480, 300).data; let painted = 0, escaped = 0;
+        for (let y = 0; y < 300; y++) for (let x = 0; x < 480; x++) {
+          const at = (y * 480 + x) * 4;
+          if (pixels[at]! > 180 && pixels[at + 1]! < 80 && pixels[at + 2]! > 180 && pixels[at + 3]! > 180) {
+            painted++; if (x < item.summary.left - 1 || x > item.summary.left + item.summary.width + 1 || y < item.summary.top - 1 || y > item.summary.top + item.summary.height + 1) escaped++;
+          }
+        }
+        paints.push({ painted, escaped, clipped: item.summary.dataClipped });
+      } finally { URL.revokeObjectURL(url); item.result.element.remove(); }
+    }
+    return { normal, paints, unchanged: surface.source.innerHTML === before };
+  } finally { sources.dispose(); surface.dispose(); container.remove(); }
+}
+
 export async function measureWorkbookChartMarkers(snapshot: WorkbookSnapshot, plots: readonly BasicChartData[]) {
   const container = document.createElement('div'); document.body.append(container);
   const surface = await createWorkbookSurface(container, snapshot, { widthPt: 520, heightPt: 340 }), sources = new WorkbookContentSources(surface.document, snapshot);
@@ -40,21 +83,21 @@ export async function measureWorkbookChartColors(snapshot: WorkbookSnapshot, plo
   const container = document.createElement('div'); document.body.append(container);
   const surface = await createWorkbookSurface(container, snapshot, { widthPt: 520, heightPt: 340 }), sources = new WorkbookContentSources(surface.document, snapshot);
   const charts = snapshot.metadata.workbook.charts!, projected = sources.project(surface.source, charts.map(chart => chart.nodeId)), before = surface.source.innerHTML;
-  const read = (index: number, data = plots[index]!) => {
-    const chart = charts[index]!, source = projected.get(chart.nodeId)!;
+  const read = (index: number, data = plots[index]!, hideMarkers = false) => {
+    const original = charts[index]!, chart = hideMarkers ? { ...original, seriesStyles: original.seriesStyles!.map(series => ({ ...series, marker: 'none' as const })) } : original, source = projected.get(chart.nodeId)!;
     const result = createWorkbookChartView(source, chart, data, 480, 300, 'chart-colors-' + index, { formatNumber: value => String(value) });
     surface.view.append(result.element); const svg = result.element.querySelector('svg')!, visible = data.series.filter(series => !series.hidden);
     const varied = (chart.varyColors ?? chart.kind === 'pie') && chart.series.length === 1;
     const entries = chart.kind === 'pie' || varied && visible.length === 1 ? data.categories.length : visible.length;
     const color = (node: Element) => surface.document.defaultView!.getComputedStyle(node).getPropertyValue('fill');
-    const points = chart.kind === 'column' ? [...svg.querySelectorAll('rect')].slice(1, 1 + visible.length * data.categories.length)
+    const points = chart.kind === 'column' ? [...svg.querySelectorAll('[data-sdk-chart-point=column]')]
       : chart.kind === 'line' ? [...svg.querySelectorAll('[data-sdk-chart-marker-role=point] > circle')] : [...svg.querySelectorAll('path,circle')].filter(node => node.getAttribute('fill') !== 'none');
     const keys = chart.kind === 'line' ? [...svg.querySelectorAll('line')].slice(-entries).map(node => surface.document.defaultView!.getComputedStyle(node).stroke)
       : [...svg.querySelectorAll('rect')].slice(-entries).map(color);
     const text = [...svg.querySelectorAll('text')].slice(-entries).map(node => node.textContent);
     const words: Record<string, number> = {};
     for (const node of svg.querySelectorAll('text')) if (['One', 'Two', 'Three', 'Series1', 'Series2'].includes(node.textContent ?? '')) words[node.textContent!] = (words[node.textContent!] ?? 0) + 1;
-    const value = { points: points.map(color), keys, text, words, nodes: result.nodes, actualNodes: result.element.querySelectorAll('*').length + [...svg.querySelectorAll('text')].reduce((sum, node) => sum + (node.textContent ? 1 : 0), 0) + 1 };
+    const value = { points: points.map(color), keys, text, words, lineOrder: [...svg.querySelectorAll('[data-sdk-chart-line]')].map(node => surface.document.defaultView!.getComputedStyle(node).stroke), nodes: result.nodes, actualNodes: result.element.querySelectorAll('*').length + [...svg.querySelectorAll('text')].reduce((sum, node) => sum + (node.textContent ? 1 : 0), 0) + 1 };
     result.element.remove(); return value;
   };
   try {
@@ -62,7 +105,9 @@ export async function measureWorkbookChartColors(snapshot: WorkbookSnapshot, plo
     const hidden = read(multiple, { ...plots[multiple]!, series: plots[multiple]!.series.map((series, index) => ({ ...series, hidden: index > 0 })) });
     const pie = charts.findIndex(chart => chart.kind === 'pie' && chart.varyColors), source = plots[pie]!;
     const compacted = read(pie, { ...source, categories: [source.categories[0]!, source.categories[2]!], sourceIndexes: [0, 2], series: source.series.map(series => ({ ...series, values: [series.values[0]!, series.values[2]!], ...(series.missing ? { missing: [series.missing[0], series.missing[2]] } : {}) })) });
-    return { normal, hidden, compacted, unchanged: surface.source.innerHTML === before };
+    const lines = charts.findIndex(chart => chart.kind === 'line' && chart.series.length === 2);
+    const withoutMarkers = read(lines, plots[lines]!, true);
+    return { normal, hidden, compacted, withoutMarkers, unchanged: surface.source.innerHTML === before };
   } finally { sources.dispose(); surface.dispose(); container.remove(); }
 }
 import { layoutWorkbookChartTexts, layoutWorkbookChartTitleContents } from '../../../packages/render/src/workbook/drawing-text-layout.js';
@@ -121,7 +166,7 @@ export async function measureWorkbookCharts(snapshot: WorkbookSnapshot, plots: r
         const appearance = { ...chart }; delete appearance.minimum; delete appearance.maximum; delete appearance.majorUnit;
         const values = { ...data, series: data.series.map(series => ({ ...series, values: series.values.map(value => value === null || sign === null ? null : Math.abs(value) * sign / 128) })) };
         const graphics = createWorkbookChartView(source, appearance, values, 360, 220, 'small-' + sign, options());
-        const rects = [...graphics.element.querySelectorAll('svg > rect')], plot = rects[0]!;
+        const rects = [...graphics.element.querySelectorAll('[data-sdk-chart-point=column]')], plot = graphics.element.querySelector('svg > rect')!;
         const bars = rects.filter(node => Number(node.getAttribute('width')) > 20 && Number(node.getAttribute('width')) < 100);
         const fraction = Math.max(0, ...bars.map(node => Number(node.getAttribute('height')))) / Number(plot.getAttribute('height'));
         if (sign) smallScales.push(fraction); else zeroScales.push(fraction);
@@ -201,17 +246,17 @@ export async function measureWorkbookChartPositions(snapshot: WorkbookSnapshot) 
     const colors = [...graphics.element.querySelectorAll('svg > text')].filter(node => ['2', '8'].includes(node.textContent ?? '')).slice(-2).map(node => surface.document.defaultView!.getComputedStyle(node).fill);
     const plain: BasicChartData = { categories: ['A', 'B', 'C', 'D', 'E'], series: [{ seriesId: series.seriesId, name: 'Values', values: [2, null, 8, null, 5] }] };
     const missing: BasicChartData = { ...plain, series: [{ ...plain.series[0]!, missing: [undefined, 'gap', undefined, 'span', undefined] }] };
-    const path = (data: BasicChartData) => [...createWorkbookChartView(source, { ...chart, showLabels: false }, data, 360, 220, 'gaps', options).element.querySelectorAll('svg > path')].map(node => node.getAttribute('d')).join(' ');
+    const path = (data: BasicChartData) => [...createWorkbookChartView(source, { ...chart, showLabels: false }, data, 360, 220, 'gaps', options).element.querySelectorAll('[data-sdk-chart-line]')].map(node => node.getAttribute('d')).join(' ');
     const hidden = createWorkbookChartView(source, { ...chart, kind: 'pie' }, { ...compact, series: [{ ...compact.series[0]!, hidden: true, values: [-2, 8] }] }, 360, 220, 'hidden', options);
     const second = { ...series, seriesId: 'second-series' };
     const masked = createWorkbookChartView(source, { ...chart, series: [series, second], legend: 'right', seriesStyles: [], showLabels: false },
       { ...compact, series: [{ ...compact.series[0]!, hidden: true }, { ...compact.series[0]!, seriesId: second.seriesId }] }, 360, 220, 'masked-series', options);
-    const maskedColors = [...masked.element.querySelectorAll('svg > path,svg > line')].filter(node => node.localName === 'path' || node.getAttribute('x2') !== node.getAttribute('x1') && Number(node.getAttribute('x2')) - Number(node.getAttribute('x1')) === 22).map(node => node.getAttribute('stroke'));
+    const maskedColors = [...masked.element.querySelectorAll('[data-sdk-chart-line],svg > line')].filter(node => node.localName === 'path' || node.getAttribute('x2') !== node.getAttribute('x1') && Number(node.getAttribute('x2')) - Number(node.getAttribute('x1')) === 22).map(node => node.getAttribute('stroke'));
     const errors: string[] = [];
     for (const data of [{ ...compact, sourceIndexes: [2, 2] }, { ...compact, sourceIndexes: [0] }, { ...compact, series: [{ ...compact.series[0]!, missing: ['gap' as const, undefined] }] }]) {
       try { createWorkbookChartView(source, chart, data, 360, 220, 'invalid', options); errors.push('accepted'); } catch (error) { errors.push((error as { code: string }).code); }
     }
-    return { colors, maskedColors, plain: path(plain), missing: path(missing), hiddenPaths: hidden.element.querySelectorAll('svg > path').length, hiddenDiagnostics: hidden.diagnostics, errors, unchanged: source.outerHTML === before };
+    return { colors, maskedColors, plain: path(plain), missing: path(missing), hiddenPaths: hidden.element.querySelectorAll('[data-sdk-chart-line]').length, hiddenDiagnostics: hidden.diagnostics, errors, unchanged: source.outerHTML === before };
   } finally { sources.dispose(); surface.dispose(); container.remove(); }
 }
 

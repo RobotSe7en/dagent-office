@@ -5,7 +5,7 @@ import { cssStringValue, numeric, property, resolvedColor, strokeAttributes, svg
 import { svgElement as createSvgElement } from "./presentation/svg.js";
 import type { DrawingGradientBounds } from "./drawing-gradient.js";
 import { appendChartMarker } from "./chart-marker.js";
-import { chartAxisTicks } from "./chart-axis.js";
+import { chartAxisTicks, chartCategoryAxis } from "./chart-axis.js";
 
 /** Derived plot values. The owning format adapter supplies its authoritative
  * source binding, visibility, coercion and explicit number-display policy. */
@@ -59,9 +59,10 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
   const sourceIndex = (index: number): number => data.sourceIndexes?.[index] ?? index;
   data = { ...data, series: data.series.filter(series => !series.hidden) };
   let paintSerial = 0;
+  let plotLayer: SVGElement;
   const svg = markViewNode(svgElement(document, "svg", { width: "100%", height: "100%", viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": chart.kind + " chart", "data-sdk-chart": chart.kind }));
   svg.style.cssText = "position:absolute;inset:0;overflow:visible;pointer-events:none";
-  node.prepend(svg);
+  node.prepend(svg); plotLayer = svg;
   const base = style(chart.textCssClass), legendStyle = style([chart.textCssClass, chart.legendCssClass].filter(Boolean).join(" "));
   const palette = defaultPalette.map((fallback, index) => {
     const name = "--office-theme-accent" + (index + 1);
@@ -112,7 +113,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     const color = property(point, "--office-marker-fill-kind") || property(point, "--office-marker-fill-color")
       ? svgFill(document, point, svg, serial + "-marker-" + ++paintSerial, bounds, "--office-marker-fill", automatic, account)
       : fill(seriesId, position, point, bounds);
-    const group = appendChartMarker(svg, symbol, size, x, y, color, strokeAttributes(document, point, "--office-marker-line", automatic), svgElement)!;
+    const group = appendChartMarker(role === "point" ? plotLayer : svg, symbol, size, x, y, color, strokeAttributes(document, point, "--office-marker-line", automatic), svgElement)!;
     group.dataset.sdkChartMarkerRole = role; if (index >= 0) group.dataset.sdkChartSourceIndex = String(sourceIndex(index));
   };
   const label = (series: BasicChartData["series"][number], index: number, value: number, x: number, y: number, percent?: number, baseline?: number): void => {
@@ -179,9 +180,8 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     };
     for (const value of majorTicks) {
       const position = y(value);
+      if (chart.gridCssClass) svg.append(svgElement(document, "line", { x1: left, y1: position, x2: right, y2: position, "data-sdk-chart-grid": "value", ...strokeAttributes(document, gridStyle, "--office-line", "#d9d9d9") }));
       if (chart.showValueAxis !== false) {
-        const grid = strokeAttributes(document, gridStyle, "--office-line", "#d9d9d9");
-        if (chart.gridCssClass) svg.append(svgElement(document, "line", { x1: left, y1: position, x2: right, y2: position, ...grid }));
         tick(axisX, position, false, valStyle);
         if (property(valStyle, "--office-axis-label-position") !== "none") text(formatNumber(value, chart.numberFormat, { kind: "value-axis", style: valStyle }), axisX + (valueRight ? 7 : -7), position, valStyle, valueRight ? "start" : "end").dataset.sdkChartLabel = "value-axis";
       }
@@ -193,19 +193,29 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     const baseline = y(Math.max(minimum, Math.min(maximum, 0))), axisY = categoryTop ? top : baseline;
     if (chart.showCategoryAxis !== false) svg.append(svgElement(document, "line", { x1: left, y1: axisY, x2: right, y2: axisY, ...strokeAttributes(document, catStyle, "--office-line", "#b7b7b7") }));
     if (chart.showValueAxis !== false) svg.append(svgElement(document, "line", { x1: axisX, y1: top, x2: axisX, y2: bottom, ...strokeAttributes(document, valStyle, "--office-line", "#b7b7b7") }));
-    const count = Math.max(1, data.categories.length), group = w / count;
-    const x = (index: number): number => left + (chart.reverseCategories ? count - index - 0.5 : index + 0.5) * group;
+    const count = Math.max(1, data.categories.length), category = chartCategoryAxis(count, left, w, property(valStyle, "--office-axis-cross-between", "between") === "between", chart.reverseCategories ?? false);
+    const group = category.interval, x = category.position;
+    if (chart.categoryGridCssClass) {
+      const grid = strokeAttributes(document, style(chart.categoryGridCssClass), "--office-line", "#d9d9d9");
+      for (let index = 0; index < category.tickCount; index++) { const position = category.tick(index); svg.append(svgElement(document, "line", { x1: position, y1: top, x2: position, y2: bottom, "data-sdk-chart-grid": "category", ...grid })); }
+    }
     if (chart.showCategoryAxis !== false) {
       const skip = Math.max(1, numeric(catStyle, "--office-axis-label-skip", 1)), tickSkip = Math.max(1, numeric(catStyle, "--office-axis-tick-skip", 1));
       const offset = 6 + 10 * numeric(catStyle, "--office-axis-label-offset", 100) / 100;
       data.categories.forEach((category, index) => { if (index % skip === 0 && property(catStyle, "--office-axis-label-position") !== "none") text(options.formatCategory?.(index, catStyle) ?? category, x(index), categoryTop ? top - offset : bottom + offset, catStyle).dataset.sdkChartLabel = "category-axis"; });
-      if (chart.kind === "line") {
-        for (let n = 0; n < count; n += tickSkip) { tick(x(n), axisY, true, catStyle); if (n + 1 < count) tick((x(n) + x(n + 1)) / 2, axisY, true, catStyle, true); }
-      } else for (let n = 0; n <= count; n += tickSkip) tick(left + n * group, axisY, true, catStyle);
+      for (let index = 0; index < category.tickCount; index++) {
+        const position = category.tick(index);
+        if (index % tickSkip === 0) tick(position, axisY, true, catStyle);
+        if (index + 1 < category.tickCount) tick((position + category.tick(index + 1)) / 2, axisY, true, catStyle, true);
+      }
     }
+    const defs = svgElement(document, "defs"), clip = svgElement(document, "clipPath", { id: serial + "-plot-clip" });
+    clip.append(svgElement(document, "rect", { x: left, y: top, width: w, height: h })); defs.append(clip); svg.append(defs);
+    plotLayer = svgElement(document, "g", { "clip-path": `url(#${serial}-plot-clip)`, "data-sdk-chart-plot": "" }); svg.append(plotLayer);
     data.series.forEach((series, seriesIndex) => {
       const s = seriesStyle.get(series.seriesId)!, segments: string[] = [];
       const overlap = (chart.overlap ?? 0) / 100, slots = data.series.length - (data.series.length - 1) * overlap, bar = group / (slots + (chart.gapWidth ?? 150) / 100), total = slots * bar;
+      const beforeSeries = plotLayer.lastChild;
       let connected = false;
       series.values.forEach((raw, index) => {
         if (raw === null && series.missing?.[index]) { if (series.missing[index] === "gap") connected = false; return; }
@@ -214,7 +224,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
         const px = x(index), py = y(value), point = pointStyle(series.seriesId, index);
         if (chart.kind === "column") {
           const bounds = { x: px - total / 2 + seriesIndex * bar * (1 - overlap), y: Math.min(py, baseline), width: bar, height: Math.abs(py - baseline) };
-          svg.append(svgElement(document, "rect", { ...bounds, fill: fill(series.seriesId, index, point, bounds), ...strokeAttributes(document, point) }));
+          plotLayer.append(svgElement(document, "rect", { ...bounds, "data-sdk-chart-point": "column", fill: fill(series.seriesId, index, point, bounds), ...strokeAttributes(document, point) }));
         }
         else {
           segments.push((connected ? "L" : "M") + px + " " + py); connected = true;
@@ -222,7 +232,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
         }
         label(series, index, value, chart.kind === "column" ? px - total / 2 + seriesIndex * bar * (1 - overlap) + bar / 2 : px, py, undefined, baseline);
       });
-      if (chart.kind === "line") svg.append(svgElement(document, "path", { d: segments.join(" "), fill: "none", ...strokeAttributes(document, s, "--office-line", palette[seriesIndexes.get(series.seriesId)! % palette.length]!) }));
+      if (chart.kind === "line") plotLayer.insertBefore(svgElement(document, "path", { d: segments.join(" "), "data-sdk-chart-line": "", fill: "none", ...strokeAttributes(document, s, "--office-line", palette[seriesIndexes.get(series.seriesId)! % palette.length]!) }), beforeSeries ? beforeSeries.nextSibling : plotLayer.firstChild);
     });
   }
   if (chart.legend !== "none") {

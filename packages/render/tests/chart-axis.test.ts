@@ -20,3 +20,23 @@ describe("finite bounded chart ticks", () => {
     }
   });
 });
+
+describe('shared category intervals', () => {
+  it('projects source points and grid boundaries for between and mid-category crossing', async () => {
+    const { chartCategoryAxis } = await import('../src/chart-axis.js');
+    for (const reverse of [false, true]) {
+      const between = chartCategoryAxis(3, 10, 120, true, reverse), mid = chartCategoryAxis(3, 10, 120, false, reverse);
+      expect([0, 1, 2].map(between.position)).toEqual(reverse ? [110, 70, 30] : [30, 70, 110]);
+      expect([0, 1, 2].map(mid.position)).toEqual(reverse ? [130, 70, 10] : [10, 70, 130]);
+      expect(Array.from({ length: between.tickCount }, (_, i) => between.tick(i))).toEqual([10, 50, 90, 130]);
+      expect(Array.from({ length: mid.tickCount }, (_, i) => mid.tick(i))).toEqual([10, 70, 130]);
+    }
+  });
+  it('keeps singleton and large source axes finite without allocating per-axis arrays', async () => {
+    const { chartCategoryAxis } = await import('../src/chart-axis.js');
+    const single = chartCategoryAxis(1, 10, 120, false, false); expect(single.position(0)).toBe(10); expect(single.tickCount).toBe(2); expect(single.tick(1)).toBe(130);
+    expect(chartCategoryAxis(1, 10, 120, true, true).position(0)).toBe(70);
+    const large = chartCategoryAxis(0xffff_ffff, 0, 1000, true, false); expect(large.tickCount).toBe(0x1_0000_0000); expect(large.tick(0xffff_ffff)).toBe(1000);
+    for (const count of [0, -1, 1.5, Infinity, 0x1_0000_0000]) expect(() => chartCategoryAxis(count, 0, 120, true, false)).toThrowError(expect.objectContaining({ code: 'ResourceLimitExceeded' }));
+  });
+});

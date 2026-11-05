@@ -17,12 +17,12 @@ import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
 import type { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback, measureDrawingTextOverflow, measureDrawingOverflowEdges } from './fixtures/workbook-drawing-text.js';
 import type { measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } from './fixtures/workbook-surface.js';
 import type { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } from './fixtures/workbook-shadow.js';
-import type { measureWorkbookCharts, measureWorkbookChartMarkers, measureWorkbookChartColors, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } from './fixtures/workbook-chart.js';
+import type { measureWorkbookCharts, measureWorkbookChartMarkers, measureWorkbookChartGrid, measureWorkbookChartColors, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } from './fixtures/workbook-chart.js';
 import { bindWorkbookChartData } from "../../packages/render/src/workbook/chart-values.js";
 import type { BasicChartData } from '../../packages/render/src/chart.js';
 import { modelChartSource, DEFAULT_CHART_READ_LIMITS } from '../../packages/render/src/workbook/chart-source.js';
 
-declare global { interface Window { workbookChartHost: { measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartMarkers: typeof measureWorkbookChartMarkers; measureWorkbookChartColors: typeof measureWorkbookChartColors; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
+declare global { interface Window { workbookChartHost: { measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartGrid: typeof measureWorkbookChartGrid; measureWorkbookChartMarkers: typeof measureWorkbookChartMarkers; measureWorkbookChartColors: typeof measureWorkbookChartColors; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
 
 declare global { interface Window { workbookShadowHost: { measureWorkbookShadows: typeof measureWorkbookShadows; mountWorkbookShadowPixels: typeof mountWorkbookShadowPixels; disposeWorkbookShadowPixels: typeof disposeWorkbookShadowPixels } } }
 
@@ -32,6 +32,7 @@ const chartPlots = new Map<string, BasicChartData[]>();
 let referenceTitles: { snapshot: WorkbookSnapshot; bindings: ReturnType<typeof bindWorkbookChartData> };
 let formatCharts: typeof referenceTitles;
 let code = '';
+const gridCharts: { snapshot: WorkbookSnapshot; plots: BasicChartData[] }[] = [];
 const markerCharts: { producer: boolean; snapshot: WorkbookSnapshot; plots: BasicChartData[] }[] = [];
 const colorCharts: { theme: string; snapshot: WorkbookSnapshot; plots: BasicChartData[] }[] = [];
 let nativeText: WorkbookSnapshot;
@@ -43,6 +44,13 @@ const textEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-drawing-text-se
 const shadowEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-drawing-shadow-semantics.json', 'utf8')) as { sourceSha256: string; cases: { rotation: number; flipH: boolean; flipV: boolean; rotateWithShape: boolean; direction: number; distancePt: number; observed: { offsetPt: number[] } }[] };
 const blurEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-shadow-blur-semantics.json', 'utf8')) as { sourceSha256: string; cases: { blurPt: number; observed: { sharpEdgeOffsetPt?: number; samples: { offsetPt: number; rgb: number[] }[] } }[] };
 test.beforeAll(async () => {
+  for (const suffix of ['', '-producer']) {
+    const model = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-grid' + suffix + '.xlsx'), { documentId: 'grid' + suffix }), { kind: 'workbook' }), snapshot = model.snapshot();
+    const response = await modelChartSource(model).read({ ...DEFAULT_CHART_READ_LIMITS, documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, chartIds: snapshot.metadata.workbook.charts!.map(chart => chart.chartId) }, new AbortController().signal);
+    const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
+    const plots = bindWorkbookChartData(snapshot, response, formatter).map(binding => { if (binding.kind !== 'available') throw Error('Grid data unavailable'); return binding.data; });
+    formatter.dispose(); gridCharts.push({ snapshot, plots });
+  }
   for (const producer of [false, true]) {
     const model = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-markers' + (producer ? '-producer' : '') + '.xlsx'), { documentId: 'markers-' + producer }), { kind: 'workbook' }), snapshot = model.snapshot();
     const response = await modelChartSource(model).read({ ...DEFAULT_CHART_READ_LIMITS, documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, chartIds: snapshot.metadata.workbook.charts!.map(chart => chart.chartId) }, new AbortController().signal);
@@ -585,6 +593,7 @@ test('native automatic chart colors follow document themes, single-series variat
     }
     expect(actual.hidden).toMatchObject({ points: [palette[0], palette[0], palette[0]], keys: [palette[0]], text: ['Series1'] });
     expect(actual.compacted).toMatchObject({ points: [palette[0], palette[2]], keys: [palette[0], palette[2]], text: ['One', 'Three'] });
+    expect(actual.withoutMarkers.lineOrder).toEqual([palette[0], palette[1]]);
   }
 });
 
@@ -618,5 +627,29 @@ test('native point marker geometry, independent paint and inherited properties r
       if (!point.gradient) expect(compacted[0]!.fill).toBe(fill);
       expect(compacted[0]!.paths.map(path => path?.match(/M/g)?.length)).toEqual(paths.map(path => path?.match(/M/g)?.length));
     }
+  }
+});
+
+
+test('category chart grids share current data intervals and remain visible with hidden axes while plot paint stays clipped', async ({ page }) => {
+  const cases = JSON.parse(readFileSync('docs/evidence/xlsx-chart-grid.json', 'utf8')).cases as { kind: string; between: string; reverse: boolean; single?: boolean; pdfCategoryGridPositions: number[] }[];
+  for (const input of gridCharts) {
+    const result = await page.evaluate(({ snapshot, plots }) => window.workbookChartHost.measureWorkbookChartGrid(snapshot, plots), input);
+    expect(result.unchanged).toBe(true);
+    for (const [index, item] of result.normal.entries()) {
+      const source = cases[index]!, count = source.single ? 1 : 3, between = source.between === 'between';
+      const ticks = between ? count + 1 : Math.max(2, count);
+      expect(item.nodes).toBe(item.declared); expect(item.dataClipped).toBe(true); expect(item.clip).toEqual([item.left, item.top, item.width, item.height]);
+      expect(item.grid).toHaveLength(ticks);
+      item.grid.forEach((line, index) => { expect(line.position).toBeCloseTo(index / (ticks - 1), 7); expect(line).toMatchObject({ from: 0, to: 1, color: 'rgb(0, 255, 0)' }); });
+      expect(item.points).toHaveLength(count);
+      item.points.forEach((position, index) => { const value = (index + (between ? .5 : 0)) / (between ? count : Math.max(1, count - 1)); expect(position).toBeCloseTo(source.reverse ? 1 - value : value, 7); });
+      if (source.kind !== 'column' || between || source.single) {
+        expect(item.grid).toHaveLength(source.pdfCategoryGridPositions.length);
+        item.grid.forEach((line, index) => expect(Math.abs(line.position - source.pdfCategoryGridPositions[index]!)).toBeLessThan(.0001));
+      }
+    }
+    expect(result.paints).toHaveLength(2);
+    for (const paint of result.paints) { expect(paint.clipped).toBe(true); expect(paint.painted).toBeGreaterThan(20); expect(paint.escaped).toBe(0); }
   }
 });
