@@ -1,0 +1,122 @@
+{
+  "measuredAt": "2026-11-05T08:09:59.879685+00:00",
+  "scope": "Native XLSX import, unified model, bounded Worker read transport and public read-only preview. Does not certify the complete R3 reading or performance gate.",
+  "source": {
+    "path": "examples/xlsx/15-ten-thousand-rows.xlsx",
+    "bytes": 840104,
+    "sha256": "3a28e0f501ee0c482ae5025ed8747cf76f72fcef0ab8528df12c49ad0e6fdd96"
+  },
+  "environment": {
+    "logicalCpuCount": 128,
+    "processAffinityCpuCount": 128,
+    "fixedFourCpuEightGiB": false,
+    "browserPlusWorkerPeakMemoryMeasured": false
+  },
+  "method": {
+    "test": "tests/browser/workbook-read-worker.spec.ts",
+    "start": "Before transferring authorized XLSX bytes to the newly created host-owned Worker.",
+    "firstScreen": "After public preview.ready; metadata and bounded query replies only.",
+    "countAudit": "Independent scan in the Worker after first screen; not included in mount timing.",
+    "replyUnits": "JSON serialization UTF-16 code units; not browser wire bytes.",
+    "importEventLoop": "10 ms interval on main thread until snapshot arrives.",
+    "memory": "Not measured in this probe."
+  },
+  "results": [
+    {
+      "engine": "chromium",
+      "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36",
+      "openedMs": 8114.1,
+      "firstScreenMs": 8283.7,
+      "importEventLoopDelayP95Ms": 0.1,
+      "snapshotCodeUnits": 41549,
+      "largestSerializedReplyCodeUnits": 41619,
+      "firstWindowStoredCells": 146,
+      "scrolledWindowStoredCells": 119,
+      "scrolledImportedFormulaCells": 28,
+      "audit": {
+        "kind": "audit",
+        "cells": 200000,
+        "formulas": 20000,
+        "chunks": 40
+      },
+      "cancelled": {
+        "error": "OperationCancelled",
+        "progress": 1
+      },
+      "postPreviewDisposeReadUnchanged": true,
+      "sourceBufferTransferred": true
+    },
+    {
+      "engine": "firefox",
+      "browser": "Mozilla/5.0 (X11; Linux x86_64; rv:157.0) Gecko/20100101 Firefox/157.0",
+      "openedMs": 10909,
+      "firstScreenMs": 11147,
+      "importEventLoopDelayP95Ms": 1,
+      "snapshotCodeUnits": 41549,
+      "largestSerializedReplyCodeUnits": 41619,
+      "firstWindowStoredCells": 146,
+      "scrolledWindowStoredCells": 119,
+      "scrolledImportedFormulaCells": 28,
+      "audit": {
+        "kind": "audit",
+        "cells": 200000,
+        "formulas": 20000,
+        "chunks": 40
+      },
+      "cancelled": {
+        "error": "OperationCancelled",
+        "progress": 1
+      },
+      "postPreviewDisposeReadUnchanged": true,
+      "sourceBufferTransferred": true
+    },
+    {
+      "engine": "webkit",
+      "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+      "openedMs": 6824,
+      "firstScreenMs": 7228,
+      "importEventLoopDelayP95Ms": 2,
+      "snapshotCodeUnits": 41549,
+      "largestSerializedReplyCodeUnits": 41619,
+      "firstWindowStoredCells": 146,
+      "scrolledWindowStoredCells": 119,
+      "scrolledImportedFormulaCells": 28,
+      "audit": {
+        "kind": "audit",
+        "cells": 200000,
+        "formulas": 20000,
+        "chunks": 40
+      },
+      "cancelled": {
+        "error": "OperationCancelled",
+        "progress": 1
+      },
+      "postPreviewDisposeReadUnchanged": true,
+      "sourceBufferTransferred": true
+    },
+    {
+      "engine": "legacy-chromium-107",
+      "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/109.0.5414.46 Safari/537.36",
+      "openedMs": 10442.8,
+      "firstScreenMs": 10728.4,
+      "importEventLoopDelayP95Ms": 0.1,
+      "snapshotCodeUnits": 41549,
+      "largestSerializedReplyCodeUnits": 41619,
+      "firstWindowStoredCells": 146,
+      "scrolledWindowStoredCells": 119,
+      "scrolledImportedFormulaCells": 28,
+      "audit": {
+        "kind": "audit",
+        "cells": 200000,
+        "formulas": 20000,
+        "chunks": 40
+      },
+      "cancelled": {
+        "error": "OperationCancelled",
+        "progress": 1
+      },
+      "postPreviewDisposeReadUnchanged": true,
+      "sourceBufferTransferred": true
+    }
+  ]
+}
