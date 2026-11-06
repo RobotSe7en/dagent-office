@@ -1,5 +1,5 @@
 import { DEFAULT_DOCUMENT_READ_LIMITS, DocumentError, openDocument } from "@dagent-office/core";
-import type { DocumentModel } from "@dagent-office/core";
+import type { ContentDocumentModel } from "@dagent-office/core";
 import { writeOpcZip } from "./document-zip.js";
 import { attributes, declaration, empty, escapeXml } from "./export/xml.js";
 import { xml } from "./ooxml/xml.js";
@@ -14,10 +14,10 @@ import { emu } from "./pptx-export/values.js";
 export type { PptxExportOptions, PptxExportReport, PptxExportResult, PptxAnnotationLoss, UnexportedPptxAnnotation } from "./pptx-export/types.js";
 /** Compile the current validated HTML/CSS package into native editable OOXML.
  * Original Office bytes, browser DOM, network and file system are never read. */
-export function exportPptx(document: DocumentModel, options: PptxExportOptions = {}): PptxExportResult {
+export function exportPptx(document: ContentDocumentModel, options: PptxExportOptions = {}): PptxExportResult {
     if (options.commentFormat !== undefined && !["preserve", "modern", "classic"].includes(options.commentFormat))
         throw new DocumentError("InvalidOperation", "Unknown native PPTX comment format.");
-    const model = openDocument(document.serialize(), options), limits = { ...DEFAULT_DOCUMENT_READ_LIMITS, ...options.limits };
+    const model = openDocument(document.serialize(), { ...options, kind: "presentation" }), limits = { ...DEFAULT_DOCUMENT_READ_LIMITS, ...options.limits };
     if (model.snapshot().manifest.kind !== "presentation")
         throw new DocumentError("UnsupportedFormat", "PPTX export requires a presentation package.");
     const ctx = new PresentationExportContext(model, limits, options), text = new PresentationTextWriter(ctx), charts = new PresentationChartWriter(ctx, text), drawings = new PresentationDrawingWriter(ctx, text, (object, node, surface) => charts.write(object, node, surface)), comments = new PresentationCommentWriter(ctx, text);

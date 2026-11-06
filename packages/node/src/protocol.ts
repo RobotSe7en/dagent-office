@@ -63,6 +63,7 @@ export async function executeConversionRequest(converter: DocumentConverter, inp
     if (bytes.length > maximum) throw new ConversionError("ResourceLimitExceeded", "Conversion input exceeds its byte budget.");
     if (bytes.toString("base64") !== encoded) throw new ConversionError("InvalidRequest", "Input bytes must use canonical base64.");
     const model = openDocument(request.input.format === "docx" ? importDocx(bytes, { documentId: request.input.documentId! }) : request.input.format === "pptx" ? importPptx(bytes, { documentId: request.input.documentId! }) : readDocumentZip(bytes));
+    if (model.kind === "workbook") throw new ConversionError("UnsupportedFeature", "Workbook conversion is not implemented yet.");
     if (request.input.documentId !== undefined && model.snapshot().manifest.documentId !== request.input.documentId) throw new ConversionError("InvalidDocument", "Package identity differs from the asserted document identifier.");
     const output = request.format === "pdf" ? await converter.renderPdf(model, request.options) : await converter.renderPage(model, request.options);
     return { protocolVersion: 1, taskId, ok: true, output: { bytesBase64: Buffer.from(output.bytes).toString("base64"), mimeType: output.mimeType, report: output.report, engine: output.engine } };

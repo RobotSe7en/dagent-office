@@ -28,7 +28,7 @@
 
 | 依赖 | 版本 | 用途 | 许可证 |
 | --- | --- | --- | --- |
-| `@noble/hashes` | 2.4.0 | `core`：同步、跨运行环境的 SHA-256；保持现有打开接口同步 | MIT |
+| `@noble/hashes` | 2.4.0 | `core`/`office`：跨运行环境的 SHA-256，校验资源及生成工作簿分块摘要；保持现有打开接口同步 | MIT |
 | fflate | 0.8.3 | `office`：DEFLATE 流及 ZIP 写出，使用不依赖 Node 的 browser 入口 | MIT |
 
 资源 MIME 识别和基本容器边界由内部轻量适配器检查，不实现像素解码。ZIP 适配层在解压前按原始记录检查路径、重复项、结构及预算，压缩解压由 fflate 执行；不能只依赖上层解包 Map，因为此时重复名可能已被覆盖。版本与许可来自已安装包，支持范围见[资源与 ZIP](resources-and-zip.md)。[fflate](https://github.com/101arrowz/fflate)、[noble-hashes](https://github.com/paulmillr/noble-hashes)

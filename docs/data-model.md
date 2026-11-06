@@ -74,13 +74,13 @@
 
 ## 接口、版本与验收
 
-当前 `openDocument/snapshot/getNode/serialize` 已实现 Word 和 [R2-02 Presentation 文档包模型](presentation-model.md)，并保留 Word 旧包。[PPTX 原生读取](pptx-import.md)已实现声明范围，[只读画布](presentation-preview.md)已实现声明范围的读取验收；Excel 文档包读取仍未开放，模型实现不代表其他阶段已通过。结构类型来自严格契约及同源 JSON Schema，节点存在、引用、层级、锚点和样式循环另做语义校验。
+当前 `openDocument/snapshot/getNode/serialize` 已实现 Word 和 [R2-02 Presentation 文档包模型](presentation-model.md)，并保留 Word 旧包。[PPTX 原生读取](pptx-import.md)已实现声明范围，[只读画布](presentation-preview.md)已实现声明范围的读取验收；[R3-03 工作簿包模型](workbook-model.md)已支持新建、分块校验和窗口查询，原生 XLSX 读取仍未完成，模型实现不代表其他阶段已通过。结构类型来自严格契约及同源 JSON Schema，节点存在、引用、层级、锚点和样式循环另做语义校验。
 
 格式仍为未发布的版本 1 草案。新增字段显式定义，旧报告包继续可读；发布冻结后保留已支持的读取器，不通过忽略未知字段兼容。Word 读取结果必须经过文档包校验，并满足保存、ZIP 打包及重开语义一致。三格式正式实现时分别使用真实格式文件验证原生语义与视觉，不能用模型设计代替实现验收。
 
 ## 类型与来源映射
 
-以下是三格式运行时的设计类型，不是第三方 AST，也不是新的保存文件。当前 Word 和 R2-02 Presentation 契约由 `core` 的 Zod 定义推导；下列宽泛枚举还包含后续类型，不能据此推断实现范围。Excel 类型在第三轮落地，当前读取器仍拒绝 workbook。
+以下是三格式运行时的设计类型，不是第三方 AST，也不是新的保存文件。当前 Word 和 R2-02 Presentation 契约由 `core` 的 Zod 定义推导；下列宽泛枚举还包含后续类型，不能据此推断实现范围。Excel 基础类型与分块包已在 [R3-03](workbook-model.md)落地，完整功能仍按第三轮门槛推进。
 
 ```ts
 type NodeId = string;
@@ -143,25 +143,30 @@ type CellValueKind = "blank" | "text" | "number" | "boolean" | "error" | "formul
 
 ### Excel 元数据设计示例
 
-下面的 JSON 是第三轮的目标结构示例，当前读取器不接受。行列窗口由分块清单定位；一个合并区域可以跨窗口，但只有一个逻辑定义。
+下面是当前基础工作簿元数据的结构示例。行列窗口由分块清单定位；一个合并区域可以跨窗口，但只有一个逻辑定义。名称、规则和图表契约在后续任务增加。
 
 ```json
 {
   "workbook": {
     "dateSystem": "1900",
-    "sheets": [{ "sheetId": "sheet-1", "name": "预算", "rootNodeId": "sheet-root-1" }],
-    "dimensions": [{ "sheetId": "sheet-1", "rows": [{ "index": 1, "heightPt": 24 }], "columns": [{ "index": 1, "width": 12, "unit": "characters" }] }],
-    "merges": [{ "sheetId": "sheet-1", "from": "A1", "to": "B1" }],
-    "frozen": [{ "sheetId": "sheet-1", "rows": 1, "columns": 0 }],
-    "numberFormats": [{ "formatId": "money", "code": "#,##0.00" }],
-    "names": [],
-    "conditionalFormats": [],
-    "charts": []
+    "calculationMode": "auto",
+    "activeSheetId": "sheet-1",
+    "sheets": [{
+      "sheetId": "sheet-1", "name": "预算", "visibility": "visible",
+      "defaultRowHeightPt": 15, "defaultColumnWidth": 8.43,
+      "defaultCssClass": "cell-default",
+      "rowDimensions": [{ "from": 1, "to": 1, "heightPt": 24 }],
+      "columnDimensions": [{ "from": 1, "to": 1, "width": 12, "unit": "characters" }],
+      "merges": [{ "from": { "row": 0, "column": 0 }, "to": { "row": 0, "column": 1 } }],
+      "frozen": { "rows": 1, "columns": 0 },
+      "showGridLines": true, "rightToLeft": false
+    }],
+    "numberFormats": [{ "formatId": "money", "code": "#,##0.00" }]
   }
 }
 ```
 
-单元格 `A2` 的数字以 `data-value-type=number` 和原始值属性保存，展示文本由 `formatId` 派生；文本单元格的 HTML 是文本来源。公式单元格保存表达式、原缓存类型和值及 `valid/stale/unavailable` 状态，修改依赖后不能继续将旧缓存标为有效。日期系统、数字格式、公式缓存和实际计算分别解释，不相互替代。
+单元格 `A2` 的数字以 `data-value-type=number` 和原始值属性保存，展示文本由 `formatId` 派生；文本单元格的 HTML 是文本来源。公式单元格保存表达式、原缓存类型和值及 `imported/valid/stale/unavailable` 状态，修改依赖后不能继续将旧缓存标为有效。日期系统、数字格式、公式缓存和实际计算分别解释，不相互替代。
 
 ### 引用与变更规则
 

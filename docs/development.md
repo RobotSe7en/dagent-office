@@ -69,6 +69,10 @@ DAGENT_OFFICE_BROWSER_CHANNEL=chrome pnpm test:browser
 
 仅运行 R1-08 交互验收使用 `node scripts/playwright.mjs test interaction.spec.ts workbench.spec.ts text-editor.spec.ts pagination.spec.ts rendering.spec.ts remote-access.spec.ts word-closure.spec.ts`；它包含普通 JavaScript 宿主及 React Playground。CI 分别执行 `pnpm check` 和浏览器交互／工作台检查，失败时上传 Playwright 结果。文档视觉夹具截图时展开滚动容器，继续核对原完整文档基线；交互滚动与缩放另有坐标验收。
 
+第三轮工作簿的当前内部检查使用 `node scripts/playwright.mjs test workbook-storage.spec.ts workbook-grid.spec.ts workbook-drawing.spec.ts`。CI 在 Chromium、Firefox、WebKit 和固定旧 Chromium 上执行，现代与旧引擎的结果分别保存在 `.cache/workbook-browser/modern`、`.cache/workbook-browser/legacy`，并上传 `workbook-reading-checks`。其中一万行 Worker 用例保留 20 万实际单元格、2 万公式、取消后旧窗口及传输大小报告；它仍是存储原型检查，不代表完整 XLSX 首屏或固定 4 vCPU／8 GiB 性能验收已经通过。
+
+浏览器 CI 任务包含 Word／PPT、工作簿的三引擎与旧 Chromium，以及固定原生页面比较，任务时限为 45 分钟。CI #70 的 Word／PPT 438 项已耗时 11.2 分钟，随后工作簿 276 项及后续比较尚未完成时触及原 20 分钟上限；该取消不是产品性能验收结果。产品的 4 vCPU／8 GiB、首屏 30 秒、交互 p95 100 ms 和内存目标仍按第三轮单独验收。
+
 ## 本地打包
 
 ```bash
@@ -89,8 +93,12 @@ R1-12 的浏览器 CI 使用 Ubuntu 24.04、固定 Playwright 引擎、Poppler �
 
 PPT 的独立 ZIP/XML 样例与参考环境见 [PPTX 样例](../examples/pptx/README.md)。`pnpm check:pptx-fixtures` 不需要 Office；`pnpm check:pptx-reference` 需要 Impress、Calc、Poppler 和上述字体，会实际打开、重存并重开。环境不同只运行内容检查并明确记录未比较像素，不自动刷新基线。
 
+Office CI 也执行 `pnpm check:xlsx-fixtures` 与 `pnpm check:xlsx-reference`，核对 [XLSX 独立来源](../examples/xlsx/README.md)的可重现字节、官方结构、负例和固定 Calc 重开。源及重存后的结构差异始终对照已记录预期；只有渲染环境完全相同时才比较页数与像素摘要。结果上传为 `independent-xlsx-reference`，环境不同会明确标为未比较像素，不更新参考文件。
+
 PPT 导出与独立闭环使用 `pnpm check:pptx-export` 和 `pnpm check:presentation-closure`，需要 `python3-uno`、`python3-lxml`、Impress/Calc、Poppler 和既定字体。普通 JS／React／Node 在工作区外安装 tarball；输出及环境见 `.cache/pptx-export-acceptance/` 和 `.cache/presentation-closure-acceptance/`。完整范围、现代批注限制及 PowerPoint/WPS 未验证项见 [PPTX 导出](pptx-export.md)。
 
 Office CI 固定使用官方 LibreOffice 25.8.1.1 归档，`node scripts/install-acceptance-office.mjs` 校验官方 SHA-256 后仅解包到 `.cache/acceptance-office/`，不替换系统 Office。CI 将其 `bin` 加入当前任务 PATH，并保留版本、来源和摘要；本地 Ubuntu 24.04 x64 在装齐上述原生依赖后可用同一命令，再把该 `bin` 加入 PATH；其他系统可使用已验证的本机版本。归档随附的许可保留在解包目录，工具不会进入 SDK 发布包。
+
+Office CI 另显式运行 `node scripts/install-acceptance-fonts.mjs`，从固定 Debian 归档解出与参考相同的 Noto Sans／Serif CJK Regular/Bold 和 Color Emoji，仅保存到 `.cache/acceptance-fonts/`。归档及逐字体 SHA-256 都要通过，来源、版本与许可见[验收字体清单](../scripts/fixtures/acceptance-fonts.json)。生成的 Fontconfig 配置在当前作业内替换这些字体的解析，系统文件不变；本地使用时显式设置脚本输出的 `FONTCONFIG_FILE`。CI 会通过 `GITHUB_ENV` 传给后续步骤，日志／配置／许可保留在该缓存目录。此为开发验收设置，SDK 不下载字体。
 
 LibreOffice 24.2 在含未使用自定义布局的新建文稿重存中会生成重复原生对象 ID；此结果在隔离 Ubuntu 24.04 中复现，SDK 继续明确拒绝，不放宽重复身份校验。本轮外部打开、实际编辑和重存验收以固定的 25.8.1.1 为准，其他 Office 版本需单独验证。

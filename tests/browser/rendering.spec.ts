@@ -1,3 +1,4 @@
+import { openContentFixture as openDocument } from "../content-fixture.js";
 import { execFile } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { readFileSync } from "node:fs";
@@ -5,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { expect, test } from "@playwright/test";
-import { openDocument } from "@dagent-office/core";
+import {} from "@dagent-office/core";
 import { importDocx, writeDocumentZip } from "@dagent-office/office";
 import { createDocumentConverter } from "@dagent-office/node";
 import { runConversionProcess } from "@dagent-office/node/dev";

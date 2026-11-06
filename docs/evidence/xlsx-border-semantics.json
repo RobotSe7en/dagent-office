@@ -1,0 +1,4494 @@
+{
+  "scope": "Pinned Calc regular-border widths and 588 shared-edge PDF color observations. Conditional formats, merged perimeters and Excel/WPS remain unverified. Calc maps slantDashDot to fine-dashed; this is a producer difference, not proof of faithful slanted-border rendering.",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "environment": {
+    "libreOffice": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+    "poppler": "pdfinfo version 25.03.0\nCopyright 2005-2025 The Poppler Developers - http://poppler.freedesktop.org\nCopyright 1996-2011, 2022 Glyph & Cog, LLC",
+    "fontconfig": "fontconfig version 2.15.0",
+    "dpi": 96,
+    "fontManifestSha256": "c69980066d071afe8f248c7774f5265a6eb82990db1f2f78843580df8d2325b4",
+    "fontCount": 424
+  },
+  "localeEnvironment": {
+    "LC_ALL": "C.UTF-8",
+    "LANG": "C.UTF-8",
+    "TZ": "UTC"
+  },
+  "kinds": {
+    "sourceSha256": "fc525b3e8c9852a41bbaa0186247641dd7684aa3472fd3a13742d513b2af1ae0",
+    "samples": [
+      {
+        "kind": "none",
+        "nativeOdsBorder": "none",
+        "nativeDoubleWidths": null
+      },
+      {
+        "kind": "thin",
+        "nativeOdsBorder": "0.74pt solid #020000",
+        "nativeDoubleWidths": null
+      },
+      {
+        "kind": "medium",
+        "nativeOdsBorder": "1.76pt solid #030000",
+        "nativeDoubleWidths": null
+      },
+      {
+        "kind": "dashed",
+        "nativeOdsBorder": "0.74pt fine-dashed #040000",
+        "nativeDoubleWidths": null
+      },
+      {
+        "kind": "dotted",
+        "nativeOdsBorder": "0.74pt dotted #050000",
+        "nativeDoubleWidths": null
+      },
+      {
+        "kind": "thick",
+        "nativeOdsBorder": "2.49pt solid #060000",
+        "nativeDoubleWidths": null
+      },
+      {
+        "kind": "double",
+        "nativeOdsBorder": "1.76pt double-thin #070000",
+        "nativeDoubleWidths": "0.0071in 0.0102in 0.0071in"
+      },
+      {
+        "kind": "hair",
+        "nativeOdsBorder": "0.06pt solid #080000",
+        "nativeDoubleWidths": null
+      },
+      {
+        "kind": "mediumDashed",
+        "nativeOdsBorder": "1.76pt dashed #090000",
+        "nativeDoubleWidths": null
+      },
+      {
+        "kind": "dashDot",
+        "nativeOdsBorder": "0.74pt dash-dot #0a0000",
+        "nativeDoubleWidths": null
+      },
+      {
+        "kind": "mediumDashDot",
+        "nativeOdsBorder": "1.76pt dash-dot #0b0000",
+        "nativeDoubleWidths": null
+      },
+      {
+        "kind": "dashDotDot",
+        "nativeOdsBorder": "0.74pt dash-dot-dot #0c0000",
+        "nativeDoubleWidths": null
+      },
+      {
+        "kind": "mediumDashDotDot",
+        "nativeOdsBorder": "1.76pt dash-dot-dot #0d0000",
+        "nativeDoubleWidths": null
+      },
+      {
+        "kind": "slantDashDot",
+        "nativeOdsBorder": "1.76pt fine-dashed #0e0000",
+        "nativeDoubleWidths": null
+      }
+    ],
+    "pdfStrokes": {
+      "none": [],
+      "thin": [
+        {
+          "from": [
+            35.929684,
+            96.277424
+          ],
+          "to": [
+            109.035144,
+            96.277424
+          ],
+          "widthPt": 0.749154,
+          "dashPt": [],
+          "cap": "butt"
+        }
+      ],
+      "medium": [
+        {
+          "from": [
+            35.929684,
+            126.234453
+          ],
+          "to": [
+            109.035144,
+            126.234453
+          ],
+          "widthPt": 1.748036,
+          "dashPt": [],
+          "cap": "butt"
+        }
+      ],
+      "dashed": [
+        {
+          "from": [
+            35.929684,
+            156.187574
+          ],
+          "to": [
+            109.035144,
+            156.187574
+          ],
+          "widthPt": 0.736129,
+          "dashPt": [
+            2.996446,
+            0.998812
+          ],
+          "cap": "butt"
+        }
+      ],
+      "dotted": [
+        {
+          "from": [
+            35.929684,
+            186.144603
+          ],
+          "to": [
+            109.035144,
+            186.144603
+          ],
+          "widthPt": 0.736129,
+          "dashPt": [
+            0.499406,
+            0.998812
+          ],
+          "cap": "butt"
+        }
+      ],
+      "thick": [
+        {
+          "from": [
+            35.929684,
+            216.10163
+          ],
+          "to": [
+            109.035144,
+            216.10163
+          ],
+          "widthPt": 2.49691,
+          "dashPt": [],
+          "cap": "butt"
+        }
+      ],
+      "double": [
+        {
+          "from": [
+            35.929684,
+            245.433658
+          ],
+          "to": [
+            109.035144,
+            245.433658
+          ],
+          "widthPt": 0.499436,
+          "dashPt": [],
+          "cap": "butt"
+        },
+        {
+          "from": [
+            35.929684,
+            246.679752
+          ],
+          "to": [
+            109.035144,
+            246.679752
+          ],
+          "widthPt": 0.499436,
+          "dashPt": [],
+          "cap": "butt"
+        }
+      ],
+      "hair": [
+        {
+          "from": [
+            35.929684,
+            276.01178
+          ],
+          "to": [
+            109.035144,
+            276.01178
+          ],
+          "widthPt": 0.099873,
+          "dashPt": [],
+          "cap": "butt"
+        }
+      ],
+      "mediumDashed": [
+        {
+          "from": [
+            35.929684,
+            305.968808
+          ],
+          "to": [
+            109.035144,
+            305.968808
+          ],
+          "widthPt": 1.755397,
+          "dashPt": [
+            7.990526,
+            2.49703
+          ],
+          "cap": "butt"
+        }
+      ],
+      "dashDot": [
+        {
+          "from": [
+            35.929684,
+            335.92193
+          ],
+          "to": [
+            109.035144,
+            335.92193
+          ],
+          "widthPt": 0.736129,
+          "dashPt": [
+            7.990526,
+            2.49703,
+            2.49703,
+            2.49703
+          ],
+          "cap": "butt"
+        }
+      ],
+      "mediumDashDot": [
+        {
+          "from": [
+            35.929684,
+            365.878958
+          ],
+          "to": [
+            109.035144,
+            365.878958
+          ],
+          "widthPt": 1.755397,
+          "dashPt": [
+            7.990526,
+            2.49703,
+            2.49703,
+            2.49703
+          ],
+          "cap": "butt"
+        }
+      ],
+      "dashDotDot": [
+        {
+          "from": [
+            35.929684,
+            395.832079
+          ],
+          "to": [
+            109.035144,
+            395.832079
+          ],
+          "widthPt": 0.736129,
+          "dashPt": [
+            7.990526,
+            2.49703,
+            2.49703,
+            2.49703,
+            2.49703,
+            2.49703
+          ],
+          "cap": "butt"
+        }
+      ],
+      "mediumDashDotDot": [
+        {
+          "from": [
+            35.929684,
+            425.789108
+          ],
+          "to": [
+            109.035144,
+            425.789108
+          ],
+          "widthPt": 1.755397,
+          "dashPt": [
+            7.990526,
+            2.49703,
+            2.49703,
+            2.49703,
+            2.49703,
+            2.49703
+          ],
+          "cap": "butt"
+        }
+      ],
+      "slantDashDot": [
+        {
+          "from": [
+            35.929684,
+            455.742229
+          ],
+          "to": [
+            109.035144,
+            455.742229
+          ],
+          "widthPt": 1.755397,
+          "dashPt": [
+            2.996446,
+            0.998812
+          ],
+          "cap": "butt"
+        },
+        {
+          "from": [
+            35.929684,
+            455.742229
+          ],
+          "to": [
+            109.035144,
+            455.742229
+          ],
+          "widthPt": 1.755397,
+          "dashPt": [
+            2.996446,
+            0.998812
+          ],
+          "cap": "butt"
+        }
+      ]
+    }
+  },
+  "cases": [
+    {
+      "axis": "row",
+      "rightToLeft": false,
+      "sourceSha256": "e031d33e542e145f0299b88154accd8af1fafffe8624fa3f2b4dd76a7d8096fd",
+      "pdfPages": 12,
+      "leadingLabelXPt": 36.992,
+      "samples": [
+        {
+          "first": "none",
+          "second": "none",
+          "owners": []
+        },
+        {
+          "first": "none",
+          "second": "thin",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "dashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "dotted",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "hair",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "dashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "dashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "thin",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "dashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "dotted",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "dashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "dashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "thin",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "dashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "dotted",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "dashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "dashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "thin",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "dashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "dotted",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "dashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "dashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "medium",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "double",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "mediumDashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "mediumDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "slantDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "medium",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "mediumDashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "mediumDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "slantDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "thin",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "dashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "dotted",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "hair",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "dashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "dashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "thin",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "dashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "dotted",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "dashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "dashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "thin",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "dashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "dotted",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "dashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "dashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        }
+      ]
+    },
+    {
+      "axis": "column",
+      "rightToLeft": false,
+      "sourceSha256": "7eb5af6a05f9b9b4cbc1b5592782bb313713e4d82490bf46fe659337a0b42723",
+      "pdfPages": 12,
+      "leadingLabelXPt": 36.992,
+      "samples": [
+        {
+          "first": "none",
+          "second": "none",
+          "owners": []
+        },
+        {
+          "first": "none",
+          "second": "thin",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "dashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "dotted",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "hair",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "dashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "dashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "thin",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "dashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "dotted",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "dashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "dashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "thin",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "dashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "dotted",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "dashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "dashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "thin",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "dashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "dotted",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "dashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "dashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "medium",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "double",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "mediumDashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "mediumDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "slantDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "medium",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "mediumDashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "mediumDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "slantDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "thin",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "dashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "dotted",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "hair",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "dashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "dashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "thin",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "dashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "dotted",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "dashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "dashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "thin",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "dashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "dotted",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "dashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "dashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        }
+      ]
+    },
+    {
+      "axis": "column",
+      "rightToLeft": true,
+      "sourceSha256": "4beda0cd29d1f57fae28959a8f26c6590be194a9117d8539c6ecf4bb6157c5dd",
+      "pdfPages": 12,
+      "leadingLabelXPt": 487.134,
+      "samples": [
+        {
+          "first": "none",
+          "second": "none",
+          "owners": []
+        },
+        {
+          "first": "none",
+          "second": "thin",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "dashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "dotted",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "hair",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "dashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "dashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "none",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thin",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "medium",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "mediumDashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "mediumDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "medium",
+          "second": "slantDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashed",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dotted",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "medium",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "thick",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "double",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "mediumDashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "mediumDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "thick",
+          "second": "slantDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "medium",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "double",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "mediumDashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "mediumDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "double",
+          "second": "slantDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "thin",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "dashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "dotted",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "dashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "dashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "hair",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "medium",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "mediumDashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "mediumDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashed",
+          "second": "slantDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDot",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "medium",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "mediumDashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "mediumDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDot",
+          "second": "slantDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "medium",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "mediumDashed",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "mediumDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "dashDotDot",
+          "second": "slantDashDot",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "medium",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "mediumDashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "mediumDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "mediumDashDotDot",
+          "second": "slantDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "none",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "thin",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "medium",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "dashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "dotted",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "thick",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "double",
+          "owners": [
+            "second"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "hair",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "mediumDashed",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "dashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "mediumDashDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "dashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "mediumDashDotDot",
+          "owners": [
+            "first"
+          ]
+        },
+        {
+          "first": "slantDashDot",
+          "second": "slantDashDot",
+          "owners": [
+            "first"
+          ]
+        }
+      ]
+    }
+  ]
+}

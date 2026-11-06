@@ -15,7 +15,9 @@ window.__dagentOfficeRender = {
       const input = new Map(files.map(([path, base64]) => [path, Uint8Array.from(atob(base64), (value) => value.charCodeAt(0))]));
       document.body.style.margin = "0";
       const host = document.createElement("div"); document.body.replaceChildren(host);
-      renderer = mountPreview(host, openDocument(input), options);
+      const model = openDocument(input);
+      if (model.kind === "workbook") throw new DocumentError("UnsupportedFeature", "Workbook rendering is not implemented yet.");
+      renderer = mountPreview(host, model, options);
       const report = await renderer.settled();
       // Renderer-owned labels are preview UI, never part of a PNG or PDF.
       const source = renderer.source();

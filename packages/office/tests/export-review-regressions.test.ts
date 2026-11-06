@@ -1,6 +1,7 @@
+import { openContentFixture as openDocument } from "../../../tests/content-fixture.js";
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
-import { openDocument, DEFAULT_DOCUMENT_READ_LIMITS } from "@dagent-office/core";
+import { DEFAULT_DOCUMENT_READ_LIMITS } from "@dagent-office/core";
 import type { WordDocumentMetadata, WordMetadata } from "@dagent-office/core";
 import { exportDocx, importDocx, readDocumentZip } from "@dagent-office/office";
 import { attr, child, elements, W, xml } from "../src/ooxml/xml.js";

@@ -1,0 +1,1730 @@
+{
+  "scope": "Independent native Office-profile axis crossing and reverse-axis observations.\n\nNormalized PDF vectors cover crossing coordinates, not whole-chart auto-layout.\nThe user selected Office's perpendicular-axis crossesAt and ignored axPos.\n",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "sourceSha256": "948db07c3a97fed09f453c77333c8dbe9b7c86e91254ae893ee251e49eb8bc71",
+  "policy": {
+    "axPos": "preserved, ignored for display",
+    "crossesAt": "perpendicular axis; integral category numbers, decimal values",
+    "categoryNumbers": "current plotted categories, starting at 1"
+  },
+  "cases": [
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "categoryCrosses": "autoZero",
+      "valueCrosses": "autoZero",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.4999
+          ],
+          [
+            1.0,
+            0.4999
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "autoZero"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "categoryCrosses": "autoZero",
+      "valueCrosses": "min",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.4999
+          ],
+          [
+            1.0,
+            0.4999
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "autoZero"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "min"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "categoryCrosses": "autoZero",
+      "valueCrosses": "max",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.4999
+          ],
+          [
+            1.0,
+            0.4999
+          ]
+        ],
+        "value": [
+          [
+            1.0,
+            0.9999
+          ],
+          [
+            1.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "autoZero"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "max"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "categoryCrosses": "min",
+      "valueCrosses": "autoZero",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            1.0,
+            0.9999
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "min"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "categoryCrosses": "min",
+      "valueCrosses": "min",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            1.0,
+            0.9999
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "min"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "min"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "categoryCrosses": "min",
+      "valueCrosses": "max",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            1.0,
+            0.9999
+          ]
+        ],
+        "value": [
+          [
+            1.0,
+            0.9999
+          ],
+          [
+            1.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "min"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "max"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "categoryCrosses": "max",
+      "valueCrosses": "autoZero",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            -0.0001
+          ],
+          [
+            1.0,
+            -0.0001
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "max"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "categoryCrosses": "max",
+      "valueCrosses": "min",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            -0.0001
+          ],
+          [
+            1.0,
+            -0.0001
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "max"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "min"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "categoryCrosses": "max",
+      "valueCrosses": "max",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            -0.0001
+          ],
+          [
+            1.0,
+            -0.0001
+          ]
+        ],
+        "value": [
+          [
+            1.0,
+            0.9999
+          ],
+          [
+            1.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "max"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "max"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "categoryAt": -2.5,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.8123
+          ],
+          [
+            1.0,
+            0.8123
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crossesAt": "-2.5"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "categoryAt": 2,
+      "reverseValues": true,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.7498
+          ],
+          [
+            1.0,
+            0.7498
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crossesAt": "2"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "categoryAt": 6,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            -0.0001
+          ],
+          [
+            1.0,
+            -0.0001
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crossesAt": "6"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "categoryAt": -6,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            1.0,
+            0.9999
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crossesAt": "-6"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "valueAt": 2,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.4999
+          ],
+          [
+            1.0,
+            0.4999
+          ]
+        ],
+        "value": [
+          [
+            0.3334,
+            0.9999
+          ],
+          [
+            0.3334,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "autoZero"
+        },
+        "value": {
+          "axPos": "l",
+          "crossesAt": "2"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "midCat",
+      "reverse": false,
+      "valueAt": 2,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.4999
+          ],
+          [
+            1.0,
+            0.4999
+          ]
+        ],
+        "value": [
+          [
+            0.3334,
+            0.9999
+          ],
+          [
+            0.3334,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "autoZero"
+        },
+        "value": {
+          "axPos": "l",
+          "crossesAt": "2"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": true,
+      "valueAt": 2,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.4999
+          ],
+          [
+            1.0,
+            0.4999
+          ]
+        ],
+        "value": [
+          [
+            0.6666,
+            0.9999
+          ],
+          [
+            0.6666,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "autoZero"
+        },
+        "value": {
+          "axPos": "l",
+          "crossesAt": "2"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": true,
+      "categoryAt": 1.5,
+      "valueAt": 2,
+      "reverseValues": true,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.6874
+          ],
+          [
+            1.0,
+            0.6874
+          ]
+        ],
+        "value": [
+          [
+            0.6666,
+            0.9999
+          ],
+          [
+            0.6666,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crossesAt": "1.5"
+        },
+        "value": {
+          "axPos": "l",
+          "crossesAt": "2"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "categoryAt": 0,
+      "valueAt": 2,
+      "hiddenFirst": true,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.4999
+          ],
+          [
+            1.0,
+            0.4999
+          ]
+        ],
+        "value": [
+          [
+            0.5,
+            0.9999
+          ],
+          [
+            0.5,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crossesAt": "0"
+        },
+        "value": {
+          "axPos": "l",
+          "crossesAt": "2"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "categoryAt": 0,
+      "categoryPosition": "t",
+      "valuePosition": "r",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.4999
+          ],
+          [
+            1.0,
+            0.4999
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crossesAt": "0"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "categoryAt": 0,
+      "categoryPosition": "l",
+      "valuePosition": "b",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.4999
+          ],
+          [
+            1.0,
+            0.4999
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crossesAt": "0"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "minimum": 1,
+      "maximum": 4,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            1.0,
+            0.9999
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "autoZero"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "column",
+      "between": "between",
+      "reverse": false,
+      "minimum": -4,
+      "maximum": -1,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            -0.0001
+          ],
+          [
+            1.0,
+            -0.0001
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "autoZero"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "categoryCrosses": "autoZero",
+      "valueCrosses": "autoZero",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.4999
+          ],
+          [
+            1.0,
+            0.4999
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "autoZero"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "categoryCrosses": "autoZero",
+      "valueCrosses": "min",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.4999
+          ],
+          [
+            1.0,
+            0.4999
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "autoZero"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "min"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "categoryCrosses": "autoZero",
+      "valueCrosses": "max",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.4999
+          ],
+          [
+            1.0,
+            0.4999
+          ]
+        ],
+        "value": [
+          [
+            1.0,
+            0.9999
+          ],
+          [
+            1.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "autoZero"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "max"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "categoryCrosses": "min",
+      "valueCrosses": "autoZero",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            1.0,
+            0.9999
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "min"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "categoryCrosses": "min",
+      "valueCrosses": "min",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            1.0,
+            0.9999
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "min"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "min"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "categoryCrosses": "min",
+      "valueCrosses": "max",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            1.0,
+            0.9999
+          ]
+        ],
+        "value": [
+          [
+            1.0,
+            0.9999
+          ],
+          [
+            1.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "min"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "max"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "categoryCrosses": "max",
+      "valueCrosses": "autoZero",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            -0.0001
+          ],
+          [
+            1.0,
+            -0.0001
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "max"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "categoryCrosses": "max",
+      "valueCrosses": "min",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            -0.0001
+          ],
+          [
+            1.0,
+            -0.0001
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "max"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "min"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "categoryCrosses": "max",
+      "valueCrosses": "max",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            -0.0001
+          ],
+          [
+            1.0,
+            -0.0001
+          ]
+        ],
+        "value": [
+          [
+            1.0,
+            0.9999
+          ],
+          [
+            1.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "max"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "max"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "categoryAt": -2.5,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.8123
+          ],
+          [
+            1.0,
+            0.8123
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crossesAt": "-2.5"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "categoryAt": 2,
+      "reverseValues": true,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.7498
+          ],
+          [
+            1.0,
+            0.7498
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crossesAt": "2"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "categoryAt": 6,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            -0.0001
+          ],
+          [
+            1.0,
+            -0.0001
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crossesAt": "6"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "categoryAt": -6,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            1.0,
+            0.9999
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crossesAt": "-6"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "valueAt": 2,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.4999
+          ],
+          [
+            1.0,
+            0.4999
+          ]
+        ],
+        "value": [
+          [
+            0.3334,
+            0.9999
+          ],
+          [
+            0.3334,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "autoZero"
+        },
+        "value": {
+          "axPos": "l",
+          "crossesAt": "2"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "midCat",
+      "reverse": false,
+      "valueAt": 2,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.4999
+          ],
+          [
+            1.0,
+            0.4999
+          ]
+        ],
+        "value": [
+          [
+            0.5,
+            0.9999
+          ],
+          [
+            0.5,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "autoZero"
+        },
+        "value": {
+          "axPos": "l",
+          "crossesAt": "2"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": true,
+      "valueAt": 2,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.4999
+          ],
+          [
+            1.0,
+            0.4999
+          ]
+        ],
+        "value": [
+          [
+            0.6666,
+            0.9999
+          ],
+          [
+            0.6666,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "autoZero"
+        },
+        "value": {
+          "axPos": "l",
+          "crossesAt": "2"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": true,
+      "categoryAt": 1.5,
+      "valueAt": 2,
+      "reverseValues": true,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.6874
+          ],
+          [
+            1.0,
+            0.6874
+          ]
+        ],
+        "value": [
+          [
+            0.6666,
+            0.9999
+          ],
+          [
+            0.6666,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crossesAt": "1.5"
+        },
+        "value": {
+          "axPos": "l",
+          "crossesAt": "2"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "categoryAt": 0,
+      "valueAt": 2,
+      "hiddenFirst": true,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.4999
+          ],
+          [
+            1.0,
+            0.4999
+          ]
+        ],
+        "value": [
+          [
+            0.5,
+            0.9999
+          ],
+          [
+            0.5,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crossesAt": "0"
+        },
+        "value": {
+          "axPos": "l",
+          "crossesAt": "2"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "categoryAt": 0,
+      "categoryPosition": "t",
+      "valuePosition": "r",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.4999
+          ],
+          [
+            1.0,
+            0.4999
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crossesAt": "0"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "categoryAt": 0,
+      "categoryPosition": "l",
+      "valuePosition": "b",
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.4999
+          ],
+          [
+            1.0,
+            0.4999
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crossesAt": "0"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "minimum": 1,
+      "maximum": 4,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            1.0,
+            0.9999
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "autoZero"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    },
+    {
+      "kind": "line",
+      "between": "between",
+      "reverse": false,
+      "minimum": -4,
+      "maximum": -1,
+      "pdfAxes": {
+        "category": [
+          [
+            0.0,
+            -0.0001
+          ],
+          [
+            1.0,
+            -0.0001
+          ]
+        ],
+        "value": [
+          [
+            0.0,
+            0.9999
+          ],
+          [
+            0.0,
+            -0.0001
+          ]
+        ]
+      },
+      "producer": {
+        "category": {
+          "axPos": "b",
+          "crosses": "autoZero"
+        },
+        "value": {
+          "axPos": "l",
+          "crosses": "autoZero"
+        }
+      }
+    }
+  ],
+  "limits": [
+    "Calc retains midCat on columns but draws between categories; source and producer geometry are evaluated separately.",
+    "A nonintegral crossing of a category axis is outside the selected Office profile; no rounding is inferred from Calc.",
+    "Normalized axis vectors do not establish full labels, fonts, auto-layout, pixels or Excel/WPS acceptance."
+  ]
+}

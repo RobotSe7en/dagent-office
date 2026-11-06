@@ -1,9 +1,10 @@
+import { openContentFixture as openDocument } from "../content-fixture.js";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
-import { openDocument } from "@dagent-office/core";
+import {} from "@dagent-office/core";
 import type { DocumentPackage, Rectangle } from "@dagent-office/core";
 import { importDocx, readDocumentZip } from "@dagent-office/office";
 import type {} from "./fixtures/interaction-host.js";

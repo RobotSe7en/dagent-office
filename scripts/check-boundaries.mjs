@@ -11,7 +11,7 @@ const layers = {
   "packages/editor": ["packages/core", "packages/render"],
   "packages/office": ["packages/core"],
   "packages/node": ["packages/core", "packages/office", "packages/render"],
-  "apps/playground": ["packages/core", "packages/editor", "packages/office", "packages/node"],
+  "apps/playground": ["packages/core", "packages/render", "packages/editor", "packages/office", "packages/node"],
 };
 // Office and input mappings are first-party implementations. General-purpose
 // ZIP/XML/HTML/CSS/hashing/browser primitives remain allowed behind adapters.

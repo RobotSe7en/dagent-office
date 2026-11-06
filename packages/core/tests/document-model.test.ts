@@ -1,9 +1,10 @@
+import { openContentFixture as openDocument } from "../../../tests/content-fixture.js";
 import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { describe, expect, expectTypeOf, test } from "vitest";
-import { createAssetDescriptor, DEFAULT_DOCUMENT_READ_LIMITS, DocumentError, openDocument, parseContract } from "@dagent-office/core";
-import type { DocumentErrorCode, DocumentModel, DocumentPackage, DocumentReadLimits } from "@dagent-office/core";
+import { createAssetDescriptor, DEFAULT_DOCUMENT_READ_LIMITS, DocumentError, parseContract } from "@dagent-office/core";
+import type { DocumentErrorCode, ContentDocumentModel as DocumentModel, DocumentPackage, DocumentReadLimits } from "@dagent-office/core";
 import { annotations, manifest, metadata, repository } from "./fixtures.js";
 
 const encoder = new TextEncoder();
@@ -100,7 +101,8 @@ describe("document package reading and serialization", () => {
   test.each(["presentation", "workbook"])("rejects unsupported kinds or metadata belonging to another kind: %s", (kind) => {
     const input = files();
     json(input, "manifest.json", { ...manifest, kind });
-    failure(input, kind === "workbook" ? "UnsupportedFeature" : "InvalidDocument");
+    // A workbook now requires a chunks manifest and workbook metadata.
+    failure(input, "InvalidDocument");
   });
 
   test.each(["manifest.json", "content.html", "styles.css", "metadata.json", "annotations.json"])("rejects missing %s", (path) => {

@@ -15,6 +15,8 @@ R1-06 回归覆盖宋体、新宋体、`SimSun/NSimSun`，仿宋、仿宋_GB2312
 
 系统原有 Noto Sans CJK SC、Noto Serif CJK SC 和 Liberation Serif 继续作为 DOCX 参考环境，既有[参考记录](../examples/docx/reference.json)没有因安装新字体而刷新。
 
+Linux Office CI 通过独立[验收脚本](../scripts/install-acceptance-fonts.mjs)将 Noto Sans／Serif CJK Regular/Bold 与 Color Emoji 固定为既有 XLSX 参考字体的实际字节。开发者显式运行时会下载清单列出的两个 Debian 字体归档；[清单](../scripts/fixtures/acceptance-fonts.json)保存版本、来源、归档与逐文件摘要及许可。字体和随附版权文件只解到工作区缓存，Fontconfig 配置仅对显式使用它的进程生效，不替换系统字体或进入 SDK 包。CI 字体版本不同会修正验收环境，不改写视觉参考或放宽摘要检查。
+
 ## 缺失字体的预览
 
 预览先尝试文档请求的字体列表。列表中均不可用时，仿宋类名称依次尝试 FandolFang、Noto Serif CJK SC、serif；楷体类名称依次尝试 FandolKai、LXGW WenKai、Noto Serif CJK SC、serif。宋体类优先使用 Noto Serif CJK SC，再尝试 FandolSong。字体不存在时仍明确报告请求名称与实际选用名称，源 CSS 保持原样。

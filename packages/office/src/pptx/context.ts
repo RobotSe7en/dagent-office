@@ -1,48 +1,24 @@
 import { createAssetDescriptor, DocumentError } from "@dagent-office/core";
-import type { Annotation, DocumentManifest, PresentationMetadata } from "@dagent-office/core";
+import type { Annotation, ContentDocumentManifest, PresentationMetadata } from "@dagent-office/core";
 import { openOpc } from "../ooxml/package.js";
 import type { OpcPackage } from "../ooxml/package.js";
-import { attr, fail, number, R, unsupported } from "../ooxml/xml.js";
+import { fail, R, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
-import { declarations, escapeHtml } from "../ooxml/styles.js";
+import { declarations } from "../ooxml/styles.js";
 import type { Css } from "../ooxml/styles.js";
+import type { Html } from "../drawingml/html.js";
+import { rootName } from "../drawingml/values.js";
+export * from "../drawingml/html.js";
+export * from "../drawingml/values.js";
 
-export interface Html { tag: string; attrs: Record<string, string>; children: (Html | string)[] }
 export interface Surface { id: string; root: Html; source: XmlNode; themeId: string; masterId?: string; layoutId?: string }
 export interface NativeParagraph { nodeId: string; start: number; text: string; nativeText: string }
-export function serialize(node: Html): string {
-  const attrs = Object.entries(node.attrs).map(([name, value]) => " " + name + '="' + escapeHtml(value) + '"').join("");
-  return "<" + node.tag + attrs + ">" + (["br", "img"].includes(node.tag) ? "" : node.children.map(item => typeof item === "string" ? escapeHtml(item) : serialize(item)).join("") + "</" + node.tag + ">");
-}
-export const encode = (value: string): Uint8Array => new (globalThis as unknown as { TextEncoder: new () => { encode(value: string): Uint8Array } }).TextEncoder().encode(value);
-export const value = (node: XmlNode | undefined, name = "val"): string | undefined => attr(node, name, "");
-export const integer = (node: XmlNode, name: string, fallback?: number): number => number(value(node, name), node, fallback);
-export function unsigned(node: XmlNode, name: string, minimum = 0, maximum = 4294967295): number {
-  const n = integer(node, name);
-  if (n < minimum || n > maximum) fail(node, "A native unsigned identity or index is outside its range.");
-  return n;
-}
-export const points = (node: XmlNode, name: string, fallback?: number): number => integer(node, name, fallback) / 12700;
-export function bool(node: XmlNode, name: string, fallback = false): boolean {
-  const v = value(node, name);
-  if (v === undefined) return fallback;
-  if (["true", "1"].includes(v)) return true;
-  if (["false", "0"].includes(v)) return false;
-  return fail(node, "A DrawingML boolean is invalid.");
-}
-export function rootName(node: XmlNode, name: string, uri: string): void {
-  if (node.uri !== uri || node.name !== name) fail(node, "An OOXML part has the wrong root.");
-}
-export function fontName(name: string): string {
-  if (/[\u0000-\u001f\u007f]/.test(name)) throw new DocumentError("InvalidDocument", "A font name contains control characters.");
-  return '"' + name.replace(/["\\]/g, "\\$&") + '"';
-}
 export class Context {
   serial = 0;
   work = 0;
   outputBytes = 0;
   readonly css: string[] = [];
-  readonly assets: DocumentManifest["assets"] = [];
+  readonly assets: ContentDocumentManifest["assets"] = [];
   readonly files: Map<string, Uint8Array> = new Map();
   readonly surfaces: Map<string, Surface> = new Map();
   readonly nativeNodes: Map<string, Map<string, string>> = new Map();

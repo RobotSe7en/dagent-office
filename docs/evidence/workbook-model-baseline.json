@@ -1,0 +1,18 @@
+{
+  "kind": "R3-03-public-model-probe",
+  "generatedAt": "2026-11-04T09:05:14.502Z",
+  "node": "v24.13.0",
+  "rows": 10000,
+  "columns": 20,
+  "cellCount": 200000,
+  "formulaCount": 20000,
+  "sourceSha256": "bc1454f1a04f735837f6a6d9500caa286e6c8266d43117d17d0f658ee7621270",
+  "openMs": 1911.0753089999998,
+  "allWindowsScanMs": 9012.614157,
+  "snapshotBytes": 7215,
+  "processLifetimePeakRssBytes": 466055168,
+  "limitations": [
+    "HTML package reading only; not native XLSX or calculation acceptance.",
+    "Local environment; final fixed-resource/browser gates remain outstanding."
+  ]
+}

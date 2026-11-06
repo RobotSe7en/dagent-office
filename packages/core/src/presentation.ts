@@ -5,12 +5,12 @@ import type { PresentationDocumentMetadata, PresentationMetadata, PresentationGe
 import { DocumentError } from "./errors.js";
 import { openDocument } from "./document-model.js";
 import { encode } from "./document/package.js";
-import type { DocumentModel, DocumentPackage, OpenDocumentOptions } from "./runtime.js";
+import type { ContentDocumentModel, DocumentPackage, OpenDocumentOptions } from "./runtime.js";
 import { checkLimit, freeze, readLimits } from "./document/validation.js";
 import { presentationTransforms } from "./session/presentation-geometry.js";
 
 /** Resolve source-local geometry through the declared placeholder inheritance chain. */
-export function resolvePresentationGeometry(model: DocumentModel, nodeId: string): Readonly<PresentationGeometry> {
+export function resolvePresentationGeometry(model: ContentDocumentModel, nodeId: string): Readonly<PresentationGeometry> {
   const p=model.snapshot().metadata.presentation;
   if(!p) throw new DocumentError("UnsupportedFormat","Presentation geometry requires a presentation model.");
   if(!p.objects.some(object=>object.nodeId===nodeId)) throw new DocumentError("InvalidOperation","Geometry resolution requires a registered object.");

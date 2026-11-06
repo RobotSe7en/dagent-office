@@ -1,11 +1,11 @@
 import { parseContract } from "../schema-registry.js";
-import type { DocumentPackage, DocumentReadLimits, DocumentSnapshot } from "../runtime.js";
+import type { DocumentPackage, DocumentReadLimits, ContentDocumentSnapshot } from "../runtime.js";
 import { normalizeCss } from "./css.js";
 import { parseHtml } from "./html.js";
 import { validateAssets } from "./assets.js";
 import { validateWord } from "./word.js";
 import { validatePresentation } from "./presentation.js";
-import type { DocumentMetadata } from "../contracts/document.js";
+import type { ContentDocumentMetadata } from "../contracts/document.js";
 import { validateAnnotations } from "./annotations.js";
 import { readManifest } from "./manifest.js";
 import { encode, readJson, readText } from "./package.js";
@@ -14,7 +14,7 @@ import { checkLimit, freeze, invalid, unsupported } from "./validation.js";
 /** Private bytes are never exposed; unchanged assets may be shared across states. */
 export interface DocumentState {
   readonly files: DocumentPackage;
-  readonly snapshot: DocumentSnapshot;
+  readonly snapshot: ContentDocumentSnapshot;
   readonly html: ReturnType<typeof parseHtml>;
 }
 
@@ -24,7 +24,9 @@ export function buildDocumentState(input: DocumentPackage, limits: DocumentReadL
   if (manifest.kind !== "document" && manifest.kind !== "presentation") unsupported("This document kind is not implemented.");
 
   validateAssets(manifest.assets, files);
-  const metadata: DocumentMetadata = parseContract("document-metadata", readJson(files, manifest.metadata));
+  const parsedMetadata = parseContract("document-metadata", readJson(files, manifest.metadata));
+  if ("workbook" in parsedMetadata) invalid("Manifest kind and metadata kind must match.");
+  const metadata: ContentDocumentMetadata = parsedMetadata;
   if ((manifest.kind === "presentation") !== (metadata.presentation !== undefined)) invalid("Manifest kind and metadata kind must match.");
   const annotations = parseContract("annotations", readJson(files, manifest.annotations));
   const cssBudget = { nodes: 0 };
@@ -44,7 +46,7 @@ export function buildDocumentState(input: DocumentPackage, limits: DocumentReadL
     validateWord(metadata, annotations, html);
   } else validatePresentation(metadata.presentation, annotations, html, styles, limits);
   validateAnnotations(annotations, manifest, html);
-  const snapshot: DocumentSnapshot = freeze({ manifest, html: html.html, styles, metadata, annotations });
+  const snapshot: ContentDocumentSnapshot = freeze({ manifest, html: html.html, styles, metadata, annotations });
   files.set("manifest.json", encode(JSON.stringify(manifest, null, 2) + "\n"));
   files.set(manifest.entrypoint, encode(snapshot.html));
   files.set(manifest.metadata, encode(JSON.stringify(metadata, null, 2) + "\n"));

@@ -1,0 +1,104 @@
+{
+  "node": {
+    "kind": "R3-02-source-storage-probe",
+    "generatedAt": "2026-11-04T08:30:52.180Z",
+    "environment": {
+      "node": "v24.13.0",
+      "platform": "linux",
+      "arch": "x64",
+      "availableCpus": 128,
+      "systemMemoryBytes": 24603303936
+    },
+    "rows": 10000,
+    "columns": 20,
+    "chunks": 40,
+    "sourceSha256": "bc1454f1a04f735837f6a6d9500caa286e6c8266d43117d17d0f658ee7621270",
+    "cellCount": 200000,
+    "formulaCount": 20000,
+    "sourceBytes": 16506794,
+    "indexBytes": 2120000,
+    "formulaTemplates": 2,
+    "formulaTemplateKeyCodeUnits": 436,
+    "generationMs": 96.30880699999918,
+    "indexingMs": 2148.4766689999997,
+    "fourWindowsQueryMs": 3.9161779999999453,
+    "transferredWindowCells": 20,
+    "elapsedMs": 2411.199144,
+    "parentEventLoopDelayP95Ms": 0.27021700000000237,
+    "processIncrementalPeakRssBytes": 278327296,
+    "processLifetimePeakRssBytes": 340865024,
+    "limitations": [
+      "Source storage probe; not XLSX open or calculation acceptance.",
+      "Memory includes Node and its Worker; browser measurements are separate.",
+      "Formula subset parsed and interned; cache not evaluated."
+    ]
+  },
+  "browsers": [
+    {
+      "opened": {
+        "kind": "opened",
+        "id": 1,
+        "rows": 10000,
+        "cellCount": 200000,
+        "formulaCount": 20000,
+        "formulaTemplates": 2,
+        "indexBytes": 2120000,
+        "elapsedMs": 1773.699999999255
+      },
+      "cancellation": {
+        "kind": "cancelled",
+        "id": 99,
+        "retainedChunks": 40
+      },
+      "cancelledPublished": false,
+      "ticks": 186,
+      "eventLoopDelayP95Ms": 0.09999999962747097,
+      "largestReplyBytes": 2500,
+      "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36"
+    },
+    {
+      "opened": {
+        "kind": "opened",
+        "id": 1,
+        "rows": 10000,
+        "cellCount": 200000,
+        "formulaCount": 20000,
+        "formulaTemplates": 2,
+        "indexBytes": 2120000,
+        "elapsedMs": 3801
+      },
+      "cancellation": {
+        "kind": "cancelled",
+        "id": 99,
+        "retainedChunks": 40
+      },
+      "cancelledPublished": false,
+      "ticks": 392,
+      "eventLoopDelayP95Ms": 1,
+      "largestReplyBytes": 2500,
+      "browser": "Mozilla/5.0 (X11; Linux x86_64; rv:157.0) Gecko/20100101 Firefox/157.0"
+    },
+    {
+      "opened": {
+        "kind": "opened",
+        "id": 1,
+        "rows": 10000,
+        "cellCount": 200000,
+        "formulaCount": 20000,
+        "formulaTemplates": 2,
+        "indexBytes": 2120000,
+        "elapsedMs": 1748
+      },
+      "cancellation": {
+        "kind": "cancelled",
+        "id": 99,
+        "retainedChunks": 40
+      },
+      "cancelledPublished": false,
+      "ticks": 151,
+      "eventLoopDelayP95Ms": 2,
+      "largestReplyBytes": 2500,
+      "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15"
+    }
+  ]
+}

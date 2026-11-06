@@ -1,8 +1,10 @@
 import { z } from "zod";
-import { DocumentKindSchema, FORMAT_VERSION, IdentifierSchema, PackagePathSchema, RevisionSchema } from "./primitives.js";
+import { FORMAT_VERSION, IdentifierSchema, PackagePathSchema, RevisionSchema } from "./primitives.js";
 import { WordMetadataSchema } from "./word.js";
 import { PresentationDocumentMetadataSchema } from "./presentation.js";
 import type { PresentationDocumentMetadata } from "./presentation.js";
+import { WorkbookChunkDescriptorSchema, WorkbookDocumentMetadataSchema } from "./workbook.js";
+import type { WorkbookDocumentMetadata } from "./workbook.js";
 
 export const AssetDescriptorSchema = z.strictObject({
   path: PackagePathSchema,
@@ -11,18 +13,21 @@ export const AssetDescriptorSchema = z.strictObject({
 });
 export type AssetDescriptor = z.infer<typeof AssetDescriptorSchema>;
 
-export const DocumentManifestSchema = z.strictObject({
+const manifestFields = {
   format: z.literal("dagent-office"),
   formatVersion: z.literal(FORMAT_VERSION),
   documentId: IdentifierSchema,
-  kind: DocumentKindSchema,
   revision: RevisionSchema,
-  entrypoint: PackagePathSchema,
   styles: z.array(PackagePathSchema),
   metadata: PackagePathSchema,
   annotations: PackagePathSchema,
   assets: z.array(AssetDescriptorSchema),
-});
+};
+export const ContentDocumentManifestSchema = z.strictObject({ ...manifestFields, kind: z.enum(["document", "presentation"]), entrypoint: PackagePathSchema });
+export type ContentDocumentManifest = z.infer<typeof ContentDocumentManifestSchema>;
+export const WorkbookManifestSchema = z.strictObject({ ...manifestFields, kind: z.literal("workbook"), chunks: z.array(WorkbookChunkDescriptorSchema), content: PackagePathSchema.optional() });
+export type WorkbookManifest = z.infer<typeof WorkbookManifestSchema>;
+export const DocumentManifestSchema = z.union([ContentDocumentManifestSchema, WorkbookManifestSchema]);
 export type DocumentManifest = z.infer<typeof DocumentManifestSchema>;
 
 export const PageSetupSchema = z.strictObject({
@@ -60,6 +65,8 @@ export const WordDocumentMetadataSchema = z.strictObject({
   sections: z.array(DocumentSectionSchema).min(1),
   word: WordMetadataSchema.optional(),
 });
-export type WordDocumentMetadata = z.infer<typeof WordDocumentMetadataSchema> & { readonly presentation?: never };
-export const DocumentMetadataSchema = z.union([WordDocumentMetadataSchema, PresentationDocumentMetadataSchema]);
-export type DocumentMetadata = WordDocumentMetadata | PresentationDocumentMetadata;
+export type WordDocumentMetadata = z.infer<typeof WordDocumentMetadataSchema> & { readonly presentation?: never; readonly workbook?: never };
+export type ContentDocumentMetadata = WordDocumentMetadata | PresentationDocumentMetadata;
+export const ContentDocumentMetadataSchema = z.union([WordDocumentMetadataSchema, PresentationDocumentMetadataSchema]);
+export const DocumentMetadataSchema = z.union([WordDocumentMetadataSchema, PresentationDocumentMetadataSchema, WorkbookDocumentMetadataSchema]);
+export type DocumentMetadata = ContentDocumentMetadata | WorkbookDocumentMetadata;

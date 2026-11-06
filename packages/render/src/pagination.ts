@@ -1,5 +1,5 @@
 import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, DocumentMetadata, DocumentSection, PageSetup } from "@dagent-office/core";
+import type { DeepReadonly, ContentDocumentMetadata, DocumentSection, PageSetup } from "@dagent-office/core";
 import type { LayoutDiagnostic, RenderedPage, RenderLimits } from "./contracts.js";
 import { markViewNode } from "./view-nodes.js";
 import { repeatTableHeaders } from "./table-headers.js";
@@ -42,7 +42,7 @@ export interface Pagination {
 }
 
 /** Browser-independent measured pages over a single, reversible source DOM. */
-export function paginate(document: Document, source: PreviewSource, metadata: DeepReadonly<DocumentMetadata>, limits: Readonly<RenderLimits>): Pagination {
+export function paginate(document: Document, source: PreviewSource, metadata: DeepReadonly<ContentDocumentMetadata>, limits: Readonly<RenderLimits>): Pagination {
   if (metadata.presentation !== undefined) throw new DocumentError("UnsupportedFeature", "Presentation surfaces do not use Word pagination.");
   const root = source.root;
   const diagnostics: LayoutDiagnostic[] = [], groups: Group[] = [];

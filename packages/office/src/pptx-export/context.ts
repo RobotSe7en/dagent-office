@@ -1,5 +1,5 @@
 import { createOpaqueId, DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, DocumentModel, DocumentPackage, DocumentReadLimits, DocumentSnapshot, PresentationMetadata, PresentationObject } from "@dagent-office/core";
+import type { DeepReadonly, ContentDocumentModel, DocumentPackage, DocumentReadLimits, ContentDocumentSnapshot, PresentationMetadata, PresentationObject } from "@dagent-office/core";
 import { OutputOpc } from "../export/opc.js";
 import { children, parseSource } from "../export/source.js";
 import type { SourceElement, SourceTree } from "../export/source.js";
@@ -40,7 +40,7 @@ export function resourcePath(reference: string, entrypoint: string): string {
 }
 type FormatKind = "fill" | "line" | "effect" | "background";
 export class PresentationExportContext {
-    readonly snapshot: DocumentSnapshot;
+    readonly snapshot: ContentDocumentSnapshot;
     readonly p: DeepReadonly<PresentationMetadata>;
     readonly files: DocumentPackage;
     readonly tree: SourceTree;
@@ -66,7 +66,7 @@ export class PresentationExportContext {
     private generatedBytes = 0;
     private generatedNodes = 0;
     private readonly nextIds = new Map<string, number>();
-    constructor(model: DocumentModel, readonly limits: DocumentReadLimits, readonly options: PptxExportOptions) {
+    constructor(model: ContentDocumentModel, readonly limits: DocumentReadLimits, readonly options: PptxExportOptions) {
         this.snapshot = model.snapshot();
         const p = this.snapshot.metadata.presentation;
         if (!p)

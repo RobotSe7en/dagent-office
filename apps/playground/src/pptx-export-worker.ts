@@ -8,7 +8,7 @@ const scope = globalThis as unknown as {
 scope.onmessage = (event) => {
     const { taskId, files } = event.data;
     try {
-        const output = exportPptx(openDocument(new Map(files))), bytes = new Uint8Array(output.bytes);
+        const output = exportPptx(openDocument(new Map(files), { kind: "presentation" })), bytes = new Uint8Array(output.bytes);
         scope.postMessage({ taskId, ok: true, bytes, report: output.report }, [bytes.buffer]);
     }
     catch (reason) {

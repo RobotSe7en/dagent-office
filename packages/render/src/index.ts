@@ -1,5 +1,16 @@
 export { decorate, mountDocumentPreview, mountPreview, packagePath } from "./preview.js";
 export type { DocumentPreview, DocumentPreviewOptions } from "./preview.js";
+export type { WorkbookPreview, WorkbookPreviewInput, WorkbookPreviewSource, WorkbookPreviewOptions, WorkbookRenderReport } from "./workbook/preview-contracts.js";
+export type { WorkbookViewport } from "./workbook/viewport.js";
+export type { WorkbookWindowSource, WorkbookWindowRequest, WorkbookWindowResponse } from "./workbook/window-source.js";
+export type { WorkbookAssetSource } from "./workbook/assets.js";
+export type { WorkbookChartSource } from "./workbook/chart-source.js";
+export type { WorkbookRuleSource } from "./workbook/rule-source.js";
+export { serveWorkbookReads } from "./workbook/read-server.js";
+export type { WorkbookReadServer } from "./workbook/read-server.js";
+export { connectWorkbookReads } from "./workbook/read-client.js";
+export type { WorkbookReadConnection } from "./workbook/read-client.js";
+export type { WorkbookReadTransportLimits, WorkbookReadTransportOptions } from "./workbook/read-transport.js";
 export { resolvePreviewFonts } from "./fonts.js";
 export type { FontResolution } from "./fonts.js";
 export { PreviewSource } from "./source-index.js";

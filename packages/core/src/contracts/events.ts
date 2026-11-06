@@ -4,7 +4,7 @@ import { IdentifierSchema, PROTOCOL_VERSION, RevisionSchema } from "./primitives
 export const DocumentErrorCodeSchema = z.enum([
   "UnsupportedFormat", "UnsupportedVersion", "UnsupportedFeature", "InvalidDocument",
   "InvalidOperation", "InvalidProposal", "AnchorNotFound", "RevisionConflict",
-  "AssetUnavailable", "ResourceLimitExceeded", "HostSubmissionFailed", "ExportFailed", "HostCommitFailed",
+  "AssetUnavailable", "ResourceLimitExceeded", "HostSubmissionFailed", "ExportFailed", "HostCommitFailed", "OperationCancelled",
 ]);
 export type DocumentErrorCode = z.infer<typeof DocumentErrorCodeSchema>;
 

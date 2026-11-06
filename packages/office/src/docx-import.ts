@@ -5,8 +5,8 @@ import {
 } from "@dagent-office/core";
 import type {
   Annotation,
-  DocumentManifest,
-  DocumentMetadata,
+  ContentDocumentManifest,
+  ContentDocumentMetadata,
   DocumentPackage,
   DocumentSection,
   PageSetup,
@@ -119,7 +119,7 @@ class Importer {
   private readonly word: WordMetadata = emptyWord();
   private readonly sections: DocumentSection[] = [];
   private readonly assetSources = new Map<string, string>();
-  private readonly assets: DocumentManifest["assets"] = [];
+  private readonly assets: ContentDocumentManifest["assets"] = [];
   private readonly styles: DocxStyles;
   private readonly root: Html;
   private readonly auxiliary: Html[] = [];
@@ -487,7 +487,7 @@ class Importer {
               : { kind: "node", nodeId: comment.point! },
       });
     }
-    const metadata: DocumentMetadata = {
+    const metadata: ContentDocumentMetadata = {
       ...(this.styles.language ? { locale: this.styles.language } : {}),
       pageSetup: this.sections[0]!.pageSetup!,
       sections: this.sections,
@@ -509,7 +509,7 @@ class Importer {
       )[0];
       if (language && text(language)) metadata.locale = text(language);
     }
-    const manifest: DocumentManifest = {
+    const manifest: ContentDocumentManifest = {
       format: "dagent-office",
       formatVersion: 1,
       documentId: this.documentId,

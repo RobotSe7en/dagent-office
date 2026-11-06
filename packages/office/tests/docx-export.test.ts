@@ -1,6 +1,7 @@
+import { openContentFixture as openDocument } from "../../../tests/content-fixture.js";
 import { readFileSync, readdirSync } from "node:fs";
 import { expect, test } from "vitest";
-import { createDocumentSession, DocumentError, openDocument } from "@dagent-office/core";
+import { createDocumentSession, DocumentError } from "@dagent-office/core";
 import { exportDocx, importDocx } from "@dagent-office/office";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 const directory = new URL("../../../examples/docx/", import.meta.url);

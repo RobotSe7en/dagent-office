@@ -29,6 +29,7 @@ const aliases: Readonly<Record<string, string>> = {
   "http://purl.oclc.org/ooxml/drawingml/wordprocessingDrawing": WP,
   "http://purl.oclc.org/ooxml/drawingml/picture": PIC,
 };
+export const normalizeXmlNamespace = (uri: string): string => aliases[uri] ?? uri;
 export interface XmlNode {
   readonly name: string;
   readonly uri: string;
@@ -61,6 +62,13 @@ export function attr(
   uri: string = W,
 ): string | undefined {
   return node?.attrs.get(uri + " " + name);
+}
+/** Namespace bindings are syntax, not unsupported feature attributes. */
+export function checkAttributes(node: XmlNode, names: readonly string[], uri = ""): void {
+  for (const key of node.attrs.keys()) {
+    if (key.startsWith("http://www.w3.org/2000/xmlns/ ")) continue;
+    if (!names.some(name => key === uri + " " + name)) unsupported(node, "This OOXML attribute is not supported.");
+  }
 }
 export function elements(
   node: XmlNode | undefined,
@@ -131,6 +139,7 @@ export function xml(
   part: string,
   limits: DocumentReadLimits,
   budget: XmlBudget,
+  maxPartNodes: number = limits.maxNodes,
 ): XmlNode {
   const codecs = globalThis as unknown as {
     TextDecoder: new (
@@ -155,7 +164,7 @@ export function xml(
   }
   const parser = new SaxesParser({ xmlns: true });
   const stack: XmlNode[] = [];
-  let root: XmlNode | undefined;
+  let root: XmlNode | undefined, partNodes = 0;
   parser.on("doctype", () =>
     fail(
       { part, name: "DOCTYPE" },
@@ -173,7 +182,7 @@ export function xml(
     fail({ part, name: "XML" }, "An XML part is malformed."),
   );
   parser.on("opentag", (tag) => {
-    if (++budget.nodes > limits.maxNodes || stack.length + 1 > limits.maxDepth)
+    if (++budget.nodes > limits.maxNodes || ++partNodes > maxPartNodes || stack.length + 1 > limits.maxDepth)
       throw new DocumentError(
         "ResourceLimitExceeded",
         "XML exceeds the configured node or depth budget.",
@@ -211,7 +220,7 @@ export function xml(
   });
   const addText = (value: string): void => {
     if (stack.length) {
-      if (++budget.nodes > limits.maxNodes)
+      if (++budget.nodes > limits.maxNodes || ++partNodes > maxPartNodes)
         throw new DocumentError(
           "ResourceLimitExceeded",
           "XML exceeds the configured node budget.",

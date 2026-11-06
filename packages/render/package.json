@@ -6,7 +6,8 @@
   "license": "UNLICENSED",
   "description": "Shared scriptless Office document canvas, pagination and rendering projection",
   "files": [
-    "dist"
+    "dist",
+    "ECMA-376-TABLE-STYLES-LICENSE.txt"
   ],
   "types": "./dist/index.d.ts",
   "exports": {

@@ -3,11 +3,13 @@ import { validTextRanges } from "../document/annotations.js";
 import type { ParsedHtml } from "../document/html.js";
 import { isTextBoundary } from "../document/text.js";
 import type { DeepReadonly, TextOffsetMapping } from "../runtime.js";
+import { unsupported } from "../document/validation.js";
 
 export function annotationNodes(annotation: DeepReadonly<Annotation>): readonly string[] {
   return anchorNodes(annotation.anchor);
 }
 export function anchorNodes(anchor:DeepReadonly<Anchor>):readonly string[]{
+  if (anchor.kind === "cells") unsupported("Cell anchors require a workbook editing session.");
   return anchor.kind === "text" || anchor.kind === "node" ? [anchor.nodeId]
     : anchor.kind === "text-set" ? anchor.ranges.map((range) => range.nodeId)
       : anchor.kind === "region" ? [anchor.surfaceId, ...anchor.nodeIds] : anchor.nodeIds;

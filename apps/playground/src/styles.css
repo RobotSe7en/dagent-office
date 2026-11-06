@@ -605,6 +605,25 @@ h1,h2,p {
   background: #f1f4f2;
 }
 
+.workbook-pane {
+  position: relative;
+  min-width: 0;
+  min-height: 660px;
+  width: 100%;
+  overflow: hidden;
+  background: #f1f4f2;
+}
+.workbook-pane.preparing {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  left: 0;
+  top: 0;
+}
+.workspace { position: relative; }
+.file-icon.workbook { background: #e4f2e8; color: #247545; }
+.workbook-note { margin: 0; padding: 6px 28px; color: #58665e; font-size: 12px; line-height: 1.6; }
+
 .empty-workspace {
   flex: 1;
   display: flex;

@@ -1,0 +1,674 @@
+{
+  "scope": "Native Calc formatted text only. Historical 1900 dates differ from Excel; SDK uses the user-selected Excel compatibility calendar. Number-format rendering, fitting, fonts and Excel/WPS remain unverified.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "localeEnvironment": {
+    "LC_ALL": "C.UTF-8",
+    "LANG": "C.UTF-8",
+    "TZ": "UTC"
+  },
+  "cases": [
+    {
+      "dateSystem": "1900",
+      "sourceSha256": "4fc777d31bf121ee65aad0311619140de6805e73eee43ab61a01bbe90e614094",
+      "samples": [
+        {
+          "value": 0,
+          "code": "yyyy-mm-dd",
+          "text": "1899-12-30"
+        },
+        {
+          "value": 1,
+          "code": "yyyy-mm-dd",
+          "text": "1899-12-31"
+        },
+        {
+          "value": 59,
+          "code": "yyyy-mm-dd",
+          "text": "1900-02-27"
+        },
+        {
+          "value": 60,
+          "code": "yyyy-mm-dd",
+          "text": "1900-02-28"
+        },
+        {
+          "value": 61,
+          "code": "yyyy-mm-dd",
+          "text": "1900-03-01"
+        },
+        {
+          "value": 0.0006932870370370371,
+          "code": "hh:mm",
+          "text": "00:00"
+        },
+        {
+          "value": 0.0006932870370370371,
+          "code": "hh:mm:ss",
+          "text": "00:00:59"
+        },
+        {
+          "value": 0.0006932870370370371,
+          "code": "hh:mm:ss.00",
+          "text": "00:00:59.90"
+        },
+        {
+          "value": 0.5,
+          "code": "h:mm AM/PM",
+          "text": "12:00 PM"
+        },
+        {
+          "value": 1.25,
+          "code": "[h]:mm",
+          "text": "30:00"
+        },
+        {
+          "value": 1.005,
+          "code": "0.00",
+          "text": "1.01"
+        },
+        {
+          "value": -1.005,
+          "code": "0.00",
+          "text": "-1.01"
+        },
+        {
+          "value": 0.47,
+          "code": "#.##",
+          "text": ".47"
+        },
+        {
+          "value": 0,
+          "code": "#.##",
+          "text": ""
+        },
+        {
+          "value": 0,
+          "code": "0.##",
+          "text": "0"
+        },
+        {
+          "value": 12345.678,
+          "code": "#,##0.00",
+          "text": "12,345.68"
+        },
+        {
+          "value": -1234.5,
+          "code": "#,##0.00;[Red](#,##0.00)",
+          "text": "(1,234.50)"
+        },
+        {
+          "value": 0,
+          "code": "0.00;[Red](0.00);\"—\";@",
+          "text": "—"
+        },
+        {
+          "value": 12200000,
+          "code": "0.0,,\"M\"",
+          "text": "12.2M"
+        },
+        {
+          "value": 1234,
+          "code": "00.0E+0",
+          "text": "12.3E+2"
+        },
+        {
+          "value": 1234,
+          "code": "##0.0E+0",
+          "text": "1.2E+3"
+        },
+        {
+          "value": 1234,
+          "code": "0.00E+00",
+          "text": "1.23E+03"
+        },
+        {
+          "value": 1.25,
+          "code": "# ?/?",
+          "text": "1 1/4"
+        },
+        {
+          "value": 1.3,
+          "code": "# ??/??",
+          "text": "1  3/10"
+        },
+        {
+          "value": 0.5,
+          "code": "0.00%%",
+          "text": "50.00%%"
+        },
+        {
+          "value": -1,
+          "code": "[>=100]0;[<0](0);0",
+          "text": "(1)"
+        },
+        {
+          "value": 123456789012345,
+          "code": "General",
+          "text": "123456789012345"
+        },
+        {
+          "value": 0,
+          "code": "0#",
+          "text": "0"
+        },
+        {
+          "value": 0,
+          "code": "0?",
+          "text": "0 "
+        },
+        {
+          "value": 0,
+          "code": "?0#",
+          "text": " 0"
+        },
+        {
+          "value": 0,
+          "code": "00?",
+          "text": "00 "
+        },
+        {
+          "value": 0,
+          "code": "?#0",
+          "text": " 0"
+        },
+        {
+          "value": 0,
+          "code": "0.?0",
+          "text": "0. 0"
+        },
+        {
+          "value": 1,
+          "code": "0.?0",
+          "text": "1. 0"
+        },
+        {
+          "value": 0,
+          "code": ".00",
+          "text": ".00"
+        },
+        {
+          "value": 0,
+          "code": "0.#0",
+          "text": "0.00"
+        },
+        {
+          "value": 1,
+          "code": "0.#0",
+          "text": "1.00"
+        },
+        {
+          "value": 0,
+          "code": "# ?/?",
+          "text": "0    "
+        },
+        {
+          "value": 1,
+          "code": "# ?/?",
+          "text": "1    "
+        },
+        {
+          "value": 1.3,
+          "code": "# ?/?",
+          "text": "1 2/7"
+        },
+        {
+          "value": 1.99,
+          "code": "# ?/?",
+          "text": "2    "
+        },
+        {
+          "value": 0.01,
+          "code": "# ?/?",
+          "text": "0    "
+        },
+        {
+          "value": 0,
+          "code": "# ??/??",
+          "text": "0      "
+        },
+        {
+          "value": 1,
+          "code": "# ??/??",
+          "text": "1      "
+        },
+        {
+          "value": 1.3,
+          "code": "# ??/??",
+          "text": "1  3/10"
+        },
+        {
+          "value": 1.99,
+          "code": "# ??/??",
+          "text": "1 98/99"
+        },
+        {
+          "value": 0.01,
+          "code": "# ??/??",
+          "text": "  1/99"
+        },
+        {
+          "value": 0,
+          "code": "# ?/8",
+          "text": "0   "
+        },
+        {
+          "value": 1,
+          "code": "# ?/8",
+          "text": "1   "
+        },
+        {
+          "value": 1.3,
+          "code": "# ?/8",
+          "text": "1 2/8"
+        },
+        {
+          "value": 1.99,
+          "code": "# ?/8",
+          "text": "2   "
+        },
+        {
+          "value": 0.01,
+          "code": "# ?/8",
+          "text": "0   "
+        },
+        {
+          "value": 0,
+          "code": "?/?",
+          "text": "0/1"
+        },
+        {
+          "value": 1,
+          "code": "?/?",
+          "text": "1/1"
+        },
+        {
+          "value": 1.3,
+          "code": "?/?",
+          "text": "9/7"
+        },
+        {
+          "value": 1.99,
+          "code": "?/?",
+          "text": "2/1"
+        },
+        {
+          "value": 0.01,
+          "code": "?/?",
+          "text": "0/1"
+        },
+        {
+          "value": 0,
+          "code": "0/0",
+          "text": "0/1"
+        },
+        {
+          "value": 1,
+          "code": "0/0",
+          "text": "1/1"
+        },
+        {
+          "value": 1.3,
+          "code": "0/0",
+          "text": "9/7"
+        },
+        {
+          "value": 1.99,
+          "code": "0/0",
+          "text": "2/1"
+        },
+        {
+          "value": 0.01,
+          "code": "0/0",
+          "text": "0/1"
+        },
+        {
+          "value": 123.456,
+          "code": "# ?/16",
+          "text": "123 7/16"
+        },
+        {
+          "value": 123.456,
+          "code": "# ?/10",
+          "text": "123 5/10"
+        },
+        {
+          "value": 123.456,
+          "code": "# ??/100",
+          "text": "123 46/100"
+        }
+      ]
+    },
+    {
+      "dateSystem": "1904",
+      "sourceSha256": "be3d6d199def36fedd12e70757b663f62c86355bd081908fa70e44c8eeea0452",
+      "samples": [
+        {
+          "value": 0,
+          "code": "yyyy-mm-dd",
+          "text": "1904-01-01"
+        },
+        {
+          "value": 1,
+          "code": "yyyy-mm-dd",
+          "text": "1904-01-02"
+        },
+        {
+          "value": 59,
+          "code": "yyyy-mm-dd",
+          "text": "1904-02-29"
+        },
+        {
+          "value": 60,
+          "code": "yyyy-mm-dd",
+          "text": "1904-03-01"
+        },
+        {
+          "value": 61,
+          "code": "yyyy-mm-dd",
+          "text": "1904-03-02"
+        },
+        {
+          "value": 0.0006932870370370371,
+          "code": "hh:mm",
+          "text": "00:00"
+        },
+        {
+          "value": 0.0006932870370370371,
+          "code": "hh:mm:ss",
+          "text": "00:00:59"
+        },
+        {
+          "value": 0.0006932870370370371,
+          "code": "hh:mm:ss.00",
+          "text": "00:00:59.90"
+        },
+        {
+          "value": 0.5,
+          "code": "h:mm AM/PM",
+          "text": "12:00 PM"
+        },
+        {
+          "value": 1.25,
+          "code": "[h]:mm",
+          "text": "30:00"
+        },
+        {
+          "value": 1.005,
+          "code": "0.00",
+          "text": "1.01"
+        },
+        {
+          "value": -1.005,
+          "code": "0.00",
+          "text": "-1.01"
+        },
+        {
+          "value": 0.47,
+          "code": "#.##",
+          "text": ".47"
+        },
+        {
+          "value": 0,
+          "code": "#.##",
+          "text": ""
+        },
+        {
+          "value": 0,
+          "code": "0.##",
+          "text": "0"
+        },
+        {
+          "value": 12345.678,
+          "code": "#,##0.00",
+          "text": "12,345.68"
+        },
+        {
+          "value": -1234.5,
+          "code": "#,##0.00;[Red](#,##0.00)",
+          "text": "(1,234.50)"
+        },
+        {
+          "value": 0,
+          "code": "0.00;[Red](0.00);\"—\";@",
+          "text": "—"
+        },
+        {
+          "value": 12200000,
+          "code": "0.0,,\"M\"",
+          "text": "12.2M"
+        },
+        {
+          "value": 1234,
+          "code": "00.0E+0",
+          "text": "12.3E+2"
+        },
+        {
+          "value": 1234,
+          "code": "##0.0E+0",
+          "text": "1.2E+3"
+        },
+        {
+          "value": 1234,
+          "code": "0.00E+00",
+          "text": "1.23E+03"
+        },
+        {
+          "value": 1.25,
+          "code": "# ?/?",
+          "text": "1 1/4"
+        },
+        {
+          "value": 1.3,
+          "code": "# ??/??",
+          "text": "1  3/10"
+        },
+        {
+          "value": 0.5,
+          "code": "0.00%%",
+          "text": "50.00%%"
+        },
+        {
+          "value": -1,
+          "code": "[>=100]0;[<0](0);0",
+          "text": "(1)"
+        },
+        {
+          "value": 123456789012345,
+          "code": "General",
+          "text": "123456789012345"
+        },
+        {
+          "value": 0,
+          "code": "0#",
+          "text": "0"
+        },
+        {
+          "value": 0,
+          "code": "0?",
+          "text": "0 "
+        },
+        {
+          "value": 0,
+          "code": "?0#",
+          "text": " 0"
+        },
+        {
+          "value": 0,
+          "code": "00?",
+          "text": "00 "
+        },
+        {
+          "value": 0,
+          "code": "?#0",
+          "text": " 0"
+        },
+        {
+          "value": 0,
+          "code": "0.?0",
+          "text": "0. 0"
+        },
+        {
+          "value": 1,
+          "code": "0.?0",
+          "text": "1. 0"
+        },
+        {
+          "value": 0,
+          "code": ".00",
+          "text": ".00"
+        },
+        {
+          "value": 0,
+          "code": "0.#0",
+          "text": "0.00"
+        },
+        {
+          "value": 1,
+          "code": "0.#0",
+          "text": "1.00"
+        },
+        {
+          "value": 0,
+          "code": "# ?/?",
+          "text": "0    "
+        },
+        {
+          "value": 1,
+          "code": "# ?/?",
+          "text": "1    "
+        },
+        {
+          "value": 1.3,
+          "code": "# ?/?",
+          "text": "1 2/7"
+        },
+        {
+          "value": 1.99,
+          "code": "# ?/?",
+          "text": "2    "
+        },
+        {
+          "value": 0.01,
+          "code": "# ?/?",
+          "text": "0    "
+        },
+        {
+          "value": 0,
+          "code": "# ??/??",
+          "text": "0      "
+        },
+        {
+          "value": 1,
+          "code": "# ??/??",
+          "text": "1      "
+        },
+        {
+          "value": 1.3,
+          "code": "# ??/??",
+          "text": "1  3/10"
+        },
+        {
+          "value": 1.99,
+          "code": "# ??/??",
+          "text": "1 98/99"
+        },
+        {
+          "value": 0.01,
+          "code": "# ??/??",
+          "text": "  1/99"
+        },
+        {
+          "value": 0,
+          "code": "# ?/8",
+          "text": "0   "
+        },
+        {
+          "value": 1,
+          "code": "# ?/8",
+          "text": "1   "
+        },
+        {
+          "value": 1.3,
+          "code": "# ?/8",
+          "text": "1 2/8"
+        },
+        {
+          "value": 1.99,
+          "code": "# ?/8",
+          "text": "2   "
+        },
+        {
+          "value": 0.01,
+          "code": "# ?/8",
+          "text": "0   "
+        },
+        {
+          "value": 0,
+          "code": "?/?",
+          "text": "0/1"
+        },
+        {
+          "value": 1,
+          "code": "?/?",
+          "text": "1/1"
+        },
+        {
+          "value": 1.3,
+          "code": "?/?",
+          "text": "9/7"
+        },
+        {
+          "value": 1.99,
+          "code": "?/?",
+          "text": "2/1"
+        },
+        {
+          "value": 0.01,
+          "code": "?/?",
+          "text": "0/1"
+        },
+        {
+          "value": 0,
+          "code": "0/0",
+          "text": "0/1"
+        },
+        {
+          "value": 1,
+          "code": "0/0",
+          "text": "1/1"
+        },
+        {
+          "value": 1.3,
+          "code": "0/0",
+          "text": "9/7"
+        },
+        {
+          "value": 1.99,
+          "code": "0/0",
+          "text": "2/1"
+        },
+        {
+          "value": 0.01,
+          "code": "0/0",
+          "text": "0/1"
+        },
+        {
+          "value": 123.456,
+          "code": "# ?/16",
+          "text": "123 7/16"
+        },
+        {
+          "value": 123.456,
+          "code": "# ?/10",
+          "text": "123 5/10"
+        },
+        {
+          "value": 123.456,
+          "code": "# ??/100",
+          "text": "123 46/100"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,230 @@
+{
+  "scope": "Independent implicit rule/table row fonts and validation-only current values.\n\nCalc observations record producer differences; they do not establish that Calc\nimplements custom table styles or every differential font property.\n",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "sourceSha256": "fba61f056542ad57a1e6d401009d640eea035b6fdf26ce838ac92ef79930e038",
+  "referenceInputSha256": "6f11b204f11c32e3f8d7376519da609a08747e722f858ba21b4da791795e18da",
+  "referenceInput": "Same source with the deliberately wrong validation formula cache omitted.",
+  "producer": [
+    {
+      "case": "conditional-match",
+      "rows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "case": "conditional-miss",
+      "rows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "case": "conditional-relative",
+      "rows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "case": "table-custom",
+      "rows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "case": "table-data-differential",
+      "rows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "case": "table-and-conditional",
+      "rows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "case": "validation-current",
+      "rows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "39.55",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "case": "color-only-whole-column",
+      "rows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    },
+    {
+      "case": "table-named-font",
+      "rows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Calc producer heights are observations, not expected SDK height for unsupported differential fonts or custom table styles.",
+    "Excel/WPS unverified."
+  ]
+}

@@ -1,0 +1,346 @@
+{
+  "scope": "Static reference operators and qualified local names. Calc binds a global nested unqualified name to a first-sheet local shadow; the SDK reports this uncertain global scope as unresolved. Excel/WPS and full SDK calculation remain unverified.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "cases": [
+    {
+      "sheetOrder": [
+        "Data",
+        "Second",
+        "Third"
+      ],
+      "activeSheetIndex": 0,
+      "sourceSha256": "d62d66ee9edf164e47884fd290aa48fa938fcc2554f76ed64274abec595adc28",
+      "observed": {
+        "Data": {
+          "E1": {
+            "formula": "of:=Base",
+            "value": "2"
+          },
+          "E2": {
+            "formula": "of:=data!base",
+            "value": "#NAME?"
+          },
+          "E3": {
+            "formula": "of:=LocalBase",
+            "value": "2"
+          },
+          "E4": {
+            "formula": "of:=Chain",
+            "value": "2"
+          },
+          "E5": {
+            "formula": "of:=LocalChain",
+            "value": "2"
+          },
+          "E6": {
+            "formula": "of:=SUM(([.A1:.A2]~[.A2:.A3]))",
+            "value": "8"
+          },
+          "E7": {
+            "formula": "of:=SUM([.A1:.A3]![.A2:.A4])",
+            "value": "5"
+          },
+          "E8": {
+            "formula": "of:=SUM(([.A1:.A2]~[.A4:.A5]):[.A6])",
+            "value": "21"
+          }
+        },
+        "Second": {
+          "E1": {
+            "formula": "of:=Base",
+            "value": "20"
+          },
+          "E2": {
+            "formula": "of:=data!base",
+            "value": "#NAME?"
+          },
+          "E3": {
+            "formula": "of:=Data.LocalBase",
+            "value": "2"
+          },
+          "E4": {
+            "formula": "of:=Chain",
+            "value": "2"
+          },
+          "E5": {
+            "formula": "of:=Data.LocalChain",
+            "value": "2"
+          },
+          "E6": {
+            "formula": "of:=SUM(([.A1:.A2]~[.A2:.A3]))",
+            "value": "80"
+          },
+          "E7": {
+            "formula": "of:=SUM([.A1:.A3]![.A2:.A4])",
+            "value": "50"
+          },
+          "E8": {
+            "formula": "of:=SUM(([.A1:.A2]~[.A4:.A5]):[.A6])",
+            "value": "210"
+          }
+        },
+        "Third": {
+          "E1": {
+            "formula": "of:=Base",
+            "value": "200"
+          },
+          "E2": {
+            "formula": "of:=data!base",
+            "value": "#NAME?"
+          },
+          "E3": {
+            "formula": "of:=Data.LocalBase",
+            "value": "2"
+          },
+          "E4": {
+            "formula": "of:=Chain",
+            "value": "2"
+          },
+          "E5": {
+            "formula": "of:=Data.LocalChain",
+            "value": "2"
+          },
+          "E6": {
+            "formula": "of:=SUM(([.A1:.A2]~[.A2:.A3]))",
+            "value": "800"
+          },
+          "E7": {
+            "formula": "of:=SUM([.A1:.A3]![.A2:.A4])",
+            "value": "500"
+          },
+          "E8": {
+            "formula": "of:=SUM(([.A1:.A2]~[.A4:.A5]):[.A6])",
+            "value": "2100"
+          }
+        }
+      }
+    },
+    {
+      "sheetOrder": [
+        "Data",
+        "Second",
+        "Third"
+      ],
+      "activeSheetIndex": 1,
+      "sourceSha256": "d0104857d745c21bbb79b93e2ef4c88ef510ecf98853d989b7940f0cc7a195e0",
+      "observed": {
+        "Data": {
+          "E1": {
+            "formula": "of:=Base",
+            "value": "2"
+          },
+          "E2": {
+            "formula": "of:=data!base",
+            "value": "#NAME?"
+          },
+          "E3": {
+            "formula": "of:=LocalBase",
+            "value": "2"
+          },
+          "E4": {
+            "formula": "of:=Chain",
+            "value": "2"
+          },
+          "E5": {
+            "formula": "of:=LocalChain",
+            "value": "2"
+          },
+          "E6": {
+            "formula": "of:=SUM(([.A1:.A2]~[.A2:.A3]))",
+            "value": "8"
+          },
+          "E7": {
+            "formula": "of:=SUM([.A1:.A3]![.A2:.A4])",
+            "value": "5"
+          },
+          "E8": {
+            "formula": "of:=SUM(([.A1:.A2]~[.A4:.A5]):[.A6])",
+            "value": "21"
+          }
+        },
+        "Second": {
+          "E1": {
+            "formula": "of:=Base",
+            "value": "20"
+          },
+          "E2": {
+            "formula": "of:=data!base",
+            "value": "#NAME?"
+          },
+          "E3": {
+            "formula": "of:=Data.LocalBase",
+            "value": "2"
+          },
+          "E4": {
+            "formula": "of:=Chain",
+            "value": "2"
+          },
+          "E5": {
+            "formula": "of:=Data.LocalChain",
+            "value": "2"
+          },
+          "E6": {
+            "formula": "of:=SUM(([.A1:.A2]~[.A2:.A3]))",
+            "value": "80"
+          },
+          "E7": {
+            "formula": "of:=SUM([.A1:.A3]![.A2:.A4])",
+            "value": "50"
+          },
+          "E8": {
+            "formula": "of:=SUM(([.A1:.A2]~[.A4:.A5]):[.A6])",
+            "value": "210"
+          }
+        },
+        "Third": {
+          "E1": {
+            "formula": "of:=Base",
+            "value": "200"
+          },
+          "E2": {
+            "formula": "of:=data!base",
+            "value": "#NAME?"
+          },
+          "E3": {
+            "formula": "of:=Data.LocalBase",
+            "value": "2"
+          },
+          "E4": {
+            "formula": "of:=Chain",
+            "value": "2"
+          },
+          "E5": {
+            "formula": "of:=Data.LocalChain",
+            "value": "2"
+          },
+          "E6": {
+            "formula": "of:=SUM(([.A1:.A2]~[.A2:.A3]))",
+            "value": "800"
+          },
+          "E7": {
+            "formula": "of:=SUM([.A1:.A3]![.A2:.A4])",
+            "value": "500"
+          },
+          "E8": {
+            "formula": "of:=SUM(([.A1:.A2]~[.A4:.A5]):[.A6])",
+            "value": "2100"
+          }
+        }
+      }
+    },
+    {
+      "sheetOrder": [
+        "Second",
+        "Data",
+        "Third"
+      ],
+      "activeSheetIndex": 0,
+      "sourceSha256": "b469a7cc603a4e75f2dfd93d14f1e7c19cd3b49c4297cd3b1dac9ee7c3923bd7",
+      "observed": {
+        "Second": {
+          "E1": {
+            "formula": "of:=Base",
+            "value": "20"
+          },
+          "E2": {
+            "formula": "of:=data!base",
+            "value": "#NAME?"
+          },
+          "E3": {
+            "formula": "of:=Data.LocalBase",
+            "value": "2"
+          },
+          "E4": {
+            "formula": "of:=Chain",
+            "value": "30"
+          },
+          "E5": {
+            "formula": "of:=Data.LocalChain",
+            "value": "2"
+          },
+          "E6": {
+            "formula": "of:=SUM(([.A1:.A2]~[.A2:.A3]))",
+            "value": "80"
+          },
+          "E7": {
+            "formula": "of:=SUM([.A1:.A3]![.A2:.A4])",
+            "value": "50"
+          },
+          "E8": {
+            "formula": "of:=SUM(([.A1:.A2]~[.A4:.A5]):[.A6])",
+            "value": "210"
+          }
+        },
+        "Data": {
+          "E1": {
+            "formula": "of:=Base",
+            "value": "2"
+          },
+          "E2": {
+            "formula": "of:=data!base",
+            "value": "#NAME?"
+          },
+          "E3": {
+            "formula": "of:=LocalBase",
+            "value": "2"
+          },
+          "E4": {
+            "formula": "of:=Chain",
+            "value": "30"
+          },
+          "E5": {
+            "formula": "of:=LocalChain",
+            "value": "2"
+          },
+          "E6": {
+            "formula": "of:=SUM(([.A1:.A2]~[.A2:.A3]))",
+            "value": "8"
+          },
+          "E7": {
+            "formula": "of:=SUM([.A1:.A3]![.A2:.A4])",
+            "value": "5"
+          },
+          "E8": {
+            "formula": "of:=SUM(([.A1:.A2]~[.A4:.A5]):[.A6])",
+            "value": "21"
+          }
+        },
+        "Third": {
+          "E1": {
+            "formula": "of:=Base",
+            "value": "200"
+          },
+          "E2": {
+            "formula": "of:=data!base",
+            "value": "#NAME?"
+          },
+          "E3": {
+            "formula": "of:=Data.LocalBase",
+            "value": "2"
+          },
+          "E4": {
+            "formula": "of:=Chain",
+            "value": "30"
+          },
+          "E5": {
+            "formula": "of:=Data.LocalChain",
+            "value": "2"
+          },
+          "E6": {
+            "formula": "of:=SUM(([.A1:.A2]~[.A2:.A3]))",
+            "value": "800"
+          },
+          "E7": {
+            "formula": "of:=SUM([.A1:.A3]![.A2:.A4])",
+            "value": "500"
+          },
+          "E8": {
+            "formula": "of:=SUM(([.A1:.A2]~[.A4:.A5]):[.A6])",
+            "value": "2100"
+          }
+        }
+      }
+    }
+  ]
+}

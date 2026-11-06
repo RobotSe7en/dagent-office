@@ -1,0 +1,1130 @@
+{
+  "scope": "Pinned Calc scalar operators, coercion, references and selected basic functions. Deliberately wrong source caches are not expected current results. Full calculation, Excel/WPS and later function families are separate gates.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "sourceSha256": "ba4d1e3a1879171a94e8eb7aee274d889ac049867dc195c9f9e9cf8aff140193",
+  "referenceInputSha256": "1e13eddd68a1d428317fb82ac217c31fc9166e8d8c39526dd3d98a42c671e408",
+  "referenceInput": "Same formulas and constants with formula caches omitted; pinned Calc retains deliberately wrong caches despite native recalc flags, so those caches are never reference results.",
+  "cases": [
+    {
+      "address": "E1",
+      "expression": "=1+2*3",
+      "value": {
+        "type": "number",
+        "value": 7.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 7.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E2",
+      "expression": "=-2^2",
+      "value": {
+        "type": "number",
+        "value": 4.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 4.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E3",
+      "expression": "=2^3^2",
+      "value": {
+        "type": "number",
+        "value": 64.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 64.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E4",
+      "expression": "=5%",
+      "value": {
+        "type": "number",
+        "value": 0.05
+      },
+      "expected": {
+        "type": "number",
+        "value": 0.05
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E5",
+      "expression": "=\"2\"+3",
+      "value": {
+        "type": "number",
+        "value": 5.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 5.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E6",
+      "expression": "=\"\"+1",
+      "value": {
+        "type": "error",
+        "value": "#VALUE!"
+      },
+      "expected": {
+        "type": "error",
+        "value": "#VALUE!"
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E7",
+      "expression": "=TRUE+2",
+      "value": {
+        "type": "number",
+        "value": 3.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 3.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E8",
+      "expression": "=\"A\"&TRUE",
+      "value": {
+        "type": "text",
+        "value": "A1"
+      },
+      "expected": {
+        "type": "text",
+        "value": "ATRUE"
+      },
+      "basis": "Microsoft calculation-operators-and-precedence-in-excel: logical-to-text conversion example",
+      "matchesProducer": false
+    },
+    {
+      "address": "E9",
+      "expression": "=1/0",
+      "value": {
+        "type": "error",
+        "value": "#DIV/0!"
+      },
+      "expected": {
+        "type": "error",
+        "value": "#DIV/0!"
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E10",
+      "expression": "=SQRT(-1)",
+      "value": {
+        "type": "error",
+        "value": "#VALUE!"
+      },
+      "expected": {
+        "type": "error",
+        "value": "#NUM!"
+      },
+      "basis": "ECMA-376 Part 1 18.17.7.296: negative square-root argument",
+      "matchesProducer": false
+    },
+    {
+      "address": "E11",
+      "expression": "=1=\"1\"",
+      "value": {
+        "type": "boolean",
+        "value": false
+      },
+      "expected": {
+        "type": "boolean",
+        "value": false
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E12",
+      "expression": "=TRUE=1",
+      "value": {
+        "type": "boolean",
+        "value": true
+      },
+      "expected": {
+        "type": "boolean",
+        "value": false
+      },
+      "basis": "Declared typed comparison: logical and numeric values remain distinct without arithmetic coercion; Excel/WPS unverified",
+      "matchesProducer": false
+    },
+    {
+      "address": "E13",
+      "expression": "=2<\"1\"",
+      "value": {
+        "type": "boolean",
+        "value": true
+      },
+      "expected": {
+        "type": "boolean",
+        "value": true
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E14",
+      "expression": "=\"a\"=\"A\"",
+      "value": {
+        "type": "boolean",
+        "value": true
+      },
+      "expected": {
+        "type": "boolean",
+        "value": true
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E15",
+      "expression": "=A5=0",
+      "value": {
+        "type": "boolean",
+        "value": true
+      },
+      "expected": {
+        "type": "boolean",
+        "value": true
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E16",
+      "expression": "=A5=\"\"",
+      "value": {
+        "type": "boolean",
+        "value": true
+      },
+      "expected": {
+        "type": "boolean",
+        "value": true
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E17",
+      "expression": "=A5=FALSE",
+      "value": {
+        "type": "boolean",
+        "value": true
+      },
+      "expected": {
+        "type": "boolean",
+        "value": true
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E18",
+      "expression": "=A4=0",
+      "value": {
+        "type": "boolean",
+        "value": false
+      },
+      "expected": {
+        "type": "boolean",
+        "value": false
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E19",
+      "expression": "=A4=FALSE",
+      "value": {
+        "type": "boolean",
+        "value": false
+      },
+      "expected": {
+        "type": "boolean",
+        "value": false
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E20",
+      "expression": "=A4=A5",
+      "value": {
+        "type": "boolean",
+        "value": true
+      },
+      "expected": {
+        "type": "boolean",
+        "value": true
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E21",
+      "expression": "=A5",
+      "value": {
+        "type": "number",
+        "value": 0.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 0.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E22",
+      "expression": "=C1",
+      "value": {
+        "type": "number",
+        "value": 3.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 3.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E23",
+      "expression": "=C2",
+      "value": {
+        "type": "number",
+        "value": 6.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 6.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E24",
+      "expression": "=IF(TRUE,1,1/0)",
+      "value": {
+        "type": "number",
+        "value": 1.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 1.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E25",
+      "expression": "=IF(FALSE,1/0,2)",
+      "value": {
+        "type": "number",
+        "value": 2.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 2.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E26",
+      "expression": "=IF(1,,)",
+      "value": {
+        "type": "number",
+        "value": 0.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 0.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E27",
+      "expression": "=IF(FALSE,1)",
+      "value": {
+        "type": "boolean",
+        "value": false
+      },
+      "expected": {
+        "type": "boolean",
+        "value": false
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E28",
+      "expression": "=IF(TRUE,A5,1)",
+      "value": {
+        "type": "number",
+        "value": 0.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 0.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E29",
+      "expression": "=IFERROR(1/0,3)",
+      "value": {
+        "type": "number",
+        "value": 3.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 3.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E30",
+      "expression": "=_xlfn.IFNA(1/0,3)",
+      "value": {
+        "type": "error",
+        "value": "#DIV/0!"
+      },
+      "expected": {
+        "type": "error",
+        "value": "#DIV/0!"
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E31",
+      "expression": "=_xlfn.IFNA(A6,3)",
+      "value": {
+        "type": "number",
+        "value": 3.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 3.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E32",
+      "expression": "=IF(\"x\",1,2)",
+      "value": {
+        "type": "error",
+        "value": "#VALUE!"
+      },
+      "expected": {
+        "type": "error",
+        "value": "#VALUE!"
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E33",
+      "expression": "=IF(\"TRUE\",1,2)",
+      "value": {
+        "type": "number",
+        "value": 1.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 1.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E34",
+      "expression": "=AND(A1:A5)",
+      "value": {
+        "type": "boolean",
+        "value": true
+      },
+      "expected": {
+        "type": "boolean",
+        "value": true
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E35",
+      "expression": "=OR(A1:A5)",
+      "value": {
+        "type": "boolean",
+        "value": true
+      },
+      "expected": {
+        "type": "boolean",
+        "value": true
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E36",
+      "expression": "=AND(A2:A2)",
+      "value": {
+        "type": "error",
+        "value": "#VALUE!"
+      },
+      "expected": {
+        "type": "error",
+        "value": "#VALUE!"
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E37",
+      "expression": "=AND(\"x\",TRUE)",
+      "value": {
+        "type": "error",
+        "value": "#VALUE!"
+      },
+      "expected": {
+        "type": "error",
+        "value": "#VALUE!"
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E38",
+      "expression": "=AND(TRUE,\"TRUE\")",
+      "value": {
+        "type": "error",
+        "value": "#VALUE!"
+      },
+      "expected": {
+        "type": "boolean",
+        "value": true
+      },
+      "basis": "Declared direct logical-argument conversion accepts TRUE/FALSE text; reference text remains ignored; Excel/WPS unverified",
+      "matchesProducer": false
+    },
+    {
+      "address": "E39",
+      "expression": "=NOT(\"TRUE\")",
+      "value": {
+        "type": "boolean",
+        "value": false
+      },
+      "expected": {
+        "type": "boolean",
+        "value": false
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E40",
+      "expression": "=NOT(0)",
+      "value": {
+        "type": "boolean",
+        "value": true
+      },
+      "expected": {
+        "type": "boolean",
+        "value": true
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E41",
+      "expression": "=AND(FALSE,1/0)",
+      "value": {
+        "type": "error",
+        "value": "#DIV/0!"
+      },
+      "expected": {
+        "type": "error",
+        "value": "#DIV/0!"
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E42",
+      "expression": "=OR(TRUE,1/0)",
+      "value": {
+        "type": "error",
+        "value": "#DIV/0!"
+      },
+      "expected": {
+        "type": "error",
+        "value": "#DIV/0!"
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E43",
+      "expression": "=TRUE()",
+      "value": {
+        "type": "boolean",
+        "value": true
+      },
+      "expected": {
+        "type": "boolean",
+        "value": true
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E44",
+      "expression": "=FALSE()",
+      "value": {
+        "type": "boolean",
+        "value": false
+      },
+      "expected": {
+        "type": "boolean",
+        "value": false
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E45",
+      "expression": "=ISBLANK(A5)",
+      "value": {
+        "type": "boolean",
+        "value": true
+      },
+      "expected": {
+        "type": "boolean",
+        "value": true
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E46",
+      "expression": "=ISBLANK(A4)",
+      "value": {
+        "type": "boolean",
+        "value": false
+      },
+      "expected": {
+        "type": "boolean",
+        "value": false
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E47",
+      "expression": "=ISNUMBER(A2)",
+      "value": {
+        "type": "boolean",
+        "value": false
+      },
+      "expected": {
+        "type": "boolean",
+        "value": false
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E48",
+      "expression": "=ISTEXT(A4)",
+      "value": {
+        "type": "boolean",
+        "value": true
+      },
+      "expected": {
+        "type": "boolean",
+        "value": true
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E49",
+      "expression": "=ISERROR(A6)",
+      "value": {
+        "type": "boolean",
+        "value": true
+      },
+      "expected": {
+        "type": "boolean",
+        "value": true
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E50",
+      "expression": "=ISNA(A6)",
+      "value": {
+        "type": "boolean",
+        "value": true
+      },
+      "expected": {
+        "type": "boolean",
+        "value": true
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E51",
+      "expression": "=SUM(A1:A5)",
+      "value": {
+        "type": "number",
+        "value": 3.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 2
+      },
+      "basis": "ECMA-376 Part 1 18.17.7.306: reference logical/text values ignored",
+      "matchesProducer": false
+    },
+    {
+      "address": "E52",
+      "expression": "=SUM(\"2\",TRUE)",
+      "value": {
+        "type": "error",
+        "value": "#VALUE!"
+      },
+      "expected": {
+        "type": "number",
+        "value": 3
+      },
+      "basis": "ECMA-376 Part 1 18.17.7.306: direct logical/numeric text arguments counted",
+      "matchesProducer": false
+    },
+    {
+      "address": "E53",
+      "expression": "=SUM(A6:A6)",
+      "value": {
+        "type": "error",
+        "value": "#N/A"
+      },
+      "expected": {
+        "type": "error",
+        "value": "#N/A"
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E54",
+      "expression": "=MIN(\"2\",TRUE)",
+      "value": {
+        "type": "error",
+        "value": "#VALUE!"
+      },
+      "expected": {
+        "type": "number",
+        "value": 1
+      },
+      "basis": "ECMA-376 Part 1 18.17.7.212: direct logical/numeric text arguments counted",
+      "matchesProducer": false
+    },
+    {
+      "address": "E55",
+      "expression": "=MAX(A1:A5)",
+      "value": {
+        "type": "number",
+        "value": 2.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 2.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E56",
+      "expression": "=AVERAGE(A1:A5)",
+      "value": {
+        "type": "number",
+        "value": 1.5
+      },
+      "expected": {
+        "type": "number",
+        "value": 2
+      },
+      "basis": "ECMA-376 Part 1 18.17.7.18: reference logical/text values ignored",
+      "matchesProducer": false
+    },
+    {
+      "address": "E57",
+      "expression": "=AVERAGE(A5:A5)",
+      "value": {
+        "type": "error",
+        "value": "#DIV/0!"
+      },
+      "expected": {
+        "type": "error",
+        "value": "#DIV/0!"
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E58",
+      "expression": "=COUNT(\"2\",TRUE)",
+      "value": {
+        "type": "number",
+        "value": 2.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 2.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E59",
+      "expression": "=COUNT(A1:A5)",
+      "value": {
+        "type": "number",
+        "value": 2.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 1
+      },
+      "basis": "ECMA-376 Part 1 18.17.7.52: reference logical/text values ignored",
+      "matchesProducer": false
+    },
+    {
+      "address": "E60",
+      "expression": "=COUNTA(A1:A5)",
+      "value": {
+        "type": "number",
+        "value": 4.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 4.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E61",
+      "expression": "=COUNTBLANK(A1:A5)",
+      "value": {
+        "type": "number",
+        "value": 2.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 2.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E62",
+      "expression": "=SUM(,)",
+      "value": {
+        "type": "number",
+        "value": 0.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 0.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E63",
+      "expression": "=COUNT(,)",
+      "value": {
+        "type": "number",
+        "value": 2.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 2.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E64",
+      "expression": "=COUNTA(,)",
+      "value": {
+        "type": "number",
+        "value": 2.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 2.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E65",
+      "expression": "=ABS(-3)",
+      "value": {
+        "type": "number",
+        "value": 3.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 3.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E66",
+      "expression": "=INT(-1.2)",
+      "value": {
+        "type": "number",
+        "value": -2.0
+      },
+      "expected": {
+        "type": "number",
+        "value": -2.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E67",
+      "expression": "=TRUNC(-1.2)",
+      "value": {
+        "type": "number",
+        "value": -1.0
+      },
+      "expected": {
+        "type": "number",
+        "value": -1.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E68",
+      "expression": "=MOD(-5,3)",
+      "value": {
+        "type": "number",
+        "value": 1.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 1.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E69",
+      "expression": "=MOD(5,-3)",
+      "value": {
+        "type": "number",
+        "value": -1.0
+      },
+      "expected": {
+        "type": "number",
+        "value": -1.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E70",
+      "expression": "=POWER(2,3)",
+      "value": {
+        "type": "number",
+        "value": 8.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 8.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E71",
+      "expression": "=SQRT(4)",
+      "value": {
+        "type": "number",
+        "value": 2.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 2.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E72",
+      "expression": "=LEN(\"中文Ab\")",
+      "value": {
+        "type": "number",
+        "value": 4.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 4.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E73",
+      "expression": "=ROW()",
+      "value": {
+        "type": "number",
+        "value": 73.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 73.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E74",
+      "expression": "=COLUMN()",
+      "value": {
+        "type": "number",
+        "value": 5.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 5.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E75",
+      "expression": "=ROWS(A1:B3)",
+      "value": {
+        "type": "number",
+        "value": 3.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 3.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E76",
+      "expression": "=COLUMNS(A1:B3)",
+      "value": {
+        "type": "number",
+        "value": 2.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 2.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E77",
+      "expression": "=Constant",
+      "value": {
+        "type": "number",
+        "value": 7.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 7.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E78",
+      "expression": "=ComputedName",
+      "value": {
+        "type": "number",
+        "value": 2.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 2.0
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    },
+    {
+      "address": "E79",
+      "expression": "=SUM((A1:A2,A2:A3))",
+      "value": {
+        "type": "number",
+        "value": 3.0
+      },
+      "expected": {
+        "type": "number",
+        "value": 2
+      },
+      "basis": "ECMA-376 Part 1 18.17.7.306: reference logical/text values ignored, union multiplicity retained",
+      "matchesProducer": false
+    },
+    {
+      "address": "E80",
+      "expression": "=SUM(A:A)",
+      "value": {
+        "type": "error",
+        "value": "#N/A"
+      },
+      "expected": {
+        "type": "error",
+        "value": "#N/A"
+      },
+      "basis": "Pinned Calc observation; Excel/WPS unverified",
+      "matchesProducer": true
+    }
+  ]
+}

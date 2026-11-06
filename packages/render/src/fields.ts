@@ -1,5 +1,5 @@
 import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, DocumentModel, DocumentTransaction, WordMetadata } from "@dagent-office/core";
+import type { DeepReadonly, ContentDocumentModel, DocumentTransaction, WordMetadata } from "@dagent-office/core";
 import type { DocumentRenderReport, LayoutDiagnostic, LayoutFieldResult, RenderedPage } from "./contracts.js";
 import { pageLabel } from "./pagination.js";
 import { hideFromViewSelection, markViewNode, measureViewContent } from "./view-nodes.js";
@@ -106,7 +106,7 @@ export function layoutFields(document: Document, source: PreviewSource, word: De
   } };
 }
 
-export function createLayoutFieldTransaction(model: DocumentModel, report: DocumentRenderReport): DocumentTransaction {
+export function createLayoutFieldTransaction(model: ContentDocumentModel, report: DocumentRenderReport): DocumentTransaction {
   const snapshot = model.snapshot();
   if (report.layout !== "pages" || !report.pages.length) throw new DocumentError("InvalidOperation", "Layout fields require a completed pages layout.");
   if (report.documentId !== snapshot.manifest.documentId || report.revision !== snapshot.manifest.revision)

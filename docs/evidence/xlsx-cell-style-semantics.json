@@ -1,0 +1,283 @@
+{
+  "scope": "Native Calc row/column/cell/default formatting including stored and implicit blanks. Normal differs from cellXfs zero; customFormat is tested both absent and false. No Excel/WPS or complete visual acceptance claim.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "sourceSha256": "77755f469683daa449c940b57d4f10d2f374a23b8ee27f3dac92d97d5b724e6c",
+  "localeEnvironment": {
+    "LC_ALL": "C.UTF-8",
+    "LANG": "C.UTF-8",
+    "TZ": "UTC"
+  },
+  "samples": [
+    {
+      "address": "A1",
+      "text": "N1",
+      "fill": "#eeeeee"
+    },
+    {
+      "address": "B1",
+      "text": "C1",
+      "fill": "#ddeeff"
+    },
+    {
+      "address": "C1",
+      "text": "D1",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "D1",
+      "text": "X1",
+      "fill": "#ddffdd"
+    },
+    {
+      "address": "E1",
+      "text": "",
+      "fill": "#ddeeff"
+    },
+    {
+      "address": "F1",
+      "text": "",
+      "fill": "#ddeeff"
+    },
+    {
+      "address": "G1",
+      "text": "",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "H1",
+      "text": "",
+      "fill": "#ddffdd"
+    },
+    {
+      "address": "I1",
+      "text": "N1",
+      "fill": "#eeeeee"
+    },
+    {
+      "address": "A2",
+      "text": "R1",
+      "fill": "#ffdddd"
+    },
+    {
+      "address": "B2",
+      "text": "R1",
+      "fill": "#ffdddd"
+    },
+    {
+      "address": "C2",
+      "text": "D1",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "D2",
+      "text": "X1",
+      "fill": "#ddffdd"
+    },
+    {
+      "address": "E2",
+      "text": "",
+      "fill": "#ffdddd"
+    },
+    {
+      "address": "F2",
+      "text": "",
+      "fill": "#ffdddd"
+    },
+    {
+      "address": "G2",
+      "text": "",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "H2",
+      "text": "",
+      "fill": "#ddffdd"
+    },
+    {
+      "address": "I2",
+      "text": "R1",
+      "fill": "#ffdddd"
+    },
+    {
+      "address": "A3",
+      "text": "N1",
+      "fill": "#eeeeee"
+    },
+    {
+      "address": "B3",
+      "text": "C1",
+      "fill": "#ddeeff"
+    },
+    {
+      "address": "C3",
+      "text": "D1",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "D3",
+      "text": "X1",
+      "fill": "#ddffdd"
+    },
+    {
+      "address": "E3",
+      "text": "",
+      "fill": "#ddeeff"
+    },
+    {
+      "address": "F3",
+      "text": "",
+      "fill": "#ddeeff"
+    },
+    {
+      "address": "G3",
+      "text": "",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "H3",
+      "text": "",
+      "fill": "#ddffdd"
+    },
+    {
+      "address": "I3",
+      "text": "N1",
+      "fill": "#eeeeee"
+    },
+    {
+      "address": "A4",
+      "text": "N1",
+      "fill": "#eeeeee"
+    },
+    {
+      "address": "B4",
+      "text": "C1",
+      "fill": "#ddeeff"
+    },
+    {
+      "address": "C4",
+      "text": "D1",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "D4",
+      "text": "X1",
+      "fill": "#ddffdd"
+    },
+    {
+      "address": "E4",
+      "text": "",
+      "fill": "#ddeeff"
+    },
+    {
+      "address": "F4",
+      "text": "",
+      "fill": "#ddeeff"
+    },
+    {
+      "address": "G4",
+      "text": "",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "H4",
+      "text": "",
+      "fill": "#ddffdd"
+    },
+    {
+      "address": "I4",
+      "text": "N1",
+      "fill": "#eeeeee"
+    },
+    {
+      "address": "A5",
+      "text": "D1",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "B5",
+      "text": "D1",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "C5",
+      "text": "D1",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "D5",
+      "text": "X1",
+      "fill": "#ddffdd"
+    },
+    {
+      "address": "E5",
+      "text": "",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "F5",
+      "text": "",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "G5",
+      "text": "",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "H5",
+      "text": "",
+      "fill": "#ddffdd"
+    },
+    {
+      "address": "I5",
+      "text": "D1",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "A6",
+      "text": "D1",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "B6",
+      "text": "D1",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "C6",
+      "text": "D1",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "D6",
+      "text": "X1",
+      "fill": "#ddffdd"
+    },
+    {
+      "address": "E6",
+      "text": "",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "F6",
+      "text": "",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "G6",
+      "text": "",
+      "fill": "#ffffdd"
+    },
+    {
+      "address": "H6",
+      "text": "",
+      "fill": "#ddffdd"
+    },
+    {
+      "address": "I6",
+      "text": "D1",
+      "fill": "#ffffdd"
+    }
+  ]
+}

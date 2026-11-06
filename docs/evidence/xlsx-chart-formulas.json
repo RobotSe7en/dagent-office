@@ -1,0 +1,226 @@
+{
+  "scope": "Independent chart formulas with wrong caches and pinned Calc current values. Data acceptance only; no Excel/WPS or visual acceptance claim.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "sourceSha256": "d9bbbf43a055e469c49621755ee668a55e6f5bb27b9169a6f2ebccca1e9aacdd",
+  "referenceInputSha256": "9802dc226961de48e4da0f4c72abfa8cdaf19125daf8d7fba458a2bfba054333",
+  "referenceInput": "Same formulas with formula caches omitted. Pinned Calc may retain wrong supplied caches despite recalc flags; those caches are not expected results.",
+  "formulas": {
+    "B2": "=ChartConstant+7",
+    "B3": "=SUM(B2,6)",
+    "B4": "=IF(B3>10,B3*2,0)",
+    "B5": "=AVERAGE(B2:B4)",
+    "B6": "=ROUND(B5,2)",
+    "B7": "=COUNT(B2:B6)",
+    "B8": "=LEN(A2)",
+    "B9": "=TRUE()",
+    "B10": "=\"text\"",
+    "B11": "=\"\"",
+    "B12": "=1/0",
+    "B13": "=Second!A1-10"
+  },
+  "expected": {
+    "B1": {
+      "type": "text",
+      "value": "Current values"
+    },
+    "A2": {
+      "type": "text",
+      "value": "Point0"
+    },
+    "B2": {
+      "type": "number",
+      "value": 14
+    },
+    "A3": {
+      "type": "text",
+      "value": "Point1"
+    },
+    "B3": {
+      "type": "number",
+      "value": 20
+    },
+    "A4": {
+      "type": "text",
+      "value": "Point2"
+    },
+    "B4": {
+      "type": "number",
+      "value": 40
+    },
+    "A5": {
+      "type": "text",
+      "value": "Point3"
+    },
+    "B5": {
+      "type": "number",
+      "value": 24.666666666666668
+    },
+    "A6": {
+      "type": "text",
+      "value": "Point4"
+    },
+    "B6": {
+      "type": "number",
+      "value": 24.67
+    },
+    "A7": {
+      "type": "text",
+      "value": "Point5"
+    },
+    "B7": {
+      "type": "number",
+      "value": 5
+    },
+    "A8": {
+      "type": "text",
+      "value": "Point6"
+    },
+    "B8": {
+      "type": "number",
+      "value": 6
+    },
+    "A9": {
+      "type": "text",
+      "value": "Point7"
+    },
+    "B9": {
+      "type": "boolean",
+      "value": true
+    },
+    "A10": {
+      "type": "text",
+      "value": "Point8"
+    },
+    "B10": {
+      "type": "text",
+      "value": "text"
+    },
+    "A11": {
+      "type": "text",
+      "value": "Point9"
+    },
+    "B11": {
+      "type": "text",
+      "value": ""
+    },
+    "A12": {
+      "type": "text",
+      "value": "Point10"
+    },
+    "B12": {
+      "type": "error",
+      "value": "#DIV/0!"
+    },
+    "A13": {
+      "type": "text",
+      "value": "Point11"
+    },
+    "B13": {
+      "type": "number",
+      "value": -7
+    }
+  },
+  "producer": {
+    "B1": {
+      "type": "text",
+      "value": "Current values"
+    },
+    "A2": {
+      "type": "text",
+      "value": "Point0"
+    },
+    "B2": {
+      "type": "number",
+      "value": 14.0
+    },
+    "A3": {
+      "type": "text",
+      "value": "Point1"
+    },
+    "B3": {
+      "type": "number",
+      "value": 20.0
+    },
+    "A4": {
+      "type": "text",
+      "value": "Point2"
+    },
+    "B4": {
+      "type": "number",
+      "value": 40.0
+    },
+    "A5": {
+      "type": "text",
+      "value": "Point3"
+    },
+    "B5": {
+      "type": "number",
+      "value": 24.6666666666667
+    },
+    "A6": {
+      "type": "text",
+      "value": "Point4"
+    },
+    "B6": {
+      "type": "number",
+      "value": 24.67
+    },
+    "A7": {
+      "type": "text",
+      "value": "Point5"
+    },
+    "B7": {
+      "type": "number",
+      "value": 5.0
+    },
+    "A8": {
+      "type": "text",
+      "value": "Point6"
+    },
+    "B8": {
+      "type": "number",
+      "value": 6.0
+    },
+    "A9": {
+      "type": "text",
+      "value": "Point7"
+    },
+    "B9": {
+      "type": "boolean",
+      "value": true
+    },
+    "A10": {
+      "type": "text",
+      "value": "Point8"
+    },
+    "B10": {
+      "type": "text",
+      "value": "text"
+    },
+    "A11": {
+      "type": "text",
+      "value": "Point9"
+    },
+    "B11": {
+      "type": "text",
+      "value": ""
+    },
+    "A12": {
+      "type": "text",
+      "value": "Point10"
+    },
+    "B12": {
+      "type": "error",
+      "value": "#DIV/0!"
+    },
+    "A13": {
+      "type": "text",
+      "value": "Point11"
+    },
+    "B13": {
+      "type": "number",
+      "value": -7.0
+    }
+  }
+}

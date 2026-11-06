@@ -1,5 +1,7 @@
 import { DocumentError } from "@dagent-office/core";
 import { svgElement } from "./svg.js";
+import { drawingGradientLine } from "../drawing-gradient.js";
+import type { DrawingGradientBounds, DrawingGradientOrientation } from "../drawing-gradient.js";
 
 export const property = (style: CSSStyleDeclaration, name: string, fallback = ""): string => style.getPropertyValue(name).trim() || fallback;
 export function cssStringValue(value: string): string {
@@ -37,29 +39,40 @@ export function resolvedColor(document: Document, style: CSSStyleDeclaration, pr
   const alpha = Math.max(0, Math.min(1, nativeAlpha * numeric(style, prefix + "-alpha", 1)));
   return `rgba(${values.join(",")},${alpha})`;
 }
-export function svgFill(document: Document, style: CSSStyleDeclaration, svg: SVGSVGElement, id: string, prefix = "--office-fill", fallback = "none", account?: (amount: number) => void): string {
+export function svgFill(document: Document, style: CSSStyleDeclaration, svg: SVGSVGElement, id: string, bounds: DrawingGradientBounds, prefix = "--office-fill", fallback = "none", account?: (amount: number) => void, orientation?: DrawingGradientOrientation): string {
   const kind = property(style, prefix + "-kind");
   if (kind === "none") return "none";
   if (kind !== "linear") return kind === "solid" || property(style, prefix + "-color") ? resolvedColor(document, style, prefix) : fallback === "none" ? "none" : resolvedColor(document,style,prefix,fallback);
   const count = numeric(style, prefix + "-stop-count", 0);
   if (!Number.isSafeInteger(count) || count < 2 || count > 1024) throw new DocumentError("ResourceLimitExceeded", "A presentation gradient exceeds its stop budget.");
   account?.(count + 2);
-  const angle = numeric(style, prefix + "-angle", 0) * Math.PI / 180;
-  const dx = Math.cos(angle), dy = Math.sin(angle), extent = Math.abs(dx) + Math.abs(dy);
-  const gradient = svgElement(document, "linearGradient", { id, x1: (1 - dx / extent) / 2, y1: (1 - dy / extent) / 2, x2: (1 + dx / extent) / 2, y2: (1 + dy / extent) / 2 });
-  for (let n = 0; n < count; n++) gradient.append(svgElement(document, "stop", { offset: property(style, prefix + "-stop-" + n + "-position", "0"), "stop-color": resolvedColor(document, style, prefix + "-stop-" + n) }));
+  const scaled = property(style, prefix + "-scaled", "false");
+  if (scaled !== "true" && scaled !== "false") throw new DocumentError("InvalidDocument", "A drawing gradient scale flag must be a boolean.");
+  const angle = property(style, prefix + "-angle", "0");
+  if (!/^-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(angle)) throw new DocumentError("InvalidDocument", "A drawing gradient angle must be a source number.");
+  const rotates = property(style, prefix + "-rotate-with-shape", "true");
+  if (rotates !== "true" && rotates !== "false") throw new DocumentError("InvalidDocument", "A drawing gradient rotation flag must be a boolean.");
+  const line = drawingGradientLine(bounds, Number(angle), scaled === "true", rotates === "false" ? orientation : undefined);
+  const gradient = svgElement(document, "linearGradient", { id, gradientUnits: "userSpaceOnUse", "color-interpolation": "sRGB", ...line });
+  let previous = -1;
+  for (let n = 0; n < count; n++) {
+    const raw = property(style, prefix + "-stop-" + n + "-position"), position = Number(raw);
+    if (!raw || !Number.isFinite(position) || position < 0 || position > 1 || position < previous) throw new DocumentError("InvalidDocument", "Drawing gradient stops require ordered positions in [0,1].");
+    previous = position; gradient.append(svgElement(document, "stop", { offset: position, "stop-color": resolvedColor(document, style, prefix + "-stop-" + n) }));
+  }
   const defs = svgElement(document, "defs"); defs.append(gradient); svg.append(defs); return `url(#${id})`;
 }
 export function strokeAttributes(document: Document, style: CSSStyleDeclaration, prefix = "--office-line", fallback = "none"): Record<string, string | number> {
   const kind = property(style, prefix + "-kind"), color = kind === "none" ? "none" : property(style, prefix + "-color") ? resolvedColor(document, style, prefix) : fallback === "none" ? "none" : resolvedColor(document,style,prefix,fallback);
-  const width = numeric(style, prefix + "-width", 1), dash = property(style, prefix + "-dash", "solid");
+  const width = numeric(style, prefix + "-width", .75), dash = property(style, prefix + "-dash", "solid");
   const patterns: Record<string, readonly number[]> = { dash: [4, 3], dot: [1, 3], lgDash: [8, 3], dashDot: [4, 3, 1, 3], lgDashDot: [8, 3, 1, 3], lgDashDotDot: [8, 3, 1, 3, 1, 3], sysDash: [3, 1], sysDot: [1, 1], sysDashDot: [3, 1, 1, 1], sysDashDotDot: [3, 1, 1, 1, 1, 1] };
   const cap = property(style, prefix + "-cap", "flat");
   return { stroke: color, "stroke-width": width, "stroke-linecap": cap === "rnd" ? "round" : cap === "sq" ? "square" : "butt", "stroke-linejoin": property(style, prefix + "-join", "round"), "stroke-miterlimit": numeric(style, prefix + "-miter-limit", 8), ...(patterns[dash] ? { "stroke-dasharray": patterns[dash]!.map(n => n * width).join(" ") } : {}) };
 }
-export function addArrows(document: Document, svg: SVGSVGElement, path: SVGPathElement, style: CSSStyleDeclaration, id: string): void {
+export function addArrows(document: Document, svg: SVGSVGElement, path: SVGPathElement, style: CSSStyleDeclaration, id: string, account?: (amount: number) => void): void {
   for (const side of ["start", "end"] as const) {
     const prefix = "--office-line-" + side, type = property(style, prefix + "-arrow", "none"); if (type === "none") continue;
+    account?.(3); // defs, marker and its one geometry primitive.
     const size = (value: string): number => value === "sm" ? 2 : value === "lg" ? 5 : 3;
     const width = size(property(style, prefix + "-w")), length = size(property(style, prefix + "-len"));
     const marker = svgElement(document, "marker", { id: id + "-" + side, markerWidth: length, markerHeight: width, refX: length, refY: width / 2, orient: "auto-start-reverse", viewBox: `0 0 ${length} ${width}`, overflow: "visible" });

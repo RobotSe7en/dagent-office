@@ -1,0 +1,138 @@
+import { DocumentError } from "@dagent-office/core";
+import type { WorkbookDisplayFormat, WorkbookNumberDisplay, WorkbookNumberFormatter } from "@dagent-office/core";
+import { resolvePreviewFontsInScope } from "../fonts.js";
+import type { FontProbeCache } from "../font-probe-cache.js";
+import { markViewNode } from "../view-nodes.js";
+import type { WorkbookSourceCell } from "./cell-source.js";
+import { measureNumberDisplay } from "./number-layout.js";
+import { createWorkbookNumberText } from "./number-text.js";
+import { workbookTextAlignment, workbookTextGutters } from "./text-alignment.js";
+import { layoutWorkbookTexts } from "./text-layout.js";
+import type { WorkbookTextLayoutInput, WorkbookTextLayouts } from "./text-layout.js";
+import type { WorkbookTextView } from "./text-view.js";
+import { workbookAsciiWidth } from "./ascii-width.js";
+
+export interface WorkbookNumberLayoutInput {
+  readonly source: WorkbookSourceCell;
+  readonly value: number;
+  readonly format?: WorkbookDisplayFormat;
+  readonly widthPt: number;
+  readonly heightPt: number;
+  readonly bordered?: boolean;
+}
+type Overflow = Extract<WorkbookNumberDisplay, { kind: "overflow" }>["reason"];
+function generalFormat(format: WorkbookDisplayFormat | undefined): boolean {
+  return !format || "builtinId" in format && format.builtinId === 0 || "code" in format && format.code === "General";
+}
+export interface WorkbookNumberLayouts extends WorkbookTextLayouts {
+  readonly overflow: readonly (Overflow | undefined)[];
+  readonly locales: readonly string[];
+}
+
+/** Resolve fonts for derived scalar displays, measure full shaped candidates,
+ * then use the shared cell alignment/rotation layout. Temporary glyph probes
+ * and failed windows never mutate source HTML or the current published grid. */
+export function layoutWorkbookNumbers(scope: HTMLElement, inputs: readonly WorkbookNumberLayoutInput[], formatter: WorkbookNumberFormatter,
+  normalSpaceWidthPx: number, maxNodes = 50_000, maxTextUnits: number = 8 * 1024 * 1024, probes?: FontProbeCache): WorkbookNumberLayouts {
+  const document = scope.ownerDocument, view = document.defaultView;
+  if (!scope.isConnected || !view || document.fonts.status === "loading" || !Number.isFinite(normalSpaceWidthPx) || normalSpaceWidthPx < 0
+    || !Number.isSafeInteger(maxNodes) || maxNodes < 1 || !Number.isSafeInteger(maxTextUnits) || maxTextUnits < 1) throw new DocumentError("InvalidOperation", "Numeric layout requires a connected surface, settled fonts and positive budgets.");
+  const root = markViewNode(document.createElement("div")); root.dataset.officeView = "workbook-number-measurement"; root.setAttribute("aria-hidden", "true");
+  root.style.cssText = "position:absolute;visibility:hidden;pointer-events:none;contain:layout;left:0;top:0;width:0;height:0;overflow:hidden;direction:ltr";
+  let liveNodes = 1, initialUnits = 0, outputUnits = 0;
+  const remainingNodes = (): number => {
+    if (liveNodes >= maxNodes) throw new DocumentError("ResourceLimitExceeded", "Numeric layout exceeds its node budget.");
+    return maxNodes - liveNodes;
+  };
+  const finals: WorkbookTextLayoutInput[] = [], overflow: (Overflow | undefined)[] = [], locales: string[] = [];
+  const context = document.createElement("canvas").getContext("2d"), batchGeneral = !context || !("fontKerning" in context);
+  const probeStyle = ';display:inline-block;position:absolute;width:max-content;white-space:pre;font-kerning:none;font-feature-settings:"kern" 0;direction:ltr;unicode-bidi:isolate';
+  try {
+    const prepared = inputs.map(input => {
+      if (input.source.element.ownerDocument !== document || !input.source.element.isConnected || !Number.isFinite(input.value)
+        || !Number.isFinite(input.widthPt / .75) || input.widthPt <= 0 || !Number.isFinite(input.heightPt / .75) || input.heightPt <= 0) throw new DocumentError("InvalidOperation", "Numeric layout requires finite values, matching connected sources and positive geometry.");
+      const display = formatter.format(input.value, input.format);
+      const parts = display.kind === "parts" ? display.parts.map(part => ({ kind: "text" as const, text: part.kind === "text" ? part.text : part.character })) : [{ kind: "text" as const, text: "#" }];
+      initialUnits += parts.reduce((sum, part) => sum + part.text.length, 0);
+      if (initialUnits > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Numeric measurement exceeds its cumulative text budget.");
+      const text = createWorkbookNumberText(input.source, parts, display.color, remainingNodes()); liveNodes += text.nodes;
+      const general = generalFormat(input.format); if (general && batchGeneral) text.element.style.cssText += probeStyle;
+      // Font resolution mutates only these private family declarations. Keep
+      // their requested values so a reused candidate still reports the source
+      // family/substitution during the final shared layout and glyph audit.
+      const fontFamilies = [text.element, ...text.element.querySelectorAll<HTMLElement>('[data-office-script]')].map(node => ({ node, family: node.style.fontFamily }));
+      root.append(text.element); return { input, text, general, parts, color: display.color, fontFamilies };
+    });
+    scope.append(root);
+    resolvePreviewFontsInScope(document, root, "[data-office-text-style],[data-office-script]", probes);
+    // WebKit lacks Canvas fontKerning. Read all already-present full General
+    // candidates before changing any DOM; most values fit this first candidate
+    // and then require no per-value synchronous layout. Narrow alternatives
+    // still follow the original exact DOM measurement path.
+    const initialWidths = new Map(prepared.filter(item => batchGeneral && item.general).map(item => {
+      const width = item.text.element.getBoundingClientRect().width;
+      if (!Number.isFinite(width) || width < 0) throw new DocumentError("UnsupportedFeature", "This browser cannot measure numeric display text.");
+      return [item, { text: item.text.element.textContent ?? "", width }] as const;
+    }));
+    for (const item of prepared) {
+      const { input, text, general } = item;
+      const alignment = workbookTextAlignment(view.getComputedStyle(input.source.element), "number", "ltr"), gutter = workbookTextGutters(alignment, normalSpaceWidthPx);
+      const available = Math.max(0, input.widthPt / .75 - gutter.left - gutter.right), fit = !alignment.shrink && !alignment.wrap && !alignment.rotationDegrees && !alignment.stacked;
+      const families = new Map<string, string>(), widths = new Map<string, number>();
+      const initial = initialWidths.get(item); if (initial) widths.set(initial.text, initial.width);
+      for (const span of text.element.querySelectorAll<HTMLElement>("[data-office-script]")) families.set(span.dataset.officeScript!, view.getComputedStyle(span).fontFamily);
+      const ascii = text.element.querySelector<HTMLElement>('[data-office-script="ascii"]');
+      const fast = general && ascii ? workbookAsciiWidth(context, view.getComputedStyle(ascii)) : undefined;
+      const measure = (value: string): number => {
+        const known = widths.get(value); if (known !== undefined) return known;
+        const quick = fast?.(value);
+        // Preserve the exact DOM decision at a fit boundary, including layout
+        // engine subpixel quantization. Complex format parts never use this.
+        if (quick !== undefined && Math.abs(quick - available) > 1 / 16) return quick;
+        const sample = createWorkbookNumberText(input.source, [{ kind: "text", text: value }], undefined, remainingNodes());
+        sample.element.style.cssText += probeStyle;
+        root.append(sample.element);
+        try {
+          let missing = false;
+          for (const span of sample.element.querySelectorAll<HTMLElement>("[data-office-script]")) {
+            const family = families.get(span.dataset.officeScript!);
+            if (family) span.style.fontFamily = family; else missing = true;
+          }
+          if (missing) {
+            resolvePreviewFontsInScope(document, sample.element, "[data-office-script]", probes);
+            for (const span of sample.element.querySelectorAll<HTMLElement>("[data-office-script]")) families.set(span.dataset.officeScript!, view.getComputedStyle(span).fontFamily);
+          }
+          const width = sample.element.getBoundingClientRect().width;
+          if (!Number.isFinite(width) || width < 0) throw new DocumentError("UnsupportedFeature", "This browser cannot measure numeric display text.");
+          if (widths.size >= 64) widths.delete(widths.keys().next().value!);
+          widths.set(value, width);
+          return width;
+        } finally { sample.element.remove(); }
+      };
+      const display = formatter.format(input.value, input.format, fit ? { availableWidth: available, measure } : undefined);
+      let reason: Overflow | undefined = display.kind === "overflow" ? display.reason : undefined;
+      let measured = display.kind === "parts" ? measureNumberDisplay(display.parts, available, measure) : undefined;
+      if (fit && measured?.overflow) reason = "width";
+      if (reason) {
+        measured = measureNumberDisplay([{ kind: "fill", character: "#" }], available, measure);
+        if (!measured.parts.some(part => part.kind === "text" && part.text)) { const width = measure("#"); measured = { parts: [{ kind: "text", text: "#", width }], width, overflow: true }; }
+      }
+      const parts = measured!.parts;
+      outputUnits += parts.reduce((sum, part) => sum + (part.kind === "text" ? part.text.length : 0), 0);
+      if (outputUnits > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Numeric display exceeds its cumulative text budget.");
+      text.element.remove();
+      const unchanged = parts.length === 1 && parts[0]!.kind === "text" && item.parts.length === 1 && item.parts[0]!.kind === "text"
+        && parts[0]!.text === item.parts[0]!.text && JSON.stringify(display.color) === JSON.stringify(item.color);
+      let final: WorkbookTextView;
+      if (unchanged) {
+        final = text; for (const { node, family } of item.fontFamilies) node.style.fontFamily = family;
+      } else {
+        liveNodes -= text.nodes; final = createWorkbookNumberText(input.source, parts, display.color, remainingNodes()); liveNodes += final.nodes;
+      }
+      finals.push({ source: input.source, text: final, valueType: "number", widthPt: input.widthPt, heightPt: input.heightPt,
+        ...(input.bordered === undefined ? {} : { bordered: input.bordered }) }); overflow.push(reason); locales.push(display.locale);
+    }
+  } finally { root.remove(); root.replaceChildren(); }
+  const layout = layoutWorkbookTexts(scope, finals, normalSpaceWidthPx, maxNodes, maxTextUnits, probes);
+  return Object.freeze({ ...layout, overflow: Object.freeze(overflow), locales: Object.freeze(locales) });
+}

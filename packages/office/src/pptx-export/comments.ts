@@ -50,6 +50,7 @@ export class PresentationCommentWriter {
         return author;
     }
     private slide(annotation: Comment): NativeSurface | undefined {
+        if (annotation.anchor.kind === "cells") return undefined;
         const body = annotation.bodyNodeId ? this.ctx.p.stories.find(story => story.rootNodeId === annotation.bodyNodeId) : undefined, anchor = annotation.anchor;
         const ids = anchor.kind === "region" ? [anchor.surfaceId] : anchor.kind === "node" || anchor.kind === "text" ? [anchor.nodeId] : anchor.kind === "node-set" ? anchor.nodeIds : anchor.ranges.map(range => range.nodeId), surfaces = ids.flatMap(id => { const node = this.ctx.tree.byId.get(id), surface = node && this.ctx.surfaceFor(node); return surface?.kind === "slide" ? [surface] : []; });
         const surface = surfaces[0];

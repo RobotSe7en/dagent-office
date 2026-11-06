@@ -1,4 +1,4 @@
-import type { DeepReadonly, PresentationChart, PresentationObject } from "@dagent-office/core";
+import type { ChartAppearance, DeepReadonly, PresentationChart, PresentationObject } from "@dagent-office/core";
 import type { Css } from "../export/css.js";
 import type { SourceElement } from "../export/source.js";
 import { attributes, declaration, empty, escapeXml } from "../export/xml.js";
@@ -6,10 +6,21 @@ import { effectXml, fillXml, lineXml } from "./appearance.js";
 import { relativePart } from "./context.js";
 import type { NativeSurface, PresentationExportContext } from "./context.js";
 import { PresentationTextWriter, runProperties } from "./text.js";
-import { cssString, integer } from "./values.js";
+import { cssString, integer, unsupported } from "./values.js";
 import { exportConstantWorkbook } from "./workbook.js";
 import type { ExportedConstantWorkbook } from "./workbook.js";
 const cv = (name: string, value: string | number | boolean | undefined): string => value === undefined ? "" : empty("c:" + name, { val: typeof value === "boolean" ? value ? 1 : 0 : value });
+function crossingXml(css: Css, category: boolean): string {
+    const raw = css["--office-axis-crosses-at"];
+    if (raw !== undefined) {
+        const at = raw.trim(), number = Number(at);
+        if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][+-]?\d+)?$/.test(at) || !Number.isFinite(number) || !category && !Number.isInteger(number)) unsupported("Chart crossing values exceed the selected Office axis profile.");
+        return cv("crossesAt", number);
+    }
+    const kind = css["--office-axis-crosses"] ?? "autoZero";
+    if (!["autoZero", "min", "max"].includes(kind)) unsupported("A chart axis crossing enum is invalid.");
+    return cv("crosses", kind);
+}
 export class PresentationChartWriter {
     private readonly books = new Map<string, {
         part: string;
@@ -27,6 +38,15 @@ export class PresentationChartWriter {
     }, fallback?: string): string {
         const css = fallback && !style.css["--office-fill-kind"] ? { ...style.css, "--office-fill-kind": "solid", "--office-fill-color": fallback } : style.css;
         return "<c:spPr>" + (css["--office-fill-kind"] || css["--office-fill-color"] ? fillXml(css, "--office-fill", style.raw) : "") + (css["--office-line-kind"] || css["--office-line-color"] ? lineXml(css, "--office-line", style.raw) : "") + (css["--office-shadow-kind"] ? effectXml(css, style.raw) : "") + "</c:spPr>";
+    }
+    private marker(definition: { marker?: NonNullable<ChartAppearance["seriesStyles"]>[number]["marker"]; markerSize?: number | undefined } | undefined,
+        style: { css: Css; raw: Css }, series = false): string {
+        const remap = (css: Css): Css => Object.fromEntries(Object.entries(css).filter(([key]) => key.startsWith("--office-marker-")).map(([key, value]) => [key.replace("--office-marker-", "--office-"), value]));
+        const css = remap(style.css), raw = remap(style.raw);
+        if (!series && definition?.marker === undefined && definition?.markerSize === undefined && !Object.keys(css).length) return "";
+        return "<c:marker>" + cv("symbol", definition?.marker ?? (series ? "none" : undefined))
+            + cv("size", definition?.markerSize === undefined ? undefined : integer(definition.markerSize, 1, 2, 72))
+            + (Object.keys(css).length ? this.appearance({ css, raw }) : "") + "</c:marker>";
     }
     private textStyle(style: {
         css: Css;
@@ -91,16 +111,18 @@ export class PresentationChartWriter {
             const s = seriesStyle.css["--office-fill-kind"] ? seriesStyle : { css: { ...seriesStyle.css, "--office-fill-kind": "solid", "--office-fill-color": palette }, raw: { ...seriesStyle.raw, "--office-fill-color": fallback } };
             out.add("<c:ser>" + cv("idx", index) + cv("order", index) + "<c:tx>" + vector([series.name], false, ranges.nameFormula) + "</c:tx>" + this.appearance(s));
             if (chart.kind === "line")
-                out.add("<c:marker>" + cv("symbol", style?.marker ?? "none") + cv("size", style?.markerSize === undefined ? undefined : integer(style.markerSize, 1, 2, 72)) + "</c:marker>");
+                out.add(this.marker(style, seriesStyle, true));
             else if (chart.kind === "column")
                 out.add(cv("invertIfNegative", seriesStyle.css["--office-invert-negative"] === "true"));
             for (const point of points)
-                out.add("<c:dPt>" + cv("idx", point.index) + this.appearance(this.style([style?.cssClass, point.cssClass].filter(Boolean).join(" "), node, surface)) + "</c:dPt>");
+                out.add("<c:dPt>" + cv("idx", point.index) + this.marker(point, this.style(point.cssClass, node, surface)) + this.appearance(this.style([style?.cssClass, point.cssClass].filter(Boolean).join(" "), node, surface)) + "</c:dPt>");
             if (style?.labelCssClass || points.some(point => point.labelCssClass))
                 out.add(this.labels(chart, style?.labelCssClass ?? chart.labelCssClass, node, surface, points));
             out.add("<c:cat>" + vector(data.categories, false, embedded.book.categoryFormula) + "</c:cat><c:val>" + vector(series.values, true, ranges.valueFormula) + "</c:val>" + (chart.kind === "line" ? cv("smooth", false) : "") + "</c:ser>");
         }
         out.add(this.labels(chart, chart.labelCssClass, node, surface));
+        if (chart.kind === "line" && chart.nativeShowMarkers !== undefined)
+            out.add(cv("marker", chart.nativeShowMarkers));
         if (chart.kind === "column")
             out.add(cv("gapWidth", chart.gapWidth) + cv("overlap", chart.overlap));
         if (chart.kind === "pie")
@@ -112,13 +134,13 @@ export class PresentationChartWriter {
             for (const category of [true, false]) {
                 const name = category ? "catAx" : "valAx", style = this.style(category ? chart.categoryAxisCssClass : chart.valueAxisCssClass, node, surface), css = style.css;
                 out.add("<c:" + name + ">" + cv("axId", category ? 1 : 2) + "<c:scaling>" + cv("orientation", (category ? chart.reverseCategories : chart.reverseValues) ? "maxMin" : "minMax") + (category ? "" : cv("max", chart.maximum) + cv("min", chart.minimum)) + "</c:scaling>" + cv("delete", (category ? chart.showCategoryAxis : chart.showValueAxis) === false) + cv("axPos", css["--office-axis-position"] ?? (category ? "b" : "l")));
-                if (!category && chart.gridCssClass)
-                    out.add("<c:majorGridlines>" + this.appearance(this.style(chart.gridCssClass, node, surface)) + "</c:majorGridlines>");
+                const gridClass = category ? chart.categoryGridCssClass : chart.gridCssClass;
+                if (gridClass) out.add("<c:majorGridlines>" + this.appearance(this.style(gridClass, node, surface)) + "</c:majorGridlines>");
                 if (!category)
                     out.add(empty("c:numFmt", { formatCode: chart.numberFormat ?? "General", sourceLinked: 0 }));
                 for (const [native, key, fallback] of [["majorTickMark", "major-tick", "cross"], ["minorTickMark", "minor-tick", "cross"], ["tickLblPos", "label-position", "nextTo"]])
                     out.add(cv(native!, css["--office-axis-" + key] ?? fallback));
-                out.add(this.appearance(style) + this.textStyle(style) + cv("crossAx", category ? 2 : 1) + cv("crosses", css["--office-axis-crosses"] ?? "autoZero"));
+                out.add(this.appearance(style) + this.textStyle(style) + cv("crossAx", category ? 2 : 1) + crossingXml(css, category));
                 if (category) {
                     out.add(cv("auto", true) + cv("lblAlgn", css["--office-axis-label-align"] ?? "ctr") + cv("lblOffset", css["--office-axis-label-offset"] ?? 100));
                     for (const [native, key] of [["tickLblSkip", "label-skip"], ["tickMarkSkip", "tick-skip"]])

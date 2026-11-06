@@ -1,8 +1,9 @@
+import { openContentFixture as openDocument } from "../../../tests/content-fixture.js";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
-import { createDocumentSession, createPresentation, DocumentError, getContractJsonSchema, openDocument, parseContract, readPresentationGeometry } from "@dagent-office/core";
+import { createDocumentSession, createPresentation, DocumentError, getContractJsonSchema, parseContract, readPresentationGeometry } from "@dagent-office/core";
 import type { Annotation, DocumentErrorCode, PresentationDocumentMetadata } from "@dagent-office/core";
 import { repository } from "./fixtures.js";
 
@@ -85,11 +86,11 @@ describe("Presentation package model", () => {
     const files = initial(); editMetadata(files, edit); expectFailure(() => openDocument(files));
   });
 
-  test("rejects mixed manifest/metadata kinds and continues rejecting workbooks", () => {
+  test("rejects mixed manifest/metadata kinds, including workbook kind without chunks", () => {
     for (const kind of ["document", "workbook"]) {
       const files = initial(), manifest = JSON.parse(decoder.decode(files.get("manifest.json"))) as { kind: string };
       manifest.kind = kind; json(files, "manifest.json", manifest);
-      expectFailure(() => openDocument(files), kind === "workbook" ? "UnsupportedFeature" : "InvalidDocument");
+      expectFailure(() => openDocument(files), "InvalidDocument");
     }
   });
 

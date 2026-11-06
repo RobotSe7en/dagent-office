@@ -1,0 +1,3284 @@
+{
+  "scope": "Pinned Calc point-space PDF text and cell-border bounds for General, explicit horizontal/vertical alignment, reading direction and indentation. This is not an SDK locale default, complete layout acceptance or Excel/WPS observation.",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "environment": {
+    "libreOffice": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+    "poppler": "pdfinfo version 25.03.0\nCopyright 2005-2025 The Poppler Developers - http://poppler.freedesktop.org\nCopyright 1996-2011, 2022 Glyph & Cog, LLC",
+    "fontconfig": "fontconfig version 2.15.0",
+    "dpi": 96,
+    "fontManifestSha256": "c69980066d071afe8f248c7774f5265a6eb82990db1f2f78843580df8d2325b4",
+    "fontCount": 424
+  },
+  "localeEnvironment": {
+    "LC_ALL": "C.UTF-8",
+    "LANG": "C.UTF-8",
+    "TZ": "UTC"
+  },
+  "fonts": [
+    {
+      "family": "Liberation Sans",
+      "sizePt": 11
+    },
+    {
+      "family": "Liberation Serif",
+      "sizePt": 13
+    },
+    {
+      "family": "Noto Sans CJK SC",
+      "sizePt": 12
+    }
+  ],
+  "sourceSha256": "58ab440d05805b94b34e41a123c9c4f930dfb7719877ba4f4f6875f04bb6ee1b",
+  "cases": [
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            110.183,
+            97.735574,
+            138.293888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.147856,
+        46.391738,
+        43.846717,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "אבג",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "גבא",
+          "bounds": [
+            163.219,
+            97.735574,
+            181.332706,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        54.183856,
+        46.391738,
+        0.807899,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "123 אבג",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "123",
+          "bounds": [
+            110.183,
+            97.735574,
+            128.505668,
+            110.009342
+          ]
+        },
+        {
+          "text": "גבא",
+          "bounds": [
+            131.584,
+            97.735574,
+            149.67571,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.147856,
+        46.391738,
+        32.464895,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "n",
+      "value": 123,
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "123",
+          "bounds": [
+            163.02,
+            97.735574,
+            181.364664,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        53.984856,
+        46.391738,
+        0.775941,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "n",
+      "value": -123,
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "-123",
+          "bounds": [
+            159.335,
+            97.735574,
+            181.341998,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        50.299856,
+        46.391738,
+        0.798607,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "n",
+      "value": -123.5,
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "-123.5",
+          "bounds": [
+            150.18,
+            97.735574,
+            181.348332,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        41.144856,
+        46.391738,
+        0.792273,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "b",
+      "value": true,
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "TRUE",
+          "bounds": [
+            151.427,
+            97.735574,
+            181.34156,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        42.391856,
+        46.391738,
+        0.799045,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "e",
+      "value": "#DIV/0!",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "#DIV/0!",
+          "bounds": [
+            144.68,
+            97.735574,
+            181.314338,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        35.644856,
+        46.391738,
+        0.826267,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 1,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            110.183,
+            97.735574,
+            138.293888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.147856,
+        46.391738,
+        43.846717,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 1,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "אבג",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "גבא",
+          "bounds": [
+            163.219,
+            97.735574,
+            181.332706,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        54.183856,
+        46.391738,
+        0.807899,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 1,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "123 אבג",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "123",
+          "bounds": [
+            110.183,
+            97.735574,
+            128.505668,
+            110.009342
+          ]
+        },
+        {
+          "text": "גבא",
+          "bounds": [
+            131.584,
+            97.735574,
+            149.67571,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.147856,
+        46.391738,
+        32.464895,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 1,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "n",
+      "value": 123,
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "123",
+          "bounds": [
+            163.02,
+            97.735574,
+            181.364664,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        53.984856,
+        46.391738,
+        0.775941,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 1,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "n",
+      "value": -123,
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "-123",
+          "bounds": [
+            159.335,
+            97.735574,
+            181.341998,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        50.299856,
+        46.391738,
+        0.798607,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 1,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "n",
+      "value": -123.5,
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "-123.5",
+          "bounds": [
+            150.18,
+            97.735574,
+            181.348332,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        41.144856,
+        46.391738,
+        0.792273,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 1,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "b",
+      "value": true,
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "TRUE",
+          "bounds": [
+            151.427,
+            97.735574,
+            181.34156,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        42.391856,
+        46.391738,
+        0.799045,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 1,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "e",
+      "value": "#DIV/0!",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "#DIV/0!",
+          "bounds": [
+            144.68,
+            97.735574,
+            181.314338,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        35.644856,
+        46.391738,
+        0.826267,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 2,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            153.241,
+            97.735574,
+            181.351888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        44.205856,
+        46.391738,
+        0.788717,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 2,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "אבג",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "גבא",
+          "bounds": [
+            163.219,
+            97.735574,
+            181.332706,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        54.183856,
+        46.391738,
+        0.807899,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 2,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "123 אבג",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "גבא",
+          "bounds": [
+            141.817,
+            97.735574,
+            159.930706,
+            110.009342
+          ]
+        },
+        {
+          "text": "123",
+          "bounds": [
+            163.02,
+            97.735574,
+            181.342668,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        32.781856,
+        46.391738,
+        0.797937,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 2,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "n",
+      "value": 123,
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "123",
+          "bounds": [
+            163.02,
+            97.735574,
+            181.364664,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        53.984856,
+        46.391738,
+        0.775941,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 2,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "n",
+      "value": -123,
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "-123",
+          "bounds": [
+            159.335,
+            97.735574,
+            181.341998,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        50.299856,
+        46.391738,
+        0.798607,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 2,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "n",
+      "value": -123.5,
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "-123.5",
+          "bounds": [
+            150.18,
+            97.735574,
+            181.348332,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        41.144856,
+        46.391738,
+        0.792273,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 2,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "b",
+      "value": true,
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "TRUE",
+          "bounds": [
+            151.427,
+            97.735574,
+            181.34156,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        42.391856,
+        46.391738,
+        0.799045,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": false,
+      "readingOrder": 2,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "e",
+      "value": "#DIV/0!",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "#DIV/0!",
+          "bounds": [
+            144.68,
+            97.735574,
+            181.314338,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        35.644856,
+        46.391738,
+        0.826267,
+        1.244643
+      ]
+    },
+    {
+      "group": "explicit",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            110.183,
+            97.735574,
+            138.293888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.147856,
+        46.391738,
+        43.846717,
+        1.244643
+      ]
+    },
+    {
+      "group": "explicit",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "אבג",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "גבא",
+          "bounds": [
+            110.183,
+            97.735574,
+            128.296706,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.147856,
+        46.391738,
+        53.843899,
+        1.244643
+      ]
+    },
+    {
+      "group": "explicit",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "center",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            131.698,
+            97.735574,
+            159.808888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        22.662856,
+        46.391738,
+        22.331717,
+        1.244643
+      ]
+    },
+    {
+      "group": "explicit",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "center",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "אבג",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "גבא",
+          "bounds": [
+            136.687,
+            97.735574,
+            154.800706,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        27.651856,
+        46.391738,
+        27.339899,
+        1.244643
+      ]
+    },
+    {
+      "group": "explicit",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "right",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            153.241,
+            97.735574,
+            181.351888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        44.205856,
+        46.391738,
+        0.788717,
+        1.244643
+      ]
+    },
+    {
+      "group": "explicit",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "right",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "אבג",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "גבא",
+          "bounds": [
+            163.219,
+            97.735574,
+            181.332706,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        54.183856,
+        46.391738,
+        0.807899,
+        1.244643
+      ]
+    },
+    {
+      "group": "vertical",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "top",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            110.183,
+            52.041574,
+            138.293888,
+            64.315342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.147856,
+        0.697738,
+        43.846717,
+        46.938643
+      ]
+    },
+    {
+      "group": "vertical",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "center",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            110.183,
+            74.888574,
+            138.293888,
+            87.162342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.147856,
+        23.544738,
+        43.846717,
+        24.091643
+      ]
+    },
+    {
+      "group": "vertical",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            110.183,
+            97.735574,
+            138.293888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.147856,
+        46.391738,
+        43.846717,
+        1.244643
+      ]
+    },
+    {
+      "group": "vertical",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "top",
+      "font": 1,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            110.183,
+            51.988963,
+            141.214235,
+            66.39214
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.147856,
+        0.645127,
+        40.92637,
+        44.861845
+      ]
+    },
+    {
+      "group": "vertical",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "center",
+      "font": 1,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            110.183,
+            73.787963,
+            141.214235,
+            88.19114
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.147856,
+        22.444127,
+        40.92637,
+        23.062845
+      ]
+    },
+    {
+      "group": "vertical",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "bottom",
+      "font": 1,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            110.183,
+            95.585963,
+            141.214235,
+            109.98914
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.147856,
+        44.242127,
+        40.92637,
+        1.264845
+      ]
+    },
+    {
+      "group": "vertical",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "top",
+      "font": 2,
+      "kind": "inlineStr",
+      "value": "汉字",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "汉字",
+          "bounds": [
+            110.183,
+            51.968204,
+            134.165,
+            69.331172
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.147856,
+        0.624368,
+        47.975605,
+        41.922813
+      ]
+    },
+    {
+      "group": "vertical",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "center",
+      "font": 2,
+      "kind": "inlineStr",
+      "value": "汉字",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "汉字",
+          "bounds": [
+            110.183,
+            72.264204,
+            134.165,
+            89.627172
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.147856,
+        20.920368,
+        47.975605,
+        21.626813
+      ]
+    },
+    {
+      "group": "vertical",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "bottom",
+      "font": 2,
+      "kind": "inlineStr",
+      "value": "汉字",
+      "indent": 0,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "汉字",
+          "bounds": [
+            110.183,
+            92.589204,
+            134.165,
+            109.952172
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.147856,
+        41.245368,
+        47.975605,
+        1.301813
+      ]
+    },
+    {
+      "group": "indent",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 1,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            119.339,
+            97.735574,
+            147.449888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        10.303856,
+        46.391738,
+        34.690717,
+        1.244643
+      ]
+    },
+    {
+      "group": "indent",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 2,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            128.466,
+            97.735574,
+            156.576888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        19.430856,
+        46.391738,
+        25.563717,
+        1.244643
+      ]
+    },
+    {
+      "group": "indent",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "right",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 1,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            144.085,
+            97.735574,
+            172.195888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        35.049856,
+        46.391738,
+        9.944717,
+        1.244643
+      ]
+    },
+    {
+      "group": "indent",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "right",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 2,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            134.957,
+            97.735574,
+            163.067888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        25.921856,
+        46.391738,
+        19.072717,
+        1.244643
+      ]
+    },
+    {
+      "group": "indent",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "bottom",
+      "font": 1,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 1,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            119.339,
+            95.585963,
+            150.370235,
+            109.98914
+          ]
+        }
+      ],
+      "textGapsPt": [
+        10.303856,
+        44.242127,
+        31.77037,
+        1.264845
+      ]
+    },
+    {
+      "group": "indent",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "bottom",
+      "font": 1,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 2,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            128.466,
+            95.585963,
+            159.497235,
+            109.98914
+          ]
+        }
+      ],
+      "textGapsPt": [
+        19.430856,
+        44.242127,
+        22.64337,
+        1.264845
+      ]
+    },
+    {
+      "group": "indent",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "right",
+      "vertical": "bottom",
+      "font": 1,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 1,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            141.165,
+            95.585963,
+            172.196235,
+            109.98914
+          ]
+        }
+      ],
+      "textGapsPt": [
+        32.129856,
+        44.242127,
+        9.94437,
+        1.264845
+      ]
+    },
+    {
+      "group": "indent",
+      "rightToLeft": false,
+      "readingOrder": 0,
+      "horizontal": "right",
+      "vertical": "bottom",
+      "font": 1,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 2,
+      "cellBoundsPt": [
+        109.035144,
+        51.343836,
+        182.140605,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            132.038,
+            95.585963,
+            163.069235,
+            109.98914
+          ]
+        }
+      ],
+      "textGapsPt": [
+        23.002856,
+        44.242127,
+        19.07137,
+        1.264845
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            413.943,
+            97.735574,
+            442.053888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.587576,
+        46.391738,
+        43.406997,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "אבג",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "גבא",
+          "bounds": [
+            466.98,
+            97.735574,
+            485.093706,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        54.624576,
+        46.391738,
+        0.367179,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "123 אבג",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "123",
+          "bounds": [
+            413.943,
+            97.735574,
+            432.265668,
+            110.009342
+          ]
+        },
+        {
+          "text": "גבא",
+          "bounds": [
+            435.345,
+            97.735574,
+            453.43671,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.587576,
+        46.391738,
+        32.024175,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "n",
+      "value": 123,
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "123",
+          "bounds": [
+            466.781,
+            97.735574,
+            485.125664,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        54.425576,
+        46.391738,
+        0.335221,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "n",
+      "value": -123,
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "-123",
+          "bounds": [
+            463.096,
+            97.735574,
+            485.102998,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        50.740576,
+        46.391738,
+        0.357887,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "n",
+      "value": -123.5,
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "-123.5",
+          "bounds": [
+            453.94,
+            97.735574,
+            485.108332,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        41.584576,
+        46.391738,
+        0.352553,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "b",
+      "value": true,
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "TRUE",
+          "bounds": [
+            455.187,
+            97.735574,
+            485.10156,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        42.831576,
+        46.391738,
+        0.359325,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "e",
+      "value": "#DIV/0!",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "#DIV/0!",
+          "bounds": [
+            448.441,
+            97.735574,
+            485.075338,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        36.085576,
+        46.391738,
+        0.385547,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 1,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            413.943,
+            97.735574,
+            442.053888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.587576,
+        46.391738,
+        43.406997,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 1,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "אבג",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "גבא",
+          "bounds": [
+            466.98,
+            97.735574,
+            485.093706,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        54.624576,
+        46.391738,
+        0.367179,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 1,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "123 אבג",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "123",
+          "bounds": [
+            413.943,
+            97.735574,
+            432.265668,
+            110.009342
+          ]
+        },
+        {
+          "text": "גבא",
+          "bounds": [
+            435.345,
+            97.735574,
+            453.43671,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.587576,
+        46.391738,
+        32.024175,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 1,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "n",
+      "value": 123,
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "123",
+          "bounds": [
+            466.781,
+            97.735574,
+            485.125664,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        54.425576,
+        46.391738,
+        0.335221,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 1,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "n",
+      "value": -123,
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "-123",
+          "bounds": [
+            463.096,
+            97.735574,
+            485.102998,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        50.740576,
+        46.391738,
+        0.357887,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 1,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "n",
+      "value": -123.5,
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "-123.5",
+          "bounds": [
+            453.94,
+            97.735574,
+            485.108332,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        41.584576,
+        46.391738,
+        0.352553,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 1,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "b",
+      "value": true,
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "TRUE",
+          "bounds": [
+            455.187,
+            97.735574,
+            485.10156,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        42.831576,
+        46.391738,
+        0.359325,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 1,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "e",
+      "value": "#DIV/0!",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "#DIV/0!",
+          "bounds": [
+            448.441,
+            97.735574,
+            485.075338,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        36.085576,
+        46.391738,
+        0.385547,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 2,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            457.002,
+            97.735574,
+            485.112888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        44.646576,
+        46.391738,
+        0.347997,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 2,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "אבג",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "גבא",
+          "bounds": [
+            466.98,
+            97.735574,
+            485.093706,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        54.624576,
+        46.391738,
+        0.367179,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 2,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "123 אבג",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "גבא",
+          "bounds": [
+            445.578,
+            97.735574,
+            463.691706,
+            110.009342
+          ]
+        },
+        {
+          "text": "123",
+          "bounds": [
+            466.781,
+            97.735574,
+            485.103668,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        33.222576,
+        46.391738,
+        0.357217,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 2,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "n",
+      "value": 123,
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "123",
+          "bounds": [
+            466.781,
+            97.735574,
+            485.125664,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        54.425576,
+        46.391738,
+        0.335221,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 2,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "n",
+      "value": -123,
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "-123",
+          "bounds": [
+            463.096,
+            97.735574,
+            485.102998,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        50.740576,
+        46.391738,
+        0.357887,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 2,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "n",
+      "value": -123.5,
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "-123.5",
+          "bounds": [
+            453.94,
+            97.735574,
+            485.108332,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        41.584576,
+        46.391738,
+        0.352553,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 2,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "b",
+      "value": true,
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "TRUE",
+          "bounds": [
+            455.187,
+            97.735574,
+            485.10156,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        42.831576,
+        46.391738,
+        0.359325,
+        1.244643
+      ]
+    },
+    {
+      "group": "general",
+      "rightToLeft": true,
+      "readingOrder": 2,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "e",
+      "value": "#DIV/0!",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "#DIV/0!",
+          "bounds": [
+            448.441,
+            97.735574,
+            485.075338,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        36.085576,
+        46.391738,
+        0.385547,
+        1.244643
+      ]
+    },
+    {
+      "group": "explicit",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            413.943,
+            97.735574,
+            442.053888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.587576,
+        46.391738,
+        43.406997,
+        1.244643
+      ]
+    },
+    {
+      "group": "explicit",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "אבג",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "גבא",
+          "bounds": [
+            413.943,
+            97.735574,
+            432.056706,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.587576,
+        46.391738,
+        53.404179,
+        1.244643
+      ]
+    },
+    {
+      "group": "explicit",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "center",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            435.458,
+            97.735574,
+            463.568888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        23.102576,
+        46.391738,
+        21.891997,
+        1.244643
+      ]
+    },
+    {
+      "group": "explicit",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "center",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "אבג",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "גבא",
+          "bounds": [
+            440.447,
+            97.735574,
+            458.560706,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        28.091576,
+        46.391738,
+        26.900179,
+        1.244643
+      ]
+    },
+    {
+      "group": "explicit",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "right",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            457.002,
+            97.735574,
+            485.112888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        44.646576,
+        46.391738,
+        0.347997,
+        1.244643
+      ]
+    },
+    {
+      "group": "explicit",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "right",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "אבג",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "גבא",
+          "bounds": [
+            466.98,
+            97.735574,
+            485.093706,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        54.624576,
+        46.391738,
+        0.367179,
+        1.244643
+      ]
+    },
+    {
+      "group": "vertical",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "top",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            413.943,
+            52.041574,
+            442.053888,
+            64.315342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.587576,
+        0.697738,
+        43.406997,
+        46.938643
+      ]
+    },
+    {
+      "group": "vertical",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "center",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            413.943,
+            74.888574,
+            442.053888,
+            87.162342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.587576,
+        23.544738,
+        43.406997,
+        24.091643
+      ]
+    },
+    {
+      "group": "vertical",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            413.943,
+            97.735574,
+            442.053888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.587576,
+        46.391738,
+        43.406997,
+        1.244643
+      ]
+    },
+    {
+      "group": "vertical",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "top",
+      "font": 1,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            413.943,
+            51.988963,
+            444.974235,
+            66.39214
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.587576,
+        0.645127,
+        40.48665,
+        44.861845
+      ]
+    },
+    {
+      "group": "vertical",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "center",
+      "font": 1,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            413.943,
+            73.787963,
+            444.974235,
+            88.19114
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.587576,
+        22.444127,
+        40.48665,
+        23.062845
+      ]
+    },
+    {
+      "group": "vertical",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "bottom",
+      "font": 1,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            413.943,
+            95.585963,
+            444.974235,
+            109.98914
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.587576,
+        44.242127,
+        40.48665,
+        1.264845
+      ]
+    },
+    {
+      "group": "vertical",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "top",
+      "font": 2,
+      "kind": "inlineStr",
+      "value": "汉字",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "汉字",
+          "bounds": [
+            413.943,
+            51.968204,
+            437.925,
+            69.331172
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.587576,
+        0.624368,
+        47.535885,
+        41.922813
+      ]
+    },
+    {
+      "group": "vertical",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "center",
+      "font": 2,
+      "kind": "inlineStr",
+      "value": "汉字",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "汉字",
+          "bounds": [
+            413.943,
+            72.264204,
+            437.925,
+            89.627172
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.587576,
+        20.920368,
+        47.535885,
+        21.626813
+      ]
+    },
+    {
+      "group": "vertical",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "bottom",
+      "font": 2,
+      "kind": "inlineStr",
+      "value": "汉字",
+      "indent": 0,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "汉字",
+          "bounds": [
+            413.943,
+            92.589204,
+            437.925,
+            109.952172
+          ]
+        }
+      ],
+      "textGapsPt": [
+        1.587576,
+        41.245368,
+        47.535885,
+        1.301813
+      ]
+    },
+    {
+      "group": "indent",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 1,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            423.099,
+            97.735574,
+            451.209888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        10.743576,
+        46.391738,
+        34.250997,
+        1.244643
+      ]
+    },
+    {
+      "group": "indent",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 2,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            432.227,
+            97.735574,
+            460.337888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        19.871576,
+        46.391738,
+        25.122997,
+        1.244643
+      ]
+    },
+    {
+      "group": "indent",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "right",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 1,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            447.846,
+            97.735574,
+            475.956888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        35.490576,
+        46.391738,
+        9.503997,
+        1.244643
+      ]
+    },
+    {
+      "group": "indent",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "right",
+      "vertical": "bottom",
+      "font": 0,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 2,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            438.718,
+            97.735574,
+            466.828888,
+            110.009342
+          ]
+        }
+      ],
+      "textGapsPt": [
+        26.362576,
+        46.391738,
+        18.631997,
+        1.244643
+      ]
+    },
+    {
+      "group": "indent",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "bottom",
+      "font": 1,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 1,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            423.099,
+            95.585963,
+            454.130235,
+            109.98914
+          ]
+        }
+      ],
+      "textGapsPt": [
+        10.743576,
+        44.242127,
+        31.33065,
+        1.264845
+      ]
+    },
+    {
+      "group": "indent",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "left",
+      "vertical": "bottom",
+      "font": 1,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 2,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            432.227,
+            95.585963,
+            463.258235,
+            109.98914
+          ]
+        }
+      ],
+      "textGapsPt": [
+        19.871576,
+        44.242127,
+        22.20265,
+        1.264845
+      ]
+    },
+    {
+      "group": "indent",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "right",
+      "vertical": "bottom",
+      "font": 1,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 1,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            444.926,
+            95.585963,
+            475.957235,
+            109.98914
+          ]
+        }
+      ],
+      "textGapsPt": [
+        32.570576,
+        44.242127,
+        9.50365,
+        1.264845
+      ]
+    },
+    {
+      "group": "indent",
+      "rightToLeft": true,
+      "readingOrder": 0,
+      "horizontal": "right",
+      "vertical": "bottom",
+      "font": 1,
+      "kind": "inlineStr",
+      "value": "Value",
+      "indent": 2,
+      "cellBoundsPt": [
+        412.355424,
+        51.343836,
+        485.460885,
+        111.253985
+      ],
+      "pdfWords": [
+        {
+          "text": "Value",
+          "bounds": [
+            435.798,
+            95.585963,
+            466.829235,
+            109.98914
+          ]
+        }
+      ],
+      "textGapsPt": [
+        23.442576,
+        44.242127,
+        18.63165,
+        1.264845
+      ]
+    }
+  ]
+}

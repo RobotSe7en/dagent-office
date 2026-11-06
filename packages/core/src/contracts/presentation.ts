@@ -1,5 +1,7 @@
+import { ChartAppearanceSchema } from "./chart.js";
 import { z } from "zod";
 import { IdentifierSchema } from "./primitives.js";
+import { DrawingPresetSchema, DrawingTextPropertiesSchema } from "./drawing.js";
 
 export const PresentationSizeSchema = z.strictObject({ unit: z.literal("pt"), width: z.number().positive(), height: z.number().positive() });
 export type PresentationSize = z.infer<typeof PresentationSizeSchema>;
@@ -8,10 +10,7 @@ export const PresentationGeometrySchema = z.strictObject({
   rotation: z.number(), flipH: z.boolean(), flipV: z.boolean(),
 });
 export type PresentationGeometry = z.infer<typeof PresentationGeometrySchema>;
-export const PresentationPresetSchema = z.enum([
-  "rect", "roundRect", "ellipse", "triangle", "diamond", "parallelogram", "trapezoid", "pentagon", "hexagon",
-  "rightArrow", "leftArrow", "upArrow", "downArrow", "leftRightArrow", "chevron", "line",
-]);
+export const PresentationPresetSchema = DrawingPresetSchema;
 const placeholder = z.strictObject({
   type: z.enum(["title", "body", "ctrTitle", "subTitle", "dt", "sldNum", "ftr", "hdr", "obj", "chart", "tbl", "clipArt", "dgm", "media", "sldImg", "pic"]),
   index: z.number().int().min(0),
@@ -20,10 +19,7 @@ const objectBase = {
   nodeId: IdentifierSchema, name: z.string().optional(), nativeId: IdentifierSchema.optional(), creationId: IdentifierSchema.optional(),
   placeholder: placeholder.optional(),
 };
-const textProperties = z.strictObject({
-  autoFit: z.enum(["none", "normal", "shape"]).optional(), wrap: z.boolean().optional(),
-  fontScale: z.number().positive().max(1).optional(), lineSpacingReduction: z.number().min(0).max(1).optional(),
-});
+const textProperties = DrawingTextPropertiesSchema;
 export const PresentationObjectSchema = z.discriminatedUnion("kind", [
   z.strictObject({ ...objectBase, kind: z.literal("text"), text: textProperties.optional() }),
   z.strictObject({ ...objectBase, kind: z.literal("image") }),
@@ -41,23 +37,7 @@ export const PresentationDataSetSchema = z.strictObject({
   series: z.array(z.strictObject({ seriesId: IdentifierSchema, name: z.string(), values: z.array(z.union([z.number(), z.null()])) })).min(1),
 });
 export type PresentationDataSet = z.infer<typeof PresentationDataSetSchema>;
-export const PresentationChartSchema = z.strictObject({
-  chartId: IdentifierSchema, nodeId: IdentifierSchema, dataSetId: IdentifierSchema, kind: z.enum(["column", "line", "pie"]),
-  titleNodeId: IdentifierSchema.optional(), titleVisible: z.boolean().optional(), legend: z.enum(["none", "left", "right", "top", "bottom"]),
-  showLabels: z.boolean(), numberFormat: z.string().optional(),
-  minimum: z.number().optional(), maximum: z.number().optional(), majorUnit: z.number().positive().optional(),
-  plotCssClass: IdentifierSchema.optional(), legendCssClass: IdentifierSchema.optional(), textCssClass: IdentifierSchema.optional(), labelCssClass: IdentifierSchema.optional(),
-  categoryAxisCssClass: IdentifierSchema.optional(), valueAxisCssClass: IdentifierSchema.optional(), gridCssClass: IdentifierSchema.optional(),
-  showCategoryAxis: z.boolean().optional(), showValueAxis: z.boolean().optional(),
-  blankAs: z.enum(["gap", "zero", "span"]).optional(),
-  reverseCategories: z.boolean().optional(), reverseValues: z.boolean().optional(),
-  gapWidth: z.number().min(0).max(500).optional(), overlap: z.number().min(-100).max(100).optional(), firstSliceAngle: z.number().min(0).max(360).optional(),
-  labelContents: z.array(z.enum(["value", "category", "series", "percent"])).optional(),
-  seriesStyles: z.array(z.strictObject({ seriesId: IdentifierSchema, cssClass: IdentifierSchema,
-    labelCssClass: IdentifierSchema.optional(),
-    marker: z.enum(["none", "circle", "square", "diamond", "triangle", "x", "star", "plus", "dot", "dash"]).optional(), markerSize: z.number().positive().optional() })).optional(),
-  pointStyles: z.array(z.strictObject({ seriesId: IdentifierSchema, index: z.number().int().min(0), cssClass: IdentifierSchema, labelCssClass: IdentifierSchema.optional() })).optional(),
-});
+export const PresentationChartSchema = ChartAppearanceSchema.extend({ chartId: IdentifierSchema, nodeId: IdentifierSchema, dataSetId: IdentifierSchema });
 export type PresentationChart = z.infer<typeof PresentationChartSchema>;
 export const PresentationMetadataSchema = z.strictObject({
   size: PresentationSizeSchema,
@@ -92,5 +72,5 @@ export const PresentationDocumentMetadataSchema = z.strictObject({
   title: z.string().optional(), locale: IdentifierSchema.optional(), presentation: PresentationMetadataSchema,
 });
 export type PresentationDocumentMetadata = z.infer<typeof PresentationDocumentMetadataSchema> & {
-  readonly word?: never; readonly pageSetup?: never; readonly sections?: never;
+  readonly word?: never; readonly workbook?: never; readonly pageSetup?: never; readonly sections?: never;
 };

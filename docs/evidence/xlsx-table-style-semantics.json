@@ -1,0 +1,2624 @@
+{
+  "scope": "Pinned Calc does not display the referenced TableStyleMedium9 in these independently generated inputs. Direct cell formatting is observed, but table precedence and hidden-row banding cannot be verified by this producer. No Excel/WPS or SDK composition acceptance claim.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "sourceSha256": "c4a78621a06737105d214089a873345025750d3bf484885c7d38f8ccea5ec93c",
+  "appearances": [
+    {
+      "background-color": null,
+      "color": "#000000",
+      "font-weight": null,
+      "font-name": "Liberation Sans1",
+      "border": null,
+      "border-bottom": null,
+      "border-top": null
+    },
+    {
+      "background-color": null,
+      "color": "#000000",
+      "font-weight": "bold",
+      "font-name": "Liberation Sans1",
+      "border": null,
+      "border-bottom": null,
+      "border-top": null
+    },
+    {
+      "background-color": null,
+      "color": "#cc0000",
+      "font-weight": "normal",
+      "font-name": "Liberation Sans1",
+      "border": null,
+      "border-bottom": null,
+      "border-top": null
+    },
+    {
+      "background-color": null,
+      "color": "#000000",
+      "font-weight": "normal",
+      "font-name": "DejaVu Sans",
+      "border": null,
+      "border-bottom": null,
+      "border-top": null
+    },
+    {
+      "background-color": null,
+      "color": "#000000",
+      "font-weight": "normal",
+      "font-name": "Liberation Sans1",
+      "border": null,
+      "border-bottom": null,
+      "border-top": null
+    },
+    {
+      "background-color": "#ff0000",
+      "color": "#000000",
+      "font-weight": null,
+      "font-name": "Liberation Sans1",
+      "border": null,
+      "border-bottom": null,
+      "border-top": null
+    },
+    {
+      "background-color": "transparent",
+      "color": "#000000",
+      "font-weight": null,
+      "font-name": "Liberation Sans1",
+      "border": null,
+      "border-bottom": null,
+      "border-top": null
+    },
+    {
+      "background-color": null,
+      "color": "#000000",
+      "font-weight": null,
+      "font-name": "Liberation Sans1",
+      "border": "none",
+      "border-bottom": null,
+      "border-top": null
+    },
+    {
+      "background-color": null,
+      "color": "#000000",
+      "font-weight": null,
+      "font-name": "Liberation Sans1",
+      "border": null,
+      "border-bottom": "0.74pt solid #00ff00",
+      "border-top": "none"
+    }
+  ],
+  "samples": [
+    {
+      "case": "implicit",
+      "cells": [
+        {
+          "address": "A1",
+          "text": "A",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B1",
+          "text": "B",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C1",
+          "text": "C",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        }
+      ]
+    },
+    {
+      "case": "explicit_zero",
+      "cells": [
+        {
+          "address": "A1",
+          "text": "A",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B1",
+          "text": "B",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C1",
+          "text": "C",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        }
+      ]
+    },
+    {
+      "case": "bold",
+      "cells": [
+        {
+          "address": "A1",
+          "text": "A",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "B1",
+          "text": "B",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "C1",
+          "text": "C",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "A2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "B2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "C2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "A3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "B3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "C3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "A4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "B4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "C4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "A5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "B5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "C5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "A6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "B6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "C6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "A7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "B7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "C7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "A8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "B8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 1
+        },
+        {
+          "address": "C8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 1
+        }
+      ]
+    },
+    {
+      "case": "red_font",
+      "cells": [
+        {
+          "address": "A1",
+          "text": "A",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "B1",
+          "text": "B",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "C1",
+          "text": "C",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "A2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "B2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "C2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "A3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "B3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "C3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "A4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "B4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "C4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "A5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "B5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "C5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "A6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "B6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "C6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "A7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "B7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "C7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "A8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "B8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 2
+        },
+        {
+          "address": "C8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 2
+        }
+      ]
+    },
+    {
+      "case": "family",
+      "cells": [
+        {
+          "address": "A1",
+          "text": "A",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "B1",
+          "text": "B",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "C1",
+          "text": "C",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "A2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "B2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "C2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "A3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "B3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "C3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "A4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "B4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "C4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "A5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "B5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "C5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "A6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "B6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "C6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "A7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "B7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "C7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "A8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "B8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 3
+        },
+        {
+          "address": "C8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 3
+        }
+      ]
+    },
+    {
+      "case": "duplicate_font",
+      "cells": [
+        {
+          "address": "A1",
+          "text": "A",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "B1",
+          "text": "B",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "C1",
+          "text": "C",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "A2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "B2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "C2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "A3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "B3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "C3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "A4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "B4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "C4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "A5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "B5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "C5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "A6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "B6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "C6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "A7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "B7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "C7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "A8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "B8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 4
+        },
+        {
+          "address": "C8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 4
+        }
+      ]
+    },
+    {
+      "case": "red_fill",
+      "cells": [
+        {
+          "address": "A1",
+          "text": "A",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "B1",
+          "text": "B",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "C1",
+          "text": "C",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "A2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "B2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "C2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "A3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "B3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "C3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "A4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "B4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "C4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "A5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "B5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "C5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "A6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "B6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "C6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "A7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "B7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "C7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "A8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "B8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 5
+        },
+        {
+          "address": "C8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 5
+        }
+      ]
+    },
+    {
+      "case": "duplicate_none_fill",
+      "cells": [
+        {
+          "address": "A1",
+          "text": "A",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "B1",
+          "text": "B",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "C1",
+          "text": "C",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "A2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "B2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "C2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "A3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "B3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "C3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "A4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "B4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "C4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "A5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "B5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "C5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "A6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "B6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "C6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "A7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "B7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "C7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "A8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "B8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 6
+        },
+        {
+          "address": "C8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 6
+        }
+      ]
+    },
+    {
+      "case": "duplicate_empty_border",
+      "cells": [
+        {
+          "address": "A1",
+          "text": "A",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "B1",
+          "text": "B",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "C1",
+          "text": "C",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "A2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "B2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "C2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "A3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "B3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "C3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "A4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "B4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "C4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "A5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "B5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "C5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "A6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "B6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "C6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "A7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "B7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "C7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "A8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "B8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 7
+        },
+        {
+          "address": "C8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 7
+        }
+      ]
+    },
+    {
+      "case": "bottom_border",
+      "cells": [
+        {
+          "address": "A1",
+          "text": "A",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "B1",
+          "text": "B",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "C1",
+          "text": "C",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "A2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "B2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "C2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "A3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "B3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "C3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "A4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "B4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "C4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "A5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "B5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "C5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "A6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "B6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "C6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "A7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "B7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "C7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "A8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "B8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 8
+        },
+        {
+          "address": "C8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 8
+        }
+      ]
+    },
+    {
+      "case": "number_format",
+      "cells": [
+        {
+          "address": "A1",
+          "text": "A",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B1",
+          "text": "B",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C1",
+          "text": "C",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A2",
+          "text": "2.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B2",
+          "text": "2.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C2",
+          "text": "2.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A3",
+          "text": "3.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B3",
+          "text": "3.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C3",
+          "text": "3.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A4",
+          "text": "4.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B4",
+          "text": "4.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C4",
+          "text": "4.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A5",
+          "text": "5.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B5",
+          "text": "5.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C5",
+          "text": "5.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A6",
+          "text": "6.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B6",
+          "text": "6.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C6",
+          "text": "6.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A7",
+          "text": "7.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B7",
+          "text": "7.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C7",
+          "text": "7.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A8",
+          "text": "8.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B8",
+          "text": "8.00",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C8",
+          "text": "8.00",
+          "visibility": "visible",
+          "appearance": 0
+        }
+      ]
+    },
+    {
+      "case": "hidden_rows",
+      "cells": [
+        {
+          "address": "A1",
+          "text": "A",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B1",
+          "text": "B",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C1",
+          "text": "C",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A3",
+          "text": "3",
+          "visibility": "collapse",
+          "appearance": 0
+        },
+        {
+          "address": "B3",
+          "text": "3",
+          "visibility": "collapse",
+          "appearance": 0
+        },
+        {
+          "address": "C3",
+          "text": "3",
+          "visibility": "collapse",
+          "appearance": 0
+        },
+        {
+          "address": "A4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A5",
+          "text": "5",
+          "visibility": "collapse",
+          "appearance": 0
+        },
+        {
+          "address": "B5",
+          "text": "5",
+          "visibility": "collapse",
+          "appearance": 0
+        },
+        {
+          "address": "C5",
+          "text": "5",
+          "visibility": "collapse",
+          "appearance": 0
+        },
+        {
+          "address": "A6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        }
+      ]
+    },
+    {
+      "case": "hidden_column",
+      "cells": [
+        {
+          "address": "A1",
+          "text": "A",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B1",
+          "text": "B",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C1",
+          "text": "C",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        }
+      ]
+    },
+    {
+      "case": "both_stripes",
+      "cells": [
+        {
+          "address": "A1",
+          "text": "A",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B1",
+          "text": "B",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C1",
+          "text": "C",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        }
+      ]
+    },
+    {
+      "case": "no_header",
+      "cells": [
+        {
+          "address": "A1",
+          "text": "A",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B1",
+          "text": "B",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C1",
+          "text": "C",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        }
+      ]
+    },
+    {
+      "case": "no_totals",
+      "cells": [
+        {
+          "address": "A1",
+          "text": "A",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B1",
+          "text": "B",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C1",
+          "text": "C",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        }
+      ]
+    },
+    {
+      "case": "first_last",
+      "cells": [
+        {
+          "address": "A1",
+          "text": "A",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B1",
+          "text": "B",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C1",
+          "text": "C",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C2",
+          "text": "2",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C3",
+          "text": "3",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C4",
+          "text": "4",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C5",
+          "text": "5",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C6",
+          "text": "6",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C7",
+          "text": "7",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "A8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "B8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        },
+        {
+          "address": "C8",
+          "text": "8",
+          "visibility": "visible",
+          "appearance": 0
+        }
+      ]
+    }
+  ]
+}

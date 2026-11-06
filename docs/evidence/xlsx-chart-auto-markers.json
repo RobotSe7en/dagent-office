@@ -1,0 +1,1035 @@
+{
+  "scope": "Independent native explicit auto markers and producer observations.\n\nThe official Transitional schema permits auto; MS-OI29500 2.1.1588 leaves its\nshape to the application. The user selected Office semantics for the separate\nlegacy lineChart/marker Boolean: retain its value, ignore it for display.\n",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "sourceSha256": "71f71b7784c5f31f4c14c7ae4e695429612817c1ba045db3ad4178fbcb72a446",
+  "cases": [
+    {
+      "series": 1,
+      "symbol": "auto"
+    },
+    {
+      "series": 1,
+      "symbol": "circle",
+      "pointSymbol": "auto",
+      "pointSize": 20
+    },
+    {
+      "series": 1,
+      "symbol": "auto",
+      "pointSymbol": "diamond",
+      "pointSize": 20
+    },
+    {
+      "series": 1,
+      "symbol": "auto",
+      "pointSize": 24
+    },
+    {
+      "series": 1,
+      "symbol": "auto",
+      "pointPaint": "none"
+    },
+    {
+      "series": 2,
+      "symbol": "auto"
+    },
+    {
+      "series": 2,
+      "symbol": "auto",
+      "pointSymbol": "auto",
+      "pointSize": 20
+    },
+    {
+      "series": 1,
+      "symbol": "auto",
+      "pointSymbol": "none"
+    }
+  ],
+  "sourceMarkers": [
+    [
+      {
+        "series": {
+          "symbol": "auto",
+          "size": "10",
+          "appearance": [
+            [
+              "spPr",
+              {}
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "228833"
+              }
+            ],
+            [
+              "ln",
+              {
+                "w": "19050"
+              }
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "111111"
+              }
+            ]
+          ]
+        },
+        "points": []
+      }
+    ],
+    [
+      {
+        "series": {
+          "symbol": "circle",
+          "size": "10",
+          "appearance": [
+            [
+              "spPr",
+              {}
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "228833"
+              }
+            ],
+            [
+              "ln",
+              {
+                "w": "19050"
+              }
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "111111"
+              }
+            ]
+          ]
+        },
+        "points": [
+          {
+            "index": "1",
+            "marker": {
+              "symbol": "auto",
+              "size": "20",
+              "appearance": []
+            }
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "series": {
+          "symbol": "auto",
+          "size": "10",
+          "appearance": [
+            [
+              "spPr",
+              {}
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "228833"
+              }
+            ],
+            [
+              "ln",
+              {
+                "w": "19050"
+              }
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "111111"
+              }
+            ]
+          ]
+        },
+        "points": [
+          {
+            "index": "1",
+            "marker": {
+              "symbol": "diamond",
+              "size": "20",
+              "appearance": []
+            }
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "series": {
+          "symbol": "auto",
+          "size": "10",
+          "appearance": [
+            [
+              "spPr",
+              {}
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "228833"
+              }
+            ],
+            [
+              "ln",
+              {
+                "w": "19050"
+              }
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "111111"
+              }
+            ]
+          ]
+        },
+        "points": [
+          {
+            "index": "1",
+            "marker": {
+              "symbol": null,
+              "size": "24",
+              "appearance": []
+            }
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "series": {
+          "symbol": "auto",
+          "size": "10",
+          "appearance": [
+            [
+              "spPr",
+              {}
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "228833"
+              }
+            ],
+            [
+              "ln",
+              {
+                "w": "19050"
+              }
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "111111"
+              }
+            ]
+          ]
+        },
+        "points": [
+          {
+            "index": "1",
+            "marker": {
+              "symbol": null,
+              "size": null,
+              "appearance": [
+                [
+                  "spPr",
+                  {}
+                ],
+                [
+                  "noFill",
+                  {}
+                ],
+                [
+                  "ln",
+                  {
+                    "w": "19050"
+                  }
+                ],
+                [
+                  "solidFill",
+                  {}
+                ],
+                [
+                  "srgbClr",
+                  {
+                    "val": "0000FF"
+                  }
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "series": {
+          "symbol": "auto",
+          "size": "10",
+          "appearance": [
+            [
+              "spPr",
+              {}
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "228833"
+              }
+            ],
+            [
+              "ln",
+              {
+                "w": "19050"
+              }
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "111111"
+              }
+            ]
+          ]
+        },
+        "points": []
+      },
+      {
+        "series": {
+          "symbol": "auto",
+          "size": "10",
+          "appearance": [
+            [
+              "spPr",
+              {}
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "228833"
+              }
+            ],
+            [
+              "ln",
+              {
+                "w": "19050"
+              }
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "111111"
+              }
+            ]
+          ]
+        },
+        "points": []
+      }
+    ],
+    [
+      {
+        "series": {
+          "symbol": "auto",
+          "size": "10",
+          "appearance": [
+            [
+              "spPr",
+              {}
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "228833"
+              }
+            ],
+            [
+              "ln",
+              {
+                "w": "19050"
+              }
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "111111"
+              }
+            ]
+          ]
+        },
+        "points": [
+          {
+            "index": "1",
+            "marker": {
+              "symbol": "auto",
+              "size": "20",
+              "appearance": []
+            }
+          }
+        ]
+      },
+      {
+        "series": {
+          "symbol": "auto",
+          "size": "10",
+          "appearance": [
+            [
+              "spPr",
+              {}
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "228833"
+              }
+            ],
+            [
+              "ln",
+              {
+                "w": "19050"
+              }
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "111111"
+              }
+            ]
+          ]
+        },
+        "points": [
+          {
+            "index": "1",
+            "marker": {
+              "symbol": "auto",
+              "size": "20",
+              "appearance": []
+            }
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "series": {
+          "symbol": "auto",
+          "size": "10",
+          "appearance": [
+            [
+              "spPr",
+              {}
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "228833"
+              }
+            ],
+            [
+              "ln",
+              {
+                "w": "19050"
+              }
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "111111"
+              }
+            ]
+          ]
+        },
+        "points": [
+          {
+            "index": "1",
+            "marker": {
+              "symbol": "none",
+              "size": null,
+              "appearance": []
+            }
+          }
+        ]
+      }
+    ]
+  ],
+  "producerMarkers": [
+    [
+      {
+        "series": null,
+        "points": []
+      }
+    ],
+    [
+      {
+        "series": {
+          "symbol": "circle",
+          "size": "10",
+          "appearance": [
+            [
+              "spPr",
+              {}
+            ],
+            [
+              "solidFill",
+              {}
+            ],
+            [
+              "srgbClr",
+              {
+                "val": "4472c4"
+              }
+            ]
+          ]
+        },
+        "points": [
+          {
+            "index": "1",
+            "marker": null
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "series": null,
+        "points": [
+          {
+            "index": "1",
+            "marker": {
+              "symbol": "diamond",
+              "size": "20",
+              "appearance": [
+                [
+                  "spPr",
+                  {}
+                ],
+                [
+                  "solidFill",
+                  {}
+                ],
+                [
+                  "srgbClr",
+                  {
+                    "val": "4472c4"
+                  }
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "series": null,
+        "points": [
+          {
+            "index": "1",
+            "marker": null
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "series": null,
+        "points": [
+          {
+            "index": "1",
+            "marker": null
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "series": null,
+        "points": []
+      },
+      {
+        "series": null,
+        "points": []
+      }
+    ],
+    [
+      {
+        "series": null,
+        "points": [
+          {
+            "index": "1",
+            "marker": null
+          }
+        ]
+      },
+      {
+        "series": null,
+        "points": [
+          {
+            "index": "1",
+            "marker": null
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "series": null,
+        "points": [
+          {
+            "index": "1",
+            "marker": {
+              "symbol": "none",
+              "size": null,
+              "appearance": []
+            }
+          }
+        ]
+      }
+    ]
+  ],
+  "sourceLegacyFlags": [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    []
+  ],
+  "producerLegacyFlags": [
+    [
+      {
+        "val": "1"
+      }
+    ],
+    [
+      {
+        "val": "1"
+      }
+    ],
+    [
+      {
+        "val": "1"
+      }
+    ],
+    [
+      {
+        "val": "1"
+      }
+    ],
+    [
+      {
+        "val": "1"
+      }
+    ],
+    [
+      {
+        "val": "1"
+      }
+    ],
+    [
+      {
+        "val": "1"
+      }
+    ],
+    [
+      {
+        "val": "1"
+      }
+    ]
+  ],
+  "pdfObservations": [
+    {
+      "kind": "line",
+      "series": 1,
+      "symbol": "auto",
+      "producer": {
+        "vary": [
+          {
+            "val": "0"
+          }
+        ],
+        "series": [
+          {
+            "index": "0",
+            "fill": "4472c4",
+            "points": []
+          }
+        ],
+        "pdfWords": {
+          "One": 1,
+          "Series1": 1,
+          "Three": 1,
+          "Two": 1
+        },
+        "pdfFillColors": [
+          "4472c4"
+        ]
+      }
+    },
+    {
+      "kind": "line",
+      "series": 1,
+      "symbol": "circle",
+      "pointSymbol": "auto",
+      "pointSize": 20,
+      "producer": {
+        "vary": [
+          {
+            "val": "0"
+          }
+        ],
+        "series": [
+          {
+            "index": "0",
+            "fill": "4472c4",
+            "points": [
+              {
+                "index": "1",
+                "colors": [],
+                "marker": null
+              }
+            ]
+          }
+        ],
+        "pdfWords": {
+          "One": 1,
+          "Series1": 1,
+          "Three": 1,
+          "Two": 1
+        },
+        "pdfFillColors": [
+          "4472c4"
+        ]
+      }
+    },
+    {
+      "kind": "line",
+      "series": 1,
+      "symbol": "auto",
+      "pointSymbol": "diamond",
+      "pointSize": 20,
+      "producer": {
+        "vary": [
+          {
+            "val": "0"
+          }
+        ],
+        "series": [
+          {
+            "index": "0",
+            "fill": "4472c4",
+            "points": [
+              {
+                "index": "1",
+                "colors": [
+                  {
+                    "val": "4472c4"
+                  }
+                ],
+                "marker": "diamond"
+              }
+            ]
+          }
+        ],
+        "pdfWords": {
+          "One": 1,
+          "Series1": 1,
+          "Three": 1,
+          "Two": 1
+        },
+        "pdfFillColors": [
+          "4472c4"
+        ]
+      }
+    },
+    {
+      "kind": "line",
+      "series": 1,
+      "symbol": "auto",
+      "pointSize": 24,
+      "producer": {
+        "vary": [
+          {
+            "val": "0"
+          }
+        ],
+        "series": [
+          {
+            "index": "0",
+            "fill": "4472c4",
+            "points": [
+              {
+                "index": "1",
+                "colors": [],
+                "marker": null
+              }
+            ]
+          }
+        ],
+        "pdfWords": {
+          "One": 1,
+          "Series1": 1,
+          "Three": 1,
+          "Two": 1
+        },
+        "pdfFillColors": [
+          "4472c4"
+        ]
+      }
+    },
+    {
+      "kind": "line",
+      "series": 1,
+      "symbol": "auto",
+      "pointPaint": "none",
+      "producer": {
+        "vary": [
+          {
+            "val": "0"
+          }
+        ],
+        "series": [
+          {
+            "index": "0",
+            "fill": "4472c4",
+            "points": [
+              {
+                "index": "1",
+                "colors": [],
+                "marker": null
+              }
+            ]
+          }
+        ],
+        "pdfWords": {
+          "One": 1,
+          "Series1": 1,
+          "Three": 1,
+          "Two": 1
+        },
+        "pdfFillColors": [
+          "4472c4"
+        ]
+      }
+    },
+    {
+      "kind": "line",
+      "series": 2,
+      "symbol": "auto",
+      "producer": {
+        "vary": [
+          {
+            "val": "0"
+          }
+        ],
+        "series": [
+          {
+            "index": "0",
+            "fill": "4472c4",
+            "points": []
+          },
+          {
+            "index": "1",
+            "fill": "ed7d31",
+            "points": []
+          }
+        ],
+        "pdfWords": {
+          "One": 1,
+          "Series1": 1,
+          "Series2": 1,
+          "Three": 1,
+          "Two": 1
+        },
+        "pdfFillColors": [
+          "4472c4",
+          "ed7d31"
+        ]
+      }
+    },
+    {
+      "kind": "line",
+      "series": 2,
+      "symbol": "auto",
+      "pointSymbol": "auto",
+      "pointSize": 20,
+      "producer": {
+        "vary": [
+          {
+            "val": "0"
+          }
+        ],
+        "series": [
+          {
+            "index": "0",
+            "fill": "4472c4",
+            "points": [
+              {
+                "index": "1",
+                "colors": [],
+                "marker": null
+              }
+            ]
+          },
+          {
+            "index": "1",
+            "fill": "ed7d31",
+            "points": [
+              {
+                "index": "1",
+                "colors": [],
+                "marker": null
+              }
+            ]
+          }
+        ],
+        "pdfWords": {
+          "One": 1,
+          "Series1": 1,
+          "Series2": 1,
+          "Three": 1,
+          "Two": 1
+        },
+        "pdfFillColors": [
+          "4472c4",
+          "ed7d31"
+        ]
+      }
+    },
+    {
+      "kind": "line",
+      "series": 1,
+      "symbol": "auto",
+      "pointSymbol": "none",
+      "producer": {
+        "vary": [
+          {
+            "val": "0"
+          }
+        ],
+        "series": [
+          {
+            "index": "0",
+            "fill": "4472c4",
+            "points": [
+              {
+                "index": "1",
+                "colors": [],
+                "marker": "none"
+              }
+            ]
+          }
+        ],
+        "pdfWords": {
+          "One": 1,
+          "Series1": 1,
+          "Three": 1,
+          "Two": 1
+        },
+        "pdfFillColors": [
+          "4472c4"
+        ]
+      }
+    }
+  ],
+  "limits": [
+    "Auto shape selection is application-owned, not a claim of matching Excel, WPS or Calc.",
+    "SDK source retains auto rather than replacing it with the preview shape.",
+    "Calc drops explicit auto series and point markers, including size and appearance in these probes; this is recorded as loss, not source fidelity.",
+    "Calc writes lineChart/marker=true after removing explicit auto. The SDK retains it without restoring discarded marker settings; public source and producer package reopen are checked separately.",
+    "The older lineChart/marker Boolean follows the selected Office semantics: it neither synthesizes nor suppresses explicit series or point markers.",
+    "No whole-chart layout, font geometry or pixel equivalence is claimed."
+  ]
+}

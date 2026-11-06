@@ -1,0 +1,158 @@
+{
+  "scope": "Independent classic note sources with VML and commentPr boxes.\n\nThe selected display source is VML. Both mapped native sources and property\ndifferences are retained; Calc resave losses are recorded independently.\n",
+  "baseSha256": "4e916b0f4883d663e1058ddd622305059823ab54c9ffdb4a8d1edc08e26ba09d",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "fontManifest": [
+    {
+      "file": "LiberationSans-Regular.ttf",
+      "sha256": "4659bc0c58c5028dd488ec928d41d9265db43d9b669fc14ca8b0832daca7b144"
+    },
+    {
+      "file": "LiberationSans-Bold.ttf",
+      "sha256": "3973aa5054fb467dd5627245d3dc82e37bf16fe075756156a570455871351582"
+    },
+    {
+      "file": "NotoSansCJK-Regular.ttc",
+      "sha256": "b76b0433203017ca80401b2ee0dd69350349871c4b19d504c34dbdd80541690a"
+    },
+    {
+      "file": "NotoSansCJK-Bold.ttc",
+      "sha256": "faa5f3656a78b2e2d450d27fe8382c778bc2b6bb5ea29c986664a6a435056ceb"
+    },
+    {
+      "file": "NotoColorEmoji.ttf",
+      "sha256": "ede3ac600162ca750e2aba610285f06f30d8c0dd198bcec1d53cb6efe660306c"
+    }
+  ],
+  "cases": [
+    {
+      "case": "conflict",
+      "sourceSha256": "444d53730451a6b7131e5847a8ee00381fb31c8ee4197f5b946c40e4a17adf12",
+      "source": {
+        "commentCells": [
+          "B2"
+        ],
+        "commentPr": [
+          "<ns0:commentPr xmlns:ns0=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:ns1=\"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing\" print=\"0\" autoFill=\"0\" altText=\"备用备注框😀\" textHAlign=\"center\" textVAlign=\"bottom\"><ns0:anchor moveWithCells=\"1\" sizeWithCells=\"0\"><ns1:from><ns1:col>3</ns1:col><ns1:colOff>0</ns1:colOff><ns1:row>2</ns1:row><ns1:rowOff>0</ns1:rowOff></ns1:from><ns1:to><ns1:col>7</ns1:col><ns1:colOff>127000</ns1:colOff><ns1:row>8</ns1:row><ns1:rowOff>25400</ns1:rowOff></ns1:to></ns0:anchor></ns0:commentPr>"
+        ],
+        "vml": [
+          {
+            "anchor": "2, 10, 1, 2, 5, 20, 5, 4",
+            "visible": false
+          }
+        ]
+      },
+      "producer": {
+        "commentCells": [
+          "B2"
+        ],
+        "commentPr": [
+          null
+        ],
+        "vml": [
+          {
+            "anchor": "2, 10, 1, 2, 5, 20, 5, 4",
+            "visible": false
+          }
+        ]
+      }
+    },
+    {
+      "case": "same-anchor",
+      "sourceSha256": "100f21888d526a2cdf51ff363798bf65ad24e5f16bf7b1af1b92aafa787890db",
+      "source": {
+        "commentCells": [
+          "B2"
+        ],
+        "commentPr": [
+          "<ns0:commentPr xmlns:ns0=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:ns1=\"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing\" print=\"0\" autoFill=\"0\" altText=\"备用备注框😀\" textHAlign=\"center\" textVAlign=\"bottom\"><ns0:anchor moveWithCells=\"1\" sizeWithCells=\"1\"><ns1:from><ns1:col>2</ns1:col><ns1:colOff>95250</ns1:colOff><ns1:row>1</ns1:row><ns1:rowOff>19050</ns1:rowOff></ns1:from><ns1:to><ns1:col>5</ns1:col><ns1:colOff>190500</ns1:colOff><ns1:row>5</ns1:row><ns1:rowOff>38100</ns1:rowOff></ns1:to></ns0:anchor></ns0:commentPr>"
+        ],
+        "vml": [
+          {
+            "anchor": "2, 10, 1, 2, 5, 20, 5, 4",
+            "visible": false
+          }
+        ]
+      },
+      "producer": {
+        "commentCells": [
+          "B2"
+        ],
+        "commentPr": [
+          null
+        ],
+        "vml": [
+          {
+            "anchor": "2, 10, 1, 2, 5, 20, 5, 4",
+            "visible": false
+          }
+        ]
+      }
+    },
+    {
+      "case": "visible",
+      "sourceSha256": "e6bfeb4325349e20d1fe5f1ceb1da9cc535f0332bc2f12f766b017c117bc22f4",
+      "source": {
+        "commentCells": [
+          "B2"
+        ],
+        "commentPr": [
+          "<ns0:commentPr xmlns:ns0=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:ns1=\"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing\" print=\"0\" autoFill=\"0\" altText=\"备用备注框😀\" textHAlign=\"center\" textVAlign=\"bottom\"><ns0:anchor moveWithCells=\"1\" sizeWithCells=\"0\"><ns1:from><ns1:col>3</ns1:col><ns1:colOff>0</ns1:colOff><ns1:row>2</ns1:row><ns1:rowOff>0</ns1:rowOff></ns1:from><ns1:to><ns1:col>7</ns1:col><ns1:colOff>127000</ns1:colOff><ns1:row>8</ns1:row><ns1:rowOff>25400</ns1:rowOff></ns1:to></ns0:anchor></ns0:commentPr>"
+        ],
+        "vml": [
+          {
+            "anchor": "2, 10, 1, 2, 5, 20, 5, 4",
+            "visible": true
+          }
+        ]
+      },
+      "producer": {
+        "commentCells": [
+          "B2"
+        ],
+        "commentPr": [
+          null
+        ],
+        "vml": [
+          {
+            "anchor": "2, 10, 0, 22, 5, 20, 4, 18",
+            "visible": true
+          }
+        ]
+      }
+    },
+    {
+      "case": "commentPr-only",
+      "sourceSha256": "d53103782c6787adef63b6bcd44a5ffe778088bfaa35f9e27ad15fbfada9412a",
+      "source": {
+        "commentCells": [
+          "B2"
+        ],
+        "commentPr": [
+          "<ns0:commentPr xmlns:ns0=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:ns1=\"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing\" print=\"0\" autoFill=\"0\" altText=\"备用备注框😀\" textHAlign=\"center\" textVAlign=\"bottom\"><ns0:anchor moveWithCells=\"1\" sizeWithCells=\"0\"><ns1:from><ns1:col>3</ns1:col><ns1:colOff>0</ns1:colOff><ns1:row>2</ns1:row><ns1:rowOff>0</ns1:rowOff></ns1:from><ns1:to><ns1:col>7</ns1:col><ns1:colOff>127000</ns1:colOff><ns1:row>8</ns1:row><ns1:rowOff>25400</ns1:rowOff></ns1:to></ns0:anchor></ns0:commentPr>"
+        ],
+        "vml": []
+      },
+      "producer": {
+        "commentCells": [
+          "B2"
+        ],
+        "commentPr": [
+          null
+        ],
+        "vml": [
+          {
+            "anchor": "2, 23, 0, 0, 3, 35, 2, 0",
+            "visible": true
+          }
+        ]
+      }
+    }
+  ],
+  "limits": [
+    "Office implementation notes say Excel rejects commentPr; the user selected VML priority, not an inferred Excel precedence.",
+    "Calc resave may discard commentPr or replace its geometry; source retention and producer reopen are separate checks.",
+    "No Excel/WPS machine acceptance or complete classic-box appearance comparison is claimed."
+  ]
+}

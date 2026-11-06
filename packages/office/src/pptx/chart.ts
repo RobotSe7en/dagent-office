@@ -1,67 +1,13 @@
 import type { PresentationChart, PresentationDataSet } from "@dagent-office/core";
 import { A, attr, C, check, child, elements, fail, R, text, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
-import type { Css } from "../ooxml/styles.js";
-import { bool, Context, integer, value } from "./context.js";
+import { Context, integer, value } from "./context.js";
 import type { Html } from "./context.js";
-import { effects, fill, outline } from "./styles.js";
-import { importText, paragraphProperties, runProperties } from "./text.js";
+import { importText } from "./text.js";
+import { val, flag, decimal, textStyle, style, noLayout, labels, labelStyle, axisStyle } from "../drawingml/chart-style.js";
+import { chartMarker, chartMarkerFlag } from "../drawingml/chart-marker.js";
 import { cachedVector, constants } from "./workbook.js";
 
-function val(node: XmlNode | undefined, name: string, fallback?: string): string | undefined { return value(child(node, name, C)) ?? fallback; }
-function flag(node: XmlNode | undefined, name: string, fallback = false): boolean { const source = child(node, name, C); return source ? bool(source, "val", true) : fallback; }
-function decimal(node: XmlNode, name: string): number | undefined {
-  const property = child(node, name, C);
-  if (!property) return undefined;
-  const source = value(property), n = Number(source);
-  if (!source?.trim() || !Number.isFinite(n)) fail(property, "A chart numeric option is invalid.");
-  return n;
-}
-function appearance(node: XmlNode | undefined): Css {
-  if (!node) return {};
-  check(node, ["noFill", "solidFill", "gradFill", "ln", "effectLst", "extLst"], A);
-  return { ...fill(node), ...outline(child(node, "ln", A)), ...effects(child(node, "effectLst", A)) };
-}
-function textStyle(node: XmlNode | undefined): Css {
-  if (!node) return {};
-  const p = child(node, "p", A);
-  return { ...paragraphProperties(child(p, "pPr", A)), ...runProperties(child(p, "endParaRPr", A)) };
-}
-function style(context: Context, source: XmlNode | undefined, prefix: string, extra: Css = {}): string {
-  const name = context.id(prefix);
-  context.rule(name, { ...appearance(child(source, "spPr", C)), ...textStyle(child(source, "txPr", C)), ...extra }); return name;
-}
-function noLayout(node: XmlNode | undefined): void {
-  const layout = child(node, "layout", C);
-  if (layout && elements(layout, undefined, C).length) unsupported(layout, "Manual chart layout is outside the basic chart scope.");
-}
-function labels(node: XmlNode | undefined, defaults: NonNullable<PresentationChart["labelContents"]> = []): NonNullable<PresentationChart["labelContents"]> {
-  if (!node) return defaults;
-  check(node, ["dLbl", "delete", "numFmt", "spPr", "txPr", "dLblPos", "showLegendKey", "showVal", "showCatName", "showSerName", "showPercent", "showBubbleSize", "separator", "showLeaderLines", "leaderLines", "extLst"], C);
-  if (flag(node, "delete")) return [];
-  if (flag(node, "showLegendKey") || flag(node, "showBubbleSize")) unsupported(node, "Legend keys and bubble labels are not supported.");
-  const result: NonNullable<PresentationChart["labelContents"]> = [];
-  for (const [name, kind] of [["showVal", "value"], ["showCatName", "category"], ["showSerName", "series"], ["showPercent", "percent"]] as const) if (flag(node, name, defaults.includes(kind))) result.push(kind);
-  for (const point of elements(node, "dLbl", C)) {
-    const selected = labels({ ...point, content: point.content.filter(n => typeof n === "string" || n.uri !== C || n.name !== "idx") }, result);
-    if (JSON.stringify(selected) !== JSON.stringify(result)) unsupported(point, "Per-point label visibility is outside the basic chart scope.");
-  }
-  return result;
-}
-function cssString(value: string): string { return '"' + value.replace(/["\\\u0000-\u001f\u007f]/g, c => c === '"' || c === "\\" ? "\\" + c : "\\" + c.charCodeAt(0).toString(16) + " ") + '"'; }
-function labelStyle(context: Context, source: XmlNode | undefined): string | undefined {
-  if (!source) return undefined;
-  const css: Css = {}, format = child(source, "numFmt", C), separator = child(source, "separator", C), position = val(source, "dLblPos");
-  if (format && value(format, "formatCode") !== undefined) css["--office-label-number-format"] = cssString(value(format, "formatCode")!);
-  if (separator) css["--office-label-separator"] = cssString(text(separator));
-  if (position) css["--office-label-position"] = position;
-  return style(context, source, "chart-label-style", css);
-}
-function axisStyle(context: Context, source: XmlNode, prefix: string): string {
-  const css: Css = {};
-  for (const [name, key, fallback] of [["axPos", "position", source.name === "catAx" ? "b" : "l"], ["majorTickMark", "major-tick", "cross"], ["minorTickMark", "minor-tick", "cross"], ["tickLblPos", "label-position", "nextTo"], ["crosses", "crosses", "autoZero"], ["lblAlgn", "label-align", "ctr"], ["lblOffset", "label-offset", "100"], ["tickLblSkip", "label-skip", "1"], ["tickMarkSkip", "tick-skip", "1"], ["crossBetween", "cross-between", "between"], ["minorUnit", "minor-unit", "auto"]]) if (child(source, name!, C)) css["--office-axis-" + key] = val(source, name!, fallback!)!;
-  return style(context, source, prefix, css);
-}
 export function importChart(context: Context, reference: XmlNode, frame: Html): string {
   const path = context.relation(reference.part, attr(reference, "id", R), "chart").target;
   const source = context.part(path, "drawingml.chart", "chartSpace", C);
@@ -90,6 +36,10 @@ export function importChart(context: Context, reference: XmlNode, frame: Html): 
   const highLow = child(native, "hiLowLines", C);
   if (highLow && !child(child(child(highLow, "spPr", C), "ln", A), "noFill", A)) unsupported(highLow, "High/low chart lines are not supported.");
   const id = context.id("chart"), definition: PresentationChart = { chartId: id, nodeId: frame.attrs["data-node-id"]!, dataSetId: "", kind, legend: "none", showLabels: false };
+  const markerFlags = kind === "line" ? elements(native, "marker", C) : [];
+  if (markerFlags.length > 1) fail(native, "A chart marker flag is repeated.");
+  const markerFlag = chartMarkerFlag(markerFlags[0]);
+  if (markerFlag !== undefined) definition.nativeShowMarkers = markerFlag;
   const series = elements(native, "ser", C);
   if (!series.length || kind === "pie" && series.length !== 1) unsupported(native, "This chart series arrangement is not supported.");
   context.count(series.length);
@@ -123,17 +73,16 @@ export function importChart(context: Context, reference: XmlNode, frame: Html): 
     }
     const seriesId = "series-" + index;
     data.series.push({ seriesId, name, values: numbers });
-    const marker = child(s, "marker", C), symbol = val(marker, "symbol", kind === "line" ? "none" : "none")!;
-    if (!["none", "circle", "square", "diamond", "triangle", "x", "star", "plus", "dot", "dash"].includes(symbol)) unsupported(marker ?? s, "This chart marker is not supported.");
-    const markerSize = decimal(marker ?? s, "size") ?? 5;
-    const seriesCss = style(context, s, "series-style", { "--office-invert-negative": String(flag(s, "invertIfNegative")) });
+    const { css: markerCss, ...marker } = chartMarker(child(s, "marker", C));
+    const seriesCss = style(context, s, "series-style", { ...markerCss, "--office-invert-negative": String(flag(s, "invertIfNegative")) });
     const seriesLabel = child(s, "dLbls", C), labelCssClass = labelStyle(context, seriesLabel);
-    definition.seriesStyles.push({ seriesId, cssClass: seriesCss, marker: symbol as NonNullable<PresentationChart["seriesStyles"]>[number]["marker"] & string, markerSize, ...(labelCssClass ? { labelCssClass } : {}) });
+    definition.seriesStyles.push({ seriesId, cssClass: seriesCss, marker: marker.marker ?? "none", markerSize: marker.markerSize ?? 5, ...(labelCssClass ? { labelCssClass } : {}) });
     for (const point of elements(s, "dPt", C)) {
       check(point, ["idx", "invertIfNegative", "marker", "bubble3D", "explosion", "spPr", "extLst"], C);
-      if ((decimal(point, "explosion") ?? 0) !== 0 || flag(point, "bubble3D") || child(point, "marker", C)) unsupported(point, "This point override is outside the basic chart scope.");
+      if ((decimal(point, "explosion") ?? 0) !== 0 || flag(point, "bubble3D")) unsupported(point, "This point override is outside the basic chart scope.");
       const pointIndex = integer(child(point, "idx", C) ?? point, "val");
-      definition.pointStyles.push({ seriesId, index: pointIndex, cssClass: style(context, point, "point-style") });
+      const { css, ...marker } = chartMarker(child(point, "marker", C));
+      definition.pointStyles.push({ seriesId, index: pointIndex, ...marker, cssClass: style(context, point, "point-style", css) });
     }
     const label = labels(seriesLabel, globalLabelContents);
     for (const pointLabel of elements(seriesLabel ?? globalLabels, "dLbl", C)) {
@@ -187,12 +136,15 @@ export function importChart(context: Context, reference: XmlNode, frame: Html): 
   for (const axis of axes) {
     check(axis, ["axId", "scaling", "delete", "axPos", "majorGridlines", "minorGridlines", "title", "numFmt", "majorTickMark", "minorTickMark", "tickLblPos", "spPr", "txPr", "crossAx", "crosses", "crossesAt", "auto", "lblAlgn", "lblOffset", "tickLblSkip", "tickMarkSkip", "noMultiLvlLbl", "crossBetween", "majorUnit", "minorUnit", "extLst"], C);
     const axisId = val(axis, "axId"); if (!axisId || axisIds.has(axisId)) fail(axis, "Chart axis identities are missing or duplicated."); axisIds.add(axisId);
-    if (child(axis, "title", C) || child(axis, "minorGridlines", C) || child(axis, "crossesAt", C)) unsupported(axis, "Axis titles, minor grid lines and custom crossing points are not supported.");
+    if (child(axis, "title", C) || child(axis, "minorGridlines", C)) unsupported(axis, "Axis titles and minor grid lines are not supported.");
     const scaling = child(axis, "scaling", C);
     check(scaling, ["orientation", "max", "min", "logBase", "extLst"], C);
     if (child(scaling, "logBase", C)) unsupported(axis, "Logarithmic axes are not supported.");
     const reverse = val(scaling, "orientation", "minMax") === "maxMin";
-    if (axis.name === "catAx") { definition.categoryAxisCssClass = axisStyle(context, axis, "chart-category-axis"); definition.showCategoryAxis = !flag(axis, "delete"); definition.reverseCategories = reverse; }
+    if (axis.name === "catAx") {
+      definition.categoryAxisCssClass = axisStyle(context, axis, "chart-category-axis"); definition.showCategoryAxis = !flag(axis, "delete"); definition.reverseCategories = reverse;
+      const grid = child(axis, "majorGridlines", C); if (grid) definition.categoryGridCssClass = style(context, grid, "chart-category-grid-style");
+    }
     else {
       definition.valueAxisCssClass = axisStyle(context, axis, "chart-value-axis"); definition.showValueAxis = !flag(axis, "delete"); definition.reverseValues = reverse;
       for (const [native, key] of [["min", "minimum"], ["max", "maximum"]] as const) { const n = scaling && decimal(scaling, native); if (n !== undefined) definition[key] = n; }

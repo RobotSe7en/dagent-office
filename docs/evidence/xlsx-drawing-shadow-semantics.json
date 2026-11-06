@@ -1,0 +1,524 @@
+{
+  "scope": "Unblurred outer-shadow offsets only. Pinned Calc ignores the source rotate-with-shape flag in these cases; Excel/WPS and SDK effects are unverified.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "sourceSha256": "a6134380181d2f501848afe041dd2a98787bf16865337d06a6c44a00d75e50e1",
+  "fontManifest": {
+    "source": "examples/xlsx/reference.json#environment.fonts",
+    "sha256": "bda037c50b31e342e0e460755840725d14dd8bfaeccca8de54269277342a5119"
+  },
+  "cases": [
+    {
+      "rotation": 0,
+      "flipH": false,
+      "flipV": false,
+      "rotateWithShape": false,
+      "direction": 0,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          14.999837,
+          0.0
+        ],
+        "pdfScale": 0.998535158,
+        "resavedRotateWithShape": "0"
+      }
+    },
+    {
+      "rotation": 0,
+      "flipH": false,
+      "flipV": false,
+      "rotateWithShape": false,
+      "direction": 90,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          0.0,
+          15.001141
+        ],
+        "pdfScale": 0.998535158,
+        "resavedRotateWithShape": "0"
+      }
+    },
+    {
+      "rotation": 0,
+      "flipH": false,
+      "flipV": false,
+      "rotateWithShape": true,
+      "direction": 0,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          14.999837,
+          0.0
+        ],
+        "pdfScale": 0.998535158,
+        "resavedRotateWithShape": "1"
+      }
+    },
+    {
+      "rotation": 0,
+      "flipH": false,
+      "flipV": false,
+      "rotateWithShape": true,
+      "direction": 90,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          0.0,
+          15.001141
+        ],
+        "pdfScale": 0.998535158,
+        "resavedRotateWithShape": "1"
+      }
+    },
+    {
+      "rotation": 0,
+      "flipH": true,
+      "flipV": false,
+      "rotateWithShape": false,
+      "direction": 0,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          14.999837,
+          0.0
+        ],
+        "pdfScale": 0.998535158,
+        "resavedRotateWithShape": "0"
+      }
+    },
+    {
+      "rotation": 0,
+      "flipH": true,
+      "flipV": false,
+      "rotateWithShape": false,
+      "direction": 90,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          0.0,
+          15.001141
+        ],
+        "pdfScale": 0.998535158,
+        "resavedRotateWithShape": "0"
+      }
+    },
+    {
+      "rotation": 0,
+      "flipH": true,
+      "flipV": false,
+      "rotateWithShape": true,
+      "direction": 0,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          14.999837,
+          0.0
+        ],
+        "pdfScale": 0.998535158,
+        "resavedRotateWithShape": "1"
+      }
+    },
+    {
+      "rotation": 0,
+      "flipH": true,
+      "flipV": false,
+      "rotateWithShape": true,
+      "direction": 90,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          0.0,
+          15.001141
+        ],
+        "pdfScale": 0.998535158,
+        "resavedRotateWithShape": "1"
+      }
+    },
+    {
+      "rotation": 0,
+      "flipH": false,
+      "flipV": true,
+      "rotateWithShape": false,
+      "direction": 0,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          14.999837,
+          0.0
+        ],
+        "pdfScale": 0.998535158,
+        "resavedRotateWithShape": "0"
+      }
+    },
+    {
+      "rotation": 0,
+      "flipH": false,
+      "flipV": true,
+      "rotateWithShape": false,
+      "direction": 90,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          0.0,
+          14.999837
+        ],
+        "pdfScale": 0.998535158,
+        "resavedRotateWithShape": "0"
+      }
+    },
+    {
+      "rotation": 0,
+      "flipH": false,
+      "flipV": true,
+      "rotateWithShape": true,
+      "direction": 0,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          14.999837,
+          0.0
+        ],
+        "pdfScale": 0.998535158,
+        "resavedRotateWithShape": "1"
+      }
+    },
+    {
+      "rotation": 0,
+      "flipH": false,
+      "flipV": true,
+      "rotateWithShape": true,
+      "direction": 90,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          0.0,
+          14.999837
+        ],
+        "pdfScale": 0.998535158,
+        "resavedRotateWithShape": "1"
+      }
+    },
+    {
+      "rotation": 0,
+      "flipH": true,
+      "flipV": true,
+      "rotateWithShape": false,
+      "direction": 0,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          14.999837,
+          0.0
+        ],
+        "pdfScale": 0.998535158,
+        "resavedRotateWithShape": "0"
+      }
+    },
+    {
+      "rotation": 0,
+      "flipH": true,
+      "flipV": true,
+      "rotateWithShape": false,
+      "direction": 90,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          0.0,
+          14.999837
+        ],
+        "pdfScale": 0.998535158,
+        "resavedRotateWithShape": "0"
+      }
+    },
+    {
+      "rotation": 0,
+      "flipH": true,
+      "flipV": true,
+      "rotateWithShape": true,
+      "direction": 0,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          14.999837,
+          0.0
+        ],
+        "pdfScale": 0.998535158,
+        "resavedRotateWithShape": "1"
+      }
+    },
+    {
+      "rotation": 0,
+      "flipH": true,
+      "flipV": true,
+      "rotateWithShape": true,
+      "direction": 90,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          0.0,
+          14.999837
+        ],
+        "pdfScale": 0.998535158,
+        "resavedRotateWithShape": "1"
+      }
+    },
+    {
+      "rotation": 30,
+      "flipH": false,
+      "flipV": false,
+      "rotateWithShape": false,
+      "direction": 0,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          14.999625,
+          0.0
+        ],
+        "pdfScale": 0.998505824,
+        "resavedRotateWithShape": "0"
+      }
+    },
+    {
+      "rotation": 30,
+      "flipH": false,
+      "flipV": false,
+      "rotateWithShape": false,
+      "direction": 90,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          0.0,
+          15.000278
+        ],
+        "pdfScale": 0.998505824,
+        "resavedRotateWithShape": "0"
+      }
+    },
+    {
+      "rotation": 30,
+      "flipH": false,
+      "flipV": false,
+      "rotateWithShape": true,
+      "direction": 0,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          14.999625,
+          0.0
+        ],
+        "pdfScale": 0.998505824,
+        "resavedRotateWithShape": "1"
+      }
+    },
+    {
+      "rotation": 30,
+      "flipH": false,
+      "flipV": false,
+      "rotateWithShape": true,
+      "direction": 90,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          0.0,
+          15.000278
+        ],
+        "pdfScale": 0.998505824,
+        "resavedRotateWithShape": "1"
+      }
+    },
+    {
+      "rotation": 30,
+      "flipH": true,
+      "flipV": false,
+      "rotateWithShape": false,
+      "direction": 0,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          15.000099,
+          0.0
+        ],
+        "pdfScale": 0.998517737,
+        "resavedRotateWithShape": "0"
+      }
+    },
+    {
+      "rotation": 30,
+      "flipH": true,
+      "flipV": false,
+      "rotateWithShape": false,
+      "direction": 90,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          0.0,
+          14.998795
+        ],
+        "pdfScale": 0.998517737,
+        "resavedRotateWithShape": "0"
+      }
+    },
+    {
+      "rotation": 30,
+      "flipH": true,
+      "flipV": false,
+      "rotateWithShape": true,
+      "direction": 0,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          15.000099,
+          0.0
+        ],
+        "pdfScale": 0.998517737,
+        "resavedRotateWithShape": "1"
+      }
+    },
+    {
+      "rotation": 30,
+      "flipH": true,
+      "flipV": false,
+      "rotateWithShape": true,
+      "direction": 90,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          0.0,
+          14.998795
+        ],
+        "pdfScale": 0.998517737,
+        "resavedRotateWithShape": "1"
+      }
+    },
+    {
+      "rotation": 30,
+      "flipH": false,
+      "flipV": true,
+      "rotateWithShape": false,
+      "direction": 0,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          15.000522,
+          0.0
+        ],
+        "pdfScale": 0.998489544,
+        "resavedRotateWithShape": "0"
+      }
+    },
+    {
+      "rotation": 30,
+      "flipH": false,
+      "flipV": true,
+      "rotateWithShape": false,
+      "direction": 90,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          0.0,
+          15.000522
+        ],
+        "pdfScale": 0.998489544,
+        "resavedRotateWithShape": "0"
+      }
+    },
+    {
+      "rotation": 30,
+      "flipH": false,
+      "flipV": true,
+      "rotateWithShape": true,
+      "direction": 0,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          15.000522,
+          0.0
+        ],
+        "pdfScale": 0.998489544,
+        "resavedRotateWithShape": "1"
+      }
+    },
+    {
+      "rotation": 30,
+      "flipH": false,
+      "flipV": true,
+      "rotateWithShape": true,
+      "direction": 90,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          0.0,
+          15.000522
+        ],
+        "pdfScale": 0.998489544,
+        "resavedRotateWithShape": "1"
+      }
+    },
+    {
+      "rotation": 30,
+      "flipH": true,
+      "flipV": true,
+      "rotateWithShape": false,
+      "direction": 0,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          15.000751,
+          0.0
+        ],
+        "pdfScale": 0.998517745,
+        "resavedRotateWithShape": "0"
+      }
+    },
+    {
+      "rotation": 30,
+      "flipH": true,
+      "flipV": true,
+      "rotateWithShape": false,
+      "direction": 90,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          0.0,
+          15.000099
+        ],
+        "pdfScale": 0.998517745,
+        "resavedRotateWithShape": "0"
+      }
+    },
+    {
+      "rotation": 30,
+      "flipH": true,
+      "flipV": true,
+      "rotateWithShape": true,
+      "direction": 0,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          15.000751,
+          0.0
+        ],
+        "pdfScale": 0.998517745,
+        "resavedRotateWithShape": "1"
+      }
+    },
+    {
+      "rotation": 30,
+      "flipH": true,
+      "flipV": true,
+      "rotateWithShape": true,
+      "direction": 90,
+      "distancePt": 15,
+      "observed": {
+        "offsetPt": [
+          0.0,
+          15.000099
+        ],
+        "pdfScale": 0.998517745,
+        "resavedRotateWithShape": "1"
+      }
+    }
+  ]
+}

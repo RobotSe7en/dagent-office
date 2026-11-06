@@ -1,0 +1,50 @@
+{
+  "source": "https://www.ecma-international.org/wp-content/uploads/ECMA-376-1_5th_edition_december_2016.zip",
+  "standard": "ECMA-376 Part 1, fifth edition (2016), sections 18.8.40–41 and Annex G.1",
+  "archiveSha256": "9d0bcad9cf06054785b03762fcfadbf6bab7e54a5f9d69434e34b7fd464d4129",
+  "nestedArchive": "OfficeOpenXML-SpreadsheetMLStyles.zip",
+  "nestedArchiveSha256": "bfe5b222db0c12494350b6c36cf0c24ebad3c8ef0cd470d18a0d96a316bbc0c9",
+  "member": "presetTableStyles.xml",
+  "memberSha256": "74c6cf73d551bb2bd33a51690d4922095260b6647b2a38fcbc0d6da6c6275d7e",
+  "memberBytes": 537455,
+  "selected": {
+    "tableStyleCount": 60,
+    "light": 21,
+    "medium": 28,
+    "dark": 11,
+    "originalDifferentials": 434,
+    "uniqueDifferentials": 180,
+    "pivotStylesIncluded": false
+  },
+  "attachmentConventions": [
+    "The pinned attachment uses one-based dxfId within each local dxfs collection. Native XLSX uses zero-based dxfId; its parser is unchanged."
+  ],
+  "attachmentDefects": [
+    {
+      "name": "TableStyleLight14",
+      "declaredDxfCount": 10,
+      "actualDxfCount": 9,
+      "referencedIds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "embeddedName": "TableStyleLight14 ",
+      "canonicalName": "TableStyleLight14"
+    },
+    {
+      "name": "TableStyleDark9",
+      "embeddedName": "TableStyleDark9 2",
+      "canonicalName": "TableStyleDark9"
+    }
+  ],
+  "generator": "scripts/generate-workbook-table-styles.py",
+  "license": "packages/render/ECMA-376-TABLE-STYLES-LICENSE.txt",
+  "status": "Definition catalog only. Direct-format/table/rule composition and native full-page acceptance remain outstanding."
+}

@@ -1,0 +1,108 @@
+{
+  "schemasSha256": "d34187520749998af306faf1b730e568b0ca6d88ad24638a407c0a9bb4ca04fc",
+  "lxml": [
+    5,
+    3,
+    0,
+    0
+  ],
+  "profile": "Unmodified official Transitional XSD; sml:t/a:t xml:space checked separately and removed only from validation projection. OPC references and selected MS-XLSX threads checked separately. VML is checked for XML well-formedness and relationship integrity, not its full schema.",
+  "cases": [
+    {
+      "file": "01-values-text.xlsx",
+      "standardParts": 5,
+      "modernParts": 0,
+      "xmlSpaceAttributesChecked": 14
+    },
+    {
+      "file": "02-styles-dates.xlsx",
+      "standardParts": 5,
+      "modernParts": 0,
+      "xmlSpaceAttributesChecked": 7
+    },
+    {
+      "file": "03-structure.xlsx",
+      "standardParts": 5,
+      "modernParts": 0,
+      "xmlSpaceAttributesChecked": 3
+    },
+    {
+      "file": "04-formulas-names.xlsx",
+      "standardParts": 6,
+      "modernParts": 0,
+      "xmlSpaceAttributesChecked": 3
+    },
+    {
+      "file": "05-native-table.xlsx",
+      "standardParts": 6,
+      "modernParts": 0,
+      "xmlSpaceAttributesChecked": 9
+    },
+    {
+      "file": "06-rules-validation.xlsx",
+      "standardParts": 5,
+      "modernParts": 0,
+      "xmlSpaceAttributesChecked": 7
+    },
+    {
+      "file": "07-three-charts.xlsx",
+      "standardParts": 9,
+      "modernParts": 0,
+      "xmlSpaceAttributesChecked": 6
+    },
+    {
+      "file": "08-images-shapes.xlsx",
+      "standardParts": 6,
+      "modernParts": 0,
+      "xmlSpaceAttributesChecked": 1
+    },
+    {
+      "file": "09-classic-notes.xlsx",
+      "standardParts": 6,
+      "modernParts": 0,
+      "xmlSpaceAttributesChecked": 2
+    },
+    {
+      "file": "10-modern-threads.xlsx",
+      "standardParts": 5,
+      "modernParts": 0,
+      "xmlSpaceAttributesChecked": 2
+    },
+    {
+      "file": "11-print-layout.xlsx",
+      "standardParts": 5,
+      "modernParts": 0,
+      "xmlSpaceAttributesChecked": 90
+    },
+    {
+      "file": "12-multi-sheet-filter.xlsx",
+      "standardParts": 8,
+      "modernParts": 0,
+      "xmlSpaceAttributesChecked": 6
+    },
+    {
+      "file": "13-date-1904.xlsx",
+      "standardParts": 5,
+      "modernParts": 0,
+      "xmlSpaceAttributesChecked": 1
+    },
+    {
+      "file": "14-preserved-formulas.xlsx",
+      "standardParts": 5,
+      "modernParts": 0,
+      "xmlSpaceAttributesChecked": 1
+    },
+    {
+      "file": "15-ten-thousand-rows.xlsx",
+      "standardParts": 5,
+      "modernParts": 0,
+      "xmlSpaceAttributesChecked": 30000
+    },
+    {
+      "file": "16-sparse-far-cell.xlsx",
+      "standardParts": 5,
+      "modernParts": 0,
+      "xmlSpaceAttributesChecked": 1
+    }
+  ]
+}

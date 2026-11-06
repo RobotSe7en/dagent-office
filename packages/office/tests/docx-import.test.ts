@@ -1,7 +1,8 @@
+import { openContentFixture as openDocument } from "../../../tests/content-fixture.js";
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
 import type { WordDocumentMetadata } from "@dagent-office/core";
-import { DocumentError, openDocument } from "@dagent-office/core";
+import { DocumentError } from "@dagent-office/core";
 import {
   importDocx,
   readDocumentZip,

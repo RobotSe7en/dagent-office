@@ -78,6 +78,15 @@ export function openOpc(
   sharedXmlBudget?: XmlBudget,
 ): OpcPackage {
   const files = readDocumentZip(bytes, options);
+  return openOpcFiles(files, options, sharedXmlBudget);
+}
+/** Reuse OPC validation after bounded asynchronous extraction of native input. */
+export function openOpcFiles(
+  files: DocumentPackage,
+  options: DocumentZipOptions,
+  sharedXmlBudget?: XmlBudget,
+  maxMetadataNodes?: number,
+): OpcPackage {
   const limits: DocumentReadLimits = {
     ...DEFAULT_DOCUMENT_READ_LIMITS,
     ...options.limits,
@@ -101,7 +110,8 @@ export function openOpc(
           },
         ],
       );
-    const result = xml(data, part, limits, budget);
+    if (data.byteLength > limits.maxFileBytes) throw new DocumentError("ResourceLimitExceeded", "An XML metadata part exceeds the configured byte budget.");
+    const result = xml(data, part, limits, budget, maxMetadataNodes);
     parsed.set(part, result);
     return result;
   };

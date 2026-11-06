@@ -2,7 +2,7 @@
 
 按五个可演示、可验收的迭代交付。第一轮合并 HTML 协作基础与 Word 完整闭环，独立 Playground 的文档读写、人工编辑、批注、提案和 DOCX/PDF 导出重开已完成。R1-15 达智真实智能体验证按用户决定延期，保留原编号和 R1-16 未完成的宿主验收项。第二轮独立 PPT 已完成；当前进入第三轮 Excel，随后为正式宿主存储与发布准备；达智验证恢复时间另行安排。
 
-当前已完成第一轮独立 Word 和第二轮独立 PPT 闭环，第二轮导出与验收通过 [PR #22](https://github.com/RobotSe7en/dagent-office/pull/22) 合并。支持范围及证据见[第二轮细则](iteration-2.md)和[PPTX 导出](pptx-export.md)；PowerPoint/WPS 仍未实机验证。[第三轮细则](iteration-3.md)已固定常用 Excel 办公闭环、自研公式、一万行实际数据、原生智能表、两类批注、绘图及打印目标，完整 Excel 尚未实现。本文路线目标不代表能力已实现。[总体架构](architecture.md)定义模块与宿主边界，[第一轮细则](iteration-1.md)保留延期验收。排期按实际样本收敛，不以代码生成速度替代兼容性验收。
+当前已完成第一轮独立 Word 和第二轮独立 PPT 闭环，第二轮导出与验收通过 [PR #22](https://github.com/RobotSe7en/dagent-office/pull/22) 合并。支持范围及证据见[第二轮细则](iteration-2.md)和[PPTX 导出](pptx-export.md)；PowerPoint/WPS 仍未实机验证。[第三轮细则](iteration-3.md)已固定常用 Excel 办公闭环、自研公式、一万行实际数据、原生智能表、两类批注、绘图及打印目标，R3-01～08 的模型、原生读取与只读验收已完成，见[读取验收](workbook-reading-acceptance.md)；编辑计算及输出仍待后两个阶段。本文路线目标不代表完整 Excel 能力已实现。[总体架构](architecture.md)定义模块与宿主边界，[第一轮细则](iteration-1.md)保留延期验收。排期按实际样本收敛，不以代码生成速度替代兼容性验收。
 
 ## 交付原则
 

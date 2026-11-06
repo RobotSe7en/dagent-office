@@ -29,9 +29,12 @@ const crcTable = Uint32Array.from({ length: 256 }, (_, value) => {
 });
 
 export function crc32(bytes: Uint8Array): number {
-  let value = 0xffffffff;
+  return (updateCrc32(bytes, 0xffffffff) ^ 0xffffffff) >>> 0;
+}
+export function updateCrc32(bytes: Uint8Array, initial: number): number {
+  let value = initial;
   for (const byte of bytes) value = (value >>> 8) ^ crcTable[(value ^ byte) & 255]!;
-  return (value ^ 0xffffffff) >>> 0;
+  return value >>> 0;
 }
 
 const codecs = globalThis as unknown as {

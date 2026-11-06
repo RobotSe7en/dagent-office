@@ -1,7 +1,7 @@
 import { DocumentError, openDocument } from "@dagent-office/core";
 import { resolvePreviewFonts } from "./fonts.js";
 import type { FontResolution } from "./fonts.js";
-import type { DeepReadonly, DocumentModel, WordMetadata } from "@dagent-office/core";
+import type { DeepReadonly, ContentDocumentModel, WordMetadata } from "@dagent-office/core";
 import { PreviewSource } from "./source-index.js";
 import { renderLimits } from "./contracts.js";
 import type { DocumentRenderReport, RenderLimits } from "./contracts.js";
@@ -14,13 +14,15 @@ import type { LayoutFields } from "./fields.js";
 import { SourceProjection } from "./projection.js";
 import { copyPreviewSelection } from "./clipboard.js";
 import { mountPresentationPreview } from "./presentation/preview.js";
+import { mountWorkbookPreview } from "./workbook/preview.js";
+import type { WorkbookPreview, WorkbookPreviewInput, WorkbookPreviewOptions } from "./workbook/preview-contracts.js";
 
 export interface DocumentPreview {
   readonly element: HTMLIFrameElement;
   readonly ready: Promise<void>;
   fonts(): readonly FontResolution[];
   layout(): DocumentRenderReport;
-  update(model: DocumentModel): void;
+  update(model: ContentDocumentModel): void;
   settled(): Promise<DocumentRenderReport>;
   printDocument(): Document;
   dispose(): void;
@@ -317,8 +319,8 @@ export function decorate(
   }
 }
 
-function prepareDocument(input: DocumentModel): { model: DocumentModel; document: Document; urls: string[] } {
-  const model = openDocument(input.serialize());
+function prepareDocument(input: ContentDocumentModel): { model: ContentDocumentModel; document: Document; urls: string[] } {
+  const model = openDocument(input.serialize(), { kind: "document" });
   const snapshot = model.snapshot();
   if (snapshot.manifest.kind !== "document" || snapshot.metadata.presentation !== undefined) throw new DocumentError("UnsupportedFormat", "This renderer supports the document flow view.");
   const files = model.serialize();
@@ -394,16 +396,19 @@ function prepareDocument(input: DocumentModel): { model: DocumentModel; document
 /** Mount a validated, scriptless read-only view. The iframe DOM is never serialized. */
 export function mountDocumentPreview(
   container: HTMLElement,
-  input: DocumentModel,
-  options: DocumentPreviewOptions = {},
-): DocumentPreview {
-  return mountPreview(container, input, options);
+  input: ContentDocumentModel,
+  options?: DocumentPreviewOptions,
+): DocumentPreview;
+export function mountDocumentPreview(container: HTMLElement, input: WorkbookPreviewInput, options?: WorkbookPreviewOptions): WorkbookPreview;
+export function mountDocumentPreview(container: HTMLElement, input: ContentDocumentModel | WorkbookPreviewInput, options?: DocumentPreviewOptions | WorkbookPreviewOptions): DocumentPreview | WorkbookPreview;
+export function mountDocumentPreview(container: HTMLElement, input: ContentDocumentModel | WorkbookPreviewInput, options: DocumentPreviewOptions | WorkbookPreviewOptions = {}): DocumentPreview | WorkbookPreview {
+  return input.kind === "workbook" ? mountWorkbookPreview(container, input, options as WorkbookPreviewOptions) : mountPreview(container, input, options as DocumentPreviewOptions);
 }
 
 /** Internal renderer connection; source positions never become a public document model. */
 export function mountPreview(
   container: HTMLElement,
-  input: DocumentModel,
+  input: ContentDocumentModel,
   options: DocumentPreviewOptions = {},
 ): DocumentPreview & { source(): PreviewSource | undefined } {
   if (input.snapshot().manifest.kind === "presentation") return mountPresentationPreview(container, input, options);

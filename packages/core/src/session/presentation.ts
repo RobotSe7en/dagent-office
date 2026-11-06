@@ -1,6 +1,6 @@
 import type { Annotation } from "../contracts/annotations.js";
 import type { DocumentContentOperation } from "../contracts/operations.js";
-import type { DocumentMetadata } from "../contracts/document.js";
+import type { ContentDocumentMetadata } from "../contracts/document.js";
 import type { DocumentState } from "../document/state.js";
 import type { ParsedHtml } from "../document/html.js";
 import type { DocumentEdit } from "../document/edit.js";
@@ -20,7 +20,7 @@ export function guardPresentationContent(base: DocumentState, op: DocumentConten
 }
 
 /** Only complete deleted objects are reconciled; damaged required references still fail. */
-export function updatePresentationMetadata(metadata: DocumentMetadata, before: DocumentState, after: ParsedHtml, annotations: Annotation[]): void {
+export function updatePresentationMetadata(metadata: ContentDocumentMetadata, before: DocumentState, after: ParsedHtml, annotations: Annotation[]): void {
   const p = metadata.presentation;
   if (!p) return;
   p.objects = p.objects.filter(item => after.hasNode(item.nodeId));
@@ -41,7 +41,7 @@ export function updatePresentationMetadata(metadata: DocumentMetadata, before: D
   for (const annotation of annotations) if (!existing.has(annotation.annotationId) && !previousAnnotations.has(annotation.annotationId)) p.comments.push({ annotationId: annotation.annotationId, format: "modern" });
 }
 
-export function removeDeletedCommentBodies(before: DocumentState, annotations: readonly Annotation[], edit: DocumentEdit,metadata:DocumentMetadata): void {
+export function removeDeletedCommentBodies(before: DocumentState, annotations: readonly Annotation[], edit: DocumentEdit,metadata:ContentDocumentMetadata): void {
   if (!before.snapshot.metadata.presentation) return;
   const kept = new Set(annotations.flatMap(a => [a.bodyNodeId, ...(a.replies ?? []).map(r => r.bodyNodeId)]).filter(id => id !== undefined));
   const originals=new Set(before.snapshot.metadata.presentation.stories.map(s=>s.rootNodeId));
@@ -49,7 +49,7 @@ export function removeDeletedCommentBodies(before: DocumentState, annotations: r
   for(const root of roots)if(!kept.has(root))edit.removeSource(root);
 }
 
-export function updatePresentationRecovery(metadata: DocumentMetadata, before: DocumentState, annotations: readonly Annotation[],workflows:ReadonlyMap<string,Annotation["status"]>): void {
+export function updatePresentationRecovery(metadata: ContentDocumentMetadata, before: DocumentState, annotations: readonly Annotation[],workflows:ReadonlyMap<string,Annotation["status"]>): void {
   const p = metadata.presentation;
   if (!p) return;
   const originals = new Map(before.snapshot.annotations.map(a => [a.annotationId, a]));

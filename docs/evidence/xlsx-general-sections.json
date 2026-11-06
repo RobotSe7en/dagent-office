@@ -1,0 +1,110 @@
+{
+  "scope": "Observe native General section signs, affixes and system date/time formats.\n\nOnly ZIP/XML source generation and pinned Calc are used. Source syntax/cache\nand SDK formatting remain separate. Locale data can use a different AM/PM\nspace; this is recorded rather than presented as an exact visual match.",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "dateSystem": "1900",
+  "sourceSha256": "fb4d225b7a6e232a76c297bc93a5abe8569b5d91a51da3a00a26d338e7317cc7",
+  "hostLocale": "en-US",
+  "localeEnvironment": {
+    "LC_ALL": "C.UTF-8",
+    "LANG": "C.UTF-8",
+    "TZ": "UTC"
+  },
+  "samples": [
+    {
+      "value": -12.5,
+      "code": "General",
+      "text": "-12.5"
+    },
+    {
+      "value": -12.5,
+      "code": "General;(General)",
+      "text": "(12.5)"
+    },
+    {
+      "value": -12.5,
+      "code": "[<0]General;0",
+      "text": "12.5"
+    },
+    {
+      "value": -12.5,
+      "code": "General;\"N\"General",
+      "text": "N12.5"
+    },
+    {
+      "value": -12.5,
+      "code": "\"ID \"General",
+      "text": "-ID 12.5"
+    },
+    {
+      "value": -12.5,
+      "code": "General\" kg\"",
+      "text": "-12.5 kg"
+    },
+    {
+      "value": -12.5,
+      "code": "General General",
+      "text": "-12.5 12.5"
+    },
+    {
+      "value": -12.5,
+      "code": "General%",
+      "text": "-1250%"
+    },
+    {
+      "value": 12.5,
+      "code": "General",
+      "text": "12.5"
+    },
+    {
+      "value": 12.5,
+      "code": "General;(General)",
+      "text": "12.5"
+    },
+    {
+      "value": 12.5,
+      "code": "[<0]General;0",
+      "text": "13"
+    },
+    {
+      "value": 12.5,
+      "code": "General;\"N\"General",
+      "text": "12.5"
+    },
+    {
+      "value": 12.5,
+      "code": "\"ID \"General",
+      "text": "ID 12.5"
+    },
+    {
+      "value": 12.5,
+      "code": "General\" kg\"",
+      "text": "12.5 kg"
+    },
+    {
+      "value": 12.5,
+      "code": "General General",
+      "text": "12.5 12.5"
+    },
+    {
+      "value": 12.5,
+      "code": "General%",
+      "text": "1250%"
+    },
+    {
+      "value": 45351.5,
+      "code": "[$-F800]yyyy-mm-dd",
+      "text": "Thursday, February 29, 2024"
+    },
+    {
+      "value": 45351.5,
+      "code": "[$-F800]\"ignored\"yyyy-mm-dd",
+      "text": "Thursday, February 29, 2024"
+    },
+    {
+      "value": 45351.5,
+      "code": "[$-F400]h:mm",
+      "text": "12:00:00 PM"
+    }
+  ]
+}

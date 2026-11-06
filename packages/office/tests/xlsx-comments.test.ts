@@ -1,0 +1,213 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import { createWorkbook, DEFAULT_DOCUMENT_READ_LIMITS, openDocument } from "@dagent-office/core";
+import { openOpc, openOpcFiles } from "../src/ooxml/package.js";
+import type { OpcPackage } from "../src/ooxml/package.js";
+import { readClassicComments } from "../src/xlsx/classic-comments.js";
+import { XlsxStyles } from "../src/xlsx/styles.js";
+import { readWorkbook } from "../src/xlsx/workbook.js";
+import { readThreadedComments } from "../src/xlsx/threaded-comments.js";
+import { WorkbookContent } from "../src/xlsx/content.js";
+import { mapThreadedComments } from "../src/xlsx/comment-mapping.js";
+import { importXlsx } from "../src/xlsx-import.js";
+
+const encoder = new TextEncoder(), decoder = new TextDecoder(), threadPart = "xl/threadedComments/threadedComment1.xml", personPart = "xl/persons/person.xml";
+const rootId = "{33333333-3333-4333-8333-333333333333}", replyId = "{44444444-4444-4444-8444-444444444444}", otherId = "{55555555-5555-4555-8555-555555555555}";
+const source = (file = "10-modern-threads") => openOpc(readFileSync(`examples/xlsx/${file}.xlsx`), {});
+function variant(edits: Record<string, (source: string) => string>) {
+  const files = new Map(source().files); for (const [path, edit] of Object.entries(edits)) files.set(path, encoder.encode(edit(decoder.decode(files.get(path)!))));
+  return openOpcFiles(files, {});
+}
+function parsed(opc: OpcPackage, maxItems = 1000) { const workbook = readWorkbook(opc); return readThreadedComments(opc, workbook.part, workbook.sheets, maxItems); }
+function mapped(opc = source()) {
+  const native = parsed(opc), content = new WorkbookContent(DEFAULT_DOCUMENT_READ_LIMITS), mapped = mapThreadedComments(native, native.threads, content, "threads");
+  const files = new Map(createWorkbook({ documentId: "threads" }));
+  const manifest = JSON.parse(decoder.decode(files.get("manifest.json")!)), metadata = JSON.parse(decoder.decode(files.get("metadata.json")!));
+  manifest.content = "content.html"; metadata.workbook.stories = content.stories; metadata.workbook.comments = mapped.comments; metadata.workbook.commentAuthors = mapped.authors;
+  for (const [path, value] of [["manifest.json", manifest], ["metadata.json", metadata], ["annotations.json", mapped.annotations]] as const) files.set(path, encoder.encode(JSON.stringify(value)));
+  files.set("content.html", encoder.encode(content.html()!)); return { files, native, content, mapped };
+}
+describe("native spreadsheet threaded comments", () => {
+  it('publicly preserves independent classic and compatibility revision UIDs without substituting native comment identities', async () => {
+    const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-comment-uids.xlsx'), { documentId: 'native-comment-uids' });
+    const model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
+    expect(snapshot.annotations).toHaveLength(3); expect(snapshot.annotations.map(annotation => annotation.status)).toEqual(['resolved', 'needs_reanchor', 'open']);
+    expect(snapshot.metadata.workbook.comments![0]).toMatchObject({ compatibilityUids: [rootId] });
+    expect(snapshot.metadata.workbook.comments![1]).toMatchObject({ compatibilityUids: ['{FFFFFFFF-FFFF-4FFF-8FFF-FFFFFFFFFFFF}'], recoveryReasons: ['mismatched-placeholder-identity'] });
+    expect(snapshot.metadata.workbook.comments![2]).toMatchObject({ nativeUid: '{DDDDDDDD-DDDD-4DDD-8DDD-DDDDDDDDDDDD}' });
+    expect(snapshot.annotations[2]!.sourceId).toBe('{EEEEEEEE-EEEE-4EEE-8EEE-EEEEEEEEEEEE}');
+    const metadata = JSON.parse(decoder.decode(files.get('metadata.json')!));
+    for (const target of [metadata.workbook.comments[0], metadata.workbook.comments[2]]) {
+      const changed = structuredClone(metadata), index = metadata.workbook.comments.indexOf(target);
+      if (target.format === 'modern') changed.workbook.comments[index].compatibilityUids[0] = 'bad'; else changed.workbook.comments[index].nativeUid = 'bad';
+      const altered = new Map(before); altered.set('metadata.json', encoder.encode(JSON.stringify(changed)));
+      expect(() => openDocument(altered)).toThrowError(expect.objectContaining({ code: 'InvalidDocument' }));
+    }
+    expect(openDocument(before).snapshot()).toEqual(snapshot); expect(model.serialize()).toEqual(before);
+  });
+  it('publicly imports and reopens independent mentions and every conflicting or missing native location', async () => {
+    const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-comment-mentions.xlsx'), { documentId: 'native-mentions' });
+    const model = openDocument(files, { kind: 'workbook' }), before = model.serialize(), snapshot = model.snapshot();
+    expect(snapshot.annotations).toHaveLength(5); expect(snapshot.annotations.flatMap(annotation => annotation.replies ?? [])).toHaveLength(1);
+    expect(snapshot.metadata.workbook.commentAuthors![2]).toMatchObject({ name: '只被提及', userId: 'opaque-mentioned-only', providerId: 'AD' });
+    expect(snapshot.annotations.map(annotation => annotation.status)).toEqual(['needs_reanchor', 'needs_reanchor', 'needs_reanchor', 'needs_reanchor', 'open']);
+    expect(snapshot.metadata.workbook.comments!.flatMap(comment => comment.format === 'modern' ? [...comment.mentions ?? [], ...comment.replies.flatMap(reply => reply.mentions ?? [])] : [])).toHaveLength(4);
+    expect(snapshot.annotations[3]!.anchor).toMatchObject({ kind: 'cells', ranges: [] });
+    expect(snapshot.metadata.workbook.comments![0]).toMatchObject({ recoveryReasons: ['duplicate-thread-location', 'mismatched-reply-location'], replies: [{ nativeCell: { row: 2, column: 1 } }] });
+    expect(model.getNode(snapshot.annotations[0]!.bodyNodeId!)!.text).toBe('请复核预算😀禰󠄀');
+    expect(openDocument(before, { kind: 'workbook' }).snapshot()).toEqual(snapshot); expect(model.serialize()).toEqual(before);
+  });
+  it("preserves author identity, Unicode, replies, timestamps and resolved state in the same workbook package", () => {
+    const { files, native } = mapped(); expect(native.threads).toHaveLength(2); expect(native.people).toHaveLength(2);
+    const model = openDocument(files, { kind: "workbook" }), annotations = model.snapshot().annotations;
+    expect(annotations[0]).toMatchObject({ status: "resolved", sourceId: rootId, date: "2026-11-04T08:00:00Z", author: { name: "预算负责人" }, anchor: { kind: "cells", sheetId: "sheet-1", ranges: [{ from: { row: 1, column: 1 }, to: { row: 1, column: 1 } }] } });
+    expect(model.getNode(annotations[0]!.bodyNodeId!)?.text).toBe("请复核预算😀禰󠄀");
+    expect(model.getNode(annotations[0]!.replies![0]!.bodyNodeId!)?.text).toBe("已复核并补充。");
+    expect(model.snapshot().metadata.workbook.commentAuthors?.[0]).toMatchObject({ userId: "opaque-owner", providerId: "None" });
+    expect(openDocument(model.serialize()).snapshot()).toEqual(model.snapshot());
+    // The pinned external producer removes modern threads entirely. Reading
+    // its output must report the actual empty source rather than fabricate it.
+    expect(parsed(source("producer/10-modern-threads"))).toEqual({ people: [], threads: [] });
+  });
+  it("retains nested reply parents and accepts replies preceding roots or omitting their inherited cell", () => {
+    const opc = variant({ [threadPart]: s => {
+      const nodes = s.match(/<threadedComment\s[\s\S]*?<\/threadedComment>/g)!;
+      const nested = nodes[2]!.replace('ref="C3"', `parentId="${replyId}"`).replace('done="0"', 'done="1"');
+      return s.slice(0, s.indexOf(nodes[0]!)) + nested + nodes[1]!.replace('ref="B2" ', '') + nodes[0]! + '</ThreadedComments>';
+    } });
+    const { files, native } = mapped(opc); expect(native.threads).toHaveLength(1); expect(native.threads[0]!.replies).toHaveLength(2);
+    const model = openDocument(files, { kind: "workbook" });
+    expect(model.snapshot().metadata.workbook.comments?.[0]).toMatchObject({ replies: [{ replyId: `xlsx-reply-${otherId}`, parentReplyId: `xlsx-reply-${replyId}` }, { replyId: `xlsx-reply-${replyId}` }] });
+  });
+  it("preserves optional empty text and escapes source markup and native UTF-16 strings exactly once", () => {
+    const { files } = mapped(variant({ [threadPart]: s => s.replace('<text>待确认。</text>', '<text xml:space="preserve"> &lt;script&gt;_x005F_x0041__x000D_\n😀 </text>').replace('<text>已复核并补充。</text>', '') }));
+    const model = openDocument(files, { kind: "workbook" }), annotations = model.snapshot().annotations;
+    expect(model.getNode(annotations[1]!.bodyNodeId!)?.text).toBe(" <script>_x0041_\r\n😀 ");
+    expect(model.getNode(annotations[0]!.replies![0]!.bodyNodeId!)?.text).toBe("");
+    expect(openDocument(model.serialize()).snapshot()).toEqual(model.snapshot());
+  });
+  it.each([
+    ["unknown author", (s: string) => s.replace('personId="{11111111-1111-4111-8111-111111111111}"', `personId="${otherId}"`)],
+    ["duplicate identity", (s: string) => s.replace(`id="${otherId}"`, `id="${rootId}"`)],
+    ["bad GUID", (s: string) => s.replace(`id="${otherId}"`, 'id="x"')],
+    ["missing parent", (s: string) => s.replace(`parentId="${rootId}"`, 'parentId="{66666666-6666-4666-8666-666666666666}"')],
+    ["self cycle", (s: string) => s.replace(`parentId="${rootId}"`, `parentId="${replyId}"`)],
+    ["invalid boolean", (s: string) => s.replace('done="1"', 'done="yes"')],
+    ["normalized invalid calendar", (s: string) => s.replace('2026-11-04T08:00:00Z', '2026-02-30T08:00:00Z')],
+    ["invalid zone", (s: string) => s.replace('2026-11-04T08:00:00Z', '2026-11-04T08:00:00+14:01')],
+  ])("rejects %s instead of returning a partial comment set", (_name, edit) => {
+    expect(() => parsed(variant({ [threadPart]: edit }))).toThrowError(expect.objectContaining({ code: "InvalidDocument" }));
+  });
+  it('retains mismatched reply locations and duplicate root locations for explicit recovery', () => {
+    const { files } = mapped(variant({ [threadPart]: s => s.replace('ref="B2" dT="2026-11-04T08:01:00Z"', 'ref="B3" dT="2026-11-04T08:01:00Z"').replace('ref="C3"', 'ref="B2"') }));
+    const model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot();
+    expect(snapshot.annotations).toHaveLength(2); expect(snapshot.annotations.every(annotation => annotation.status === 'needs_reanchor')).toBe(true);
+    expect(snapshot.metadata.workbook.comments![0]).toMatchObject({ recoveryStatus: 'resolved', recoveryReasons: ['duplicate-thread-location', 'mismatched-reply-location'],
+      replies: [{ nativeCell: { row: 2, column: 1 } }] });
+    expect(snapshot.metadata.workbook.comments![1]).toMatchObject({ recoveryStatus: 'open', recoveryReasons: ['duplicate-thread-location'] });
+    expect(snapshot.annotations[0]!.anchor).toMatchObject({ ranges: [{ from: { row: 1, column: 1 } }] });
+    expect(model.getNode(snapshot.annotations[0]!.replies![0]!.bodyNodeId!)!.text).toBe('已复核并补充。');
+    expect(openDocument(model.serialize()).snapshot()).toEqual(snapshot);
+  });
+  it('preserves root and reply mentions with exact Unicode offsets, people, cloneability and cumulative admission', () => {
+    const mention = (id: string, start: number, length: number) => `<mentions><mention mentionpersonId="{22222222-2222-4222-8222-222222222222}" mentionId="${id}" startIndex="${start}" length="${length}"/></mentions>`;
+    const opc = variant({ [threadPart]: s => s.replace('</text>', '</text>' + mention('{66666666-6666-4666-8666-666666666666}', 5, 5))
+      .replace('<text>已复核并补充。</text>', '<text>已复核并补充。</text>' + mention('{77777777-7777-4777-8777-777777777777}', 0, 3)) });
+    const { files } = mapped(opc), model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot();
+    expect(snapshot.metadata.workbook.comments![0]).toMatchObject({ mentions: [{ mentionId: '{66666666-6666-4666-8666-666666666666}', authorId: 'xlsx-person-1', startIndex: 5, length: 5 }],
+      replies: [{ mentions: [{ startIndex: 0, length: 3, authorId: 'xlsx-person-1' }] }] });
+    expect(snapshot.annotations[0]!.status).toBe('resolved'); expect(structuredClone(snapshot)).toEqual(snapshot);
+    expect(openDocument(model.serialize()).snapshot()).toEqual(snapshot);
+    expect(() => parsed(opc, 6)).toThrowError(expect.objectContaining({ code: 'ResourceLimitExceeded' }));
+    for (const change of [(s: string) => s.replace('mentionpersonId="{22222222-2222-4222-8222-222222222222}"', `mentionpersonId="${otherId}"`),
+      (s: string) => s.replace('startIndex="5"', 'startIndex="4294967296"'), (s: string) => s.replace('length="5"', 'length="1.5"'),
+      (s: string) => s.replace('{77777777-7777-4777-8777-777777777777}', '{66666666-6666-4666-8666-666666666666}')]) {
+      const files = new Map(opc.files); files.set(threadPart, encoder.encode(change(decoder.decode(files.get(threadPart)!))));
+      expect(() => parsed(openOpcFiles(files, {}))).toThrowError(expect.objectContaining({ code: 'InvalidDocument' }));
+    }
+  });
+  it.each([6, 8, 4294967295])('keeps a mention at invalid UTF-16 offset %s without clamping its raw provenance', startIndex => {
+    const { files } = mapped(variant({ [threadPart]: s => s.replace('</text>', `</text><mentions><mention mentionpersonId="{22222222-2222-4222-8222-222222222222}" mentionId="{66666666-6666-4666-8666-666666666666}" startIndex="${startIndex}" length="1"/></mentions>`) }));
+    const model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot();
+    expect(snapshot.annotations[0]!.status).toBe('needs_reanchor');
+    expect(snapshot.metadata.workbook.comments![0]).toMatchObject({ recoveryStatus: 'resolved', recoveryReasons: ['invalid-mention-range'], mentions: [{ startIndex, length: 1 }] });
+    const metadata = JSON.parse(decoder.decode(files.get('metadata.json')!)), annotations = JSON.parse(decoder.decode(files.get('annotations.json')!));
+    delete metadata.workbook.comments[0].recoveryReasons; delete metadata.workbook.comments[0].recoveryStatus; annotations[0].status = 'resolved';
+    files.set('metadata.json', encoder.encode(JSON.stringify(metadata))); files.set('annotations.json', encoder.encode(JSON.stringify(annotations)));
+    expect(() => openDocument(files, { kind: 'workbook' })).toThrowError(expect.objectContaining({ code: 'InvalidDocument' }));
+    expect(openDocument(model.serialize()).snapshot()).toEqual(snapshot);
+  });
+  it("rejects cyclic fixture, duplicated people, undeclared attributes/extensions and exceeds cumulative records before mapping", () => {
+    expect(() => parsed(source("invalid/thread-parent-cycle"))).toThrowError(expect.objectContaining({ code: "InvalidDocument" }));
+    expect(() => parsed(variant({ [personPart]: s => s.replace('id="{22222222-2222-4222-8222-222222222222}"', 'id="{11111111-1111-4111-8111-111111111111}"') }))).toThrow();
+    expect(() => parsed(variant({ [threadPart]: s => s.replace('done="1"', 'done="1" surprise="1"') }))).toThrowError(expect.objectContaining({ code: "UnsupportedFeature" }));
+    expect(() => parsed(variant({ [threadPart]: s => s.replace('</ThreadedComments>', '<extLst><ext uri="unknown"/></extLst></ThreadedComments>') }))).toThrowError(expect.objectContaining({ code: "UnsupportedFeature" }));
+    expect(() => parsed(source(), 4)).toThrowError(expect.objectContaining({ code: "ResourceLimitExceeded" }));
+    const content = new WorkbookContent({ ...DEFAULT_DOCUMENT_READ_LIMITS, maxFileBytes: 300 });
+    expect(() => content.comment("sheet-1", "😀".repeat(200))).toThrowError(expect.objectContaining({ code: "ResourceLimitExceeded" }));
+  });
+  it("bounds repeated long author names before assembling the complete annotation JSON", () => {
+    const native = parsed(variant({ [personPart]: s => s.replace('displayName="预算负责人"', `displayName="${"长".repeat(1000)}"`) }));
+    const content = new WorkbookContent({ ...DEFAULT_DOCUMENT_READ_LIMITS, maxFileBytes: 5000 });
+    expect(() => mapThreadedComments(native, native.threads, content, "threads")).toThrowError(expect.objectContaining({ code: "ResourceLimitExceeded", message: "Workbook comment metadata exceeds its source byte budget." }));
+  });
+  it("validates native author/reply bindings again when opening an edited source package", () => {
+    for (const edit of [
+      (m: ReturnType<typeof mapped>["mapped"]) => { m.authors[0]!.name = "changed"; },
+      (m: ReturnType<typeof mapped>["mapped"]) => { m.comments[0]!.annotationId = "missing"; },
+      (m: ReturnType<typeof mapped>["mapped"]) => { m.comments[0]!.recoveryStatus = "resolved"; },
+      (m: ReturnType<typeof mapped>["mapped"]) => { const c = m.comments[0]!; if (c.format === "modern") c.replies[0]!.parentReplyId = c.replies[0]!.replyId; },
+      (m: ReturnType<typeof mapped>["mapped"]) => { const c = m.comments[0]!; if (c.format === "modern") c.replies = []; },
+    ]) {
+      const data = mapped(); edit(data.mapped); const metadata = JSON.parse(decoder.decode(data.files.get("metadata.json")!));
+      metadata.workbook.commentAuthors = data.mapped.authors; metadata.workbook.comments = data.mapped.comments;
+      data.files.set("metadata.json", encoder.encode(JSON.stringify(metadata))); expect(() => openDocument(data.files)).toThrow();
+    }
+  });
+});
+
+
+describe("classic spreadsheet note records", () => {
+  function classic(opc: OpcPackage) {
+    const workbook = readWorkbook(opc), styles = new XlsxStyles(opc, workbook.part, 1_000_000);
+    return { ...readClassicComments(opc, workbook.sheets, styles, 1000, 1_000_000), styles };
+  }
+  it("preserves independent and Calc rich note bodies with stable HTML identities", () => {
+    for (const name of ["09-classic-notes", "producer/09-classic-notes"]) {
+      const native = classic(source(name)); expect(native.notes).toHaveLength(1); expect(native.authors[0]?.name).toBe("独立备注作者");
+      const note = native.notes[0]!, content = new WorkbookContent(DEFAULT_DOCUMENT_READ_LIMITS), bodyNodeId = content.comment(note.sheetId, note.html);
+      expect(note.cell).toEqual({ row: 1, column: 1 }); expect(note.html).toContain('data-node-id="xlsx-note-run-1"');
+      const files = new Map(createWorkbook({ documentId: "notes" })), manifest = JSON.parse(decoder.decode(files.get("manifest.json")!)), metadata = JSON.parse(decoder.decode(files.get("metadata.json")!));
+      manifest.content = "content.html"; metadata.workbook.stories = content.stories; metadata.workbook.commentAuthors = native.authors;
+      metadata.workbook.comments = [{ annotationId: "note", format: "classic", authorId: note.authorId }];
+      const annotations = [{ annotationId: "note", documentId: "notes", baseRevision: 0, status: "open", author: { name: native.authors[0]!.name }, bodyNodeId,
+        anchor: { kind: "cells", sheetId: note.sheetId, ranges: [{ from: note.cell, to: note.cell }] } }];
+      for (const [path, value] of [["manifest.json", manifest], ["metadata.json", metadata], ["annotations.json", annotations]] as const) files.set(path, encoder.encode(JSON.stringify(value)));
+      files.set("content.html", encoder.encode(content.html()!)); files.set("styles.css", encoder.encode(decoder.decode(files.get("styles.css")!) + native.styles.stylesheet()));
+      const model = openDocument(files, { kind: "workbook" }); expect(model.getNode(bodyNodeId)?.text).toBe("请确认：预算😀禰󠄀");
+      expect(openDocument(model.serialize()).snapshot()).toEqual(model.snapshot());
+      if (!name.startsWith("producer/")) expect(native.styles.stylesheet()).toContain(".xlsx-style-0{font-weight:bold");
+    }
+  });
+  it("identifies a compatibility placeholder by its author marker and retains pending native geometry", () => {
+    const files = new Map(source("09-classic-notes").files), part = "xl/comments/comment1.xml";
+    files.set(part, encoder.encode(decoder.decode(files.get(part)!).replace("独立备注作者", `Threaded tc=${rootId}`).replace('authorId="0"', `authorId="0" guid="${rootId}" shapeId="1025"`).replace('</text></comment>', '</text><commentPr><anchor/></commentPr></comment>')));
+    const native = classic(openOpcFiles(files, {}));
+    expect(native.notes[0]).toMatchObject({ placeholderId: rootId, guid: rootId, shapeId: 1025, properties: { name: "commentPr" } });
+    // This record stage intentionally leaves geometry for the note adapter;
+    // it cannot be exposed as a successful full workbook import yet.
+  });
+  it("rejects missing authors, duplicate note cells, missing text and unknown note content", () => {
+    expect(() => parsed(source("invalid/unknown-comment-author"))).toThrowError(expect.objectContaining({ code: "InvalidDocument" }));
+    for (const edit of [
+      (s: string) => s.replace('authorId="0"', 'authorId="999"'),
+      (s: string) => s.replace('<comment ref="B2" authorId="0">', '<comment ref="B2" authorId="0"><text/></comment><comment ref="B2" authorId="0">'),
+      (s: string) => s.replace(/<text>[\s\S]*?<\/text>/, ''),
+      (s: string) => s.replace('ref="B2"', 'ref="XFE2"'),
+      (s: string) => s.replace('</comment>', '<unsupported/></comment>'),
+    ]) {
+      const files = new Map(source("09-classic-notes").files), part = "xl/comments/comment1.xml";
+      files.set(part, encoder.encode(edit(decoder.decode(files.get(part)!)))); expect(() => classic(openOpcFiles(files, {}))).toThrow();
+    }
+  });
+});

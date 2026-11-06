@@ -1,14 +1,16 @@
 import { DocumentError, evaluatePresentationPreset, readPresentationGeometry } from "@dagent-office/core";
-import type { DeepReadonly, DocumentModel, PresentationGeometry, PresentationMetadata, PresentationObject } from "@dagent-office/core";
+import type { DeepReadonly, ContentDocumentModel, PresentationGeometry, PresentationMetadata, PresentationObject } from "@dagent-office/core";
 import type { DocumentRenderReport, LayoutDiagnostic, LayoutFieldResult, RenderedPage, RenderLimits } from "../contracts.js";
 import { PreviewSource } from "../source-index.js";
 import { hideFromViewSelection, markViewNode, measureViewContent, ownViewAttribute, ownViewStyle } from "../view-nodes.js";
-import { addArrows, numeric, property, resolvedColor, strokeAttributes, svgFill } from "./appearance.js";
+import { numeric, property, resolvedColor, svgFill } from "./appearance.js";
 import { renderChart } from "./chart.js";
 import { PresentationInheritance } from "./inheritance.js";
-import { svgElement, svgPath } from "./svg.js";
+import { svgElement } from "./svg.js";
 import { decorateLists, textTransform } from "./text.js";
 import { resolveConnector } from "./connectors.js";
+import { officeFontSegments } from "../font-scripts.js";
+import { createDrawingGeometryView } from "../drawing-geometry.js";
 
 type ObjectDefinition = DeepReadonly<PresentationObject>;
 const attributes = (node: Element): Record<string, string> => Object.fromEntries([...node.attributes].map(a => [a.name, a.value]));
@@ -23,7 +25,7 @@ export interface PresentationCanvas {
   measure(): Pick<DocumentRenderReport, "pages" | "nodePages" | "diagnostics">;
 }
 /** Fixed slide composition. Every injected object is a reversible view node. */
-export function composePresentation(document: Document, model: DocumentModel, limits: Readonly<RenderLimits>,surfaceId?:string): PresentationCanvas {
+export function composePresentation(document: Document, model: ContentDocumentModel, limits: Readonly<RenderLimits>,surfaceId?:string): PresentationCanvas {
   const snapshot = model.snapshot(), metadata = snapshot.metadata.presentation;
   if (snapshot.manifest.kind !== "presentation" || !metadata) throw new DocumentError("UnsupportedFormat", "A presentation canvas requires a presentation package.");
   const source = new PreviewSource(document, model), root = source.root;
@@ -81,16 +83,11 @@ export function composePresentation(document: Document, model: DocumentModel, li
       for (const prototype of chain) for (const attr of prototype.attributes) if (attr.name.startsWith("data-office-adjust-")) adjustments[attr.name.slice(19)] = Number(attr.value);
       const preset = definition.kind === "geometry" ? definition.preset : definition.kind === "connector" ? node.dataset.officeConnectorPreset ?? (definition.routing === "straight" ? "straightConnector1" : "bentConnector3") : "rect";
       const evaluated = evaluatePresentationPreset(preset, g.width, g.height, adjustments);
-      const svg = markViewNode(svgElement(document, "svg", { width: "100%", height: "100%", viewBox: `0 0 ${Math.max(g.width, 0.001)} ${Math.max(g.height, 0.001)}`, "aria-hidden": "true", "data-sdk-preset": preset }));
-      svg.style.cssText = `position:absolute;left:0;top:0;width:${Math.max(g.width, 0.001)}pt;height:${Math.max(g.height, 0.001)}pt;overflow:visible;pointer-events:none`;
       const boxColor=computed.backgroundColor,boxPaint=definition.kind!=="connector"&&preset!=="line"&&boxColor!=="transparent"&&!/rgba\([^)]*,\s*0\)$/.test(boxColor)?boxColor:undefined;
-      const fill = svgFill(document, computed, svg, id + "-fill", "--office-fill", boxPaint??(definition.kind === "geometry" && preset !== "line" ? "#4472c4" : "none"));
+      const svg = createDrawingGeometryView(document, computed, { preset, geometry: evaluated, widthPt: g.width, heightPt: g.height, id, orientation: { rotationDegrees: g.rotation, flipH: g.flipH, flipV: g.flipV },
+        fillFallback: boxPaint ?? (definition.kind === "geometry" && preset !== "line" ? "#4472c4" : "none"),
+        strokeFallback: definition.kind === "connector" || preset === "line" ? "#000000" : "none", maxNodes: limits.maxNodes - count });
       if(definition.kind!=="connector"&&preset!=="line")styleView(node,{"background-color":"transparent"});
-      for (const path of evaluated.paths) {
-        const drawing = svgElement(document, "path", { d: svgPath(path), fill: path.fill ? fill : "none", ...strokeAttributes(document, computed, "--office-line", definition.kind === "connector" || preset === "line" ? "#000000" : "none") });
-        if (!path.stroke) drawing.setAttribute("stroke", "none");
-        addArrows(document, svg, drawing, computed, id); svg.append(drawing);
-      }
       const children = [...node.childNodes]; node.append(svg);
       if (definition.kind === "connector") connectors.push({ node, definition });
       if (children.length || definition.kind==="text" || definition.kind==="geometry"&&evaluated.textRect) {
@@ -114,9 +111,14 @@ export function composePresentation(document: Document, model: DocumentModel, li
           resize(width, height) {
             if (width > 1_000_000 || height > 1_000_000) throw new DocumentError("ResourceLimitExceeded", "Text auto-fit exceeds its geometry budget.");
             const resolved = evaluatePresentationPreset(preset, width, height, adjustments), rect = resolved.textRect;
+            const previousNodes = svg.querySelectorAll("*").length + 1;
+            const replacement = createDrawingGeometryView(document, computed, { preset, geometry: resolved, widthPt: width, heightPt: height, id, orientation: { rotationDegrees: g.rotation, flipH: g.flipH, flipV: g.flipV },
+              fillFallback: boxPaint ?? (definition.kind === "geometry" && preset !== "line" ? "#4472c4" : "none"),
+              strokeFallback: definition.kind === "connector" || preset === "line" ? "#000000" : "none", maxNodes: limits.maxNodes - count + previousNodes });
+            account(replacement.querySelectorAll("*").length + 1 - previousNodes);
             styleView(node, { width: width + "pt", height: height + "pt" });
             svg.setAttribute("viewBox", `0 0 ${Math.max(width, 0.001)} ${Math.max(height, 0.001)}`); svg.style.width = width + "pt"; svg.style.height = height + "pt";
-            const paths = [...svg.querySelectorAll<SVGPathElement>(":scope > path")]; resolved.paths.forEach((path, index) => paths[index]!.setAttribute("d", svgPath(path)));
+            svg.replaceChildren(...replacement.childNodes);
             if (rect) {
               const geometryStyle = document.createElement("div").style; geometryStyle.cssText = textTransform(node, rect);
               for (const name of geometryStyle) content.style.setProperty(name, geometryStyle.getPropertyValue(name));
@@ -145,7 +147,7 @@ export function composePresentation(document: Document, model: DocumentModel, li
       }
     } else if (definition.kind === "chart") {
       const chart = metadata.charts.find(c => c.chartId === definition.chartId)!, data = metadata.dataSets.find(d => d.dataSetId === chart.dataSetId)!;
-      renderChart(node, chart, data, g.width, g.height, id, account);
+      renderChart(node, chart, data, g.width, g.height, id, account, { rotationDegrees: g.rotation, flipH: g.flipH, flipV: g.flipV });
     }
     for (const field of node.querySelectorAll<HTMLElement>('[data-office-field="slidenum"]')) {
       if (field.querySelector(".sdk-field-display")) continue;
@@ -169,7 +171,7 @@ export function composePresentation(document: Document, model: DocumentModel, li
     if (fill === "solid") styleView(slide, { "background-color": resolvedColor(document, s, "--office-fill") });
     else if (fill === "linear") {
       const background = markViewNode(svgElement(document, "svg", { width: "100%", height: "100%", viewBox: `0 0 ${size.width} ${size.height}` })); background.style.cssText = "position:absolute;inset:0;pointer-events:none";
-      background.append(svgElement(document, "rect", { width: size.width, height: size.height, fill: svgFill(document, s, background, "slide-bg-" + index) })); slide.prepend(background);
+      background.append(svgElement(document, "rect", { width: size.width, height: size.height, fill: svgFill(document, s, background, "slide-bg-" + index, { x: 0, y: 0, width: size.width, height: size.height }) })); slide.prepend(background);
     }
     const instanceIds = new Set<string>(); instancesBySlide.set(slide.dataset.nodeId!, instanceIds);
     const inherited: HTMLElement[] = [];
@@ -257,16 +259,11 @@ export function composePresentation(document: Document, model: DocumentModel, li
   for (let n = walker.nextNode(); n; n = walker.nextNode()) if (!n.parentElement?.closest("svg,.sdk-field-display")) texts.push(n as Text);
   for (const text of texts) {
     const parent = text.parentElement!; if (!text.textContent) continue;
-    let previous = "ascii"; const chunks: { role: string; value: string }[] = [];
-    for (const char of text.data) {
-      const code = char.codePointAt(0)!;
-      const role = /\p{Mark}/u.test(char) || code >= 0xfe00 && code <= 0xfe0f || code >= 0xe0100 && code <= 0xe01ef ? previous : /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\u3000-\u303f\uff00-\uffef]/u.test(char) ? "east-asia" : code < 128 ? "ascii" : /[\p{Script=Arabic}\p{Script=Hebrew}]/u.test(char) ? "complex-script" : "h-ansi";
-      previous = role; if (chunks.at(-1)?.role === role) chunks.at(-1)!.value += char; else chunks.push({ role, value: char });
-    }
+    const chunks = officeFontSegments(text.data);
     account(chunks.length); const fragment = document.createDocumentFragment();
     for (const chunk of chunks) {
       const span = markViewNode(document.createElement("span"), "unwrap"); span.dataset.officeScript = chunk.role; span.style.fontFamily = `var(--office-font-${chunk.role},var(--office-minor-${chunk.role},${document.defaultView!.getComputedStyle(parent).fontFamily}))`;
-      span.textContent = chunk.value; fragment.append(span);
+      span.textContent = chunk.text; fragment.append(span);
     }
     text.replaceWith(fragment);
   }
