@@ -1,13 +1,13 @@
 import { openContentFixture as openDocument } from "../../../tests/content-fixture.js";
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
-import type { WordDocumentMetadata } from "@dagent-office/core";
-import { DocumentError } from "@dagent-office/core";
+import type { WordDocumentMetadata } from "@doffi/core";
+import { DocumentError } from "@doffi/core";
 import {
   importDocx,
   readDocumentZip,
   writeDocumentZip,
-} from "@dagent-office/office";
+} from "@doffi/office";
 import { zipSync, unzipSync, strFromU8, strToU8 } from "fflate";
 
 const directory = new URL("../../../examples/docx/", import.meta.url);

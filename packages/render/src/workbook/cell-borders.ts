@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import type { WorkbookBorderPaint } from "./border-style.js";
 import { isWorkbookBorderKind } from "./border-style.js";
 import { resolvedWorkbookColor, workbookDisplayColor } from "./color.js";

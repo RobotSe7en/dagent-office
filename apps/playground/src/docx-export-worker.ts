@@ -1,5 +1,5 @@
-import { DocumentError, openDocument } from "@dagent-office/core";
-import { exportDocx } from "@dagent-office/office";
+import { DocumentError, openDocument } from "@doffi/core";
+import { exportDocx } from "@doffi/office";
 import type { DocxWorkerRequest, DocxWorkerResponse } from "./export-docx.js";
 
 const scope = globalThis as unknown as {

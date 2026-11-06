@@ -1,5 +1,5 @@
-import { WorkbookDynamicFilterSchema, WorkbookFilterComparisonSchema } from "@dagent-office/core";
-import type { WorkbookAutoFilter, WorkbookFilterCriterion, WorkbookFilterDate, WorkbookSort } from "@dagent-office/core";
+import { WorkbookDynamicFilterSchema, WorkbookFilterComparisonSchema } from "@doffi/core";
+import type { WorkbookAutoFilter, WorkbookFilterCriterion, WorkbookFilterDate, WorkbookSort } from "@doffi/core";
 import { check, elements, fail, S, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import { attributes, boolean, integer, number, one, range, spreadsheetText, value } from "./values.js";

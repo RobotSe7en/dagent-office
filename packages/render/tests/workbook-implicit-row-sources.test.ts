@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { createWorkbook, DocumentError, openDocument } from '@dagent-office/core';
+import { createWorkbook, DocumentError, openDocument } from '@doffi/core';
 import { AxisDimensions } from '../src/workbook/dimensions.js';
 import { implicitWorkbookFontRegions, implicitWorkbookRowSources } from '../src/workbook/implicit-row-sources.js';
 const source = openDocument(createWorkbook({ documentId: 'implicit-fonts' }), { kind: 'workbook' }).snapshot().metadata.workbook.sheets[0]!;

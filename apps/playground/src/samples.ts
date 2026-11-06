@@ -1,5 +1,5 @@
-import { parseContract } from "@dagent-office/core";
-import type { DocumentPackage, EditProposal, PresentationEditProposal } from "@dagent-office/core";
+import { parseContract } from "@doffi/core";
+import type { DocumentPackage, EditProposal, PresentationEditProposal } from "@doffi/core";
 async function sample(path: string): Promise<unknown> {
   const response = await fetch(import.meta.env.BASE_URL + path);
   if (!response.ok) throw new Error("协作样例读取失败。");

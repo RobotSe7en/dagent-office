@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, ContentDocumentModel, DocumentTransaction, WordMetadata } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DeepReadonly, ContentDocumentModel, DocumentTransaction, WordMetadata } from "@doffi/core";
 import type { DocumentRenderReport, LayoutDiagnostic, LayoutFieldResult, RenderedPage } from "./contracts.js";
 import { pageLabel } from "./pagination.js";
 import { hideFromViewSelection, markViewNode, measureViewContent } from "./view-nodes.js";

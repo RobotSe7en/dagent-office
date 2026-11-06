@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import type { WorkbookWindowFrame } from "./window-loader.js";
 import type { WorkbookGridCell, WorkbookRect } from "./projection.js";
 import { intersectRect, paneRect } from "./projection.js";

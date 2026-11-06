@@ -1,4 +1,4 @@
-import type { WorkbookSnapshot } from '@dagent-office/core';
+import type { WorkbookSnapshot } from '@doffi/core';
 import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';
 import { createWorkbookDrawingText } from '../../../packages/render/src/workbook/drawing-text.js';
 import { resolvePreviewFontsInScope } from '../../../packages/render/src/fonts.js';

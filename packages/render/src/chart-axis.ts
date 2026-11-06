@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { ChartAppearance, DeepReadonly } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { ChartAppearance, DeepReadonly } from "@doffi/core";
 import { property } from "./presentation/appearance.js";
 
 export function chartValueScale(chart: DeepReadonly<ChartAppearance>, series: readonly { readonly hidden?: boolean; readonly values: readonly (number | null)[] }[]): {

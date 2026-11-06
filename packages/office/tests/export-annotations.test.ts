@@ -1,9 +1,9 @@
 import { openContentFixture as openDocument } from "../../../tests/content-fixture.js";
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
-import { createDocumentSession } from "@dagent-office/core";
-import type { Anchor, Annotation } from "@dagent-office/core";
-import { exportDocx, importDocx } from "@dagent-office/office";
+import { createDocumentSession } from "@doffi/core";
+import type { Anchor, Annotation } from "@doffi/core";
+import { exportDocx, importDocx } from "@doffi/office";
 import { strFromU8, unzipSync } from "fflate";
 const root = new URL("../../../examples/report/", import.meta.url);
 const report = () => openDocument(new Map(["manifest.json", "content.html", "styles.css", "metadata.json", "annotations.json"].map((name) => [name, new Uint8Array(readFileSync(new URL(name, root)))])));

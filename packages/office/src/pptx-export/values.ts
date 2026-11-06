@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import { generate, parse } from "css-tree";
 import { color, length } from "../export/values.js";
 import type { Css } from "../export/css.js";

@@ -1,5 +1,5 @@
-import { DocumentError, parseWorkbookFormula, WorkbookErrorValueSchema } from "@dagent-office/core";
-import type { WorkbookChartCache, WorkbookChartLabel, WorkbookChartReference, WorkbookChartVector, WorkbookFormulaExpression } from "@dagent-office/core";
+import { DocumentError, parseWorkbookFormula, WorkbookErrorValueSchema } from "@doffi/core";
+import type { WorkbookChartCache, WorkbookChartLabel, WorkbookChartReference, WorkbookChartVector, WorkbookFormulaExpression } from "@doffi/core";
 import { C, check, elements, fail, text, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import { attributes, finite, integer, one, spreadsheetText, value } from "./values.js";

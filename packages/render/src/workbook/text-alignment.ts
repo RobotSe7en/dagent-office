@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookValue } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookValue } from "@doffi/core";
 import type { WorkbookReadingOrder } from "./text-direction.js";
 
 export interface WorkbookTextAlignment {

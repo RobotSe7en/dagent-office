@@ -10,7 +10,7 @@ const samples = fileURLToPath(new URL("../../examples/docx/", import.meta.url));
 test.beforeEach(async ({ page }) => {
   // Keep R1-10's continuous reading baselines; pagination has its own fixed
   // fixtures and all three browser-engine gates in pagination.spec.ts.
-  await page.addInitScript(() => { if (window === window.top) localStorage.setItem("dagent-office:layout", "continuous"); });
+  await page.addInitScript(() => { if (window === window.top) localStorage.setItem("doffi:layout", "continuous"); });
 });
 test("fixed-font continuous rich-text input fixture", async ({ page }) => {
   await page.goto("/"); await page.getByRole("button", { name: "打开报告协作样例" }).click();
@@ -94,7 +94,7 @@ test("opens a DOCX sample through the public APIs and releases its preview on re
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "dagent-office Playground" }),
+    page.getByRole("link", { name: "doffi Playground", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "打开 DOCX 样例" }).click();
   await expect(page.getByRole("status")).toContainText("已打开");

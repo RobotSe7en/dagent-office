@@ -1,6 +1,6 @@
-import type { Anchor, DeepReadonly, DocumentEditingSession } from "@dagent-office/core";
-import { isPresentationCommentPoint } from "@dagent-office/core";
-import type { PreviewSource } from "@dagent-office/render";
+import type { Anchor, DeepReadonly, DocumentEditingSession } from "@doffi/core";
+import { isPresentationCommentPoint } from "@doffi/core";
+import type { PreviewSource } from "@doffi/render";
 export interface RegionHost {
     readonly session: DocumentEditingSession;
     readonly source: PreviewSource;

@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, DocumentReadLimits, WordMetadata } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DeepReadonly, DocumentReadLimits, WordMetadata } from "@doffi/core";
 import { variables } from "./css.js";
 import type { Css, ExportCss } from "./css.js";
 import { DocxStyles } from "../ooxml/styles.js";

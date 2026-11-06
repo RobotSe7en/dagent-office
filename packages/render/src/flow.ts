@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import type { RenderLimits } from "./contracts.js";
 import { isMeasuredViewContent, markViewNode, ownViewAttribute, ownViewStyle, viewNodeRole } from "./view-nodes.js";
 

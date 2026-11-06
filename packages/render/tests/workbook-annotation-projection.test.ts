@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { createWorkbook, openDocument } from "@dagent-office/core";
-import type { Annotation, WorkbookComment, WorkbookDocumentMetadata, WorkbookRange } from "@dagent-office/core";
+import { createWorkbook, openDocument } from "@doffi/core";
+import type { Annotation, WorkbookComment, WorkbookDocumentMetadata, WorkbookRange } from "@doffi/core";
 import { AxisDimensions } from "../src/workbook/dimensions.js";
 import { projectWorkbookAnnotations } from "../src/workbook/annotation-projection.js";
 import { workbookViewport } from "../src/workbook/viewport.js";

@@ -1,4 +1,4 @@
-import type { WorkbookDrawingAnchor, WorkbookDrawingMarker } from "@dagent-office/core";
+import type { WorkbookDrawingAnchor, WorkbookDrawingMarker } from "@doffi/core";
 import { check, fail, text } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import { attributes, boolean, one, value } from "./values.js";

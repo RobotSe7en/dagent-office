@@ -1,7 +1,7 @@
-import { DocumentError, openDocument } from "@dagent-office/core";
-import type { ValidationIssue } from "@dagent-office/core";
-import { importDocx, importPptx, readDocumentZip } from "@dagent-office/office";
-import type { DocumentRenderReport, RenderLimits } from "@dagent-office/render/contracts";
+import { DocumentError, openDocument } from "@doffi/core";
+import type { ValidationIssue } from "@doffi/core";
+import { importDocx, importPptx, readDocumentZip } from "@doffi/office";
+import type { DocumentRenderReport, RenderLimits } from "@doffi/render/contracts";
 import { ConversionError, DEFAULT_CONVERTER_LIMITS } from "./render.js";
 import type { ConversionErrorCode, DocumentConverter, PageRenderOptions, RenderedOutput } from "./render.js";
 

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createSharedWorkbookFormulas, DEFAULT_DOCUMENT_READ_LIMITS } from "@dagent-office/core";
-import type { WorkbookCoordinate } from "@dagent-office/core";
+import { createSharedWorkbookFormulas, DEFAULT_DOCUMENT_READ_LIMITS } from "@doffi/core";
+import type { WorkbookCoordinate } from "@doffi/core";
 import { decodeWorkbookCell } from "../../core/src/workbook/chunk-index.js";
 import { openOpc } from "../src/ooxml/package.js";
 import { S, xml } from "../src/ooxml/xml.js";

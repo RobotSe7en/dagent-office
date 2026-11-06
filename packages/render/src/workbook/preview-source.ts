@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import { modelWindowSource } from "./window-source.js";
 import { modelAssetSource } from "./assets.js";
 import { modelChartSource } from "./chart-source.js";

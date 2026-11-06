@@ -1,6 +1,6 @@
 import { generate, ident, parse } from "css-tree";
 import type { CssNode } from "css-tree";
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 
 export interface LengthContext { readonly font: number; readonly rootFont?: number; readonly percent: number }
 interface Quantity { value: number; dimension: boolean }

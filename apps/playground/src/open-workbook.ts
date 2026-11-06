@@ -1,8 +1,8 @@
-import { DocumentError, openDocument, parseContract } from "@dagent-office/core";
-import type { DocumentErrorData, ContentDocumentModel } from "@dagent-office/core";
-import { connectWorkbookReads } from "@dagent-office/render";
-import type { WorkbookReadConnection } from "@dagent-office/render";
-import type { OfficeImportProgress } from "@dagent-office/office";
+import { DocumentError, openDocument, parseContract } from "@doffi/core";
+import type { DocumentErrorData, ContentDocumentModel } from "@doffi/core";
+import { connectWorkbookReads } from "@doffi/render";
+import type { WorkbookReadConnection } from "@doffi/render";
+import type { OfficeImportProgress } from "@doffi/office";
 
 export interface WorkbookOpenRequest { readonly kind: "xlsx" | "package"; readonly taskId: string; readonly documentId: string; readonly bytes: Uint8Array; readonly port: MessagePort }
 export type WorkbookOpenResponse = { readonly taskId: string; readonly kind: "progress"; readonly progress: OfficeImportProgress }

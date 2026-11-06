@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import type { WorkbookPaneBorders } from "./border-projection.js";
 import type { WorkbookCellDiagonals } from "./cell-borders.js";
 import type { WorkbookGridCell } from "./projection.js";

@@ -3,8 +3,8 @@ import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { describe, expect, expectTypeOf, test } from "vitest";
-import { createAssetDescriptor, DEFAULT_DOCUMENT_READ_LIMITS, DocumentError, parseContract } from "@dagent-office/core";
-import type { DocumentErrorCode, ContentDocumentModel as DocumentModel, DocumentPackage, DocumentReadLimits } from "@dagent-office/core";
+import { createAssetDescriptor, DEFAULT_DOCUMENT_READ_LIMITS, DocumentError, parseContract } from "@doffi/core";
+import type { DocumentErrorCode, ContentDocumentModel as DocumentModel, DocumentPackage, DocumentReadLimits } from "@doffi/core";
 import { annotations, manifest, metadata, repository } from "./fixtures.js";
 
 const encoder = new TextEncoder();

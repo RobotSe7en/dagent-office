@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookSnapshot } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookSnapshot } from "@doffi/core";
 
 export interface WorkbookSurface {
   readonly frame: HTMLIFrameElement;

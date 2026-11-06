@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import type { RenderedPage, RenderLimits } from "./contracts.js";
 import { safeStyleText } from "./preview-package.js";
 

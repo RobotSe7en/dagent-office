@@ -9,8 +9,8 @@ R1-05 在 `core` 实现资源摘要、图片容器识别及宿主资源收集，
 其他 MIME 的资源可作为不解释、不执行的附件保存，并校验摘要；当前不能将它们用于 `img`。因此保留 SVG、字体或原始文件附件不代表已支持它们的显示、字体嵌入或 Office 转换。正文图片仍须使用已声明的包内 PNG、JPEG、WebP。样式支持范围仍见[文档模型](document-model.md#htmlcss-支持范围)。
 
 ```ts
-import { collectDocumentAssets, createAssetDescriptor, openDocument } from "@dagent-office/core";
-import type { AssetProvider, DocumentPackage } from "@dagent-office/core";
+import { collectDocumentAssets, createAssetDescriptor, openDocument } from "@doffi/core";
+import type { AssetProvider, DocumentPackage } from "@doffi/core";
 
 declare const imageBytes: Uint8Array;
 const descriptor = createAssetDescriptor("assets/image.png", "image/png", imageBytes);
@@ -29,8 +29,8 @@ const document = openDocument(complete);
 ## ZIP 读取与保存
 
 ```ts
-import { openDocument } from "@dagent-office/core";
-import { readDocumentZip, writeDocumentZip } from "@dagent-office/office";
+import { openDocument } from "@doffi/core";
+import { readDocumentZip, writeDocumentZip } from "@doffi/office";
 
 declare const archiveBytes: Uint8Array;
 const files = readDocumentZip(archiveBytes);

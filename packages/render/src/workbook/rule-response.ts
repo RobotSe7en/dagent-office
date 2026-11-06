@@ -1,5 +1,5 @@
-import { DocumentError, WorkbookValueSchema } from "@dagent-office/core";
-import type { WorkbookRuleIssue, WorkbookRuleReadRequest, WorkbookRuleReadResponse, WorkbookSnapshot } from "@dagent-office/core";
+import { DocumentError, WorkbookValueSchema } from "@doffi/core";
+import type { WorkbookRuleIssue, WorkbookRuleReadRequest, WorkbookRuleReadResponse, WorkbookSnapshot } from "@doffi/core";
 import { isRecord, keys } from "./read-transport.js";
 import { checkWindowIdentity } from "./window-source.js";
 

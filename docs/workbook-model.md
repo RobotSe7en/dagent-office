@@ -7,7 +7,7 @@
 按用户选择，三种格式统一使用 `openDocument`。返回模型的 `kind` 是类型判别字段：Word/PPT 使用 `ContentDocumentModel` 和原有 HTML/节点接口，工作簿使用 `WorkbookModel`、`WorkbookSnapshot`、`getCell` 和 `readWindow`。工作簿快照不含 `html`，清单不含 `entrypoint`；查询不先展开全表。现有 Word/PPT 包继续可读，宿主 TypeScript 代码需要在使用格式专属字段前判断类型。
 
 ```ts
-import { createWorkbook, openDocument } from "@dagent-office/core";
+import { createWorkbook, openDocument } from "@doffi/core";
 
 const files = createWorkbook({ documentId: "host-authorized-id", sheetName: "预算" });
 const model = openDocument(files);
@@ -65,8 +65,8 @@ R3-06 接入原生读取时增加了以下可选契约，旧工作簿包无需�
 `office.importXlsx(bytes, { documentId, signal?, onProgress?, limits?, workbookLimits?, nativeLimits? })` 是异步入口。身份由宿主提供，结果继续交给统一 `core.openDocument`；不新增 `openWorkbook`。导入前捕获身份、回调、信号身份及独立额度副本，ZIP 在首次让出任务前隔离输入字节。取消信号的 `aborted` 状态保持实时读取；宿主修改原选项或输入数组不会把正在进行的导入改成另一份文档。两个并发导入的批注、资源和输出字节互相隔离。
 
 ```ts
-import { importXlsx } from "@dagent-office/office";
-import { openDocument } from "@dagent-office/core";
+import { importXlsx } from "@doffi/office";
+import { openDocument } from "@doffi/core";
 
 const files = await importXlsx(authorizedBytes, { documentId: "host-workbook-id" });
 const workbook = openDocument(files, { kind: "workbook" });
@@ -357,11 +357,11 @@ SDK 对其中 22 项明确字号且语义相同的样例执行三浏览器行距
 
 ### 开发分支的公共只读预览
 
-`@dagent-office/render` 的 `mountDocumentPreview` 按输入的 `kind` 分流。Word／PPT 继续返回原来的分页预览；工作簿返回 `WorkbookPreview`，报告的 `kind` 为 `workbook`、`layout` 为 `grid`，不提前提供工作簿打印或 PDF 支持。
+`@doffi/render` 的 `mountDocumentPreview` 按输入的 `kind` 分流。Word／PPT 继续返回原来的分页预览；工作簿返回 `WorkbookPreview`，报告的 `kind` 为 `workbook`、`layout` 为 `grid`，不提前提供工作簿打印或 PDF 支持。
 
 ```ts
-import { openDocument } from "@dagent-office/core";
-import { mountDocumentPreview } from "@dagent-office/render";
+import { openDocument } from "@doffi/core";
+import { mountDocumentPreview } from "@doffi/render";
 
 const model = openDocument(files, { kind: "workbook" });
 const preview = mountDocumentPreview(container, model, {

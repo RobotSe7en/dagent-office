@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { expect, test } from "vitest";
-import { createWorkbook, openDocument } from "@dagent-office/core";
-import { readDocumentZip, writeDocumentZip } from "@dagent-office/office";
+import { createWorkbook, openDocument } from "@doffi/core";
+import { readDocumentZip, writeDocumentZip } from "@doffi/office";
 
 test("workbook package ZIP preserves hashed chunks and forwards workbook budgets", () => {
   const encoder = new TextEncoder(), files = new Map(createWorkbook({ documentId: "zip-book" }));

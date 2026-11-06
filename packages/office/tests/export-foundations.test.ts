@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { DEFAULT_DOCUMENT_READ_LIMITS } from "@dagent-office/core";
+import { DEFAULT_DOCUMENT_READ_LIMITS } from "@doffi/core";
 import { ExportCss } from "../src/export/css.js";
 import { parseSource } from "../src/export/source.js";
 import { color, fontName, length } from "../src/export/values.js";

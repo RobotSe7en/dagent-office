@@ -1,5 +1,5 @@
-import { openDocument as openAnyDocument } from "@dagent-office/core";
-import type { DocumentPackage, OpenDocumentOptions, ContentDocumentModel } from "@dagent-office/core";
+import { openDocument as openAnyDocument } from "@doffi/core";
+import type { DocumentPackage, OpenDocumentOptions, ContentDocumentModel } from "@doffi/core";
 
 /** Legacy Word/PPT fixtures intentionally exercise only the content branch.
  * Workbook and dispatch tests call the public unified reader directly. */

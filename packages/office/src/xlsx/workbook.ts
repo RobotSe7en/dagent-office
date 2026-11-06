@@ -1,5 +1,5 @@
-import { parseWorkbookFormula } from "@dagent-office/core";
-import type { WorkbookDefinedName, WorkbookFormulaExpression, WorkbookMetadata, WorkbookRange, WorkbookSheet } from "@dagent-office/core";
+import { parseWorkbookFormula } from "@doffi/core";
+import type { WorkbookDefinedName, WorkbookFormulaExpression, WorkbookMetadata, WorkbookRange, WorkbookSheet } from "@doffi/core";
 import { attr, check, elements, fail, R, S, text, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import type { OpcPackage } from "../ooxml/package.js";

@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookCell, WorkbookModel, WorkbookSnapshot, WorkbookWindow } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookCell, WorkbookModel, WorkbookSnapshot, WorkbookWindow } from "@doffi/core";
 
 export interface WorkbookWindowLimits { readonly maxCells: number; readonly maxCodeUnits: number }
 export interface WorkbookWindowRequest extends WorkbookWindowLimits {

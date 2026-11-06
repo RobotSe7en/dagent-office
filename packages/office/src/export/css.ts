@@ -1,7 +1,7 @@
 import { generate, ident, lexer, List, parse, walk } from "css-tree";
 import type { CssNode, Declaration, Selector } from "css-tree";
-import { DocumentError } from "@dagent-office/core";
-import type { DocumentReadLimits } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DocumentReadLimits } from "@doffi/core";
 import type { SourceElement } from "./source.js";
 import { color, length } from "./values.js";
 

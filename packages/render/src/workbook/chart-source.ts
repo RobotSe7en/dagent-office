@@ -1,5 +1,5 @@
-import { createWorkbookScalarEvaluator, DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookChart, WorkbookChartLiteral, WorkbookChartVector, WorkbookFormulaSource, WorkbookModel, WorkbookReferenceArea, WorkbookReferenceResult, WorkbookScalarEvaluator, WorkbookScalarResult, WorkbookScalarUnavailable, WorkbookSheet, WorkbookSnapshot, WorkbookValue } from "@dagent-office/core";
+import { createWorkbookScalarEvaluator, DocumentError } from "@doffi/core";
+import type { DeepReadonly, WorkbookChart, WorkbookChartLiteral, WorkbookChartVector, WorkbookFormulaSource, WorkbookModel, WorkbookReferenceArea, WorkbookReferenceResult, WorkbookScalarEvaluator, WorkbookScalarResult, WorkbookScalarUnavailable, WorkbookSheet, WorkbookSnapshot, WorkbookValue } from "@doffi/core";
 import { workbookCellFormat } from "./cell-format.js";
 
 export interface WorkbookChartReadLimits {

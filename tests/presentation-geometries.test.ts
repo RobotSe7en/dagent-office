@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
-import { evaluatePresentationPreset, openDocument, readPresentationGeometry } from "@dagent-office/core";
-import { importPptx } from "@dagent-office/office";
+import { evaluatePresentationPreset, openDocument, readPresentationGeometry } from "@doffi/core";
+import { importPptx } from "@doffi/office";
 
 test("evaluates imported native shape/connector adjustments from independent and Office-resaved PPTX", () => {
   for (const producer of ["", "producer/"]) for (const name of ["04-shapes.pptx", "06-connectors.pptx"]) {

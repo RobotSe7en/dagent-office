@@ -1,6 +1,6 @@
 import { decodeTestPackage, type TestPackage } from './package-transport.js';
-import { createWorkbookNumberFormatter, openDocument } from '@dagent-office/core';
-import type { WorkbookDocumentMetadata } from '@dagent-office/core';
+import { createWorkbookNumberFormatter, openDocument } from '@doffi/core';
+import type { WorkbookDocumentMetadata } from '@doffi/core';
 import { createWorkbookSurface } from '../../../packages/render/src/workbook/surface.js';
 import { modelWindowSource } from '../../../packages/render/src/workbook/window-source.js';
 import { modelAssetSource } from '../../../packages/render/src/workbook/assets.js';

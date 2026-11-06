@@ -2,9 +2,11 @@
 
 三格式模型及来源规则见[数据模型](data-model.md)。DOCX 读取及只读验收已前移至 R1-06 前，当前状态与细则见[第一轮计划](iteration-1.md)。
 
-`DocumentPackage` 是 dagent-office 的持久化文档源。它由规范 HTML、CSS、格式元数据、资源和批注组成，可以保存为目录或 ZIP。原始 Office 文件是可选的来源材料，文档包能够独立编辑和导出。
+`DocumentPackage` 是 doffi 的持久化文档源。它由规范 HTML、CSS、格式元数据、资源和批注组成，可以保存为目录或 ZIP。原始 Office 文件是可选的来源材料，文档包能够独立编辑和导出。
 
 本格式处于设计阶段。首次发布冻结版本 1 后，外部文档继续由显式的版本读取器导入；未知版本返回类型明确的错误，不能按字段形状猜测版本。
+
+V1 的格式标识为 `format: "doffi"`，Schema 标识使用 `urn:doffi:contract:*`。项目尚未发布，本次更名按用户决定统一标识，不保留旧名称的兼容读取器。
 
 R1-03 已实现清单、Word 基本元数据及批注的[结构校验](contracts.md)；R1-04 已实现单 HTML 入口的[包读取、HTML/CSS 解析、节点索引、元数据引用及保存重开](document-model.md)。R1-05 已实现[资源摘要、图片容器识别、完整资源收集及 ZIP 读写](resources-and-zip.md)。当前所有协议对象严格拒绝未知字段；分块及更丰富的格式元数据在后续任务显式加入，不通过额外字段隐式接收。
 
@@ -24,7 +26,7 @@ assets/
 
 | 字段 | 含义 |
 | --- | --- |
-| `format` | 固定为 `dagent-office` |
+| `format` | 固定为 `doffi` |
 | `formatVersion` | 持久化格式版本，设计值为 `1` |
 | `documentId` | 不透明文档 ID，不授予访问权限 |
 | `kind` | `document`、`presentation` 或 `workbook` |

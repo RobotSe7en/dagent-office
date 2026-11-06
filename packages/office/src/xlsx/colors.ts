@@ -1,4 +1,4 @@
-import { DEFAULT_WORKBOOK_INDEXED_COLORS } from "@dagent-office/core";
+import { DEFAULT_WORKBOOK_INDEXED_COLORS } from "@doffi/core";
 import { check, elements, fail, S, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import type { Css } from "../ooxml/styles.js";

@@ -1,5 +1,5 @@
-import { AnchorSchema, DocumentError } from "@dagent-office/core";
-import type { DocumentEditingSession, DocumentOperation, DocumentSelection } from "@dagent-office/core";
+import { AnchorSchema, DocumentError } from "@doffi/core";
+import type { DocumentEditingSession, DocumentOperation, DocumentSelection } from "@doffi/core";
 import { createAnnotationPopover } from "../workspace.js";
 export interface CommentControlsHost {
     readonly session: DocumentEditingSession;

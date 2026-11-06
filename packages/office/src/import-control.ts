@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 
 export interface OfficeImportProgress {
   readonly phase: "zip" | "metadata" | "worksheet" | "content" | "validate";

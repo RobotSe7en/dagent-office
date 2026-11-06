@@ -1,5 +1,5 @@
-import type { WorkbookChart, WorkbookChartVector } from "@dagent-office/core";
-import { parseWorkbookFormula, printWorkbookFormula } from "@dagent-office/core";
+import type { WorkbookChart, WorkbookChartVector } from "@doffi/core";
+import { parseWorkbookFormula, printWorkbookFormula } from "@doffi/core";
 import type { OpcPackage } from "../ooxml/package.js";
 import type { Css } from "../ooxml/styles.js";
 import { A, attr, C, check, elements, fail, R, unsupported } from "../ooxml/xml.js";

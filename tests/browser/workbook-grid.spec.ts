@@ -1,8 +1,8 @@
 import { encodeTestPackage } from './package-transport.js';
 import { openSdkHost } from './sdk-host.js';
 import { expect, test } from "@playwright/test";
-import { openDocument } from "@dagent-office/core";
-import type { WorkbookDocumentMetadata } from "@dagent-office/core";
+import { openDocument } from "@doffi/core";
+import type { WorkbookDocumentMetadata } from "@doffi/core";
 import { build } from "vite";
 import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";

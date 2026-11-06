@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { openDocument } from '@dagent-office/core';
-import type { WorkbookComment } from '@dagent-office/core';
+import { openDocument } from '@doffi/core';
+import type { WorkbookComment } from '@doffi/core';
 type ClassicComment = Extract<WorkbookComment, { format: 'classic' }>;
-import { importXlsx } from '@dagent-office/office';
+import { importXlsx } from '@doffi/office';
 import { readDocumentZip, writeOpcZip } from '../src/document-zip.js';
 
 const cases = ['conflict', 'same-anchor', 'visible', 'commentPr-only'];

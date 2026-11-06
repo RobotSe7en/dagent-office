@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookCell } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookCell } from "@doffi/core";
 
 export const workbookCellSourceAttributes: ReadonlySet<string> = new Set(["data-column", "data-value-type", "data-value", "data-formula", "data-cache-state", "data-format-id", "class"]);
 export function checkWorkbookCellSource(source: WorkbookCell, attribute: (name: string) => string | null, text: string): void {

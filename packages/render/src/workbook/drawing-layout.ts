@@ -1,5 +1,5 @@
-import { DocumentError, evaluatePresentationPreset } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookNumberFormatter, WorkbookObject, WorkbookSnapshot } from "@dagent-office/core";
+import { DocumentError, evaluatePresentationPreset } from "@doffi/core";
+import type { DeepReadonly, WorkbookNumberFormatter, WorkbookObject, WorkbookSnapshot } from "@doffi/core";
 import type { FontResolution } from "../contracts.js";
 import { createDrawingGeometryView } from "../drawing-geometry.js";
 import { strokeAttributes } from "../presentation/appearance.js";

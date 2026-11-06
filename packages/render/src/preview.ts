@@ -1,7 +1,7 @@
-import { DocumentError, openDocument } from "@dagent-office/core";
+import { DocumentError, openDocument } from "@doffi/core";
 import { resolvePreviewFonts } from "./fonts.js";
 import type { FontResolution } from "./fonts.js";
-import type { DeepReadonly, ContentDocumentModel, WordMetadata } from "@dagent-office/core";
+import type { DeepReadonly, ContentDocumentModel, WordMetadata } from "@doffi/core";
 import { PreviewSource } from "./source-index.js";
 import { renderLimits } from "./contracts.js";
 import type { DocumentRenderReport, RenderLimits } from "./contracts.js";

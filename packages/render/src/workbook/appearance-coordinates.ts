@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookCoordinate } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookCoordinate } from "@doffi/core";
 import type { AxisCell, AxisDimensions } from "./dimensions.js";
 import type { WorkbookGridCell, WorkbookMergeIndex } from "./projection.js";
 import type { WorkbookViewportLayout } from "./viewport.js";

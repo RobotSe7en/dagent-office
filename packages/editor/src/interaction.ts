@@ -1,10 +1,10 @@
-import { createOpaqueId, DocumentError } from "@dagent-office/core";
+import { createOpaqueId, DocumentError } from "@doffi/core";
 import type {
   Anchor, DeepReadonly, DocumentEditingSession, ContentDocumentModel, DocumentOperation, DocumentSelection, Rectangle,
-} from "@dagent-office/core";
+} from "@doffi/core";
 import { mountPreview } from "./preview.js";
 import type { DocumentPreviewOptions } from "./preview.js";
-import type { DocumentRenderReport } from "@dagent-office/render";
+import type { DocumentRenderReport } from "@doffi/render";
 import type { FontResolution } from "./fonts.js";
 import type { PreviewSource } from "./source-index.js";
 import { annotationPopoverStyles, createAnnotationPopover, workspaceControls } from "./workspace.js";

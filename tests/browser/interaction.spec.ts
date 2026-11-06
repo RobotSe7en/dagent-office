@@ -6,9 +6,9 @@ import type { Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
-import {} from "@dagent-office/core";
-import type { DocumentPackage, Rectangle } from "@dagent-office/core";
-import { importDocx, readDocumentZip } from "@dagent-office/office";
+import {} from "@doffi/core";
+import type { DocumentPackage, Rectangle } from "@doffi/core";
+import { importDocx, readDocumentZip } from "@doffi/office";
 import type {} from "./fixtures/interaction-host.js";
 import { nestedFieldFixture } from "../../packages/office/tests/regression-fixtures.js";
 

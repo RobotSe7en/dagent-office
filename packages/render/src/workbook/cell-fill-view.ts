@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import { drawingGradientLine } from "../drawing-gradient.js";
 import type { DrawingGradientLine } from "../drawing-gradient.js";
 import { svgElement } from "../presentation/svg.js";

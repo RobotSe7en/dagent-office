@@ -1,9 +1,9 @@
 import { openContentFixture as openDocument } from "../../../tests/content-fixture.js";
 import { readFileSync } from "node:fs";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
-import { createDocumentSession } from "@dagent-office/core";
-import type { WordDocumentMetadata } from "@dagent-office/core";
-import { importDocx, writeDocumentZip } from "@dagent-office/office";
+import { createDocumentSession } from "@doffi/core";
+import type { WordDocumentMetadata } from "@doffi/core";
+import { importDocx, writeDocumentZip } from "@doffi/office";
 
 export function mutateDocx(
   name: string,

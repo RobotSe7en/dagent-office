@@ -1,4 +1,4 @@
-import type { DocumentEditingSession, DocumentOperation } from "@dagent-office/core";
+import type { DocumentEditingSession, DocumentOperation } from "@doffi/core";
 export interface TableControlsHost {
     readonly session: DocumentEditingSession;
     target(): string | undefined;

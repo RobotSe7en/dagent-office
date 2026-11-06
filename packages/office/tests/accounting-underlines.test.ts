@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
-import { openDocument } from '@dagent-office/core';
-import { importXlsx } from '@dagent-office/office';
+import { openDocument } from '@doffi/core';
+import { importXlsx } from '@doffi/office';
 
 const report = JSON.parse(readFileSync('docs/evidence/xlsx-accounting-underlines.json', 'utf8')) as { cases: { source: { underline: string }; producer: { underline: string } }[] };
 describe('native accounting underline sources', () => {

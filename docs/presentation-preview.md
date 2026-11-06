@@ -1,11 +1,11 @@
 # PPT 只读画布与读取验收
 
-R2-06 为 Presentation 文档包接入 `@dagent-office/render` 的 `mountDocumentPreview`，不需要编辑会话。浏览器只消费已校验的 HTML/CSS、类型化元数据和授权资源；原 PPTX、第三方演示文稿／图表库和 Office 进程不参与 SDK 运行。
+R2-06 为 Presentation 文档包接入 `@doffi/render` 的 `mountDocumentPreview`，不需要编辑会话。浏览器只消费已校验的 HTML/CSS、类型化元数据和授权资源；原 PPTX、第三方演示文稿／图表库和 Office 进程不参与 SDK 运行。
 
 ```ts
-import { openDocument } from "@dagent-office/core";
-import { importPptx } from "@dagent-office/office";
-import { mountDocumentPreview } from "@dagent-office/render";
+import { openDocument } from "@doffi/core";
+import { importPptx } from "@doffi/office";
+import { mountDocumentPreview } from "@doffi/render";
 
 const model = openDocument(importPptx(bytes, { documentId: "host-authorized-id" }));
 const view = mountDocumentPreview(container, model);

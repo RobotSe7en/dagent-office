@@ -1,8 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import "@dagent-office/core";
-import "@dagent-office/editor";
-import "@dagent-office/office";
+import "@doffi/core";
+import "@doffi/editor";
+import "@doffi/office";
 import { App } from "./App.js";
 import "./styles.css";
 

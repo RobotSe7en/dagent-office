@@ -1,4 +1,4 @@
-import { createAssetDescriptor, DocumentError } from "@dagent-office/core";
+import { createAssetDescriptor, DocumentError } from "@doffi/core";
 import type { OpcPackage } from "../ooxml/package.js";
 import { attr, check, elements, fail, PKG, R, S } from "../ooxml/xml.js";
 import type { XlsxRecords } from "./read.js";

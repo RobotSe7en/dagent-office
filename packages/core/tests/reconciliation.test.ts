@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { createDocumentSession, DocumentError, openDocument } from "@dagent-office/core";
-import type { DocumentContentOperation, DocumentSession, DocumentSessionOptions, ReconciledTextEdit } from "@dagent-office/core";
+import { createDocumentSession, DocumentError, openDocument } from "@doffi/core";
+import type { DocumentContentOperation, DocumentSession, DocumentSessionOptions, ReconciledTextEdit } from "@doffi/core";
 import { repository } from "./fixtures.js";
 
 function session(text = "甲甲甲", options?: DocumentSessionOptions): DocumentSession {

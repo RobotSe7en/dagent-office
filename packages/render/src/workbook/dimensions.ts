@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookSheet } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DeepReadonly, WorkbookSheet } from "@doffi/core";
 
 export interface AxisOverride { readonly from: number; readonly to: number; readonly sizePt: number }
 interface Segment extends AxisOverride { readonly startPt: number; readonly endPt: number }

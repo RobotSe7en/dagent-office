@@ -1,8 +1,8 @@
 import { decodeTestPackage, type TestPackage } from './package-transport.js';
-import { createDocumentSession, openDocument } from "@dagent-office/core";
-import type { DocumentSession } from "@dagent-office/core";
-import { mountDocumentTextEditor } from "@dagent-office/editor";
-import type { DocumentTextEditor } from "@dagent-office/editor";
+import { createDocumentSession, openDocument } from "@doffi/core";
+import type { DocumentSession } from "@doffi/core";
+import { mountDocumentTextEditor } from "@doffi/editor";
+import type { DocumentTextEditor } from "@doffi/editor";
 export interface TextEditorHost {
   session: DocumentSession | undefined;
   view: DocumentTextEditor | undefined;

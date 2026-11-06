@@ -1,5 +1,5 @@
-import { DocumentError, evaluatePresentationPreset, readPresentationGeometry } from "@dagent-office/core";
-import type { DeepReadonly, ContentDocumentModel, PresentationGeometry, PresentationMetadata, PresentationObject } from "@dagent-office/core";
+import { DocumentError, evaluatePresentationPreset, readPresentationGeometry } from "@doffi/core";
+import type { DeepReadonly, ContentDocumentModel, PresentationGeometry, PresentationMetadata, PresentationObject } from "@doffi/core";
 import type { DocumentRenderReport, LayoutDiagnostic, LayoutFieldResult, RenderedPage, RenderLimits } from "../contracts.js";
 import { PreviewSource } from "../source-index.js";
 import { hideFromViewSelection, markViewNode, measureViewContent, ownViewAttribute, ownViewStyle } from "../view-nodes.js";

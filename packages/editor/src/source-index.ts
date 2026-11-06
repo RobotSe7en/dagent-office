@@ -1,1 +1,1 @@
-export { PreviewSource } from "@dagent-office/render";
+export { PreviewSource } from "@doffi/render";

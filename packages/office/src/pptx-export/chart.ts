@@ -1,4 +1,4 @@
-import type { ChartAppearance, DeepReadonly, PresentationChart, PresentationObject } from "@dagent-office/core";
+import type { ChartAppearance, DeepReadonly, PresentationChart, PresentationObject } from "@doffi/core";
 import type { Css } from "../export/css.js";
 import type { SourceElement } from "../export/source.js";
 import { attributes, declaration, empty, escapeXml } from "../export/xml.js";

@@ -1,4 +1,4 @@
-import type { DeepReadonly, PresentationObject } from "@dagent-office/core";
+import type { DeepReadonly, PresentationObject } from "@doffi/core";
 import type { Css } from "../export/css.js";
 import { fontName } from "../export/values.js";
 import { children, element, sourceText } from "../export/source.js";

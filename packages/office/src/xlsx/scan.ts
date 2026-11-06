@@ -1,4 +1,4 @@
-import type { DocumentReadLimits, WorkbookCoordinate } from "@dagent-office/core";
+import type { DocumentReadLimits, WorkbookCoordinate } from "@doffi/core";
 import { check, fail, S } from "../ooxml/xml.js";
 import type { XmlBudget, XmlNode } from "../ooxml/xml.js";
 import { streamXml } from "../ooxml/xml-stream.js";

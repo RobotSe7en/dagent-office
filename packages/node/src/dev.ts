@@ -20,10 +20,10 @@ export async function runConversionProcess(input: ConversionRequestV1, options: 
   if (Buffer.byteLength(serialized) > maximum) throw new ConversionError("ResourceLimitExceeded", "Conversion request exceeds its process frame budget.");
   if (options.signal?.aborted) throw new ConversionError("Cancelled", "Conversion was cancelled before startup.");
   const env = conversionEnvironment();
-  if (options.browserExecutable) env.DAGENT_OFFICE_CHROMIUM_EXECUTABLE = options.browserExecutable;
+  if (options.browserExecutable) env.DOFFI_CHROMIUM_EXECUTABLE = options.browserExecutable;
   if (options.browserCacheDirectory) env.PLAYWRIGHT_BROWSERS_PATH = options.browserCacheDirectory;
-  env.DAGENT_OFFICE_CONVERSION_TIMEOUT = String(timeout);
-  env.DAGENT_OFFICE_CONVERSION_CONFIG = JSON.stringify({ converter: {
+  env.DOFFI_CONVERSION_TIMEOUT = String(timeout);
+  env.DOFFI_CONVERSION_CONFIG = JSON.stringify({ converter: {
     ...(options.browserChannel ? { browserChannel: options.browserChannel } : {}),
     ...(options.maxInputBytes !== undefined ? { maxInputBytes: options.maxInputBytes } : {}),
     ...(options.maxOutputBytes !== undefined ? { maxOutputBytes: options.maxOutputBytes } : {}),
@@ -85,7 +85,7 @@ function readBody(request: IncomingMessage, maximum: number, signal: AbortSignal
 /** Development adapter; loopback by default, with explicit same-origin opt-in.
  * The SDK opens no listener and this gate does not replace host authentication. */
 export function createDevelopmentConversionMiddleware(options: DevelopmentConverterOptions = {}): DevelopmentConversionMiddleware {
-  const path = options.route ?? "/__dagent_office/convert", maximum = options.maxMessageBytes ?? 96 * 1024 * 1024, concurrency = options.maxConcurrency ?? 2;
+  const path = options.route ?? "/__doffi/convert", maximum = options.maxMessageBytes ?? 96 * 1024 * 1024, concurrency = options.maxConcurrency ?? 2;
   if (!Number.isSafeInteger(concurrency) || concurrency <= 0 || !Number.isSafeInteger(maximum) || maximum <= 0
     || options.timeoutMs !== undefined && (!Number.isSafeInteger(options.timeoutMs) || options.timeoutMs <= 0)) throw new ConversionError("InvalidRequest", "Development conversion quotas are invalid.");
   if (options.allowedOrigins !== undefined && (!Array.isArray(options.allowedOrigins) || options.allowedOrigins.length > 32)) throw new ConversionError("InvalidRequest", "Development origins must be an explicit bounded list.");
@@ -118,7 +118,7 @@ export function createDevelopmentConversionMiddleware(options: DevelopmentConver
       try { const origin = new URL(request.headers.origin); sameOrigin = origin.host === authority?.host && origin.protocol === protocol; } catch { sameOrigin = false; }
     }
     const permitted = loopback(request.socket.remoteAddress) && localHost || Boolean(request.headers.origin && authority && allowed.has(authority.origin));
-    if (!validAuthority || !permitted || !sameOrigin || request.headers["x-dagent-office-dev"] !== "1") { send(403, { error: { code: "InvalidRequest", message: "An authorized same-origin development conversion is required." } }); return; }
+    if (!validAuthority || !permitted || !sameOrigin || request.headers["x-doffi-dev"] !== "1") { send(403, { error: { code: "InvalidRequest", message: "An authorized same-origin development conversion is required." } }); return; }
     if (request.method !== "POST") { send(405, { error: { code: "InvalidRequest", message: "Use a POST conversion request." } }); return; }
     if (!/^application\/json(?:\s*;|$)/i.test(request.headers["content-type"] ?? "")) { send(415, { error: { code: "InvalidRequest", message: "Conversion requires application/json." } }); return; }
     if (active >= concurrency) { send(429, { error: { code: "Busy", message: "Development conversion capacity is in use." } }); return; }

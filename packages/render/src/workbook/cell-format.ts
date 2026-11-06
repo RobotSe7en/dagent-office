@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookCell, WorkbookCoordinate, WorkbookSheet } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DeepReadonly, WorkbookCell, WorkbookCoordinate, WorkbookSheet } from "@doffi/core";
 
 export interface WorkbookCellFormat {
   readonly cssClass: string;

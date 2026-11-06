@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookModel, WorkbookSnapshot } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookModel, WorkbookSnapshot } from "@doffi/core";
 import { checkWindowCancellation, checkWindowIdentity } from "./window-source.js";
 import { workbookImageFootprint } from "./image-footprint.js";
 

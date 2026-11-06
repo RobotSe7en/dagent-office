@@ -1,5 +1,5 @@
-import { createWorkbook, createWorkbookNumberFormatter, openDocument } from "@dagent-office/core";
-import type { WorkbookDocumentMetadata, WorkbookManifest } from "@dagent-office/core";
+import { createWorkbook, createWorkbookNumberFormatter, openDocument } from "@doffi/core";
+import type { WorkbookDocumentMetadata, WorkbookManifest } from "@doffi/core";
 import { AxisDimensions } from "../../../packages/render/src/workbook/dimensions.js";
 import { WorkbookWindowLoader } from "../../../packages/render/src/workbook/window-loader.js";
 import { modelWindowSource } from "../../../packages/render/src/workbook/window-source.js";

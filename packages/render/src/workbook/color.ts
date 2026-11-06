@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 
 export type WorkbookRgb = readonly [number, number, number];
 

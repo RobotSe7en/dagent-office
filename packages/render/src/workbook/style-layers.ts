@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 
 export type WorkbookStyleProperties = ReadonlyMap<string, string>;
 const standard = new Set(["color", "background-color", "font-family", "font-size", "font-weight", "font-style", "font-variant", "line-height",

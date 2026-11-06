@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { expect, it } from 'vitest';
-import { DEFAULT_WORKBOOK_RULE_LIMITS, openDocument, readWorkbookRules } from '@dagent-office/core';
-import { importXlsx } from '@dagent-office/office';
+import { DEFAULT_WORKBOOK_RULE_LIMITS, openDocument, readWorkbookRules } from '@doffi/core';
+import { importXlsx } from '@doffi/office';
 
 it('reads the seven independent native validation kinds and four conditional rule kinds', async () => {
   const model = openDocument(await importXlsx(readFileSync('examples/xlsx/06-rules-validation.xlsx'), { documentId: 'rules' }), { kind: 'workbook' }), before = model.serialize();

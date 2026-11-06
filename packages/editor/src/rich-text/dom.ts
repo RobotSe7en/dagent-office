@@ -1,4 +1,4 @@
-import type { ChangeMapping,ReconciledTextEdit } from "@dagent-office/core";
+import type { ChangeMapping,ReconciledTextEdit } from "@doffi/core";
 
 export type IgnoreNode = (node: Node) => boolean;
 export const blockSelector = "p,h1,h2,h3,h4,h5,h6,li,td,th";

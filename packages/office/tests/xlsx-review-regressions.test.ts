@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { openDocument } from '@dagent-office/core';
-import { importPptx, importXlsx } from '@dagent-office/office';
+import { openDocument } from '@doffi/core';
+import { importPptx, importXlsx } from '@doffi/office';
 import { readDocumentZip, writeOpcZip } from '../src/document-zip.js';
 
 const decoder = new TextDecoder(), encoder = new TextEncoder();

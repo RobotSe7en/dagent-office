@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
-import { openDocument } from '@dagent-office/core';
-import { importXlsx } from '@dagent-office/office';
+import { openDocument } from '@doffi/core';
+import { importXlsx } from '@doffi/office';
 
 const evidence = JSON.parse(readFileSync('docs/evidence/xlsx-chart-finite-scales.json', 'utf8')) as { cases: { source: { axis: Record<string, string>; majorUnit: string | null; values: string[] }; producer: { axis: Record<string, string>; majorUnit: string | null; values: string[] } }[] };
 describe('independent finite chart intervals', () => {

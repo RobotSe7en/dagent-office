@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookCoordinate, WorkbookRange } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookCoordinate, WorkbookRange } from "@doffi/core";
 import { attr, elements, fail, S, text, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import { escapeHtml } from "../ooxml/styles.js";

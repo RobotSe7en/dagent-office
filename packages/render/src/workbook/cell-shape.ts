@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 
 /** Physical cell geometry. Ordinary borders anchor a rotated cell at its
  * bottom edge; diagonal-only borders do not change its rectangular outline.

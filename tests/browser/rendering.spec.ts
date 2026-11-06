@@ -6,17 +6,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { expect, test } from "@playwright/test";
-import {} from "@dagent-office/core";
-import { importDocx, writeDocumentZip } from "@dagent-office/office";
-import { createDocumentConverter } from "@dagent-office/node";
-import { runConversionProcess } from "@dagent-office/node/dev";
+import {} from "@doffi/core";
+import { importDocx, writeDocumentZip } from "@doffi/office";
+import { createDocumentConverter } from "@doffi/node";
+import { runConversionProcess } from "@doffi/node/dev";
 import { longTable, pagedFiles } from "./fixtures/pagination-files.js";
 const exec = promisify(execFile);
 
 test("real PDF contains every source paragraph once, with physical pages and searchable text", async () => {
   const files = pagedFiles(Array.from({ length: 40 }, (_, index) => `<p data-node-id="p-${index}">UNIQUE-${String(index).padStart(2, "0")}</p>`).join(""));
   const model = openDocument(files), before = model.serialize(), converter = createDocumentConverter();
-  const directory = await mkdtemp(join(tmpdir(), "dagent-pdf-"));
+  const directory = await mkdtemp(join(tmpdir(), "doffi-pdf-"));
   try {
     const result = await converter.renderPdf(model); expect(result.report.pages).toHaveLength(4); expect(result.engine.name).toBe("chromium");
     const path = join(directory, "document.pdf"); await writeFile(path, result.bytes);
@@ -27,7 +27,7 @@ test("real PDF contains every source paragraph once, with physical pages and sea
   } finally { await converter.close(); await rm(directory, { recursive: true, force: true }); }
 });
 test("PDF and PNG repeat table headers and agree on measured page geometry", async () => {
-  const model = openDocument(longTable()), converter = createDocumentConverter(), directory = await mkdtemp(join(tmpdir(), "dagent-table-"));
+  const model = openDocument(longTable()), converter = createDocumentConverter(), directory = await mkdtemp(join(tmpdir(), "doffi-table-"));
   try {
     const pdf = await converter.renderPdf(model), image = await converter.renderPage(model, { pageIndex: 1 });
     expect(image.report.pages).toEqual(pdf.report.pages); expect(Buffer.from(image.bytes).subarray(1, 4).toString()).toBe("PNG");
@@ -61,7 +61,7 @@ test("the independent CLI handles authorized DOCX bytes and package bytes with t
   const result = await runConversionProcess({ protocolVersion: 1, taskId: "docx-task", format: "pdf", input: { format: "docx", documentId: "private-docx", bytesBase64: docx.toString("base64") } });
   expect(result).toMatchObject({ protocolVersion: 1, taskId: "docx-task", ok: true, output: { report: { documentId: "private-docx" }, mimeType: "application/pdf" } });
   if (result.ok) {
-    const directory = await mkdtemp(join(tmpdir(), "dagent-cli-"));
+    const directory = await mkdtemp(join(tmpdir(), "doffi-cli-"));
     try {
       const path = join(directory, "source.pdf"); await writeFile(path, Buffer.from(result.output.bytesBase64, "base64"));
       const text = (await exec("pdftotext", [path, "-"])).stdout; expect(text.match(/报告页眉/g)).toHaveLength(2);

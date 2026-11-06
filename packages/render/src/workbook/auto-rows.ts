@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookCell, WorkbookCoordinate, WorkbookNumberFormatter, WorkbookRuleReadLimits, WorkbookSheet, WorkbookWindow } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DeepReadonly, WorkbookCell, WorkbookCoordinate, WorkbookNumberFormatter, WorkbookRuleReadLimits, WorkbookSheet, WorkbookWindow } from "@doffi/core";
 import type { FontResolution } from "../contracts.js";
 import { FontProbeCache } from "../font-probe-cache.js";
 import { WorkbookCellSources } from "./cell-source.js";

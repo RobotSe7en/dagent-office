@@ -1,6 +1,6 @@
 import { decodeTestPackage, type TestPackage } from './package-transport.js';
-import { createWorkbookNumberFormatter, openDocument } from '@dagent-office/core';
-import type { WorkbookDocumentMetadata } from '@dagent-office/core';
+import { createWorkbookNumberFormatter, openDocument } from '@doffi/core';
+import type { WorkbookDocumentMetadata } from '@doffi/core';
 import { createWorkbookSurface } from '../../../packages/render/src/workbook/surface.js';
 import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';
 import { measureWorkbookColumnFont } from '../../../packages/render/src/workbook/column-font.js';

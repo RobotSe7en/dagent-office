@@ -1,5 +1,5 @@
-import { connectWorkbookReads, mountDocumentPreview } from '@dagent-office/render';
-import type { WorkbookPreview, WorkbookReadConnection } from '@dagent-office/render';
+import { connectWorkbookReads, mountDocumentPreview } from '@doffi/render';
+import type { WorkbookPreview, WorkbookReadConnection } from '@doffi/render';
 import { cancelNativeWorker } from './workbook-read-host.js';
 
 let stop = () => {}, state = () => ({}), point = (_index: number) => ({ x: 0, y: 0 });

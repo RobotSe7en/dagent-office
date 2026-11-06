@@ -1,5 +1,5 @@
 {
-  "format": "dagent-office-pptx-fixtures",
+  "format": "doffi-pptx-fixtures",
   "version": 1,
   "generator": "Independent Python ZIP/XML, no SDK exporter or third-party Office library.",
   "cases": [

@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookMetadata } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DeepReadonly, WorkbookMetadata } from "@doffi/core";
 import { resolvePreviewFontsInScope } from "../fonts.js";
 import type { FontResolution } from "../contracts.js";
 

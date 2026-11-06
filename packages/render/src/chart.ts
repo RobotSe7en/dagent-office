@@ -1,5 +1,5 @@
-import type { ChartAppearance, DeepReadonly, WorkbookNumberDisplayPart } from "@dagent-office/core";
-import { DocumentError } from "@dagent-office/core";
+import type { ChartAppearance, DeepReadonly, WorkbookNumberDisplayPart } from "@doffi/core";
+import { DocumentError } from "@doffi/core";
 import { markViewNode, ownViewAttribute } from "./view-nodes.js";
 import { cssStringValue, numeric, property, resolvedColor, strokeAttributes, svgFill } from "./presentation/appearance.js";
 import { svgElement as createSvgElement } from "./presentation/svg.js";

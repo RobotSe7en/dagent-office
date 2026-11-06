@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 
 /** One renderer owner retains bounded local-font measurements. Font-set
  * identity/descriptors invalidate them; no document text or DOM is shared. */

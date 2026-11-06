@@ -3,7 +3,7 @@
 `exportDocx` 从当前已校验的 HTML 文档包、样式、资源及 Word 元数据生成原生 OOXML。无需原始 DOCX；输出包含可编辑的段落、文字、样式、编号、表格、图片、字段、批注和修订，不使用 HTML 附件或 `altChunk` 代替正文。实现与导入、浏览器渲染及宿主存储分开。
 
 ```ts
-import { exportDocx } from "@dagent-office/office";
+import { exportDocx } from "@doffi/office";
 
 const { bytes, report } = exportDocx(session);
 // 宿主保存 bytes；向用户展示 report 中未能导出的批注。

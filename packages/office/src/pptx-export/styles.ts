@@ -1,4 +1,4 @@
-import type { DeepReadonly, DocumentReadLimits, PresentationMetadata, PresentationObject } from "@dagent-office/core";
+import type { DeepReadonly, DocumentReadLimits, PresentationMetadata, PresentationObject } from "@doffi/core";
 import { ExportCss } from "../export/css.js";
 import type { Css } from "../export/css.js";
 import type { SourceElement, SourceTree } from "../export/source.js";

@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DocumentReadLimits } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DocumentReadLimits } from "@doffi/core";
 
 /** XML text and attributes are always data. Reject characters XML 1.0 cannot
  * encode rather than changing the user's UTF-16 source. */

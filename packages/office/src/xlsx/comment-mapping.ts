@@ -1,5 +1,5 @@
-import { DocumentError, resolveWorkbookCommentMention } from "@dagent-office/core";
-import type { Annotation, AnnotationReply, WorkbookComment, WorkbookCommentAuthor, WorkbookCommentMention } from "@dagent-office/core";
+import { DocumentError, resolveWorkbookCommentMention } from "@doffi/core";
+import type { Annotation, AnnotationReply, WorkbookComment, WorkbookCommentAuthor, WorkbookCommentMention } from "@doffi/core";
 import type { NativeNoteBoxSources } from "./note-boxes.js";
 import { fail } from "../ooxml/xml.js";
 import type { NativeCommentThread, NativeThreads } from "./threaded-comments.js";

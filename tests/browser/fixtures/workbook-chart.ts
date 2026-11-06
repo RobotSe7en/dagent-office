@@ -1,5 +1,5 @@
-import type { WorkbookSnapshot } from '@dagent-office/core';
-import { createWorkbookNumberFormatter } from '@dagent-office/core';
+import type { WorkbookSnapshot } from '@doffi/core';
+import { createWorkbookNumberFormatter } from '@doffi/core';
 import type { BasicChartData } from '../../../packages/render/src/chart.js';
 import { createWorkbookChartView } from '../../../packages/render/src/workbook/chart-view.js';
 import { createWorkbookSurface } from '../../../packages/render/src/workbook/surface.js';

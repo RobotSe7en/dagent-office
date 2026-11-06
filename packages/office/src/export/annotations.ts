@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { Annotation, DeepReadonly } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { Annotation, DeepReadonly } from "@doffi/core";
 import type { SourceElement, SourceNode, SourceText, SourceTree } from "./source.js";
 import { element } from "./source.js";
 import { empty } from "./xml.js";

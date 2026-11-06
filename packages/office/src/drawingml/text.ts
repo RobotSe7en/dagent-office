@@ -1,7 +1,7 @@
 import { A, check, child, elements, fail, text, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import type { Css } from "../ooxml/styles.js";
-import type { DrawingTextProperties } from "@dagent-office/core";
+import type { DrawingTextProperties } from "@doffi/core";
 import { bool, integer, points, value } from "./values.js";
 import type { Html } from "./html.js";
 import { fill, fontCss, onlyColor, paint } from "./styles.js";

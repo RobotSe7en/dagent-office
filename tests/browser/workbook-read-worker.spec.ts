@@ -33,7 +33,7 @@ test('native conditional and validation states reach the public preview through 
 test('10,000 actual XLSX rows open and scroll through the production read transport without moving full cell chunks to the main thread', { tag: '@scale' }, async ({ page, browserName }, info) => {
   test.setTimeout(120_000);
   const bytes = readFileSync('examples/xlsx/15-ten-thousand-rows.xlsx').toString('base64');
-  const profile = process.env.DAGENT_WORKBOOK_CPU_PROFILE && browserName === 'chromium' ? await page.context().newCDPSession(page) : undefined;
+  const profile = process.env.DOFFI_WORKBOOK_CPU_PROFILE && browserName === 'chromium' ? await page.context().newCDPSession(page) : undefined;
   if (profile) { await profile.send('Profiler.enable'); await profile.send('Profiler.start'); }
   const result = await page.evaluate(({ code, bytes }) => window.workbookReadHost.nativeWorkerRead(code, bytes, 'ten-thousand-native', true), { code: workerCode, bytes });
   if (profile) { writeFileSync(info.outputPath('workbook-main.cpuprofile'), JSON.stringify((await profile.send('Profiler.stop')).profile)); await profile.detach(); }

@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookSnapshot } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookSnapshot } from "@doffi/core";
 import type { FontResolution } from "../contracts.js";
 import { createWorkbookAnnotationView } from "./annotation-view.js";
 import type { WorkbookAnnotationView } from "./annotation-view.js";

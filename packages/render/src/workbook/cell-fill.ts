@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import { resolvedWorkbookColor, workbookDisplayColor } from "./color.js";
 import { isWorkbookFillPattern } from "./fill-pattern.js";
 import type { WorkbookFillPattern } from "./fill-pattern.js";

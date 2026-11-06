@@ -1,6 +1,6 @@
 # 总体架构
 
-dagent-office 是可嵌入不同产品的通用文档协作 SDK 与工作台。它将 Office 文件转换为带语义的 HTML 文档包，在浏览器中完成编辑、批注和修改提案预览，再从当前文档源生成 Office 文件。
+doffi 是可嵌入不同产品的通用文档协作 SDK 与工作台。它将 Office 文件转换为带语义的 HTML 文档包，在浏览器中完成编辑、批注和修改提案预览，再从当前文档源生成 Office 文件。
 
 本文描述目标架构。工程骨架、R1-03 [结构契约](contracts.md)、R1-04 [只读文档模型](document-model.md)及 R1-05 [资源与 ZIP](resources-and-zip.md)已实现，DOCX 导入和只读预览见[读取说明](docx-import.md)；[核心事务、历史和精确锚点映射](document-session.md)及 R1-08 [预览与交互](preview-interaction.md)已实现；[请求／提案执行及工作台](workbench.md)已实现，[富文本输入](rich-text.md)已实现，[分页、共享画布及 PDF/PNG](pagination-rendering.md)已实现，[原生 DOCX 导出](docx-export.md)及 [R1-14 独立 Word 闭环](word-closure.md)已实现；运行命令见[本地开发](development.md)。交付顺序见[整体实施计划](implementation-plan.md)，首轮支持范围见[第一轮实施细则](iteration-1.md)。
 

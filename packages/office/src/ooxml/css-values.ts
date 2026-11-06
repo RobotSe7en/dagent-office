@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 
 /** Quoted CSS values remain data, including hostile quotes and backslashes. */
 export function cssFontName(name: string): string {

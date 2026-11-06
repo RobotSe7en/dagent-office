@@ -21,7 +21,7 @@ const files = {
 const directory = resolve('.cache/ci-browser', browser, suite);
 mkdirSync(directory, { recursive: true });
 const env = { ...process.env, PLAYWRIGHT_JSON_OUTPUT_NAME: resolve(directory, 'report.json'),
-  ...(legacy ? { DAGENT_OFFICE_BROWSER_EXECUTABLE: resolve('.cache/legacy-browser/chromium-1041/chrome-linux/chrome') } : {}) };
+  ...(legacy ? { DOFFI_BROWSER_EXECUTABLE: resolve('.cache/legacy-browser/chromium-1041/chrome-linux/chrome') } : {}) };
 // CLI file filters are regexes: an unanchored workbench.spec.ts would also
 // select presentation-workbench.spec.ts and duplicate it across suites.
 const patterns = files.map(file => '(^|/)' + file.replaceAll('.', '\\.') + '$');
@@ -39,5 +39,5 @@ if (!status && !values.list && suite === 'presentation' && !legacy) {
   status = reference.status ?? 1;
 }
 if (!values.list) writeFileSync(resolve(directory, 'execution.json'), JSON.stringify({ browser, project, suite, mode, files,
-  sourceHead: process.env.DAGENT_SOURCE_HEAD ?? null, elapsedMs: Date.now() - started, exitCode: status }, null, 2) + '\n');
+  sourceHead: process.env.DOFFI_SOURCE_HEAD ?? null, elapsedMs: Date.now() - started, exitCode: status }, null, 2) + '\n');
 process.exitCode = status;

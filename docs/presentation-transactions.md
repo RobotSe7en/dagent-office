@@ -3,7 +3,7 @@
 R2-07 将 Presentation 接入已有 `createDocumentSession`。候选隔离、一次提交／一次撤销、单调修订、旧候选拒绝、事件与预算沿用 [核心事务](document-session.md)。持久化仍只有 HTML/CSS、元数据、批注和不可变资源，浏览器测量和矩阵不成为第二份源。
 
 ```ts
-import { createDocumentSession, openDocument, readPresentationGeometry } from "@dagent-office/core";
+import { createDocumentSession, openDocument, readPresentationGeometry } from "@doffi/core";
 
 const session = createDocumentSession(openDocument(files));
 const { documentId, revision } = session.snapshot().manifest;
@@ -30,7 +30,7 @@ session.undo();
 ## 授权图片资源
 
 ```ts
-import { createAssetDescriptor } from "@dagent-office/core";
+import { createAssetDescriptor } from "@doffi/core";
 
 const descriptor = createAssetDescriptor("assets/new.png", "image/png", authorizedBytes);
 const candidate = session.prepare({

@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DocumentReadLimits, WorkbookMetadata } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DocumentReadLimits, WorkbookMetadata } from "@doffi/core";
 import { utf8Bytes } from "./chunks.js";
 import { serialize } from "../drawingml/html.js";
 import type { Html } from "../drawingml/html.js";

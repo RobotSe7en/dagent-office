@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_DOCUMENT_READ_LIMITS, openDocument } from "@dagent-office/core";
+import { DEFAULT_DOCUMENT_READ_LIMITS, openDocument } from "@doffi/core";
 import { S, xml } from "../src/ooxml/xml.js";
 import { alignmentDeclarations, borderDeclarations, fillDeclarations } from "../src/xlsx/appearance.js";
 import { SpreadsheetColors } from "../src/xlsx/colors.js";

@@ -1,4 +1,4 @@
-import type { DrawingTextProperties } from "@dagent-office/core";
+import type { DrawingTextProperties } from "@doffi/core";
 import { A, check, elements, fail, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import type { Html } from "../drawingml/html.js";

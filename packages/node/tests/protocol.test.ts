@@ -1,11 +1,11 @@
 import { openContentFixture as openDocument } from "../../../tests/content-fixture.js";
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
-import { createPresentation } from "@dagent-office/core";
-import type { ContentDocumentModel as DocumentModel } from "@dagent-office/core";
-import { writeDocumentZip, exportPptx } from "@dagent-office/office";
-import { createDocumentConverter, executeConversionRequest, parseConversionRequest, serveConversionProtocol } from "@dagent-office/node";
-import type { ConversionRequestV1, DocumentConverter, RenderedOutput } from "@dagent-office/node";
+import { createPresentation } from "@doffi/core";
+import type { ContentDocumentModel as DocumentModel } from "@doffi/core";
+import { writeDocumentZip, exportPptx } from "@doffi/office";
+import { createDocumentConverter, executeConversionRequest, parseConversionRequest, serveConversionProtocol } from "@doffi/node";
+import type { ConversionRequestV1, DocumentConverter, RenderedOutput } from "@doffi/node";
 
 const files = new Map(["manifest.json", "content.html", "styles.css", "metadata.json", "annotations.json"].map((path) => [path,
   new Uint8Array(readFileSync(new URL("../../../examples/report/" + path, import.meta.url))),

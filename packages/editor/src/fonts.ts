@@ -1,2 +1,2 @@
-export { resolvePreviewFonts } from "@dagent-office/render";
-export type { FontResolution } from "@dagent-office/render";
+export { resolvePreviewFonts } from "@doffi/render";
+export type { FontResolution } from "@doffi/render";

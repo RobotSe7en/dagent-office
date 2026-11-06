@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
-import { openDocument } from '@dagent-office/core';
-import { exportPptx, importPptx, importXlsx } from '@dagent-office/office';
+import { openDocument } from '@doffi/core';
+import { exportPptx, importPptx, importXlsx } from '@doffi/office';
 import { readDocumentZip, writeOpcZip } from '../src/document-zip.js';
 
 const report = JSON.parse(readFileSync('docs/evidence/xlsx-chart-auto-markers.json', 'utf8')) as {

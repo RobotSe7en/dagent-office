@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookRange } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookRange } from "@doffi/core";
 import type { AxisCell, AxisDimensions } from "./dimensions.js";
 import type { WorkbookCellBorders } from "./cell-borders.js";
 import type { WorkbookBorderPaint } from "./border-style.js";

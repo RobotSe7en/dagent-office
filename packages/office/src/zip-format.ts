@@ -1,5 +1,5 @@
-import { DocumentError, PackagePathSchema } from "@dagent-office/core";
-import type { DocumentReadLimits } from "@dagent-office/core";
+import { DocumentError, PackagePathSchema } from "@doffi/core";
+import type { DocumentReadLimits } from "@doffi/core";
 
 export interface ZipEntry {
   readonly path: string;

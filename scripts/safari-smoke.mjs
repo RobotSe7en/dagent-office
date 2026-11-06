@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
-import { importPptx } from "@dagent-office/office";
+import { importPptx } from "@doffi/office";
 
 if (process.platform !== "darwin") throw new Error("Safari acceptance requires macOS and enabled safaridriver.");
 const origin = "http://127.0.0.1:4173", endpoint = "http://127.0.0.1:4445";

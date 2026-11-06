@@ -1,4 +1,4 @@
-import type { WorkbookDisplayFormat, WorkbookNumberFormatter } from "@dagent-office/core";
+import type { WorkbookDisplayFormat, WorkbookNumberFormatter } from "@doffi/core";
 import type { WorkbookCellTextInput } from "./cell-text-layout.js";
 import { workbookTextAlignment } from "./text-alignment.js";
 import { officeFontSegments } from "../font-scripts.js";

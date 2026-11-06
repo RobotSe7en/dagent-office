@@ -45,7 +45,7 @@ function sample(checkThreads = false) {
   rssPeak = Math.max(rssPeak, total); groupPeak = Math.max(groupPeak, Number(read('memory.current'))); samples++;
 }
 const child = spawn(process.execPath, ['scripts/playwright.mjs', 'test', 'workbook-reading-performance.spec.ts', '--project=' + (legacy ? 'chromium' : browser), '--output=' + join(output, 'browser')],
-  { stdio: 'inherit', env: { ...process.env, DAGENT_WORKBOOK_BUDGET: '1', ...(legacy ? { DAGENT_OFFICE_BROWSER_EXECUTABLE: resolve('.cache/legacy-browser/chromium-1041/chrome-linux/chrome') } : {}) } });
+  { stdio: 'inherit', env: { ...process.env, DOFFI_WORKBOOK_BUDGET: '1', ...(legacy ? { DOFFI_BROWSER_EXECUTABLE: resolve('.cache/legacy-browser/chromium-1041/chrome-linux/chrome') } : {}) } });
 const timer = setInterval(() => sample(samples % 50 === 0), 20);
 const code = await new Promise(resolve => { child.once('error', error => { process.stderr.write(String(error) + '\n'); resolve(1); }); child.once('exit', (code, signal) => resolve(code ?? (signal ? 1 : 0))); });
 clearInterval(timer); sample(true);

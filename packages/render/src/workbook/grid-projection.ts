@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import type { WorkbookPaneBorders } from "./border-projection.js";
 import type { WorkbookBorderEdge } from "./border-view.js";
 import type { WorkbookViewportLayout } from "./viewport.js";

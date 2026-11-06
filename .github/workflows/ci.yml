@@ -18,8 +18,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DAGENT_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
-  DAGENT_OFFICE_CI_MODE: daily
+  DOFFI_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+  DOFFI_CI_MODE: daily
 
 jobs:
   build:
@@ -197,7 +197,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      DAGENT_OFFICE_CI_MODE: full
+      DOFFI_CI_MODE: full
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-project

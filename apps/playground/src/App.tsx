@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { createPresentation, createDocumentSession, createOpaqueId, DocumentError, openDocument } from "@dagent-office/core";
-import type { ContentDocumentModel as DocumentModel, DocumentSession, DocumentSnapshot } from "@dagent-office/core";
+import { createPresentation, createDocumentSession, createOpaqueId, DocumentError, openDocument } from "@doffi/core";
+import type { ContentDocumentModel as DocumentModel, DocumentSession, DocumentSnapshot } from "@doffi/core";
 import {
   importDocx,
   importPptx,
   DEFAULT_MAX_ZIP_BYTES,
   writeDocumentZip,
-} from "@dagent-office/office";
-import type { DocxExportReport, OfficeImportProgress, PptxExportReport } from "@dagent-office/office";
-import type { DocumentWorkbenchView, PresentationWorkbenchView } from "@dagent-office/editor";
-import { DocumentWorkbench, PresentationWorkbench } from "@dagent-office/editor/react";
+} from "@doffi/office";
+import type { DocxExportReport, OfficeImportProgress, PptxExportReport } from "@doffi/office";
+import type { DocumentWorkbenchView, PresentationWorkbenchView } from "@doffi/editor";
+import { DocumentWorkbench, PresentationWorkbench } from "@doffi/editor/react";
 import { reportFiles, sampleProposal, presentationFiles, presentationProposal } from "./samples.js";
 import { exportCurrentPptx } from "./export-pptx.js";
 import { exportCurrentDocx } from "./export-docx.js";
@@ -52,7 +52,7 @@ export function App() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [layout, setLayout] = useState<"pages" | "continuous">(() => {
-    try { return localStorage.getItem("dagent-office:layout") === "continuous" ? "continuous" : "pages"; } catch { return "pages"; }
+    try { return localStorage.getItem("doffi:layout") === "continuous" ? "continuous" : "pages"; } catch { return "pages"; }
   });
   const [snapshot, setSnapshot] = useState<DocumentSnapshot>();
   const sessionRef = useRef<DocumentSession>(undefined);
@@ -261,8 +261,8 @@ export function App() {
     exportRef.current = job; setExporting(format); setError("");
     try {
       const taskId = createOpaqueId(), bytes = writeDocumentZip(active.serialize());
-      const response = await fetch("/__dagent_office/convert", { method: "POST", signal: job.controller.signal,
-        headers: { "Content-Type": "application/json", "X-Dagent-Office-Dev": "1" },
+      const response = await fetch("/__doffi/convert", { method: "POST", signal: job.controller.signal,
+        headers: { "Content-Type": "application/json", "X-Doffi-Dev": "1" },
         body: JSON.stringify({ protocolVersion: 1, taskId, format, input: { format: "document-package-zip", documentId: identity.documentId, bytesBase64: base64(bytes) } }),
       });
       const result = await response.json();
@@ -285,7 +285,7 @@ export function App() {
   return (
     <main className="office-app">
       <aside className="document-sidebar" aria-label="文档列表">
-        <a className="brand" href="./" aria-label="dagent-office Playground"><span className="brand-mark"><Icon name="grid" size={22} /></span><span>dagent<span className="brand-office">office</span><small>人与智能体的文档工作空间</small></span></a>
+        <a className="brand" href="./" aria-label="doffi Playground"><span className="brand-mark"><Icon name="grid" size={22} /></span><span>do<span className="brand-office">ffi</span><small>人与智能体的文档工作空间</small></span></a>
         <div className="library-heading"><span>工作空间</span><span className="workspace-label">PLAYGROUND</span></div>
         <label className="document-search"><Icon name="search" size={16} /><input aria-label="搜索文档" placeholder="搜索文档…" value={search} onChange={event => setSearch(event.currentTarget.value)} /><kbd>⌕</kbd></label>
         <div className="library-title"><h2>我的文档</h2><span>{files.length}</span></div>
@@ -349,7 +349,7 @@ export function App() {
         </div><div className="toolbar-group collaboration-tool"><button disabled={!session || loading} onClick={() => { void loadSampleProposal(); }}><Icon name="sparkles" size={15} />载入固定示例提案</button></div>
         {!isPresentation&&<label className="view-mode"><select aria-label="显示方式" value={layout} onChange={(event) => {
           const value = event.currentTarget.value === "continuous" ? "continuous" : "pages"; setLayout(value);
-          try { localStorage.setItem("dagent-office:layout", value); } catch { /* The host preference is optional. */ }
+          try { localStorage.setItem("doffi:layout", value); } catch { /* The host preference is optional. */ }
         }}><option value="pages">页面视图</option><option value="continuous">连续视图</option></select></label>}
       </div>}
       <div className="workspace-feedback">
@@ -391,7 +391,7 @@ export function App() {
         onSubmitAnnotations={() => { setSubmitted(true); }}
         onError={(reason) => setError(reason.message)} />}
 
-        <footer className="workspace-footer"><span>dagent-office <i /> Playground</span><span>{workbook ? "Excel 只读预览 · 查看单元格、工作表与批注" : "选中内容添加批注 · 人工与智能体共享编辑历史"}</span></footer>
+        <footer className="workspace-footer"><span>doffi <i /> Playground</span><span>{workbook ? "Excel 只读预览 · 查看单元格、工作表与批注" : "选中内容添加批注 · 人工与智能体共享编辑历史"}</span></footer>
       </section>
     </main>
   );

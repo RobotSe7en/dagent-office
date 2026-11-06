@@ -1,5 +1,5 @@
-import { DEFAULT_DOCUMENT_READ_LIMITS, DocumentError, openDocument } from "@dagent-office/core";
-import type { DeepReadonly, ContentDocumentModel, DocumentPackage, DocumentReadLimits, DocumentSection, ContentDocumentSnapshot, PageSetup, WordMetadata, WordDocumentMetadata } from "@dagent-office/core";
+import { DEFAULT_DOCUMENT_READ_LIMITS, DocumentError, openDocument } from "@doffi/core";
+import type { DeepReadonly, ContentDocumentModel, DocumentPackage, DocumentReadLimits, DocumentSection, ContentDocumentSnapshot, PageSetup, WordMetadata, WordDocumentMetadata } from "@doffi/core";
 import type { DocumentZipOptions } from "./document-zip.js";
 import { writeOpcZip } from "./document-zip.js";
 import { xml } from "./ooxml/xml.js";

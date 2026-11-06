@@ -1,4 +1,4 @@
-import type { WorkbookSnapshot } from '@dagent-office/core';
+import type { WorkbookSnapshot } from '@doffi/core';
 import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';
 import { createWorkbookObjectGeometry } from '../../../packages/render/src/workbook/object-geometry.js';
 import { createDrawingGeometryView } from '../../../packages/render/src/drawing-geometry.js';

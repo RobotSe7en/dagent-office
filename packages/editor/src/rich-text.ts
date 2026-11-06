@@ -1,9 +1,9 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DocumentEditingSession, ReconciledTextEdit } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DocumentEditingSession, ReconciledTextEdit } from "@doffi/core";
 import { mountDocumentPreview } from "./preview.js";
-import { sourceSelectionText, stripClipboardIdentities } from "@dagent-office/render";
+import { sourceSelectionText, stripClipboardIdentities } from "@doffi/render";
 import type { DocumentPreviewOptions } from "./preview.js";
-import type { DocumentRenderReport } from "@dagent-office/render";
+import type { DocumentRenderReport } from "@doffi/render";
 import { blockSelector, bookmark, caretAt, inputProofs, inputStep, offsetAt, restoreBookmark, sourceText } from "./rich-text/dom.js";
 import type { InputStep, SelectionBookmark } from "./rich-text/dom.js";
 import { SourceProjection } from "./rich-text/projection.js";

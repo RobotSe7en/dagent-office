@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import { markViewNode } from "../view-nodes.js";
 import type { WorkbookAnnotationWindow } from "./annotation-projection.js";
 import type { WorkbookViewportLayout } from "./viewport.js";

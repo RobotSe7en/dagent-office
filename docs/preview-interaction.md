@@ -5,9 +5,9 @@ R1-08 在现有无脚本只读预览上提供文字划选、对象选择、矩�
 ## 挂载与会话
 
 ```ts
-import { createDocumentSession, openDocument } from "@dagent-office/core";
-import type { DocumentPackage } from "@dagent-office/core";
-import { mountDocumentInteraction } from "@dagent-office/editor";
+import { createDocumentSession, openDocument } from "@doffi/core";
+import type { DocumentPackage } from "@doffi/core";
+import { mountDocumentInteraction } from "@doffi/editor";
 
 declare const files: DocumentPackage;
 declare const container: HTMLElement;

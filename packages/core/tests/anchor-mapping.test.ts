@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
-import { createAssetDescriptor, createDocumentSession, DocumentError, openDocument } from "@dagent-office/core";
-import type { Anchor, Annotation, DocumentEditingSession, DocumentOperation, DocumentPackage } from "@dagent-office/core";
+import { createAssetDescriptor, createDocumentSession, DocumentError, openDocument } from "@doffi/core";
+import type { Anchor, Annotation, DocumentEditingSession, DocumentOperation, DocumentPackage } from "@doffi/core";
 import { repository } from "./fixtures.js";
 
 const encode = (value: string) => new TextEncoder().encode(value);

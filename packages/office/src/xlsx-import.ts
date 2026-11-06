@@ -1,5 +1,5 @@
-import { createWorkbook, DocumentError, openDocument } from "@dagent-office/core";
-import type { DocumentPackage, WorkbookDocumentMetadata, WorkbookManifest } from "@dagent-office/core";
+import { createWorkbook, DocumentError, openDocument } from "@doffi/core";
+import type { DocumentPackage, WorkbookDocumentMetadata, WorkbookManifest } from "@doffi/core";
 import { ImportControl } from "./import-control.js";
 import { utf8Bytes } from "./xlsx/chunks.js";
 import { mapWorkbookComments } from "./xlsx/comment-mapping.js";

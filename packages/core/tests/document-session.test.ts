@@ -2,8 +2,8 @@ import { openContentFixture as openDocument } from "../../../tests/content-fixtu
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
-import { createAssetDescriptor, createDocumentSession, DocumentError, parseContract } from "@dagent-office/core";
-import type { CandidateChange, DocumentEditingSession, DocumentErrorCode, DocumentOperation, DocumentSessionOptions } from "@dagent-office/core";
+import { createAssetDescriptor, createDocumentSession, DocumentError, parseContract } from "@doffi/core";
+import type { CandidateChange, DocumentEditingSession, DocumentErrorCode, DocumentOperation, DocumentSessionOptions } from "@doffi/core";
 import { annotations, proposal, repository } from "./fixtures.js";
 
 const encode = (text: string) => new TextEncoder().encode(text);

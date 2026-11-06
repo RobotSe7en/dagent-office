@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
-import { createDocumentSession, openDocument } from "@dagent-office/core";
-import type { DocumentPackage, PageSetup } from "@dagent-office/core";
-import { importDocx } from "@dagent-office/office";
+import { createDocumentSession, openDocument } from "@doffi/core";
+import type { DocumentPackage, PageSetup } from "@doffi/core";
+import { importDocx } from "@doffi/office";
 
 export const smallSetup: PageSetup = { unit: "pt", width: 300, height: 240, margins: { top: 24, right: 24, bottom: 24, left: 24 } };
 export function pagedFiles(body: string): Map<string, Uint8Array> {

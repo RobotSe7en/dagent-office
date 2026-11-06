@@ -1,4 +1,4 @@
-import type { WorkbookSnapshot } from '@dagent-office/core';
+import type { WorkbookSnapshot } from '@doffi/core';
 import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';
 import { prepareWorkbookAssets } from '../../../packages/render/src/workbook/assets.js';
 import { AxisDimensions } from '../../../packages/render/src/workbook/dimensions.js';

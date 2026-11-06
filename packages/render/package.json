@@ -1,5 +1,5 @@
 {
-  "name": "@dagent-office/render",
+  "name": "@doffi/render",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -27,6 +27,11 @@
     "dev": "tsc --watch --project tsconfig.json --preserveWatchOutput"
   },
   "dependencies": {
-    "@dagent-office/core": "workspace:*"
+    "@doffi/core": "workspace:*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RobotSe7en/doffi.git",
+    "directory": "packages/render"
   }
 }

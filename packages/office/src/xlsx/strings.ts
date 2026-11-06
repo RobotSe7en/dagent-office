@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DocumentReadLimits } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DocumentReadLimits } from "@doffi/core";
 import { attr, check, elements, fail, S, text, unsupported } from "../ooxml/xml.js";
 import type { XmlBudget, XmlNode } from "../ooxml/xml.js";
 import { streamXml } from "../ooxml/xml-stream.js";

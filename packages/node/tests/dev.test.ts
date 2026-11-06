@@ -2,8 +2,8 @@ import { createServer, request } from "node:http";
 import type { ClientRequest, Server } from "node:http";
 import { readFileSync } from "node:fs";
 import { afterEach, expect, test } from "vitest";
-import { writeDocumentZip } from "@dagent-office/office";
-import { createDevelopmentConversionMiddleware, runConversionProcess } from "@dagent-office/node/dev";
+import { writeDocumentZip } from "@doffi/office";
+import { createDevelopmentConversionMiddleware, runConversionProcess } from "@doffi/node/dev";
 
 const servers: Server[] = [];
 async function server(timeoutMs = 200, allowedHost?: string, allowedPort?: number): Promise<{ port: number; started: Promise<void> }> {
@@ -19,8 +19,8 @@ async function server(timeoutMs = 200, allowedHost?: string, allowedPort?: numbe
 function send(port: number, headers: Record<string,string> = {}, body = "{bad}", end = true): { client: ClientRequest; response: Promise<number> } {
   let client: ClientRequest;
   const response = new Promise<number>((resolve, reject) => {
-    client = request({ hostname: "127.0.0.1", port, path: "/__dagent_office/convert", method: "POST",
-      headers: { Host: "localhost:" + port, Origin: "http://localhost:" + port, "Content-Type": "application/json", "X-Dagent-Office-Dev": "1", ...headers },
+    client = request({ hostname: "127.0.0.1", port, path: "/__doffi/convert", method: "POST",
+      headers: { Host: "localhost:" + port, Origin: "http://localhost:" + port, "Content-Type": "application/json", "X-Doffi-Dev": "1", ...headers },
     }, (value) => { value.resume(); value.once("end", () => resolve(value.statusCode!)); });
     client.once("error", reject); client.write(body); if (end) client.end();
   });

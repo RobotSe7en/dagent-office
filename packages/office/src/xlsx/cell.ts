@@ -1,5 +1,5 @@
-import { DocumentError, WorkbookErrorValueSchema } from "@dagent-office/core";
-import type { SharedWorkbookFormulas, WorkbookCoordinate, WorkbookValue } from "@dagent-office/core";
+import { DocumentError, WorkbookErrorValueSchema } from "@doffi/core";
+import type { SharedWorkbookFormulas, WorkbookCoordinate, WorkbookValue } from "@doffi/core";
 import { check, fail, S, text, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import { attributes, boolean, finite, integer, one, range, spreadsheetText, textHtml, value } from "./values.js";

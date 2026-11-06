@@ -1,4 +1,4 @@
-import { DEFAULT_DOCUMENT_READ_LIMITS } from "@dagent-office/core";
+import { DEFAULT_DOCUMENT_READ_LIMITS } from "@doffi/core";
 import { expect, it } from "vitest";
 import { address, range, spreadsheetText, textHtml } from "../src/xlsx/values.js";
 import { xml } from "../src/ooxml/xml.js";

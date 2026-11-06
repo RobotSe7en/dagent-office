@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { ContentDocumentModel } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { ContentDocumentModel } from "@doffi/core";
 import type { DocumentPreview, DocumentPreviewOptions } from "../preview.js";
 import { renderLimits } from "../contracts.js";
 import type { PresentationRenderReport, FontResolution } from "../contracts.js";

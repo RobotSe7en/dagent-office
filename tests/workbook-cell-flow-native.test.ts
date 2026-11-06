@@ -2,8 +2,8 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { expect, it } from 'vitest';
-import { openDocument } from '@dagent-office/core';
-import { importXlsx } from '@dagent-office/office';
+import { openDocument } from '@doffi/core';
+import { importXlsx } from '@doffi/office';
 
 it('imports and reopens every independent cell-flow source without flattening native alignment or underlines', async () => {
   const bytes = readFileSync('packages/office/tests/fixtures/xlsx-cell-flow.xlsx'), evidence = JSON.parse(readFileSync('docs/evidence/xlsx-cell-flow.json', 'utf8'));

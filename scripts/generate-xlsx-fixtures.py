@@ -412,7 +412,7 @@ def negative_cases(valid):
 def generate(output):
     output.mkdir(parents=True, exist_ok=True)
     (output / "invalid").mkdir(exist_ok=True)
-    manifest = {"format": "dagent-office-xlsx-fixtures", "version": 1, "generator": "Independent Python ZIP/XML, no SDK exporter or spreadsheet library.", "cases": [], "negativeCases": []}
+    manifest = {"format": "doffi-xlsx-fixtures", "version": 1, "generator": "Independent Python ZIP/XML, no SDK exporter or spreadsheet library.", "cases": [], "negativeCases": []}
     valid = cases()
     for name, parts, expected in valid:
         for path, data in parts.items():

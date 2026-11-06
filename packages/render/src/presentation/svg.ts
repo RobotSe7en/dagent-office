@@ -1,4 +1,4 @@
-import type { PresentationPresetGeometry } from "@dagent-office/core";
+import type { PresentationPresetGeometry } from "@doffi/core";
 
 const SVG = "http://www.w3.org/2000/svg";
 export function svgElement<K extends keyof SVGElementTagNameMap>(document: Document, tag: K, attributes: Readonly<Record<string, string | number>> = {}): SVGElementTagNameMap[K] {

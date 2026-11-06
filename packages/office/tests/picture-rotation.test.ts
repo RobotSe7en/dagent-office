@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
-import { openDocument } from '@dagent-office/core';
-import { importXlsx } from '@dagent-office/office';
+import { openDocument } from '@doffi/core';
+import { importXlsx } from '@doffi/office';
 import { readDocumentZip, writeOpcZip } from '../src/document-zip.js';
 
 const evidence = JSON.parse(readFileSync('docs/evidence/xlsx-picture-rotation.json', 'utf8')) as { cases: { source: { fill: Record<string, string> }; producer: { fill: Record<string, string> } }[] };

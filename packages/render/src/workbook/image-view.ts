@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import type { WorkbookPreparedAssets } from "./assets.js";
 import { checkWindowCancellation } from "./window-source.js";
 import { markViewNode } from "../view-nodes.js";

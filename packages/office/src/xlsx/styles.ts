@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookCellStyles, WorkbookNumberFormat, WorkbookStyleApplication } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookCellStyles, WorkbookNumberFormat, WorkbookStyleApplication } from "@doffi/core";
 import type { OpcPackage } from "../ooxml/package.js";
 import { declarations } from "../ooxml/styles.js";
 import type { Css } from "../ooxml/styles.js";

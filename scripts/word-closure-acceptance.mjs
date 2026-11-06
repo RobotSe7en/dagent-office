@@ -12,7 +12,7 @@ import { build } from "vite";
 import { packPackages } from "./pack.mjs";
 
 const root = resolve(import.meta.dirname, ".."), cache = join(root, ".cache/word-closure-acceptance");
-const temporary = mkdtempSync(join(tmpdir(), "dagent packed word closure-"));
+const temporary = mkdtempSync(join(tmpdir(), "doffi packed word closure-"));
 const run = (exe, args, cwd = root, env = process.env) => execFileSync(exe, args, { cwd, env, encoding: "utf8", timeout: 60_000, maxBuffer: 8 * 1024 * 1024 }).trim();
 const digest = (bytes) => createHash("sha256").update(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)).digest("hex");
 const pnpm = process.env.npm_execpath;
@@ -22,7 +22,7 @@ const sources = Object.fromEntries(["manifest.json", "content.html", "styles.css
 const proposal = JSON.parse(readFileSync(join(root, "examples/report.proposal.json"), "utf8"));
 const browserCache = process.env.PLAYWRIGHT_BROWSERS_PATH ?? join(root, ".playwright");
 const shell = readdirSync(browserCache).find((name) => name.startsWith("chromium_headless_shell-"));
-const executable = process.env.DAGENT_OFFICE_BROWSER_EXECUTABLE ?? (shell ? join(browserCache, shell, "chrome-headless-shell-linux64/chrome-headless-shell") : undefined);
+const executable = process.env.DOFFI_BROWSER_EXECUTABLE ?? (shell ? join(browserCache, shell, "chrome-headless-shell-linux64/chrome-headless-shell") : undefined);
 assert.ok(executable && existsSync(executable), "Install the pinned Chromium headless shell first.");
 let browser;
 const servers = [], cases = [];
@@ -44,11 +44,11 @@ try {
     assert.equal(existsSync(join(directory, "node_modules/react")), kind === "react");
     writeFileSync(join(directory, "index.html"), '<meta charset="utf-8"><div id="preview"></div><div id="workbench"></div><script type="module" src="/entry.js"></script>');
     writeFileSync(join(directory, "entry.js"), `
-import { openDocument, createDocumentSession } from '@dagent-office/core';
-import { mountDocumentPreview } from '@dagent-office/render';
-import { mountDocumentWorkbench } from '@dagent-office/editor';
-import { exportDocx, importDocx, writeDocumentZip } from '@dagent-office/office';
-${kind === "react" ? "import { createElement } from 'react'; import { createRoot } from 'react-dom/client'; import { DocumentWorkbench } from '@dagent-office/editor/react';" : ""}
+import { openDocument, createDocumentSession } from '@doffi/core';
+import { mountDocumentPreview } from '@doffi/render';
+import { mountDocumentWorkbench } from '@doffi/editor';
+import { exportDocx, importDocx, writeDocumentZip } from '@doffi/office';
+${kind === "react" ? "import { createElement } from 'react'; import { createRoot } from 'react-dom/client'; import { DocumentWorkbench } from '@doffi/editor/react';" : ""}
 const files = new Map(Object.entries(${JSON.stringify(sources)}).map(([path, text]) => [path, new TextEncoder().encode(text)]));
 const original = openDocument(files);
 const model = ${kind === "react" ? "openDocument(importDocx(exportDocx(original).bytes, {documentId:'packed-docx'}))" : "original"};
@@ -126,7 +126,7 @@ window.host = {titleId:title.nodeId,summaryId:summary.nodeId,session,preview,
     // This program executes from outside the repository and resolves only tarball exports.
     writeFileSync(join(directory, "node.mjs"), `
 import assert from 'node:assert/strict'; import {readFileSync,writeFileSync} from 'node:fs';
-import {openDocument} from '@dagent-office/core'; import {readDocumentZip,importDocx} from '@dagent-office/office'; import {runConversionProcess} from '@dagent-office/node/dev'; import {renderDocumentPdf} from '@dagent-office/node';
+import {openDocument} from '@doffi/core'; import {readDocumentZip,importDocx} from '@doffi/office'; import {runConversionProcess} from '@doffi/node/dev'; import {renderDocumentPdf} from '@doffi/node';
 const directory=${JSON.stringify(cache)}, kind=${JSON.stringify(kind)}, bytes=new Uint8Array(readFileSync(directory+'/'+kind+'.zip'));
 const model=openDocument(readDocumentZip(bytes));assert.equal(model.snapshot().manifest.revision,5);
 const text=model.snapshot().html;
@@ -147,7 +147,7 @@ writeFileSync(directory+'/'+kind+'.node.json',JSON.stringify({engine:pdf.engine,
     }
     const reopened = join(cache, "reopened-" + kind); mkdirSync(reopened);
     run("libreoffice", ["-env:UserInstallation=" + pathToFileURL(join(temporary, "lo-" + kind)).href, "--headless", "--convert-to", "docx:Office Open XML Text", "--outdir", reopened, join(cache, kind + ".docx")]);
-    writeFileSync(join(directory, "reopen.mjs"), `import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {openDocument} from '@dagent-office/core';import {importDocx} from '@dagent-office/office';const model=openDocument(importDocx(new Uint8Array(readFileSync(${JSON.stringify(join(reopened, kind + ".docx"))})),{documentId:'office-reopened'}));const snapshot=model.snapshot();assert.equal(snapshot.annotations.length,2);assert.ok(snapshot.annotations.every(a=>a.status==='resolved'));const text=model.getNode(snapshot.metadata.word.stories.find(s=>s.kind==='main').rootNodeId).text;assert.ok(text.includes('项目实施报告（人工）'));assert.ok(text.includes('第四季度'));`);
+    writeFileSync(join(directory, "reopen.mjs"), `import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {openDocument} from '@doffi/core';import {importDocx} from '@doffi/office';const model=openDocument(importDocx(new Uint8Array(readFileSync(${JSON.stringify(join(reopened, kind + ".docx"))})),{documentId:'office-reopened'}));const snapshot=model.snapshot();assert.equal(snapshot.annotations.length,2);assert.ok(snapshot.annotations.every(a=>a.status==='resolved'));const text=model.getNode(snapshot.metadata.word.stories.find(s=>s.kind==='main').rootNodeId).text;assert.ok(text.includes('项目实施报告（人工）'));assert.ok(text.includes('第四季度'));`);
     run(process.execPath, ["reopen.mjs"], directory);
     cases.push({ host: kind, input: kind === "react" ? "docx" : "html-package", revision: 5, resolvedComments: 2, docxSha256: digest(saved.docx), zipSha256: digest(saved.zip), ...JSON.parse(readFileSync(join(cache, kind + ".node.json"), "utf8")) });
     console.log("Packed " + kind + " preview, input, proposal, history, native DOCX, Node PDF/CLI and Office reopen passed.");

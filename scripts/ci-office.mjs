@@ -28,5 +28,5 @@ for (const [command, ...args] of tasks) {
   if (status) break;
 }
 const directory = resolve('.cache/ci-office', suite); mkdirSync(directory, { recursive: true });
-writeFileSync(resolve(directory, 'execution.json'), JSON.stringify({ suite, sourceHead: process.env.DAGENT_SOURCE_HEAD ?? null, records }, null, 2) + '\n');
+writeFileSync(resolve(directory, 'execution.json'), JSON.stringify({ suite, sourceHead: process.env.DOFFI_SOURCE_HEAD ?? null, records }, null, 2) + '\n');
 process.exitCode = status;

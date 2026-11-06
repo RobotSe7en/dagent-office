@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, DocumentReadLimits, PresentationDataSet } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DeepReadonly, DocumentReadLimits, PresentationDataSet } from "@doffi/core";
 import type { DocumentZipOptions } from "../document-zip.js";
 import { writeOpcZip } from "../document-zip.js";
 import { OutputOpc } from "../export/opc.js";

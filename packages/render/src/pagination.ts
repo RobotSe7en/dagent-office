@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, ContentDocumentMetadata, DocumentSection, PageSetup } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DeepReadonly, ContentDocumentMetadata, DocumentSection, PageSetup } from "@doffi/core";
 import type { LayoutDiagnostic, RenderedPage, RenderLimits } from "./contracts.js";
 import { markViewNode } from "./view-nodes.js";
 import { repeatTableHeaders } from "./table-headers.js";

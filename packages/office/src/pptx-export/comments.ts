@@ -1,4 +1,4 @@
-import type { Annotation, AnnotationReply, DeepReadonly, TextRange } from "@dagent-office/core";
+import type { Annotation, AnnotationReply, DeepReadonly, TextRange } from "@doffi/core";
 import { children, sourceText } from "../export/source.js";
 import type { SourceElement } from "../export/source.js";
 import { attributes, declaration, empty, escapeXml } from "../export/xml.js";

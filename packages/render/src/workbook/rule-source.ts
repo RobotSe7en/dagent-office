@@ -1,5 +1,5 @@
-import { readWorkbookRules } from "@dagent-office/core";
-import type { WorkbookModel, WorkbookRuleIssue, WorkbookRuleReadRequest, WorkbookRuleReadResponse, WorkbookSnapshot } from "@dagent-office/core";
+import { readWorkbookRules } from "@doffi/core";
+import type { WorkbookModel, WorkbookRuleIssue, WorkbookRuleReadRequest, WorkbookRuleReadResponse, WorkbookSnapshot } from "@doffi/core";
 
 export interface WorkbookRuleDiagnostic {
   readonly code: "rule-current-value-unavailable" | "conditional-rule-unavailable" | "conditional-formula-error" | "validation-unavailable" | "validation-invalid";

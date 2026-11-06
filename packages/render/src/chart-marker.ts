@@ -1,5 +1,5 @@
-import type { ChartAppearance, DeepReadonly } from "@dagent-office/core";
-import { DocumentError } from "@dagent-office/core";
+import type { ChartAppearance, DeepReadonly } from "@doffi/core";
+import { DocumentError } from "@doffi/core";
 import { svgElement } from "./presentation/svg.js";
 
 type Marker = Exclude<NonNullable<DeepReadonly<ChartAppearance>["seriesStyles"]>[number]["marker"], "auto">;

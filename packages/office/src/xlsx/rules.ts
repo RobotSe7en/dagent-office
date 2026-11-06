@@ -1,5 +1,5 @@
-import { parseWorkbookFormula, WorkbookComparisonSchema } from "@dagent-office/core";
-import type { WorkbookColorThreshold, WorkbookConditionalRule, WorkbookCoordinate, WorkbookDataValidation, WorkbookRange, WorkbookSheet } from "@dagent-office/core";
+import { parseWorkbookFormula, WorkbookComparisonSchema } from "@doffi/core";
+import type { WorkbookColorThreshold, WorkbookConditionalRule, WorkbookCoordinate, WorkbookDataValidation, WorkbookRange, WorkbookSheet } from "@doffi/core";
 import { check, elements, fail, S, text, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import type { XlsxStyles } from "./styles.js";

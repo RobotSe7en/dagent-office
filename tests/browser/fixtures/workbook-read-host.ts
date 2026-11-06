@@ -1,7 +1,7 @@
 import { decodeTestBytes } from './package-transport.js';
-import { connectWorkbookReads, mountDocumentPreview } from '@dagent-office/render';
-import type { WorkbookPreview, WorkbookReadConnection } from '@dagent-office/render';
-import { DEFAULT_WORKBOOK_RULE_LIMITS } from '@dagent-office/core';
+import { connectWorkbookReads, mountDocumentPreview } from '@doffi/render';
+import type { WorkbookPreview, WorkbookReadConnection } from '@doffi/render';
+import { DEFAULT_WORKBOOK_RULE_LIMITS } from '@doffi/core';
 
 export async function nativeWorkerRead(code: string, input: string | readonly number[], documentId: string, audit: boolean) {
   const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' })), worker = new Worker(url), channel = new MessageChannel();

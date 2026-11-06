@@ -1,4 +1,4 @@
-import type { DeepReadonly, WorkbookCoordinate, WorkbookRange, WorkbookSheet, WorkbookSnapshot } from "@dagent-office/core";
+import type { DeepReadonly, WorkbookCoordinate, WorkbookRange, WorkbookSheet, WorkbookSnapshot } from "@doffi/core";
 import type { AxisDimensions } from "./dimensions.js";
 import { checkWindowCancellation } from "./window-source.js";
 

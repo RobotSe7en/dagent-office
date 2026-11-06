@@ -1,7 +1,7 @@
 import { parse } from "parse5";
 import type { DefaultTreeAdapterTypes as Tree } from "parse5";
-import { DocumentError } from "@dagent-office/core";
-import type { DocumentReadLimits } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DocumentReadLimits } from "@doffi/core";
 
 export interface SourceElement {
   readonly tag: string;

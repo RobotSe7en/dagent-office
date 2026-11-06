@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookNumberFormatter, WorkbookSnapshot } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookNumberFormatter, WorkbookSnapshot } from "@doffi/core";
 import type { FontResolution } from "../contracts.js";
 import { FontProbeCache } from "../font-probe-cache.js";
 import { markViewNode, viewNodeRole } from "../view-nodes.js";

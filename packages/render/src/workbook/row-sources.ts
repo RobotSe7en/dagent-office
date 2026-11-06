@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookCoordinate, WorkbookSnapshot, WorkbookWindow } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookCoordinate, WorkbookSnapshot, WorkbookWindow } from "@doffi/core";
 import type { WorkbookViewportLayout } from "./viewport.js";
 
 export interface WorkbookRowSources {

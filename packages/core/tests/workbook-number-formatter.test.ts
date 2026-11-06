@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { createWorkbookNumberFormatter } from "@dagent-office/core";
-import type { WorkbookDisplayFormat, WorkbookNumberDisplay, WorkbookNumberFormatterOptions } from "@dagent-office/core";
+import { createWorkbookNumberFormatter } from "@doffi/core";
+import type { WorkbookDisplayFormat, WorkbookNumberDisplay, WorkbookNumberFormatterOptions } from "@doffi/core";
 
 function content(display: WorkbookNumberDisplay): string {
   if (display.kind !== "parts") throw new Error("Expected display parts");

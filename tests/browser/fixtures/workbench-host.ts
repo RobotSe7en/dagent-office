@@ -1,8 +1,8 @@
 import { decodeTestPackage, type TestPackage } from './package-transport.js';
-import { createDocumentSession, openDocument } from "@dagent-office/core";
-import type { DocumentInteractionRequest, DocumentSession, EditProposal } from "@dagent-office/core";
-import { mountDocumentWorkbench } from "@dagent-office/editor";
-import type { DocumentWorkbenchView } from "@dagent-office/editor";
+import { createDocumentSession, openDocument } from "@doffi/core";
+import type { DocumentInteractionRequest, DocumentSession, EditProposal } from "@doffi/core";
+import { mountDocumentWorkbench } from "@doffi/editor";
+import type { DocumentWorkbenchView } from "@doffi/editor";
 
 export interface WorkbenchHost {
   session: DocumentSession | undefined;

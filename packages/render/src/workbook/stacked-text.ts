@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import type { WorkbookTextProjection, WorkbookTextView } from "./text-view.js";
 
 /** Stack complete graphemes using horizontal font metrics. A writing-mode

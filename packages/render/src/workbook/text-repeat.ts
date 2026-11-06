@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import type { WorkbookTextProjection, WorkbookTextView } from "./text-view.js";
 
 /** Repeat complete displayed values. Clones retain local rich styles and every

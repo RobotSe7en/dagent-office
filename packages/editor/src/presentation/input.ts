@@ -1,6 +1,6 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DocumentEditingSession, DocumentOperation, ReconciledTextEdit } from "@dagent-office/core";
-import { SourceProjection, sourceSelectionText, stripClipboardIdentities } from "@dagent-office/render";
+import { DocumentError } from "@doffi/core";
+import type { DocumentEditingSession, DocumentOperation, ReconciledTextEdit } from "@doffi/core";
+import { SourceProjection, sourceSelectionText, stripClipboardIdentities } from "@doffi/render";
 import { blockSelector, bookmark, caretAt, inputProofs, inputStep, offsetAt, restoreBookmark, sourceText } from "../rich-text/dom.js";
 import type { InputStep, SelectionBookmark } from "../rich-text/dom.js";
 import { deleteNativeRange, nativeDeletionRange, styleNativeRange } from "../rich-text/operations.js";

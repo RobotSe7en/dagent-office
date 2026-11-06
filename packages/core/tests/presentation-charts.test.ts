@@ -1,6 +1,6 @@
 import {expect,test} from "vitest";
-import {createDocumentSession,createPresentation,openDocument} from "@dagent-office/core";
-import type {DocumentOperation,DocumentSession} from "@dagent-office/core";
+import {createDocumentSession,createPresentation,openDocument} from "@doffi/core";
+import type {DocumentOperation,DocumentSession} from "@doffi/core";
 const p=(s:DocumentSession)=>s.snapshot().metadata.presentation!;
 function prepare(s:DocumentSession,operations:DocumentOperation[]){const{documentId,revision}=s.snapshot().manifest;return s.prepare({protocolVersion:1,documentId,baseRevision:revision,operations});}
 const commit=(s:DocumentSession,operations:DocumentOperation[])=>s.commit(prepare(s,operations));

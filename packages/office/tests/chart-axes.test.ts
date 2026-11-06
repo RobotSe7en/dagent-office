@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
-import { openDocument } from '@dagent-office/core';
-import { importXlsx, importPptx, exportPptx } from '@dagent-office/office';
+import { openDocument } from '@doffi/core';
+import { importXlsx, importPptx, exportPptx } from '@doffi/office';
 import { readDocumentZip, writeOpcZip } from '../src/document-zip.js';
 
 type NativeAxis = { crosses?: string; crossesAt?: string; axPos?: string };

@@ -1,5 +1,5 @@
-import { openDocument } from "@dagent-office/core";
-import type { ContentDocumentModel } from "@dagent-office/core";
+import { openDocument } from "@doffi/core";
+import type { ContentDocumentModel } from "@doffi/core";
 
 export interface PreparedPreview { readonly model: ContentDocumentModel; readonly document: Document; readonly urls: string[] }
 export function packagePath(reference: string, entrypoint: string): string {

@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { createDocumentSession, createPresentation, openDocument, PresentationDocumentMetadataSchema, readPresentationGeometry } from "@dagent-office/core";
-import type { DocumentOperation, DocumentSession, PresentationGeometry } from "@dagent-office/core";
+import { createDocumentSession, createPresentation, openDocument, PresentationDocumentMetadataSchema, readPresentationGeometry } from "@doffi/core";
+import type { DocumentOperation, DocumentSession, PresentationGeometry } from "@doffi/core";
 import { repository } from "./fixtures.js";
 
 const geometry: PresentationGeometry = { x: 40, y: 50, width: 240, height: 100, rotation: 0, flipH: false, flipV: false };

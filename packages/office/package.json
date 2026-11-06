@@ -1,5 +1,5 @@
 {
-  "name": "@dagent-office/office",
+  "name": "@doffi/office",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -21,7 +21,7 @@
     "dev": "tsc --watch --project tsconfig.json --preserveWatchOutput"
   },
   "dependencies": {
-    "@dagent-office/core": "workspace:*",
+    "@doffi/core": "workspace:*",
     "@noble/hashes": "2.4.0",
     "css-tree": "3.2.1",
     "fflate": "0.8.3",
@@ -30,5 +30,10 @@
   },
   "devDependencies": {
     "@types/css-tree": "3.2.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RobotSe7en/doffi.git",
+    "directory": "packages/office"
   }
 }

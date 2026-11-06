@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_DOCUMENT_READ_LIMITS, WorkbookDrawingAnchorSchema } from "@dagent-office/core";
+import { DEFAULT_DOCUMENT_READ_LIMITS, WorkbookDrawingAnchorSchema } from "@doffi/core";
 import { openOpc } from "../src/ooxml/package.js";
 import { xml } from "../src/ooxml/xml.js";
 import { readDrawingAnchor, readNoteObjectAnchor, readVmlAnchor, XDR } from "../src/xlsx/drawing-anchor.js";

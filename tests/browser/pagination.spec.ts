@@ -3,8 +3,8 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { build } from "vite";
-import type { DocumentPackage } from "@dagent-office/core";
-import type { DocumentPreviewOptions } from "@dagent-office/editor";
+import type { DocumentPackage } from "@doffi/core";
+import type { DocumentPreviewOptions } from "@doffi/editor";
 import { fieldsFiles, longTable, pagedFiles } from "./fixtures/pagination-files.js";
 import type { PaginationHost } from "./fixtures/pagination-host.js";
 declare global { interface Window { paginationHost: PaginationHost } }
@@ -221,7 +221,7 @@ for (const mode of ["preview", "edit"] as const) test("partial field display cop
 test("disposing a preview during settled invalidates its pending report", async ({ page }) => {
   await mount(page, pagedFiles('<p data-node-id="a">TEXT</p>'));
   const result = await page.evaluate(async () => {
-    const view = window.paginationHost.view as import("@dagent-office/editor").DocumentPreview;
+    const view = window.paginationHost.view as import("@doffi/editor").DocumentPreview;
     const pending = view.settled(); await Promise.resolve(); view.dispose();
     return pending.then(() => "success", (error: { code: string }) => error.code);
   });

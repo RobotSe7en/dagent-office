@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 
 export interface WorkbookViewPoint { readonly node: Node; readonly offset: number }
 

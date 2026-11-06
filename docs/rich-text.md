@@ -5,7 +5,7 @@ R1-11 使用自研的原生浏览器输入适配器，提供连续正文和表�
 ## 挂载与状态
 
 ```ts
-import { mountDocumentTextEditor } from "@dagent-office/editor";
+import { mountDocumentTextEditor } from "@doffi/editor";
 
 const input = mountDocumentTextEditor(container, session, {
   onError(error) { host.showError(error); },

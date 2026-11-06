@@ -1,10 +1,10 @@
 import { decodeTestPackage, type TestPackage } from './package-transport.js';
 import { openContentFixture as openDocument } from "../../content-fixture.js";
-import { createDocumentSession } from "@dagent-office/core";
-import type { ContentDocumentModel as DocumentModel, DocumentOperation, DocumentSession } from "@dagent-office/core";
-import { mountPreview, SourceProjection } from "@dagent-office/render";
-import type { DocumentPreviewOptions } from "@dagent-office/render";
-import { mountDocumentInteraction, mountDocumentTextEditor, mountDocumentWorkbench } from "@dagent-office/editor";
+import { createDocumentSession } from "@doffi/core";
+import type { ContentDocumentModel as DocumentModel, DocumentOperation, DocumentSession } from "@doffi/core";
+import { mountPreview, SourceProjection } from "@doffi/render";
+import type { DocumentPreviewOptions } from "@doffi/render";
+import { mountDocumentInteraction, mountDocumentTextEditor, mountDocumentWorkbench } from "@doffi/editor";
 
 export interface PresentationHost {
   model: DocumentModel | undefined;

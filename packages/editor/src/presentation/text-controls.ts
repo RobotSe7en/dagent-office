@@ -1,4 +1,4 @@
-import type { DocumentEditingSession, DocumentOperation } from "@dagent-office/core";
+import type { DocumentEditingSession, DocumentOperation } from "@doffi/core";
 import type { PresentationInput } from "./input.js";
 export interface TextControlsHost {
     readonly session: DocumentEditingSession;
