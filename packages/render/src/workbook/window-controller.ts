@@ -83,11 +83,15 @@ export class WorkbookWindowController {
   private readonly textCache: WorkbookCellTextCache;
   private readonly readAhead: WorkbookReadAhead;
   private readonly chunkRows = new Map<string, Set<number>>();
-  private readonly interruptReadAhead = (): void => { this.readAhead.interrupt(); };
+  private readonly interruptReadAhead = (event: Event): void => {
+    if (event.type !== "wheel") this.clearPreparedGrid();
+    this.readAhead.interrupt();
+  };
   private readonly sheets = new Map<string, WorkbookAutoRows & { readonly normal: WorkbookColumnFont }>();
   private pending: { cancel(): void } | undefined;
   private active: { readonly state: WorkbookRenderedWindow; readonly drawings: WorkbookDrawingLayout; readonly decoration?: WorkbookWindowDecoration } | undefined;
   private disposed = false;
+  private preparedGrid: { readonly frame: WorkbookWindowFrame; readonly cells: WorkbookWindowLayout; readonly fontRevision: number | undefined } | undefined;
 
   constructor(private readonly surface: WorkbookSurface, private readonly providers: WorkbookWindowProviders,
     private readonly formatter: WorkbookNumberFormatter, input: WorkbookWindowControllerOptions = {}, private readonly decorate: WorkbookWindowDecorator | undefined = undefined) {
@@ -139,6 +143,7 @@ export class WorkbookWindowController {
     const cancelled = new Promise<false>(resolve => { cancel = () => { abort.abort(); loader.dispose(); resolve(false); }; });
     const request = { cancel }; this.pending = request;
     const current = (): boolean => !this.disposed && this.pending === request && !abort.signal.aborted;
+    let candidateCells: WorkbookWindowLayout | undefined;
     let drawings: WorkbookDrawingLayout | undefined;
     let decoration: WorkbookWindowDecoration | undefined;
     try {
@@ -163,10 +168,12 @@ export class WorkbookWindowController {
         rules = checkedWorkbookRules(response, request, this.snapshot);
       }
       const annotations = projectWorkbookAnnotations(this.snapshot, frame, dimensions, this.options.annotations);
-      const cells = layoutWorkbookWindow(this.surface, this.snapshot, frame, dimensions, this.formatter,
+      const prepared = this.takePreparedGrid(frame);
+      const cells = prepared ?? layoutWorkbookWindow(this.surface, this.snapshot, frame, dimensions, this.formatter,
         { ...this.options.cells, normalSpaceWidthPx: normal.spaceWidthPx, maxNodes: Math.min(this.maxNodes, this.options.cells?.maxNodes ?? this.maxNodes),
           maxCellFragments: Math.min(this.options.read?.maxCells ?? 5000, this.options.cells?.maxCellFragments ?? this.options.read?.maxCells ?? 5000) }, rules,
         this.classStyles && !sheet.tables?.length && !sheet.conditionalRules?.length ? this.textCache : undefined, this.textCache.probes);
+      candidateCells = cells;
       const walker = this.surface.document.createTreeWalker(cells.element, 0xffff_ffff); let nodes = 1;
       while (walker.nextNode()) if (++nodes >= this.maxNodes) throw new DocumentError("ResourceLimitExceeded", "The combined workbook window exceeds its node budget.");
       if (nodes >= this.maxNodes) throw new DocumentError("ResourceLimitExceeded", "The combined workbook window has no remaining object-layer budget.");
@@ -185,7 +192,11 @@ export class WorkbookWindowController {
       const state: WorkbookRenderedWindow = extra ? Object.freeze({ ...base, get nodes() { return base.nodes + extra.nodes; },
         get fonts() { return extra.fonts?.length ? Object.freeze([...base.fonts, ...extra.fonts]) : base.fonts; } }) : base;
       const previous = this.active;
-      this.surface.view.replaceChildren(cells.element);
+      if (cells.element.parentNode === this.surface.view) {
+        for (const child of [...this.surface.view.childNodes]) if (child !== cells.element) child.remove();
+        cells.element.style.removeProperty("visibility"); cells.element.style.removeProperty("pointer-events"); cells.element.removeAttribute("aria-hidden");
+      } else this.surface.view.replaceChildren(cells.element);
+      candidateCells = undefined;
       this.surface.frame.style.setProperty("width", viewport.widthPt + "pt", "important");
       this.surface.frame.style.setProperty("height", viewport.heightPt + "pt", "important");
       this.surface.frame.style.setProperty("visibility", "visible", "important");
@@ -197,7 +208,7 @@ export class WorkbookWindowController {
       if (!current()) return false;
       throw error;
     } finally {
-      decoration?.dispose(); drawings?.dispose(); loader.dispose();
+      decoration?.dispose(); drawings?.dispose(); candidateCells?.element.remove(); candidateCells?.element.replaceChildren(); loader.dispose();
       if (this.pending === request) this.pending = undefined;
     }
   }
@@ -208,6 +219,7 @@ export class WorkbookWindowController {
       if (!this.providers.cells.allowReadAhead || !this.classStyles || !(this.options.readAheadRows ?? 8)
         || sheet.tables?.length || sheet.conditionalRules?.length || sheet.dataValidations?.length) return;
       const dimensions = state.dimensions, metrics = this.sheets.get(sheetId)!, layout = state.frame.layout;
+      if (this.forecastGrid(state, previous)) return;
       const direction = previous?.frame.sheetId === sheetId && layout.scrollTopPt < previous.frame.layout.scrollTopPt ? -1 : 1;
       let first = Infinity, last = -1;
       for (const pane of layout.panes) if (pane.kind === "body" || pane.kind === "frozenColumns") {
@@ -248,9 +260,73 @@ export class WorkbookWindowController {
     } catch { this.readAhead.stop(); }
   }
 
+  private clearPreparedGrid(): void {
+    this.preparedGrid?.cells.element.remove(); this.preparedGrid?.cells.element.replaceChildren(); this.preparedGrid = undefined;
+  }
+
+  private takePreparedGrid(frame: WorkbookWindowFrame): WorkbookWindowLayout | undefined {
+    const prepared = this.preparedGrid; this.preparedGrid = undefined;
+    if (!prepared) return;
+    const before = prepared.frame, a = before.layout, b = frame.layout;
+    const same = before.sheetId === frame.sheetId && before.documentId === frame.documentId && before.revision === frame.revision
+      && a.widthPt === b.widthPt && a.heightPt === b.heightPt && a.scrollLeftPt === b.scrollLeftPt && a.scrollTopPt === b.scrollTopPt
+      && this.textCache.settled(this.surface.document.fonts) && this.textCache.fontRevision === prepared.fontRevision
+      && before.completeRows.length === frame.completeRows.length && before.completeRows.every((row, index) => row === frame.completeRows[index])
+      && before.sourceCoordinates.length === frame.sourceCoordinates.length && before.sourceCoordinates.every((point, index) => {
+        const coordinate = frame.sourceCoordinates[index]!;
+        if (point.row !== coordinate.row || point.column !== coordinate.column) return false;
+        const old = before.getCell(point.row, point.column), cell = frame.getCell(point.row, point.column);
+        return old === cell || !!old && !!cell && old.html === cell.html && old.text === cell.text && old.cssClass === cell.cssClass && old.formatId === cell.formatId
+          && old.value.type === cell.value.type && (old.value.type === "blank" || "value" in cell.value && Object.is(old.value.value, cell.value.value))
+          && old.formula?.expression === cell.formula?.expression && old.formula?.cacheState === cell.formula?.cacheState;
+      });
+    if (same) return prepared.cells;
+    prepared.cells.element.remove(); prepared.cells.element.replaceChildren(); return undefined;
+  }
+
+  /** One hidden, bounded grid only; fresh foreground reads establish identity
+   * and every source value before its already measured DOM may be accepted. */
+  private forecastGrid(state: WorkbookRenderedWindow, previous: WorkbookRenderedWindow | undefined): boolean {
+    this.clearPreparedGrid();
+    const layout = state.frame.layout, old = previous?.frame.layout;
+    if (!old || previous.frame.sheetId !== state.frame.sheetId || old.widthPt !== layout.widthPt || old.heightPt !== layout.heightPt
+      || old.scrollLeftPt !== layout.scrollLeftPt || this.snapshot.annotations.length || this.snapshot.metadata.workbook.objects?.length) return false;
+    const delta = layout.scrollTopPt - old.scrollTopPt;
+    if (!delta || !Number.isFinite(delta)) return false;
+    const dimensions = state.dimensions, target = Math.max(0, layout.scrollTopPt + delta);
+    const from = dimensions.rows.hit(layout.scrollTopPt), to = dimensions.rows.hit(target);
+    if (from === undefined || to === undefined || Math.abs(to - from) > (this.options.readAheadRows ?? 8)) return false;
+    const viewport = { widthPt: layout.widthPt, heightPt: layout.heightPt, scrollLeftPt: layout.scrollLeftPt, scrollTopPt: target };
+    const metrics = this.sheets.get(state.frame.sheetId)!;
+    this.readAhead.set(async signal => {
+      const loader = new WorkbookWindowLoader(this.providers.cells, this.options.read, true, this.skewCoefficient);
+      const cancel = (): void => loader.dispose(); signal.addEventListener("abort", cancel, { once: true });
+      let cells: WorkbookWindowLayout | undefined;
+      try {
+        if (!await loader.load(state.frame.sheetId, dimensions, viewport) || signal.aborted || this.active?.state !== state) return false;
+        if (!this.textCache.settled(this.surface.document.fonts)) return false;
+        const fontRevision = this.textCache.fontRevision;
+        cells = layoutWorkbookWindow(this.surface, this.snapshot, loader.frame!, dimensions, this.formatter,
+          { ...this.options.cells, normalSpaceWidthPx: metrics.normal.spaceWidthPx, maxNodes: Math.min(this.maxNodes - state.nodes, this.options.cells?.maxNodes ?? this.maxNodes),
+            maxCellFragments: Math.min(this.options.read?.maxCells ?? 5000, this.options.cells?.maxCellFragments ?? this.options.read?.maxCells ?? 5000) - state.cells.length },
+          undefined, this.textCache, this.textCache.probes);
+        if (signal.aborted || this.active?.state !== state || !this.textCache.settled(this.surface.document.fonts) || fontRevision !== this.textCache.fontRevision) return false;
+        // Keep one inaccessible candidate in this fixed viewport so the
+        // browser can retain its layout across acceptance, within live caps.
+        cells.element.style.position = "absolute"; cells.element.style.left = "0"; cells.element.style.top = "0";
+        cells.element.style.visibility = "hidden"; cells.element.style.pointerEvents = "none"; cells.element.setAttribute("aria-hidden", "true");
+        this.surface.view.append(cells.element); cells.element.getBoundingClientRect();
+        this.preparedGrid = { frame: loader.frame!, cells, fontRevision }; cells = undefined;
+        return false;
+      } finally { cells?.element.remove(); cells?.element.replaceChildren(); signal.removeEventListener("abort", cancel); loader.dispose(); }
+    });
+    return true;
+  }
+
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true; this.readAhead.dispose(); this.pending?.cancel(); this.pending = undefined;
+    this.clearPreparedGrid();
     for (const name of ["pointerdown", "keydown", "wheel"]) this.surface.document.removeEventListener(name, this.interruptReadAhead, true);
     this.active?.decoration?.dispose(); this.active?.drawings.dispose(); this.active?.state.element.remove(); this.active?.state.element.replaceChildren(); this.active = undefined;
     this.content.dispose(); this.sheets.clear(); this.chunkRows.clear(); this.textCache.clear();

@@ -41,6 +41,7 @@ export async function mountPublicPreview(entries: Entries, rtl: boolean) {
   try {
     await preview.ready;
     const frame = chrome.querySelector('iframe')!, rect = frame.getBoundingClientRect(), sheetId = preview.layout().sheetId;
+    let wheelPanel: HTMLElement | undefined;
     const bytesUnchanged = () => { const after = model.serialize(); return [...before].every(([path, bytes]) => bytes.length === after.get(path)!.length && bytes.every((byte, i) => byte === after.get(path)![i])); };
     inspect = () => ({ report: preview.layout(), address: chrome.querySelector<HTMLInputElement>('[aria-label="单元格地址"]')!.value,
       value: chrome.querySelector<HTMLInputElement>('[aria-label="单元格值或公式"]')!.value, status: chrome.querySelector('[role="status"]')!.textContent,
@@ -55,6 +56,16 @@ export async function mountPublicPreview(entries: Entries, rtl: boolean) {
       }
       if (name === 'empty') chrome.querySelector<HTMLButtonElement>('[data-sheet-id="preview-empty"]')!.click();
       if (name === 'first') await preview.showSheet(sheetId);
+      if (name === 'comment-scroll') {
+        const document = frame.contentDocument!, create = document.createElement;
+        document.createElement = ((tag: string, options?: ElementCreationOptions) => {
+          const element = create.call(document, tag, options); if (tag === 'aside') wheelPanel = element; return element;
+        }) as Document['createElement'];
+        try { preview.openComment(model.snapshot().annotations[0]!.annotationId); } finally { document.createElement = create; }
+        wheelPanel!.style.maxHeight = '40px'; const bounds = wheelPanel!.getBoundingClientRect();
+        return { x: rect.x + bounds.x + bounds.width / 2, y: rect.y + bounds.y + bounds.height / 2, max: wheelPanel!.scrollHeight - wheelPanel!.clientHeight };
+      }
+      if (name === 'comment-scroll-state') return { top: wheelPanel!.scrollTop, viewport: preview.layout().viewport };
       if (name === 'comment') preview.openComment(model.snapshot().annotations[0]!.annotationId);
       if (name === 'close') preview.closeComment();
       if (name === 'bad-sheet') { try { await preview.showSheet('missing'); } catch { /* inspected below */ } return inspect(); }
@@ -246,3 +257,87 @@ export function matrixFinish(){
 }
 
 Object.assign(window.workbookPreview,{matrixStart,matrixWindow,matrixFinish});
+
+
+export async function autoRowReadPipeline(entries: Entries, mode: 'sequential' | 'ahead' | 'cancel' | 'invalid' | 'preference') {
+  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)]));
+  const metadata = JSON.parse(new TextDecoder().decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata;
+  metadata.workbook.sheets[0]!.defaultRowHeightCustom = false;
+  const styles = metadata.workbook.sheets[0]!.rowDimensions; styles.splice(0);
+  files.set('metadata.json', new TextEncoder().encode(JSON.stringify(metadata)));
+  const model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot(), provider = modelWindowSource(model), container = host();
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 240, heightPt: 60 });
+  const { measureWorkbookColumnFont } = await import('../../../packages/render/src/workbook/column-font.js');
+  const { measureWorkbookAutoRows } = await import('../../../packages/render/src/workbook/auto-rows.js');
+  const formatter = createWorkbookNumberFormatter({ dateSystem: '1900' }), normal = measureWorkbookColumnFont(surface.source, snapshot.metadata.workbook, 'sheet-1');
+  const abort = new AbortController(), view = surface.document.defaultView!, computed = view.getComputedStyle;
+  let reads = 0, overlap = false, held: AbortSignal | undefined, release = () => {};
+  const unhandled: unknown[] = [], reject = (event: PromiseRejectionEvent) => { unhandled.push(event.reason); event.preventDefault(); };
+  window.addEventListener('unhandledrejection', reject);
+  view.getComputedStyle = function(element, pseudo) {
+    if (reads && element.closest('office-workbook-source')) {
+      overlap ||= reads === 2;
+      if (mode === 'cancel') abort.abort();
+    }
+    return computed.call(this, element, pseudo);
+  };
+  const source = { snapshot, get allowReadAhead() { if (mode === 'preference') throw Error('Optional preference'); return mode !== 'sequential'; },
+    async read(request: Parameters<typeof provider.read>[0], signal: AbortSignal) {
+      const index = ++reads;
+      if (index === 2 && (mode === 'cancel' || mode === 'invalid')) {
+        held = signal; await new Promise<void>(resolve => { release = resolve; });
+      }
+      const response = await provider.read(request, held === signal ? new AbortController().signal : signal);
+      if (index === 1 && mode === 'invalid') return { ...response, cells: response.cells.map((cell, index) => index ? cell : { ...cell, html: cell.html.replace('<td', '<td onclick="void 0"') }) };
+      return response;
+    } };
+  try {
+    let error: string | undefined, cells = 0;
+    try { cells = (await measureWorkbookAutoRows(surface, source, 'sheet-1', normal, formatter, abort.signal)).measuredCells; }
+    catch (value) { error = (value as { code: string }).code; }
+    const aborted = held?.aborted ?? false; release(); await new Promise<void>(resolve => setTimeout(resolve, 30));
+    return { error, cells, reads, overlap, aborted, unhandled, clean: !surface.source.querySelector('[data-office-view$="measurement"]') && !surface.view.childNodes.length };
+  } finally { release(); view.getComputedStyle = computed; window.removeEventListener('unhandledrejection', reject); formatter.dispose(); surface.dispose(); container.remove(); }
+}
+(window as unknown as { workbookPreview: Record<string, unknown> }).workbookPreview.autoRowReadPipeline = autoRowReadPipeline;
+
+export async function rollingCandidateLifecycle(entries: Entries, mode: 'same' | 'value' | 'active' | 'revision' | 'font' | 'budget') {
+  const model = modelOf(entries), source = modelWindowSource(model), snapshot = model.snapshot(), container = host();
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 240, heightPt: 60 });
+  const formatter = createWorkbookNumberFormatter({ dateSystem: '1900' });
+  let foreground = true, change = false, background = 0, fresh = 0, mountedPeak = 0;
+  const measure = () => { mountedPeak = Math.max(mountedPeak, surface.view.querySelectorAll('[data-office-view="workbook-cell"],[data-office-view="workbook-text-overflow"]').length); };
+  const observer = new MutationObserver(measure); observer.observe(surface.view, { childList: true, subtree: true });
+  const cells = { ...source, allowReadAhead: true, async read(request: Parameters<typeof source.read>[0], signal: AbortSignal) {
+    const current = foreground; if (current && change) fresh++; else if (!current) background++;
+    const response = await source.read(request, signal);
+    if (!current || !change) return response;
+    if (mode === 'revision') return { ...response, revision: response.revision + 1 };
+    return { ...response, cells: response.cells.map(cell => {
+      if (cell.row !== 8 || cell.column !== 2) return cell;
+      if (mode === 'active') return { ...cell, html: cell.html.replace('<td', '<td onclick="window.rollingExecuted=true"') };
+      if (mode === 'value') return { ...cell, text: '9999', value: { type: 'number' as const, value: 9999 },
+        html: cell.html.replace('data-value="67"', 'data-value="9999"').replace('>67<', '>9999<') };
+      return cell;
+    }) };
+  } };
+  const controller = new WorkbookWindowController(surface, { cells, assets: modelAssetSource(model), charts: modelChartSource(model) }, formatter,
+    mode === 'budget' ? { cells: { maxCellFragments: 40 } } : {});
+  const pause = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+  const viewport = { widthPt: 240, heightPt: 60, scrollLeftPt: 0, scrollTopPt: 0 };
+  try {
+    await controller.render('sheet-1', viewport); await controller.render('sheet-1', { ...viewport, scrollTopPt: 30 });
+    foreground = false; const accepted = controller.current!, html = accepted.element.innerHTML; await pause(300);
+    const retained = controller.current === accepted && accepted.element.innerHTML === html;
+    if (mode === 'font') surface.document.fonts.add(new (surface.document.defaultView as Window & typeof globalThis).FontFace('Rolling font epoch', 'local("sans-serif")'));
+    foreground = true; change = true; let error: string | undefined;
+    try { await controller.render('sheet-1', { ...viewport, scrollTopPt: 60 }); } catch (value) { error = (value as { code: string }).code; }
+    measure();
+    const result = { background, fresh, retained, error, mountedPeak, current: controller.current!.frame.layout.scrollTopPt,
+      updated: controller.current!.element.textContent!.includes('9999'), failedRetained: controller.current === accepted && accepted.element.innerHTML === html,
+      active: Boolean((surface.document.defaultView as unknown as { rollingExecuted?: boolean }).rollingExecuted), fragments: controller.current!.cells.length };
+    controller.dispose(); const stopped = background; await pause(80);
+    return { ...result, stopped: background === stopped, clean: !surface.source.childNodes.length && !surface.view.childNodes.length };
+  } finally { observer.disconnect(); controller.dispose(); formatter.dispose(); surface.dispose(); container.remove(); }
+}
+(window as unknown as { workbookPreview: Record<string, unknown> }).workbookPreview.rollingCandidateLifecycle = rollingCandidateLifecycle;

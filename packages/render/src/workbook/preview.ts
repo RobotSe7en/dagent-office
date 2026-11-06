@@ -155,11 +155,10 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
           windows.set(window.element, { controls, commitChrome });
           window.element.addEventListener("wheel", event => {
             if (event.ctrlKey || pending || active?.controller.current?.element !== window.element || (event.target as Element).closest('[data-office-view="workbook-preview-comments"]')) return;
-            event.preventDefault();
             const factor = event.deltaMode === 1 ? 12 : event.deltaMode === 2 ? window.frame.layout.heightPt : .75;
             const x = event.shiftKey && !event.deltaX ? event.deltaY : event.deltaX, y = event.shiftKey && !event.deltaX ? 0 : event.deltaY;
             void setViewport({ ...desired, scrollLeftPt: desired.scrollLeftPt + x * factor, scrollTopPt: desired.scrollTopPt + y * factor }).catch(() => {});
-          }, { passive: false, signal: events.signal });
+          }, { passive: true, signal: events.signal });
           window.element.addEventListener("click", event => attempt(() => {
             if (active?.controller.current?.element !== window.element || (event.target as Element).closest('button,[data-office-view="workbook-preview-comments"],[data-office-view="workbook-drawings"]')) return;
             const rect = ownedSurface.view.getBoundingClientRect(), x = (event.clientX - rect.left) * .75, y = (event.clientY - rect.top) * .75;

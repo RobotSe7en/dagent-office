@@ -29,7 +29,7 @@ export function paintWorkbookWindow(document: Document, frame: WorkbookWindowFra
   root.dataset.officeView = "workbook-window"; root.dataset.sheetId = frame.sheetId;
   root.setAttribute("role", "grid"); root.setAttribute("aria-readonly", "true"); root.setAttribute("aria-rowcount", "1048576"); root.setAttribute("aria-colcount", "16384");
   root.dir = rightToLeft ? "rtl" : "ltr";
-  root.style.cssText = `position:relative;overflow:hidden;isolation:isolate;background:white;width:${frame.layout.widthPt}pt;height:${frame.layout.heightPt}pt`;
+  root.style.cssText = `position:relative;overflow:hidden;overscroll-behavior:none;isolation:isolate;background:white;width:${frame.layout.widthPt}pt;height:${frame.layout.heightPt}pt`;
   fills.dataset.officeView = "workbook-fills"; fills.setAttribute("aria-hidden", "true"); fills.style.display = "contents";
   let nodes = 2, id = 0;
   const account = (amount: number): void => { nodes += amount; if (nodes > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Workbook window display exceeds its cumulative node budget."); };

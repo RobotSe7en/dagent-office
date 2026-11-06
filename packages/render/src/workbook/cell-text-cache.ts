@@ -32,6 +32,7 @@ export class WorkbookCellTextCache {
   private readonly fontIds = new WeakMap<FontResolution, string>();
   readonly probes: FontProbeCache = new FontProbeCache();
   private fontEpoch: number | undefined;
+  get fontRevision(): number | undefined { return this.fontEpoch; }
   private nodes = 0; private units = 0;
   constructor(private readonly maxEntries: number, private readonly maxNodes: number, private readonly maxUnits: number) {
     if (![maxEntries, maxNodes, maxUnits].every(value => Number.isSafeInteger(value) && value > 0))

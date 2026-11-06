@@ -58,6 +58,10 @@ const report = { browser, startedAt, completedAt: new Date().toISOString(), cgro
   method: 'All browser subprocesses in the imposed cgroup; workers share renderer RSS. Sum of observed per-process kernel VmHWM is a conservative bound over their nonconcurrent peaks and includes shared pages repeatedly. Processes/threads are sampled; short-lived processes can escape observation. Kernel cgroup memory.peak supplements the sampled record. Absolute browser bounds are stronger than document-incremental bounds.',
   childExitCode: code, node: process.version };
 report.os = { platform: platform(), release: release(), arch: arch(), cpuModels: [...new Set(hostCpus().map(cpu => cpu.model))] };
+report.os.reportedCpuTopology = cpuIds(affinity).map(cpu => {
+  const topology = name => readFileSync('/sys/devices/system/cpu/cpu' + cpu + '/topology/' + name, 'utf8').trim();
+  return { cpu, core: topology('core_id'), socket: topology('physical_package_id'), siblings: topology('thread_siblings_list') };
+});
 report.binaries = [...executables].sort().map(path => ({ file: basename(path), sha256: createHash('sha256').update(readFileSync(path)).digest('hex') }));
 writeFileSync(join(output, 'resources.json'), JSON.stringify(report, null, 2) + '\n');
 process.stdout.write(JSON.stringify({ browser, childExitCode: code, browserRssPeak: rssPeak, browserSummedProcessHighWater: highSum, memoryPeak: report.memoryPeak, invalidAffinity: report.invalidAffinity }) + '\n');

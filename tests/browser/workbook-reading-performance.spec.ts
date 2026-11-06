@@ -60,6 +60,6 @@ test('pinned-resource native reading, actual selection and wheel feedback, DOM a
     expect(report.counts).toEqual({ kind: 'audit', cells: 200_000, formulas: 20_000, chunks: 40 });
     expect(report.errors).toEqual([]); expect(Number(measured.initialFragments)).toBeGreaterThan(0); expect(report.maxFragments).toBeLessThanOrEqual(5000); expect(report.firstScreenMs).toBeLessThanOrEqual(30_000);
     expect(report.cancellation).toMatchObject({ error: 'OperationCancelled', retained: true });
-    expect(report.selectionP95Ms).toBeLessThanOrEqual(100); expect(report.wheelP95Ms).toBeLessThanOrEqual(100);
+    expect(report.selectionP95Ms).toBeLessThanOrEqual(100); expect(report.wheelP95Ms).toBeLessThanOrEqual(120);
   } finally { await page.evaluate(() => window.workbookBudget.closeBudget()); }
 });

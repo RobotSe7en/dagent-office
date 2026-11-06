@@ -102,6 +102,49 @@ test('idle neighbor reading is opt-in, bounded, cancellable and never publishes 
   }
 });
 
+test('automatic row reads overlap one authorized batch and abort it on cancellation or invalid source', async ({ page }) => {
+  for (const mode of ['sequential', 'ahead', 'cancel', 'invalid', 'preference'] as const) {
+    const result = await page.evaluate(({ entries, mode }) => window.workbookPreview.autoRowReadPipeline(entries, mode), { entries: readAheadFiles, mode });
+    expect(result, mode).toMatchObject({ reads: 2, unhandled: [], clean: true });
+    if (mode === 'cancel' || mode === 'invalid') expect(result).toMatchObject({ aborted: true, error: mode === 'cancel' ? 'OperationCancelled' : 'InvalidDocument' });
+    else expect(result).toMatchObject({ error: undefined, cells: 640, overlap: mode === 'ahead' });
+  }
+});
+
+test('prepared rolling candidates require fresh valid values and share the complete live DOM budget', async ({ page }) => {
+  for (const mode of ['same', 'value', 'active', 'revision', 'font', 'budget'] as const) {
+    const result = await page.evaluate(({ entries, mode }) => window.workbookPreview.rollingCandidateLifecycle(entries, mode), { entries: readAheadFiles, mode });
+    expect(result, mode).toMatchObject({ retained: true, active: false, stopped: true, clean: true });
+    expect(result.background).toBeGreaterThan(0); expect(result.fresh).toBeGreaterThan(0);
+    expect(result.fragments).toBeLessThanOrEqual(5000); expect(result.mountedPeak).toBeLessThanOrEqual(mode === 'budget' ? 40 : 5000);
+    if (mode === 'active' || mode === 'revision') expect(result).toMatchObject({ current: 30, failedRetained: true, error: mode === 'revision' ? 'RevisionConflict' : 'InvalidDocument' });
+    else expect(result).toMatchObject({ current: 60, error: undefined, updated: mode === 'value', failedRetained: false });
+  }
+});
+
+test('passive grid wheels retain host scrolling boundaries and shift-wheel navigation', async ({ page }) => {
+  await page.evaluate(() => {
+    document.documentElement.style.overflow = 'auto'; document.body.style.overflow = 'visible'; document.body.style.height = '4000px'; window.scrollTo(0, 200);
+  });
+  expect(await page.evaluate(() => window.scrollY)).toBe(200);
+  const start = await page.evaluate(entries => window.workbookPreview.mountPublicPreview(entries, false), inputs.find(input => input.name === '09-classic-notes')!.files);
+  const panel = await page.evaluate(() => window.workbookPreview.previewAction('comment-scroll')) as { x: number; y: number; max: number };
+  expect(panel.max).toBeGreaterThan(0); await page.mouse.move(panel.x, panel.y); await page.mouse.wheel(0, 100);
+  await expect.poll(async () => (await page.evaluate(() => window.workbookPreview.previewAction('comment-scroll-state')) as { top: number }).top).toBeGreaterThan(0);
+  expect((await page.evaluate(() => window.workbookPreview.previewAction('comment-scroll-state')) as { viewport: { scrollTopPt: number } }).viewport.scrollTopPt).toBe(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(200); await page.evaluate(() => window.workbookPreview.previewAction('close'));
+  await page.mouse.move(start.x + 50, start.y + 80); await page.mouse.wheel(0, -200);
+  await page.evaluate(() => window.workbookPreview.previewAction('close'));
+  expect(await page.evaluate(() => window.scrollY)).toBe(200);
+  expect((await page.evaluate(() => window.workbookPreview.previewInspect()) as { report: { viewport: { scrollTopPt: number } } }).report.viewport.scrollTopPt).toBe(0);
+  await page.mouse.wheel(0, 200);
+  await expect.poll(async () => (await page.evaluate(() => window.workbookPreview.previewInspect()) as { report: { viewport: { scrollTopPt: number } } }).report.viewport.scrollTopPt).toBeGreaterThan(0);
+  await page.keyboard.down('Shift'); await page.mouse.wheel(0, 80); await page.keyboard.up('Shift');
+  await expect.poll(async () => (await page.evaluate(() => window.workbookPreview.previewInspect()) as { report: { viewport: { scrollLeftPt: number } } }).report.viewport.scrollLeftPt).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(200);
+  await page.evaluate(() => window.workbookPreview.previewAction('dispose'));
+});
+
 const matrixCases=JSON.parse(readFileSync('examples/xlsx/expected.json','utf8')) as {cases:{file:string;sheets:string[];values?:Record<string,number|boolean|string>}[]};
 for(const producer of [false,true])for(const sample of matrixCases.cases)test(`${producer?'producer':'source'} ${sample.file} completes the public reading matrix without changing its package`,async({page},testInfo)=>{
   if(sample.file.startsWith('15-'))test.slow();

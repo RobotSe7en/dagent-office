@@ -11,7 +11,7 @@ import { WorkbookMergeIndex } from "./projection.js";
 import { checkedWorkbookRules } from "./rule-response.js";
 import type { WorkbookRuleSource } from "./rule-source.js";
 import { cellSourceUnits, checkWindowCancellation, checkWindowIdentity } from "./window-source.js";
-import type { WorkbookWindowSource } from "./window-source.js";
+import type { WorkbookWindowResponse, WorkbookWindowSource } from "./window-source.js";
 import { implicitWorkbookFontRegions, implicitWorkbookRowSources } from "./implicit-row-sources.js";
 import { WorkbookRowSourcePrototypes } from "./row-source-prototypes.js";
 import type { WorkbookSourceCell } from "./cell-source.js";
@@ -30,6 +30,35 @@ export interface WorkbookAutoRows {
   readonly fonts: readonly FontResolution[];
   readonly usedFallbackLineMetrics: boolean;
   readonly measuredCells: number;
+}
+
+/** At most one authorized next read overlaps current row measurement. Each
+ * response remains bounded; failure/early exit aborts the owned pending read. */
+async function* autoRowReads(source: WorkbookWindowSource, windows: readonly WorkbookWindow[], maxCodeUnits: number, signal: AbortSignal):
+  AsyncGenerator<readonly [WorkbookWindow, WorkbookWindowResponse]> {
+  if (!windows.length) return;
+  const identity = { documentId: source.snapshot.manifest.documentId, revision: source.snapshot.manifest.revision };
+  const abort = new AbortController(), cancel = (): void => abort.abort();
+  signal.addEventListener("abort", cancel, { once: true });
+  let ahead = false;
+  try { ahead = source.allowReadAhead === true; } catch { /* Optional preference cannot fail a foreground read. */ }
+  const read = async (window: WorkbookWindow): Promise<{ response: WorkbookWindowResponse } | { error: unknown }> => {
+    try {
+      checkWindowCancellation(signal);
+      return { response: await source.read({ ...identity, windows: [window], maxCells: 4096, maxCodeUnits }, abort.signal) };
+    } catch (error) { return { error }; }
+  };
+  try {
+    let pending = read(windows[0]!);
+    for (const [index, window] of windows.entries()) {
+      const result = await pending; checkWindowCancellation(signal);
+      if ("error" in result) throw result.error;
+      const next = windows[index + 1];
+      if (ahead && next) pending = read(next);
+      yield [window, result.response] as const;
+      if (!ahead && next) pending = read(next);
+    }
+  } finally { cancel(); signal.removeEventListener("abort", cancel); }
 }
 
 /** Source height overrides remain sparse, and a hidden row is never expanded. */
@@ -144,9 +173,7 @@ export async function measureWorkbookAutoRows(surface: Pick<WorkbookSurface, "so
     if (performance.now() - checkpoint >= 8) { await new Promise<void>(resolve => setTimeout(resolve, 0)); checkpoint = performance.now(); }
   }
   try {
-    for (const window of windows) {
-      checkWindowCancellation(signal);
-      const response = await source.read({ ...identity, windows: [window], maxCells: 4096, maxCodeUnits: Math.min(limits.maxCodeUnits, 8 * 1024 * 1024) }, signal);
+    for await (const [window, response] of autoRowReads(source, windows, Math.min(limits.maxCodeUnits, 8 * 1024 * 1024), signal)) {
       checkWindowCancellation(signal); checkWindowIdentity(response, snapshot);
       if (response.cells.length > window.rows * window.columns) throw new DocumentError("InvalidDocument", "Automatic row data exceeds its requested coordinates.");
       const seen = new Set<number>();
