@@ -505,3 +505,15 @@ General 接测宽选显示；显式 0 格式的数百位文字不会换格式，
 `collect-workbook-reading-matrix.mjs --record` 核对当前公共宿主包摘要、全部 128 个案例、输入摘要和完整测试通过状态后才汇总。读取验收按 docs/workbook-reading-acceptance.md 单列规范、当前源、生产者损失及资源目标。浏览器 CI 新增这些检查后总作业时限为 60 分钟；单项测试时限及性能目标不变。下一步：最终运行时代码的四核／8 GiB 四引擎性能、完整 PR 复审、最终四项 CI 及合并。
 
 本批固定旧 Chromium 37 项全部通过，其中完整文件矩阵 32 项；四引擎合计 128 项全文件读取显示验证成立。
+
+## 最终受限性能复核中的修复
+
+`b58b46d` 已推送，CI 42189089421 的 check／safari／office-reopen 成功，浏览器仍运行。本地完整 `pnpm check` 已通过 142 文件／1734 用例及构建。四引擎功能矩阵 128 项已汇总为 `workbook-reading-matrix.json`。
+
+当前代码的受限 Chromium／Firefox／WebKit 首屏、交互、内存、DOM 和取消通过；旧 Chromium 滚动 p95 为 104.6ms，未达到 100ms。该失败完整留在 `.cache/workbook-performance-experiments/pr25-final-legacy-104ms`；诊断 CPU/原生布局追踪保存在相邻 `pr25-final-legacy-profile`，不作为正式测量。把预读 4 行缩为 2 行的实验仍为 104.9ms，已撤回，原始预读范围／批次不变，记录在 `pr25-idle2-104ms`。
+
+剖析显示数字构造中的重复样式属性复制是热点，当前未提交修复为每个同步 `layoutWorkbookNumbers` 批次按源元素复用样式声明，逐值颜色／装饰／完整字符串测量与预算不变；文件为 `number-text.ts` 和 `number-text-layout.ts`。`.cache/pr25-numberstyle-legacy.log` 正在/刚完成同资源复测，恢复时核对结果。`docs/workbook-model.md` 同步了已完成功能的过时描述，尚未标记完整阶段通过。修复验证后必须重跑最终同包四引擎资源检查与矩阵摘要，保存失败记录，最终 HEAD 全 CI 成功后才合并，不能通过重抽样或降低目标关闭失败。
+
+远端 42189089421 的浏览器作业在安装阶段耗尽 60 分钟而取消；日志已明确为 azure.archive.ubuntu.com 的字体／媒体包传输异常缓慢，浏览器压缩包本身随后数秒下载完成，尚未执行功能测试。CI 改用官方 archive/security HTTPS 镜像，保留签名校验、三次重试和连接超时，并将单次浏览器依赖安装限为 10 分钟；没有跳过依赖或测试。配置脚本 bash 语法及 diff 检查通过。
+
+性能排查的样式复制、共享框、contain、分行预读、纯文字预读、停止预读及数字 DOM 展平实验均未稳定达标，已全部撤回，SDK 运行时代码仍为 b58b46d。当前另核对来宾 CPU 拓扑：0–3 被报告为同一核心，0/16/32/48 分属报告核心 0/1/2/3，仍为 4 个 vCPU 和原 CPU／内存／交换上限；它不证明物理专核。换到后一布局后原代码为 101.1ms，仍未达标，不计成功。wrapper/collector 增加了报告拓扑及四轮同一集合的复核，但尚未提交。当前仅在做鼠标每轮重定位与固定位置连续原生滚轮的诊断对照；诊断不关闭原门槛、不据此合并。`tests/browser/workbook-reading-performance.spec.ts` 的临时诊断标记须在正式验收前恢复。

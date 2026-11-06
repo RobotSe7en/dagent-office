@@ -39,7 +39,16 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Bound browser dependency downloads
+        run: |
+          printf '%s\n' 'Acquire::Retries "3";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/80-dagent-downloads >/dev/null
+          if test -f /etc/apt/apt-mirrors.txt; then
+            printf '%s\n' 'https://archive.ubuntu.com/ubuntu/' 'https://security.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+          fi
       - run: node scripts/playwright.mjs install --with-deps chromium firefox webkit --only-shell
+        timeout-minutes: 10
+        env:
+          PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT: '60000'
       - run: sudo apt-get install -y poppler-utils fonts-noto-cjk fonts-liberation2 python3-pil
       - run: pnpm build
       - run: node scripts/playwright.mjs test workspace.spec.ts interaction.spec.ts workbench.spec.ts text-editor.spec.ts pagination.spec.ts rendering.spec.ts remote-access.spec.ts word-closure.spec.ts presentation.spec.ts presentation-editor.spec.ts presentation-workbench.spec.ts presentation-closure.spec.ts
