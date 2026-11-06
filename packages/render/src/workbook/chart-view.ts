@@ -8,6 +8,7 @@ import { resolvePreviewFontsInScope } from "../fonts.js";
 import type { FontResolution } from "../contracts.js";
 import { workbookDrawingOrientation } from "./drawing-view.js";
 import { layoutBasicChartLabels } from "../chart-label-layout.js";
+import { layoutChartNumberFields } from "./chart-number-layout.js";
 
 export interface WorkbookChartViewOptions {
   /** Required: the workbook compositor owns number formats, locale and dates.
@@ -104,7 +105,7 @@ export function createWorkbookChartView(source: HTMLElement, chart: DeepReadonly
     measurement.style.cssText = "all:initial!important;position:absolute!important;visibility:hidden!important";
     measurement.dataset.officeView = "workbook-chart-label-measurement";
     measurement.attachShadow({ mode: "closed" }).append(element); source.append(measurement);
-    try { const labels = layoutBasicChartLabels(scene, account); if (labels) diagnostics.push(Object.freeze({ code: "chart-label-overflow", chartId: chart.chartId, labels })); }
+    try { layoutChartNumberFields(scene, accountText); const labels = layoutBasicChartLabels(scene, account); if (labels) diagnostics.push(Object.freeze({ code: "chart-label-overflow", chartId: chart.chartId, labels })); }
     finally { element.remove(); measurement.remove(); account(-2); }
     return Object.freeze({ element, nodes: nodes - probes.length - fontNodes, peakNodes, diagnostics: Object.freeze(diagnostics), fonts });
   } catch (error) { element.replaceChildren(); throw error; }

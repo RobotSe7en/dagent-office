@@ -1,5 +1,5 @@
 import { measureChartClipping } from './workbook-chart-clipping.js';
-import { measureNativeChartLabels, measureControlledChartLabels } from './workbook-chart-labels.js';
+import { measureChartNumberFields, measureNativeChartLabels, measureControlledChartLabels } from './workbook-chart-labels.js';
 import type { WorkbookSnapshot } from '@dagent-office/core';
 import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';
 import { disposeImageView, measureImageView, measurePictureFills } from './workbook-image-view.js';
@@ -45,4 +45,4 @@ export function rejectContentSource(snapshot: WorkbookSnapshot, maxNodes?: numbe
 }
 Object.assign(window, { workbookContentHost: { measureContentSource, rejectContentSource, measureImageView, measurePictureFills, disposeImageView, measureObjectGeometry, measureDrawingGradients, measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback, measureDrawingTextOverflow, measureDrawingOverflowEdges, measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } });
 Object.assign(window, { workbookShadowHost: { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } });
-Object.assign(window, { workbookChartHost: { measureChartClipping, measureControlledChartLabels, measureNativeChartLabels, measureWorkbookChartAxes, measureWorkbookChartFiniteScales, measureNativeFiniteCharts, measureWorkbookChartTextFonts, measureWorkbookCharts, measureWorkbookChartMarkers, measureWorkbookChartGrid, measureWorkbookChartColors, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } });
+Object.assign(window, { workbookChartHost: { measureChartNumberFields, measureChartClipping, measureControlledChartLabels, measureNativeChartLabels, measureWorkbookChartAxes, measureWorkbookChartFiniteScales, measureNativeFiniteCharts, measureWorkbookChartTextFonts, measureWorkbookCharts, measureWorkbookChartMarkers, measureWorkbookChartGrid, measureWorkbookChartColors, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } });

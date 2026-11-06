@@ -222,3 +222,27 @@ export async function publicReadAhead(entries: Entries, allow: boolean, rows: nu
       unchanged: [...before].every(([path, bytes]) => { const after = model.serialize().get(path)!; return bytes.length === after.length && bytes.every((byte, index) => byte === after[index]); }) };
   } finally { held?.release(); controller.dispose(); formatter.dispose(); surface.dispose(); container.remove(); window.removeEventListener('unhandledrejection', onUnhandled); }
 }
+
+let matrix: {preview:WorkbookPreview;chrome:ShadowRoot;model:WorkbookModel;container:HTMLElement;before:ReadonlyMap<string,Uint8Array>;serializations:()=>number;errors:string[]} | undefined;
+export async function matrixStart(entries:readonly [string,string][]){
+  matrix?.preview.dispose();matrix?.container.remove();matrix=undefined;
+  const model=openDocument(new Map(entries.map(([path,encoded])=>{const binary=atob(encoded),bytes=new Uint8Array(binary.length);for(let index=0;index<binary.length;index++)bytes[index]=binary.charCodeAt(index);return [path,bytes];})),{kind:'workbook'}),before=model.serialize(),container=host(),errors:string[]=[];
+  let serializations=0;const direct={...model,serialize(){serializations++;throw Error('Public preview serialized the workbook');}};
+  const mounted=mount(container,direct,{widthPt:880,heightPt:450,onError:error=>errors.push(error.code)});
+  matrix={...mounted,model,container,before,serializations:()=>serializations,errors};
+  try{await mounted.preview.ready;return {snapshot:model.snapshot(),report:mounted.preview.layout()};}
+  catch(error){mounted.preview.dispose();container.remove();matrix=undefined;throw error;}
+}
+export async function matrixWindow(sheetId:string,last=false){
+  const context=matrix!;await context.preview.showSheet(sheetId);
+  if(last){const current=context.preview.layout();await context.preview.setViewport({...current.viewport,scrollLeftPt:current.maxScrollLeftPt,scrollTopPt:current.maxScrollTopPt});}
+  else {const current=context.preview.layout();await context.preview.setViewport({...current.viewport,scrollLeftPt:0,scrollTopPt:0});}
+  return {report:context.preview.layout(),tabs:[...context.chrome.querySelectorAll('[role=tab]')].map(node=>node.textContent),errors:context.errors,serializations:context.serializations()};
+}
+export function matrixFinish(){
+  const context=matrix!,after=context.model.serialize(),unchanged=context.before.size===after.size&&[...context.before].every(([path,bytes])=>bytes.length===after.get(path)?.length&&bytes.every((byte,index)=>byte===after.get(path)![index]));
+  context.preview.dispose();context.container.remove();matrix=undefined;
+  return {unchanged,serializations:context.serializations(),errors:context.errors,frames:context.chrome.querySelectorAll('iframe').length,removed:!context.container.isConnected};
+}
+
+Object.assign(window.workbookPreview,{matrixStart,matrixWindow,matrixFinish});

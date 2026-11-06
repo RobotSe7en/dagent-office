@@ -1,5 +1,5 @@
 import type { measureChartClipping } from './fixtures/workbook-chart-clipping.js';
-import type { measureNativeChartLabels, measureControlledChartLabels } from './fixtures/workbook-chart-labels.js';
+import type { measureChartNumberFields, measureNativeChartLabels, measureControlledChartLabels } from './fixtures/workbook-chart-labels.js';
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -24,7 +24,7 @@ import { bindWorkbookChartData } from "../../packages/render/src/workbook/chart-
 import type { BasicChartData } from '../../packages/render/src/chart.js';
 import { modelChartSource, DEFAULT_CHART_READ_LIMITS } from '../../packages/render/src/workbook/chart-source.js';
 
-declare global { interface Window { workbookChartHost: { measureChartClipping: typeof measureChartClipping; measureControlledChartLabels: typeof measureControlledChartLabels; measureNativeChartLabels: typeof measureNativeChartLabels; measureWorkbookChartAxes: typeof measureWorkbookChartAxes; measureWorkbookChartFiniteScales: typeof measureWorkbookChartFiniteScales; measureNativeFiniteCharts: typeof measureNativeFiniteCharts; measureWorkbookChartTextFonts: typeof measureWorkbookChartTextFonts; measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartGrid: typeof measureWorkbookChartGrid; measureWorkbookChartMarkers: typeof measureWorkbookChartMarkers; measureWorkbookChartColors: typeof measureWorkbookChartColors; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
+declare global { interface Window { workbookChartHost: { measureChartNumberFields: typeof measureChartNumberFields; measureChartClipping: typeof measureChartClipping; measureControlledChartLabels: typeof measureControlledChartLabels; measureNativeChartLabels: typeof measureNativeChartLabels; measureWorkbookChartAxes: typeof measureWorkbookChartAxes; measureWorkbookChartFiniteScales: typeof measureWorkbookChartFiniteScales; measureNativeFiniteCharts: typeof measureNativeFiniteCharts; measureWorkbookChartTextFonts: typeof measureWorkbookChartTextFonts; measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartGrid: typeof measureWorkbookChartGrid; measureWorkbookChartMarkers: typeof measureWorkbookChartMarkers; measureWorkbookChartColors: typeof measureWorkbookChartColors; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
 
 declare global { interface Window { workbookShadowHost: { measureWorkbookShadows: typeof measureWorkbookShadows; mountWorkbookShadowPixels: typeof mountWorkbookShadowPixels; disposeWorkbookShadowPixels: typeof disposeWorkbookShadowPixels } } }
 
@@ -870,5 +870,20 @@ test('Office chart axes ignore axPos and preserve perpendicular crossings with c
       for (const label of value.categoryLabels) expect(label.y).toBeCloseTo(categoryAt + (top ? -16 : 16) / value.plot[3]!, 5);
       for (const label of value.valueLabels) { expect(label.x).toBeCloseTo(valueAt + (right ? 7 : -7) / value.plot[2]!, 5); expect(label.anchor).toBe(right ? 'start' : 'end'); }
     }
+  }
+});
+
+test('chart numeric spaces preserve actual glyph advances and bounded fills after final font resolution', async ({page})=>{
+  const result=await page.evaluate(input=>window.workbookChartHost.measureChartNumberFields(input.snapshot,input.bindings),formatCharts);
+  expect(result).toMatchObject({unchanged:true,cleaned:true});expect(result.results).toHaveLength(7);
+  for(const [index,item] of result.results.entries()){
+    expect(item.nodes).toBe(item.actual);
+    if([0,1,2,5,6].includes(index)){
+      expect(item.spaces.length).toBeGreaterThan(0);
+      for(const space of item.spaces){expect(space.text).toBe(' ');expect(space.hidden).toBeNull();expect(space.declared).toBeGreaterThan(0);expect(space.actual).toBeCloseTo(space.declared,1);}
+    }
+    if(index===3)expect(item.fills.every(fill=>fill.text!.length>3&&/^x+$/.test(fill.text!))).toBe(true);
+    if(index===4){expect(item.fills.filter(fill=>fill.text==='')).toHaveLength(8);expect(item.fills.filter(fill=>fill.text!==''&&/^y+$/.test(fill.text!))).toHaveLength(8);}
+    for(const label of item.labels)expect(label).not.toMatch(/[)中😀]/u);
   }
 });

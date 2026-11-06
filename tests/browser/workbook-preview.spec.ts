@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { readFileSync } from 'node:fs';
+import { openDocument } from '@dagent-office/core';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { scalarWorkbook } from '../../packages/core/tests/workbook-scalar-fixture.js';
@@ -98,4 +100,36 @@ test('idle neighbor reading is opt-in, bounded, cancellable and never publishes 
     if (!allow || !rows) expect(result.reads).toBe(0); else { expect(result.reads).toBeGreaterThan(0); expect(result.reads).toBeLessThanOrEqual(mode === 'hold' ? 9 : 8); expect(result.largestSlots).toBeLessThanOrEqual(256); }
     if (mode === 'hold') { expect(result.aborted).toBe(true); expect(result.whileHeld).toBe(1); }
   }
+});
+
+const matrixCases=JSON.parse(readFileSync('examples/xlsx/expected.json','utf8')) as {cases:{file:string;sheets:string[];values?:Record<string,number|boolean|string>}[]};
+for(const producer of [false,true])for(const sample of matrixCases.cases)test(`${producer?'producer':'source'} ${sample.file} completes the public reading matrix without changing its package`,async({page},testInfo)=>{
+  if(sample.file.startsWith('15-'))test.slow();
+  const files=await importXlsx(readFileSync('examples/xlsx/'+(producer?'producer/':'')+sample.file),{documentId:'matrix-'+sample.file.slice(0,2)});
+  const model=openDocument(files,{kind:'workbook'}),snapshot=model.snapshot(),saved=model.serialize();
+  expect(snapshot.metadata.workbook.sheets.map(sheet=>sheet.name)).toEqual(sample.sheets);
+  expect(openDocument(saved,{kind:'workbook'}).snapshot()).toEqual(snapshot);
+  // Independent source values are checked before presentation; producer
+  // cached results may be recomputed by Calc and are checked in its own audit.
+  if(!producer)for(const [address,value] of Object.entries(sample.values??{})){
+    const [,name,column,row]=/^(.*)!([A-Z]+)([0-9]+)$/.exec(address)!;
+    const index=[...column!].reduce((sum,char)=>sum*26+char.charCodeAt(0)-64,0)-1;
+    const sheet=snapshot.metadata.workbook.sheets.find(sheet=>sheet.name===name)!;
+    expect(model.getCell(sheet.sheetId,Number(row)-1,index)?.value).toMatchObject({value});
+  }
+  const start=await page.evaluate(entries=>window.workbookPreview.matrixStart(entries),[...saved].map(([path,bytes])=>[path,Buffer.from(bytes).toString('base64')] as [string,string]));
+  expect(start.snapshot).toEqual(snapshot);
+  const observations=[];
+  try{
+    for(const sheet of snapshot.metadata.workbook.sheets.filter(sheet=>sheet.visibility==='visible'))for(const last of [false,true]){
+      const result=await page.evaluate(({id,last})=>window.workbookPreview.matrixWindow(id,last),{id:sheet.sheetId,last});
+      expect(result).toMatchObject({errors:[],serializations:0,report:{sheetId:sheet.sheetId,documentId:snapshot.manifest.documentId,revision:0,kind:'workbook',layout:'grid'}});
+      expect(result.report.cellFragmentCount).toBeLessThanOrEqual(5000);expect(result.report.visibleCellCount).toBeGreaterThan(0);
+      expect(result.tabs).toEqual(snapshot.metadata.workbook.sheets.filter(sheet=>sheet.visibility==='visible').map(sheet=>sheet.name));
+      expect(result.report.fonts.length).toBeGreaterThan(0);
+      observations.push({sheet:sheet.name,last,report:result.report});
+      if(!last&&testInfo.project.name==='chromium'&&!process.env.DAGENT_OFFICE_BROWSER_EXECUTABLE){const path=testInfo.outputPath(sheet.name+'.png');await page.screenshot({path});await testInfo.attach(sheet.name+'.png',{path,contentType:'image/png'});}
+    }
+    const path=testInfo.outputPath('public-reading.json');writeFileSync(path,JSON.stringify({file:sample.file,producer,sourceSha256:createHash('sha256').update(readFileSync('examples/xlsx/'+(producer?'producer/':'')+sample.file)).digest('hex'),hostBundleSha256:createHash('sha256').update(code).digest('hex'),observations},null,2));await testInfo.attach('public-reading.json',{path,contentType:'application/json'});
+  }finally{expect(await page.evaluate(()=>window.workbookPreview.matrixFinish())).toEqual({unchanged:true,serializations:0,errors:[],frames:0,removed:true});}
 });

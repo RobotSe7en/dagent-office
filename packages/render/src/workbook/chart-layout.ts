@@ -1,6 +1,6 @@
 import { DocumentError } from "@dagent-office/core";
 import type { DeepReadonly, WorkbookChart, WorkbookDisplayFormat, WorkbookNumberFormatter } from "@dagent-office/core";
-import type { BasicChartLayout, BasicChartRect } from "../chart.js";
+import type { BasicChartLayout, BasicChartRect, BasicChartText } from "../chart.js";
 import type { FontResolution } from "../contracts.js";
 import { cssStringValue, property } from "../presentation/appearance.js";
 import { chartAxisPlacement, chartValueScale, chartAxisTicks } from "../chart-axis.js";
@@ -11,6 +11,7 @@ import type { WorkbookChartViewDiagnostic } from "./chart-view.js";
 import { layoutWorkbookChartTitleContents } from "./drawing-text-layout.js";
 import type { WorkbookChartTitleContentInput, WorkbookDrawingTextLayout } from "./drawing-text-layout.js";
 import type { WorkbookChartTextRole } from "./drawing-text.js";
+import { measureNumberDisplay } from "./number-layout.js";
 
 export interface WorkbookChartLayoutLimits { readonly maxNodes?: number; readonly maxPoints?: number; readonly maxCodeUnits?: number }
 export interface WorkbookChartLayout {
@@ -44,18 +45,20 @@ export function layoutWorkbookChart(scope: HTMLElement, source: HTMLElement, cha
     try {
       const scale = binding.data.series.some(series => !series.hidden) ? chartValueScale(chart, binding.data.series) : { minimum: 0, maximum: 1, unit: 1 };
       const categoryStyle = view.getComputedStyle(category), valueStyle = view.getComputedStyle(value), legendStyle = view.getComputedStyle(legend), context = document.createElement("canvas").getContext("2d")!;
-      const textSize = (text: string, style: CSSStyleDeclaration): { width: number; height: number } => {
+      const textSize = (text: BasicChartText, style: CSSStyleDeclaration): { width: number; height: number } => {
         context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-        const lines = text.split("\n"), factor = Number(property(style, "--office-text-font-scale", "1"));
+        const factor = Number(property(style, "--office-text-font-scale", "1"));
         const spacing = parseFloat(style.letterSpacing) || 0;
-        return { width: Math.max(0, ...lines.map(line => context.measureText(line).width + Math.max(0, [...line].length - 1) * spacing)) * .75 * factor,
+        const measure = (line: string) => (context.measureText(line).width + Math.max(0, [...line].length - 1) * spacing) * .75 * factor;
+        const lines = typeof text === "string" ? text.split("\n") : [""];
+        return { width: typeof text === "string" ? Math.max(0, ...lines.map(measure)) : measureNumberDisplay(text.parts, text.availableWidth, measure).width,
           height: lines.length * (parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2) * .75 * factor };
       };
       const valueLabels = pie || chart.showValueAxis === false || property(valueStyle, "--office-axis-label-position") === "none" ? [] : chartAxisTicks(scale.minimum, scale.maximum, scale.unit, 1024, .001)
         .map(value => textSize(format(value, linked(valueStyle, "axis") ? binding.valueAxisFormat : explicit(valueStyle, "axis", chart.numberFormat), valueStyle, widthPt / 4), valueStyle));
       const categoryLabels = pie || chart.showCategoryAxis === false || property(categoryStyle, "--office-axis-label-position") === "none" ? [] : binding.data.categories.map((name, index) => {
         const numeric = binding.categoryNumbers[index];
-        return textSize(numeric === null || numeric === undefined || linked(categoryStyle, "axis") ? name : format(numeric, explicit(categoryStyle, "axis"), categoryStyle, widthPt / Math.max(1, binding.data.categories.length)), categoryStyle);
+        return textSize(numeric === null || numeric === undefined ? name : format(numeric, linked(categoryStyle, "axis") ? binding.categoryFormats?.[index] : explicit(categoryStyle, "axis"), categoryStyle, widthPt / Math.max(1, binding.data.categories.length)), categoryStyle);
       });
       const visible = binding.data.series.filter(series => !series.hidden), vary = (chart.varyColors ?? pie) && chart.series.length === 1;
       const items = pie || vary && visible.length === 1 ? binding.data.categories.map((name, index) => ({ name, series: visible[0], index })) : visible.map(series => ({ name: series.name, series, index: -1 }));
@@ -113,14 +116,14 @@ export function layoutWorkbookChart(scope: HTMLElement, source: HTMLElement, cha
   if (axisNodes >= maxNodes || axisUnits >= maxUnits) throw new DocumentError("ResourceLimitExceeded", "Chart titles exhaust the graphic budget.");
   const main = boxes.findIndex(box => box.role === "title");
   const seriesIndexes = new Map(binding.data.series.map((series, index) => [series.seriesId, index]));
-  function format(value: number, definition?: WorkbookDisplayFormat, style?: CSSStyleDeclaration, availableWidth = widthPt / 4): string {
+  function format(value: number, definition?: WorkbookDisplayFormat, style?: CSSStyleDeclaration, availableWidth = widthPt / 4): BasicChartText {
     const display = formatter.format(value, definition, style ? { availableWidth, measure(text) {
       measureContext ??= document.createElement("canvas").getContext("2d")!;
       measureContext.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
       return (measureContext.measureText(text).width + Math.max(0, [...text].length - 1) * (parseFloat(style.letterSpacing) || 0)) * .75 * Number(property(style, "--office-text-font-scale", "1"));
     } } : undefined);
     if (display.kind === "overflow") return "####";
-    if (display.parts.some(part => part.kind !== "text")) throw new DocumentError("UnsupportedFeature", "Chart number-format spacing requires measured label layout.");
+    if (display.parts.some(part => part.kind !== "text")) return { parts: display.parts, availableWidth };
     return display.parts.map(part => part.kind === "text" ? part.text : "").join("");
   };
   function linked(style: CSSStyleDeclaration, kind: "axis" | "label"): boolean {
@@ -143,7 +146,7 @@ export function layoutWorkbookChart(scope: HTMLElement, source: HTMLElement, cha
     },
     formatCategory(index, style) {
       const value = binding.categoryNumbers[index];
-      return value === null || value === undefined || linked(style, "axis") ? binding.data.categories[index]! : format(value, explicit(style, "axis"), style, plot.width / Math.max(1, binding.data.categories.length));
+      return value === null || value === undefined ? binding.data.categories[index]! : format(value, linked(style, "axis") ? binding.categoryFormats?.[index] : explicit(style, "axis"), style, plot.width / Math.max(1, binding.data.categories.length));
     },
   });
   for (const [index, object] of texts.objects.entries()) {

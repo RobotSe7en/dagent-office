@@ -27,6 +27,7 @@ export type WorkbookChartBinding = {
   /** Numeric category source values for explicit axis-format overrides. Text
    * categories retain their already formatted current-source strings. */
   readonly categoryNumbers: readonly (number | null)[];
+  readonly categoryFormats?: readonly (WorkbookDisplayFormat | undefined)[];
   /** First currently plotted numeric source, in series/source order. */
   readonly valueAxisFormat?: WorkbookDisplayFormat;
 } | { readonly kind: "unavailable" });
@@ -106,8 +107,9 @@ export function bindWorkbookChartData(snapshot: WorkbookSnapshot, response: Work
     if (point.value.type === "error") return accountText(point.value.value);
     const display = formatter.format(point.value.value, point.format);
     if (display.kind === "overflow") return accountText("####");
-    if (display.parts.some(part => part.kind !== "text")) throw new DocumentError("UnsupportedFeature", "This chart label requires measured number-format spacing or repetition.");
-    return accountText(display.parts.map(part => part.kind === "text" ? part.text : "").join(""));
+    // This is intrinsic text for reference titles/names and accessibility.
+    // Numeric axis/point labels retain the format for measured view fields.
+    return accountText(display.parts.map(part => part.kind === "text" ? part.text : part.kind === "space" ? " " : "").join(""));
   };
   const bind = (definition: DeepReadonly<WorkbookChart>, source: WorkbookChartData): WorkbookChartBinding => {
     const diagnostics: WorkbookChartDataDiagnostic[] = [], refs = new Map<string, WorkbookChartReferenceData>(), expected = new Map<string, DeepReadonly<WorkbookChartVector>>();
@@ -194,6 +196,7 @@ export function bindWorkbookChartData(snapshot: WorkbookSnapshot, response: Work
     return Object.freeze({ kind: "available", chartId: definition.chartId, data, titles: Object.freeze(titles), diagnostics: Object.freeze(diagnostics),
       ...(valueAxisFormat ? { valueAxisFormat } : {}),
       categoryNumbers: Object.freeze(indexes.map(index => { const point = categories[index]; return definition.categories?.valueType === "number" && point?.value.type === "number" && !(visibleOnly && point.hidden) ? point.value.value : null; })),
+      categoryFormats: Object.freeze(indexes.map(index => categories[index]?.format)),
       valueFormats: Object.freeze(series.map(series => Object.freeze(indexes.map(index => series.points[index]?.format)))) });
   };
   return Object.freeze(response.charts.map(source => bind(charts.get(source.chartId)!, source)));

@@ -62,3 +62,26 @@ export async function measureControlledChartLabels(snapshot: WorkbookSnapshot, b
     const result={results,overrideFill,largeMarker:{height:marker.height,rect:large.layout.legend!,nodes:large.nodes,actual},legend:{rect:legend.layout.legend!,groups},unchanged:surface.source.innerHTML===before,cleaned:!surface.source.querySelector('[data-office-view=workbook-chart-label-measurement]')};large.element.remove();return result;
   }finally{projection.dispose();sources.dispose();formatter.dispose();surface.dispose();container.remove();}
 }
+
+export async function measureChartNumberFields(snapshot: WorkbookSnapshot, bindings: readonly WorkbookChartBinding[]) {
+  const container=document.createElement('div');document.body.append(container);
+  const formats=['0_)','_(0_)','??/??','*x0','0*x*y','0_中','0_😀'];
+  const css=formats.map((code,index)=>`.numeric-field-${index}{font-family:"Liberation Sans";font-size:11pt;--office-label-number-format:${JSON.stringify(code)};--office-label-number-format-source-linked:false;--office-axis-number-format:${JSON.stringify(code)};--office-axis-number-format-source-linked:false}`).join('');
+  const surface=await createWorkbookSurface(container,{...snapshot,styles:[...snapshot.styles,{path:'chart-number-fields.css',css}]},{widthPt:520,heightPt:340}),sources=new WorkbookContentSources(surface.document,snapshot),formatter=createWorkbookNumberFormatter({dateSystem:snapshot.metadata.workbook.dateSystem});
+  const original=snapshot.metadata.workbook.charts![0]!,old=bindings.find(binding=>binding.chartId===original.chartId)!;if(old.kind!=='available')throw Error('No format source');
+  const projection=sources.project(surface.source,[original.nodeId]),source=projection.get(original.nodeId)!,before=surface.source.innerHTML;
+  try{
+    const results=[];
+    for(const [index,format] of formats.entries()){
+      const chart={...original,minimum:0,maximum:4,majorUnit:1,showLabels:true,labelContents:['value'] as const,titleVisible:false,legend:'none' as const,series:[original.series[0]!],labelCssClass:'numeric-field-'+index,valueAxisCssClass:'numeric-field-'+index};
+      const binding={...old,data:{categories:['A','B','C'],series:[{...old.data.series[0]!,values:[1,2,3]}]}};
+      const result=layoutWorkbookChart(surface.view,source,chart,binding,480,300,'number-'+index,formatter);surface.view.append(result.element);
+      const spaces=[...result.element.querySelectorAll<SVGTSpanElement>('[data-sdk-chart-number-space]')].map(node=>({text:node.textContent,declared:Number(node.dataset.sdkChartNumberSpace),actual:node.previousElementSibling && (node.previousElementSibling as SVGTextContentElement).getNumberOfChars() ? node.getEndPositionOfChar(0).x-(node.previousElementSibling as SVGTextContentElement).getEndPositionOfChar((node.previousElementSibling as SVGTextContentElement).getNumberOfChars()-1).x : node.getComputedTextLength()+Number(node.getAttribute('dx')),hidden:node.getAttribute('visibility')}));
+      const fills=[...result.element.querySelectorAll<SVGTSpanElement>('[data-sdk-chart-number-fill]')].map(node=>({text:node.textContent,width:node.getComputedTextLength()}));
+      const walker=surface.document.createTreeWalker(result.element,0xffff_ffff);let actual=1;while(walker.nextNode())actual++;
+      results.push({format,spaces,fills,labels:[...result.element.querySelectorAll('[data-sdk-chart-label=data-label]')].map(node=>node.textContent),nodes:result.nodes,actual});
+      result.element.remove();
+    }
+    return {results,unchanged:surface.source.innerHTML===before,cleaned:!surface.source.querySelector('[data-office-view=workbook-chart-label-measurement]')};
+  }finally{projection.dispose();sources.dispose();formatter.dispose();surface.dispose();container.remove();}
+}

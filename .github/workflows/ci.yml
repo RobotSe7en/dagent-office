@@ -28,7 +28,9 @@ jobs:
 
   browser-interaction:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    # Includes Word/PPT closure, the complete XLSX matrix and the legacy run.
+    # Individual test deadlines and the explicit performance gates stay fixed.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
