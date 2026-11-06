@@ -1,11 +1,14 @@
 /** Stage-only capacity acceptance. Daily CI keeps the independent small cases. */
 import { spawnSync, execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { userInfo } from 'node:os';
 
 const root = resolve(import.meta.dirname, '..'), directory = resolve(root, '.cache/workbook-scale-acceptance');
 mkdirSync(directory, { recursive: true });
+// A failed local rerun must not leave a previous success as its latest result.
+const acceptance = resolve(directory, 'acceptance.json');
+rmSync(acceptance, { force: true });
 function run(command, args, env = process.env) {
   const result = spawnSync(command, args, { cwd: root, stdio: 'inherit', env });
   if (result.error) throw result.error;
@@ -52,5 +55,5 @@ for (const browser of ['chromium', 'firefox', 'webkit', 'legacy-chromium']) {
     process.execPath, 'scripts/workbook-reading-budget.mjs', '--browser', browser]);
 }
 run(process.execPath, ['scripts/collect-workbook-reading-budget.mjs', '--output', resolve(directory, 'reading-budget.json')]);
-writeFileSync(resolve(directory, 'acceptance.json'), JSON.stringify({ sourceHead: process.env.DAGENT_SOURCE_HEAD ?? null,
+writeFileSync(acceptance, JSON.stringify({ sourceHead: process.env.DAGENT_SOURCE_HEAD ?? execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
   complete: true, fullNativeReferences: true, logicalCpus: selected, matrixCases: 128, cells: 200000, formulas: 20000, chunks: 40 }, null, 2) + '\n');

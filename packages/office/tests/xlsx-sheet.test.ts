@@ -37,7 +37,6 @@ describe("streaming native sheet geometry", () => {
   it("keeps hyperlink targets as inert metadata", async () => {
     const small = await read("examples/xlsx/01-values-text.xlsx"), sheet = small.model.snapshot().metadata.workbook.sheets[0]!;
     expect(sheet.hyperlinks?.[0]).toEqual({ range: { from: { row: 1, column: 0 }, to: { row: 1, column: 0 } }, url: "https://example.com/authorized-link", display: "文档链接", tooltip: "外部链接，不自动访问" });
-
   });
   it.skipIf(dailyCi)("streams the full real-data worksheet @scale", async () => {
     const large = await read("examples/xlsx/15-ten-thousand-rows.xlsx"); expect(large.cells).toBe(200000);

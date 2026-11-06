@@ -17,9 +17,9 @@ function coordinate(address: string): { row: number; column: number } {
   return { row: Number(match[2]) - 1, column: column - 1 };
 }
 
-it.skipIf(dailyCi)("parses independent native and Calc formula sources, including shared followers and print names @scale", () => {
+for (const scale of [false, true]) it.skipIf(dailyCi && scale)("parses independent native and Calc formula sources, including shared followers and print names" + (scale ? " @scale" : " (small corpus)"), () => {
   let parsed = 0, shared = 0;
-  for (const directory of [root, resolve(root, "producer")]) for (const file of expected.cases) {
+  for (const directory of [root, resolve(root, "producer")]) for (const file of expected.cases.filter(file => file.file.startsWith("15-") === scale)) {
     const parts = unzipSync(readFileSync(resolve(directory, file.file)));
     for (const [path, bytes] of Object.entries(parts)) {
       if (!path.endsWith(".xml")) continue;
@@ -54,5 +54,6 @@ it.skipIf(dailyCi)("parses independent native and Calc formula sources, includin
       }
     }
   }
-  expect(parsed).toBeGreaterThan(40_000); expect(shared).toBeGreaterThanOrEqual(4);
+  expect(parsed).toBeGreaterThan(scale ? 40_000 : 0);
+  if (!scale) expect(shared).toBeGreaterThanOrEqual(4);
 }, 30_000);

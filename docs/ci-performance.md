@@ -18,6 +18,7 @@ PLAYWRIGHT_BROWSERS_PATH="$PWD/.playwright" node scripts/probe-browser-test-over
 
 - SDK 与 Playground 只构建一次，同一 workflow 的后续 job 下载该次不可变产物；类型、边界及测试照常检查。本地 `pnpm check` 也只构建一次。
 - 浏览器按四个引擎和 Word／PPT／工作簿分为独立 job，每个仍 `workers:1`。文件集合保留原矩阵；固定资源验收继续独占顺序执行。
+- 每片安装实际 UI 引擎；Word／PPT 还安装受管理 PDF/PNG 导出所需的 Chromium，缓存键包含完整工具集合。WebKit／Firefox 工作簿片不安装无关引擎。
 - SDK 探针使用同源空白宿主，实际 Playground、远程 HTTP 和工作台流程保留原首页。每例仍新建独立 context/page，不复用模型或 Worker。
 - 成功用例不采集完整 trace。首次失败保留错误与截图，随后的一次诊断重跑记录完整 trace；`failOnFlakyTests:true` 使首次失败仍导致 CI 失败。固定资源性能测试明确禁止重试及截图，保留首次失败样本。
 - 测试包使用 Base64 跨协议传输，SDK 仍接收独立字节数组，原始来源和容量断言不变。
@@ -25,6 +26,8 @@ PLAYWRIGHT_BROWSERS_PATH="$PWD/.playwright" node scripts/probe-browser-test-over
 - 每个浏览器分片输出逐用例 JSON 和执行摘要，Office 输出各命令耗时。汇总 job 只有所有分片成功才成功。
 
 `DAGENT_OFFICE_CI_MODE=daily` 只用于日常 CI。六项原生容量单元检查延后；浏览器 `@scale` 用例通过显式过滤延后，原断言保留。工作簿实际打开、切换、失败保留和授权资源仍有小样例覆盖。原生样例的字节、规范及负例审计继续执行；日常 Calc 重开省略一万行项。默认本地检查和参考记录命令保持完整模式，`--record` 永远不产生部分参考基线。
+
+原生公式语料拆为每日小样例与阶段容量两部分；共享公式跟随者、打印名称及图表／规则／表格公式的独立来源检查继续每天执行。
 
 ## 阶段合并前
 
