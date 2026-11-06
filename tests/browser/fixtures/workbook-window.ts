@@ -3,6 +3,7 @@ import type { WorkbookDocumentMetadata } from '@dagent-office/core';
 import { createWorkbookSurface } from '../../../packages/render/src/workbook/surface.js';
 import { measureWorkbookColumnFont } from '../../../packages/render/src/workbook/column-font.js';
 import { worksheetDimensions } from '../../../packages/render/src/workbook/dimensions.js';
+import { workbookDrawingRect } from '../../../packages/render/src/workbook/drawing.js';
 import { WorkbookWindowLoader } from '../../../packages/render/src/workbook/window-loader.js';
 import { modelWindowSource } from '../../../packages/render/src/workbook/window-source.js';
 import { layoutWorkbookWindow } from '../../../packages/render/src/workbook/window-layout.js';
@@ -113,6 +114,8 @@ export async function autoRowMeasurement(entries: readonly [string, number[]][],
       const normal = measureWorkbookColumnFont(surface.source, snapshot.metadata.workbook, sheetId);
       const result = await measureWorkbookAutoRows(surface, source, sheetId, normal, formatter, new AbortController().signal, {}, rules);
       results.push({ sheetId, heights: Array.from({ length: 4 }, (_, row) => result.dimensions.rows.size(row)), after: result.dimensions.rows.position(2),
+        columnWidths: [0, 1, 2].map(column => result.dimensions.columns.size(column)),
+        drawing: workbookDrawingRect({ kind: 'one-cell', from: { row: 2, column: 2, offsetXPt: 2, offsetYPt: 3 }, widthPt: 30, heightPt: 20 }, result.dimensions),
         farHeight: result.dimensions.rows.size(299), cells: result.measuredCells, fonts: result.fonts.length, segments: result.dimensions.rows.segmentCount });
     }
     const sheetId = ids[0]!, normal = measureWorkbookColumnFont(surface.source, snapshot.metadata.workbook, sheetId);
@@ -128,12 +131,12 @@ export async function autoRowMeasurement(entries: readonly [string, number[]][],
   } finally { formatter.dispose(); surface.dispose(); container.remove(); }
 }
 
-export async function autoRowSourceSafety(entries: readonly [string, number[]][]) {
+export async function autoRowSourceSafety(entries: readonly [string, number[]][], hidden = false) {
   const { measureWorkbookAutoRows } = await import('../../../packages/render/src/workbook/auto-rows.js');
   const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
   const container = document.createElement('div'); document.body.append(container);
   const surface = await createWorkbookSurface(container, snapshot, { widthPt: 600, heightPt: 360 });
-  const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem }), provider = modelWindowSource(model), sheetId = snapshot.metadata.workbook.activeSheetId;
+  const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem }), provider = modelWindowSource(model), sheetId = hidden ? snapshot.metadata.workbook.sheets[1]!.sheetId : snapshot.metadata.workbook.activeSheetId;
   const normal = measureWorkbookColumnFont(surface.source, snapshot.metadata.workbook, sheetId), errors: string[] = [], retained: number[] = [];
   try {
     for (const mode of ['handler', 'script', 'wrong-text', 'wrong-column', 'cancel']) {
@@ -142,10 +145,10 @@ export async function autoRowSourceSafety(entries: readonly [string, number[]][]
       const source = { snapshot, async read(request: Parameters<typeof provider.read>[0], signal: AbortSignal) {
         const response = await provider.read(request, signal);
         return { ...response, cells: response.cells.map(cell => {
-          if (cell.row !== 2 || cell.column !== 0 || mode === 'cancel') return cell;
+          if (cell.row !== (hidden ? 1 : 2) || cell.column !== (hidden ? 1 : 0) || mode === 'cancel') return cell;
           const html = mode === 'handler' ? cell.html.replace('<td', '<td onclick="window.parent.document.body.dataset.rowSourceExecuted=true"')
-            : mode === 'script' ? cell.html.replace('After', '<script>window.parent.document.body.dataset.rowSourceExecuted=true</script>After')
-            : mode === 'wrong-text' ? cell.html.replace('After', 'Different') : cell.html.replace('data-column="0"', 'data-column="1"');
+            : mode === 'script' ? cell.html.replace(hidden ? 'Alpha' : 'After', '<script>window.parent.document.body.dataset.rowSourceExecuted=true</script>Changed')
+            : mode === 'wrong-text' ? cell.html.replace(hidden ? 'Alpha' : 'After', 'Different') : cell.html.replace('data-column="' + (hidden ? 1 : 0) + '"', 'data-column="2"');
           return { ...cell, html };
         }) };
       } };

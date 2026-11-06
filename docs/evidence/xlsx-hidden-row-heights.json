@@ -1,0 +1,641 @@
+{
+  "scope": "Independent hidden-column AutoFit sources and pinned Calc height observations.\n\nSDK policy includes hidden content at its stored pre-hide width. Producer row\nheights are evidence, not a claim of Excel/WPS or exact browser line metrics.\n",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "fontManifest": [
+    {
+      "file": "LiberationSans-Regular.ttf",
+      "sha256": "4659bc0c58c5028dd488ec928d41d9265db43d9b669fc14ca8b0832daca7b144"
+    }
+  ],
+  "sourceSha256": "f44df099f91ce59739c72839721d6621924639c73a2aeb017bd7c023529c092e",
+  "cases": [
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "width-8.43-hidden-False",
+      "width": 8.43,
+      "hide": false,
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "64.9",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ],
+      "producerColumns": []
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "width-8.43-hidden-True",
+      "width": 8.43,
+      "hide": true,
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "64.9",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ],
+      "producerColumns": [
+        {
+          "collapsed": "false",
+          "customWidth": "false",
+          "hidden": "true",
+          "outlineLevel": "0",
+          "max": "2",
+          "min": "2",
+          "style": "0",
+          "width": "8.42"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "width-4-hidden-False",
+      "width": 4,
+      "hide": false,
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "141",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ],
+      "producerColumns": [
+        {
+          "collapsed": "false",
+          "customWidth": "true",
+          "hidden": "false",
+          "outlineLevel": "0",
+          "max": "2",
+          "min": "2",
+          "style": "0",
+          "width": "4"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "width-4-hidden-True",
+      "width": 4,
+      "hide": true,
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "141",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ],
+      "producerColumns": [
+        {
+          "collapsed": "false",
+          "customWidth": "true",
+          "hidden": "true",
+          "outlineLevel": "0",
+          "max": "2",
+          "min": "2",
+          "style": "0",
+          "width": "4"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "width-16-hidden-False",
+      "width": 16,
+      "hide": false,
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "39.55",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ],
+      "producerColumns": [
+        {
+          "collapsed": "false",
+          "customWidth": "true",
+          "hidden": "false",
+          "outlineLevel": "0",
+          "max": "2",
+          "min": "2",
+          "style": "0",
+          "width": "16"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "width-16-hidden-True",
+      "width": 16,
+      "hide": true,
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "39.55",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ],
+      "producerColumns": [
+        {
+          "collapsed": "false",
+          "customWidth": "true",
+          "hidden": "true",
+          "outlineLevel": "0",
+          "max": "2",
+          "min": "2",
+          "style": "0",
+          "width": "16"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "hidden-default-width",
+      "hide": true,
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "52.2",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ],
+      "producerColumns": [
+        {
+          "collapsed": "false",
+          "customWidth": "true",
+          "hidden": "true",
+          "outlineLevel": "0",
+          "max": "2",
+          "min": "2",
+          "style": "0",
+          "width": "10.49"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": null,
+      "size": 20,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": false,
+      "name": "hidden-implicit-column-font",
+      "hide": true,
+      "columnStyle": true,
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "24.45",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "24.45",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "24.45",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ],
+      "producerColumns": [
+        {
+          "collapsed": "false",
+          "customWidth": "true",
+          "hidden": "true",
+          "outlineLevel": "0",
+          "max": "2",
+          "min": "2",
+          "style": "3",
+          "width": "10.49"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": null,
+      "size": 20,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": false,
+      "name": "hidden-blank-font",
+      "hide": true,
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "24.45",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ],
+      "producerColumns": [
+        {
+          "collapsed": "false",
+          "customWidth": "true",
+          "hidden": "true",
+          "outlineLevel": "0",
+          "max": "2",
+          "min": "2",
+          "style": "0",
+          "width": "10.49"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "hidden-manual-row",
+      "hide": true,
+      "manual": 12,
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "12",
+          "hidden": "false",
+          "customHeight": "true",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ],
+      "producerColumns": [
+        {
+          "collapsed": "false",
+          "customWidth": "true",
+          "hidden": "true",
+          "outlineLevel": "0",
+          "max": "2",
+          "min": "2",
+          "style": "0",
+          "width": "10.49"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "hidden-row",
+      "hide": true,
+      "hidden": true,
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "52.2",
+          "hidden": "true",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ],
+      "producerColumns": [
+        {
+          "collapsed": "false",
+          "customWidth": "true",
+          "hidden": "true",
+          "outlineLevel": "0",
+          "max": "2",
+          "min": "2",
+          "style": "0",
+          "width": "10.49"
+        }
+      ]
+    },
+    {
+      "group": "auto-height",
+      "rtl": false,
+      "value": "Alpha beta gamma delta epsilon",
+      "size": 11,
+      "horizontal": "general",
+      "vertical": "bottom",
+      "wrap": true,
+      "name": "hidden-merged",
+      "hide": true,
+      "merge": "B2:C2",
+      "producerRows": [
+        {
+          "r": "1",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "2",
+          "customFormat": "false",
+          "ht": "26.85",
+          "hidden": "false",
+          "customHeight": "true",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        },
+        {
+          "r": "3",
+          "customFormat": "false",
+          "ht": "15",
+          "hidden": "false",
+          "customHeight": "false",
+          "outlineLevel": "0",
+          "collapsed": "false"
+        }
+      ],
+      "producerColumns": [
+        {
+          "collapsed": "false",
+          "customWidth": "true",
+          "hidden": "true",
+          "outlineLevel": "0",
+          "max": "2",
+          "min": "2",
+          "style": "0",
+          "width": "10.49"
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Calc may select a different width when the hidden source column omits width. The SDK uses the source sheet default.",
+    "No exact browser/Calc text metric or Excel/WPS machine equivalence is claimed."
+  ]
+}

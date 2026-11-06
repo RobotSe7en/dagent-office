@@ -973,7 +973,7 @@ test('automatic row indexing respects native fixed defaults, exceptions, hidden 
   expect(heights[3]).toBe(12); expect(heights[4]).toBe(0); expect(heights[5]).toBe(heights[0]);
   expect(heights[6]).toBe(15); expect(heights[7]).toBe(15); expect(heights[8]).toBeGreaterThan(90);
   expect(heights[9]).toBeGreaterThan(30); expect(heights[10]).toBeGreaterThan(21); expect(heights[11]).toBeGreaterThan(30);
-  expect(heights[12]).toBe(15); expect(heights[13]).toBe(15); expect(report.results[13]!.farHeight).toBe(heights[0]);
+  expect(heights[12]).toBe(heights[0]); expect(heights[13]).toBe(15); expect(report.results[13]!.farHeight).toBe(heights[0]);
   for (const index of [14, 15, 16, 17, 18, 20]) { expect(heights[index]).toBeGreaterThan(21); expect(heights[index]).toBeLessThan(29); }
   expect(heights[19]).toBeGreaterThanOrEqual(heights[18]!);
   expect(report.results[16]!.heights.slice(0, 3)).toEqual([heights[16], heights[16], heights[16]]);
@@ -1009,4 +1009,25 @@ test('automatic row prototypes validate every source and release all nodes on ma
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-row-heights.xlsx'), { documentId: 'row-prototype-validation' });
   const report = await page.evaluate(entries => window.workbookGridHost.autoRowSourceSafety(entries), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
   expect(report).toEqual({ errors: ['InvalidDocument', 'InvalidDocument', 'InvalidDocument', 'InvalidDocument', 'OperationCancelled'], retained: [0, 0, 0, 0, 0], executed: false, unchanged: true });
+});
+
+
+test('hidden columns use their stored widths for automatic row height while display columns and drawing anchors remain shared', async ({ page }) => {
+  const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-hidden-row-heights.xlsx'), { documentId: 'hidden-auto-height' });
+  const entries = [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]);
+  const report = await page.evaluate(entries => window.workbookGridHost.autoRowMeasurement(entries, Array.from({ length: 12 }, (_, i) => 'sheet-' + (i + 1))), entries);
+  expect(report.unchanged).toBe(true); expect(report.retained).toBe(0);
+  const heights = report.results.map(result => result.heights[1]!);
+  for (const index of [0, 2, 4]) expect(heights[index + 1]).toBe(heights[index]);
+  expect(heights[2]).toBeGreaterThan(heights[0]!); expect(heights[4]).toBeLessThan(heights[0]!); expect(heights[6]).toBe(heights[0]);
+  for (const index of [7, 8]) { expect(heights[index]).toBeGreaterThan(21); expect(heights[index]).toBeLessThan(29); }
+  expect(report.results[7]!.heights.slice(0, 3)).toEqual([heights[7], heights[7], heights[7]]);
+  expect(heights.slice(9)).toEqual([12, 0, 15]);
+  for (const [index, result] of report.results.entries()) {
+    expect(result.columnWidths[1] === 0).toBe(index >= 6 || index % 2 === 1);
+    expect(result.drawing).toEqual({ x: result.columnWidths[0]! + result.columnWidths[1]! + 2, y: result.after + 3, width: 30, height: 20 });
+  }
+  expect(report.largest).toBeLessThanOrEqual(4096); expect(report.errors).toEqual(['ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'OperationCancelled']);
+  const safety = await page.evaluate(entries => window.workbookGridHost.autoRowSourceSafety(entries, true), entries);
+  expect(safety).toEqual({ errors: ['InvalidDocument', 'InvalidDocument', 'InvalidDocument', 'InvalidDocument', 'OperationCancelled'], retained: [0, 0, 0, 0, 0], executed: false, unchanged: true });
 });

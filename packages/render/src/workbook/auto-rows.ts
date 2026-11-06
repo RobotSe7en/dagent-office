@@ -5,7 +5,7 @@ import { FontProbeCache } from "../font-probe-cache.js";
 import { WorkbookCellSources } from "./cell-source.js";
 import { layoutWorkbookRowTexts } from "./row-text-layout.js";
 import type { WorkbookColumnFont } from "./column-font.js";
-import { worksheetDimensions } from "./dimensions.js";
+import { worksheetDimensions, worksheetColumnDimensions } from "./dimensions.js";
 import type { WorkbookSurface } from "./surface.js";
 import { WorkbookMergeIndex } from "./projection.js";
 import { checkedWorkbookRules } from "./rule-response.js";
@@ -54,7 +54,7 @@ export async function measureWorkbookAutoRows(surface: Pick<WorkbookSurface, "so
   const selectedSheet = snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === sheetId);
   if (!selectedSheet) throw new DocumentError("InvalidOperation", "Automatic rows require a source worksheet.");
   const sheet = selectedSheet;
-  const dimensions = worksheetDimensions(sheet, normal.maximumDigitWidthPx), merges = new WorkbookMergeIndex(sheet.merges);
+  const measurementColumns = worksheetColumnDimensions(sheet, normal.maximumDigitWidthPx, true), merges = new WorkbookMergeIndex(sheet.merges);
   const heights = new Map<number, number>(), fonts = new Map<string, FontResolution>();
   const formats = new Map(snapshot.metadata.workbook.numberFormats.map(format => [format.formatId, format]));
   // Native class-only styles have no coordinate/ancestor selectors. A custom
@@ -63,7 +63,7 @@ export async function measureWorkbookAutoRows(surface: Pick<WorkbookSurface, "so
   const typography = simpleClasses ? new Map<string, WorkbookRowTypography>() : undefined;
   const metricCache = new Map<string, number>(); let metricCacheUnits = 0;
   const fontCache = new Map<string, number>();
-  const columnFonts = sheet.columnDimensions.some(run => run.cssClass && !run.hidden);
+  const columnFonts = sheet.columnDimensions.some(run => run.cssClass);
   const fontRegions = implicitWorkbookFontRegions(snapshot, sheet, simpleClasses);
   const implicitFonts = columnFonts || sheet.rowDimensions.some(run => run.cssClass) || fontRegions.length > 0;
   const occupied = new Map<number, Set<number>>(); let lastUsedRow = -1;
@@ -113,7 +113,7 @@ export async function measureWorkbookAutoRows(surface: Pick<WorkbookSurface, "so
         const cell = byCoordinate.get(point.row * 16_384 + point.column), result = values.get(point.row * 16_384 + point.column);
         const key = point.row * 16_384 + point.column;
         return { source: shared.get(key) ?? sources!.get(point.row, point.column)!, value: result?.kind === "value" ? result.value : cell?.value, formula: Boolean(cell?.formula) || shared.has(key),
-          widthPt: dimensions.columns.size(point.column), heightPt: sheet.defaultRowHeightPt, bordered: false };
+          widthPt: measurementColumns.size(point.column), heightPt: sheet.defaultRowHeightPt, bordered: false };
       });
       const selected: typeof inputs = [];
       const keys = inputs.map(input => workbookRowMetricKey(input, formatter, formats, typography)), pending = new Map<string, number>();
@@ -163,7 +163,7 @@ export async function measureWorkbookAutoRows(surface: Pick<WorkbookSurface, "so
         if (units > limits.maxCodeUnits) throw new DocumentError("ResourceLimitExceeded", "Automatic rows exceed their cumulative source-text budget.");
         // Merged cells do not drive native AutoFit; their complete source extent
         // is retained by ordinary merge layout rather than distributed over rows.
-        if (automatic(sheet, cell.row) && dimensions.columns.size(cell.column) > 0 && !merges.at(cell.row, cell.column)) cells.push(cell);
+        if (automatic(sheet, cell.row) && measurementColumns.size(cell.column) > 0 && !merges.at(cell.row, cell.column)) cells.push(cell);
       }
       for (let offset = 0; offset < cells.length; offset += 128) {
         const batch = cells.slice(offset, offset + 128);
@@ -174,7 +174,7 @@ export async function measureWorkbookAutoRows(surface: Pick<WorkbookSurface, "so
     const admit = (): void => {
       if (++visited > limits.maxReadCells) throw new DocumentError("ResourceLimitExceeded", "Automatic row discovery exceeds its cumulative query and implicit-discovery budget.");
     };
-    for await (const point of implicitWorkbookRowSources(sheet, dimensions.columns, occupied, lastUsedRow,
+    for await (const point of implicitWorkbookRowSources(sheet, measurementColumns, occupied, lastUsedRow,
       simpleClasses && !sheet.conditionalRules?.length && !sheet.tables?.length, row => automatic(sheet, row), (row, column) => merges.at(row, column)?.to.column, admit, signal, fontRegions)) {
       implicit.push(point);
       if (implicit.length === 128) { await measure(implicit, new Map()); implicit = []; }

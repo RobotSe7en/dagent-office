@@ -24,7 +24,7 @@ export async function* implicitWorkbookRowSources(sheet: DeepReadonly<WorkbookSh
   lastUsedRow: number, simpleClasses: boolean, automatic: (row: number) => boolean, mergeEnd: (row: number, column: number) => number | undefined,
   admit: () => void, signal: AbortSignal, extraRegions: readonly DeepReadonly<WorkbookRange>[] = []): AsyncGenerator<Readonly<WorkbookCoordinate>> {
   checkWindowCancellation(signal);
-  const styledColumns = sheet.columnDimensions.filter(run => run.cssClass && !run.hidden);
+  const styledColumns = sheet.columnDimensions.filter(run => run.cssClass);
   const rows = sheet.rowDimensions.filter(run => run.cssClass).map(run => ({ from: run.from, to: run.to }));
   rows.push(...extraRegions.map(region => ({ from: region.from.row, to: region.to.row })));
   if (styledColumns.length && lastUsedRow >= 0) rows.push({ from: 0, to: lastUsedRow });
