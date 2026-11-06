@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookCoordinate } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookCoordinate } from "@doffi/core";
 import type { OpcPackage } from "../ooxml/package.js";
 import { attr, check, elements, fail } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";

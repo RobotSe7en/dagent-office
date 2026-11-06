@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { openDocument } from "@dagent-office/core";
+import { openDocument } from "@doffi/core";
 import { readDocumentZip, writeOpcZip } from "../src/document-zip.js";
 import { readXlsxRecords } from "../src/xlsx/read.js";
 import { projectXlsxRecords } from "./helpers/xlsx-record-model.js";

@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import { property, resolvedColor } from "../presentation/appearance.js";
 import type { WorkbookDrawingOrientation } from "./drawing-view.js";
 

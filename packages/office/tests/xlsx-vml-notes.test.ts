@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createWorkbook, openDocument, DEFAULT_DOCUMENT_READ_LIMITS, WorkbookDrawingAnchorSchema } from "@dagent-office/core";
+import { createWorkbook, openDocument, DEFAULT_DOCUMENT_READ_LIMITS, WorkbookDrawingAnchorSchema } from "@doffi/core";
 import { openOpc, openOpcFiles } from "../src/ooxml/package.js";
 import type { OpcPackage } from "../src/ooxml/package.js";
 import { readWorkbook } from "../src/xlsx/workbook.js";

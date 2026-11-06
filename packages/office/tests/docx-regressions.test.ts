@@ -1,8 +1,8 @@
 import { openContentFixture as openDocument } from "../../../tests/content-fixture.js";
 import { expect, test } from "vitest";
-import {} from "@dagent-office/core";
-import type { ContentDocumentModel as DocumentModel, DocumentNode } from "@dagent-office/core";
-import { exportDocx, importDocx, readDocumentZip, writeDocumentZip } from "@dagent-office/office";
+import {} from "@doffi/core";
+import type { ContentDocumentModel as DocumentModel, DocumentNode } from "@doffi/core";
+import { exportDocx, importDocx, readDocumentZip, writeDocumentZip } from "@doffi/office";
 import {
   body, complexField, crossSectionRangesFixture, mutateDocx, nestedFieldFixture, styleInheritanceFixture, styles, wordNamespace,
 } from "./regression-fixtures.js";

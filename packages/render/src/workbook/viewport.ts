@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookWindow } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookWindow } from "@doffi/core";
 import type { AxisCell, AxisDimensions } from "./dimensions.js";
 
 export interface WorkbookViewport {

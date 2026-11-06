@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { openDocument } from '@dagent-office/core';
+import { openDocument } from '@doffi/core';
 import { importXlsx } from '../src/xlsx-import.js';
 import { readDocumentZip, writeOpcZip } from '../src/document-zip.js';
 

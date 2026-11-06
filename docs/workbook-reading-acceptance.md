@@ -1,6 +1,6 @@
 # XLSX 读取阶段验收
 
-R3-06～08 已完成所声明的 XLSX 读取与只读显示验收；编辑计算和输出属于后续阶段。最终提交四项 CI 全绿后合并，状态以 [PR #25](https://github.com/RobotSe7en/dagent-office/pull/25) 为准。
+R3-06～08 已完成所声明的 XLSX 读取与只读显示验收；编辑计算和输出属于后续阶段。最终提交四项 CI 全绿后合并，状态以 [PR #25](https://github.com/RobotSe7en/doffi/pull/25) 为准。
 
 ## 来源和检查边界
 

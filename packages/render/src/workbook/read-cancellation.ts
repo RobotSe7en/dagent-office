@@ -1,4 +1,4 @@
-import { DocumentError } from '@dagent-office/core';
+import { DocumentError } from '@doffi/core';
 
 /** One removable abort waiter per read; late replies never retain a shared
  * cancellation promise's completed responses or delay caller cleanup. */

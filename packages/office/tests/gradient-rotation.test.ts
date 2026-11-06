@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
-import { openDocument } from '@dagent-office/core';
-import { importXlsx } from '@dagent-office/office';
+import { openDocument } from '@doffi/core';
+import { importXlsx } from '@doffi/office';
 
 const report = JSON.parse(readFileSync('docs/evidence/xlsx-gradient-rotation.json', 'utf8')) as { cases: { source: { gradient: Record<string, string>; linear: Record<string, string> }; producer: { gradient: Record<string, string>; linear: Record<string, string> } }[] };
 describe('native gradient rotation sources', () => {

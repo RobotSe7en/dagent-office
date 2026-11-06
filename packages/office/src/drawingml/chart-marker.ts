@@ -1,4 +1,4 @@
-import type { ChartAppearance } from "@dagent-office/core";
+import type { ChartAppearance } from "@doffi/core";
 import { C, check, checkAttributes, child, elements, fail, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import type { Css } from "../ooxml/styles.js";

@@ -1,8 +1,8 @@
 import { openContentFixture as openDocument } from "../../../tests/content-fixture.js";
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
-import { createDocumentSession } from "@dagent-office/core";
-import { importDocx, readDocumentZip, writeDocumentZip } from "@dagent-office/office";
+import { createDocumentSession } from "@doffi/core";
+import { importDocx, readDocumentZip, writeDocumentZip } from "@doffi/office";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 
 const directory = new URL("../../../examples/docx/", import.meta.url);
@@ -80,7 +80,7 @@ for (const file of ["08-comments-revisions.docx", "producer/08-comments-revision
     const first = ranges[0]!;
     const second = ranges[1] ?? first;
     const session = createDocumentSession(model);
-    const transaction = (operations: import("@dagent-office/core").DocumentOperation[]) => session.prepare({
+    const transaction = (operations: import("@doffi/core").DocumentOperation[]) => session.prepare({
       protocolVersion: 1, documentId: "anchors", baseRevision: session.snapshot().manifest.revision, operations,
     });
     const candidate = transaction([

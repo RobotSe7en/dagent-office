@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import type { WorkbookCell } from '@dagent-office/core';
+import type { WorkbookCell } from '@doffi/core';
 import { checkedPlainWorkbookAttributes, checkedPlainWorkbookCell } from '../src/workbook/plain-cell-source.js';
 const text = '客户 123 😀禰󠄀';
 const cell: WorkbookCell = { sheetId: 's', row: 1, column: 2, value: { type: 'text', value: text }, text, cssClass: 'normal',

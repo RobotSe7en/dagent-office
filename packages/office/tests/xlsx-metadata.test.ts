@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createWorkbook, DEFAULT_DOCUMENT_READ_LIMITS, openDocument, parseWorkbookFormula, printWorkbookFormula, WorkbookPrintSchema } from "@dagent-office/core";
+import { createWorkbook, DEFAULT_DOCUMENT_READ_LIMITS, openDocument, parseWorkbookFormula, printWorkbookFormula, WorkbookPrintSchema } from "@doffi/core";
 import { openOpc, openOpcFiles } from "../src/ooxml/package.js";
 import { S, xml } from "../src/ooxml/xml.js";
 import { readWorkbook } from "../src/xlsx/workbook.js";

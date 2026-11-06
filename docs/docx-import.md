@@ -5,9 +5,9 @@ R1-10 将授权 DOCX 字节转换为同一 HTML 文档包，不创建编辑会�
 ## 公开入口
 
 ```ts
-import { openDocument } from "@dagent-office/core";
-import { importDocx } from "@dagent-office/office";
-import { mountDocumentPreview } from "@dagent-office/editor";
+import { openDocument } from "@doffi/core";
+import { importDocx } from "@doffi/office";
+import { mountDocumentPreview } from "@doffi/editor";
 
 const files = importDocx(authorizedBytes, { documentId: "host-supplied-id" });
 const document = openDocument(files);

@@ -21,7 +21,7 @@ check = module("check-xlsx-output")
 expected = json.loads((SAMPLES / "expected.json").read_text())
 S, TC, D = check.S, check.TC, check.D
 
-with TemporaryDirectory(prefix="dagent-xlsx-fixtures-") as directory:
+with TemporaryDirectory(prefix="doffi-xlsx-fixtures-") as directory:
     generated = Path(directory); g.generate(generated)
     assert (generated / "expected.json").read_bytes() == (SAMPLES / "expected.json").read_bytes(), "Expectations are not reproducible"
     for case in expected["cases"] + expected["negativeCases"]:
@@ -73,7 +73,7 @@ with check.schemas() as standards:
             # Assert those exact failures and audit the remaining schema/OPC
             # structure with the focused observer; never count it as conformant.
             labels = module("check-xlsx-chart-labels")
-            with TemporaryDirectory(prefix="dagent-xlsx-invalid-order-") as directory:
+            with TemporaryDirectory(prefix="doffi-xlsx-invalid-order-") as directory:
                 report = labels.audit(path.read_bytes(), Path(directory) / path.name, standards, True)
             recorded = json.loads((ROOT / "docs/evidence/xlsx-chart-labels.json").read_text())["schemas"]["producer"]
             assert report == recorded and len(report["invalidChartParts"]) == 4, (path.name, report)

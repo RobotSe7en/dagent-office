@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import { builtinTableDifferentials, builtinTableElements } from "./table-style-data.js";
 import type { WorkbookBuiltinTableDifferential, WorkbookTableRegion } from "./table-style-types.js";
 

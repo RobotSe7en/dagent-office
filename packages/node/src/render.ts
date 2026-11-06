@@ -1,10 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { chromium } from "playwright-core";
 import type { Browser, BrowserContext } from "playwright-core";
-import { DocumentError, openDocument } from "@dagent-office/core";
-import type { DocumentErrorCode, ContentDocumentModel } from "@dagent-office/core";
-import { DEFAULT_RENDER_LIMITS, renderLimits } from "@dagent-office/render/contracts";
-import type { BrowserRenderBridge, BrowserRenderResult, DocumentRenderReport, RenderLimits } from "@dagent-office/render/contracts";
+import { DocumentError, openDocument } from "@doffi/core";
+import type { DocumentErrorCode, ContentDocumentModel } from "@doffi/core";
+import { DEFAULT_RENDER_LIMITS, renderLimits } from "@doffi/render/contracts";
+import type { BrowserRenderBridge, BrowserRenderResult, DocumentRenderReport, RenderLimits } from "@doffi/render/contracts";
 import { conversionEnvironment } from "./environment.js";
 
 export type ConversionErrorCode = DocumentErrorCode | "Cancelled" | "Timeout" | "Busy" | "InvalidRequest";
@@ -105,19 +105,19 @@ export function createDocumentConverter(options: ConverterOptions = {}): Documen
         const url = route.request().url(); return url.startsWith("blob:") || url === "about:blank" ? route.continue() : route.abort("blockedbyclient");
       });
       const page = await context.newPage(); page.setDefaultTimeout(timeout); await page.emulateMedia({ media: "screen" });
-      script ??= readFile(new URL(import.meta.resolve("@dagent-office/render/browser-script")), "utf8");
+      script ??= readFile(new URL(import.meta.resolve("@doffi/render/browser-script")), "utf8");
       await page.addScriptTag({ content: await script });
       const result = await page.evaluate(async ({ entries, bounds }) => {
-        const bridge = (globalThis as unknown as { __dagentOfficeRender: BrowserRenderBridge }).__dagentOfficeRender;
+        const bridge = (globalThis as unknown as { __doffiRender: BrowserRenderBridge }).__doffiRender;
         return bridge.mount(entries, { layout: "pages", limits: bounds });
       }, { entries: [...files].map(([path, bytes]) => [path, Buffer.from(bytes).toString("base64")] as const), bounds: limits });
       let report = check(result), bytes: Uint8Array;
       if (format === "pdf") {
-        report = check(await page.evaluate(() => (globalThis as unknown as { __dagentOfficeRender: BrowserRenderBridge }).__dagentOfficeRender.preparePrint()));
+        report = check(await page.evaluate(() => (globalThis as unknown as { __doffiRender: BrowserRenderBridge }).__doffiRender.preparePrint()));
         bytes = await page.pdf({ preferCSSPageSize: true, printBackground: true, tagged: true });
       } else {
         if (pageIndex >= report.pages.length) throw new ConversionError("InvalidRequest", "Requested image page does not exist.");
-        const clip = await page.evaluate((index) => (globalThis as unknown as { __dagentOfficeRender: BrowserRenderBridge }).__dagentOfficeRender.pageClip(index), pageIndex);
+        const clip = await page.evaluate((index) => (globalThis as unknown as { __doffiRender: BrowserRenderBridge }).__doffiRender.pageClip(index), pageIndex);
         if (clip.width * clip.height * scale * scale > quota.maxPixels) throw new ConversionError("ResourceLimitExceeded", "Page image exceeds the pixel budget.");
         bytes = await page.screenshot({ type: "png", clip, fullPage: true });
       }

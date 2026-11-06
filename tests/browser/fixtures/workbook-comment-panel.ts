@@ -3,8 +3,8 @@ import { createWorkbookCommentView } from '../../../packages/render/src/workbook
 import type { WorkbookCommentView } from '../../../packages/render/src/workbook/comment-view.js';
 import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';
 import { createWorkbookSurface } from '../../../packages/render/src/workbook/surface.js';
-import { openDocument } from '@dagent-office/core';
-import type { Annotation, WorkbookDocumentMetadata } from '@dagent-office/core';
+import { openDocument } from '@doffi/core';
+import type { Annotation, WorkbookDocumentMetadata } from '@doffi/core';
 
 export async function mentionPanelMeasurement(entries: TestPackage, checkBoxes = false) {
   const model = openDocument(decodeTestPackage(entries), { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();

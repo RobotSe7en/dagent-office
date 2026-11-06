@@ -1,4 +1,4 @@
-import type { DocumentErrorData, DocumentSelection, WorkbookModel, WorkbookSnapshot } from "@dagent-office/core";
+import type { DocumentErrorData, DocumentSelection, WorkbookModel, WorkbookSnapshot } from "@doffi/core";
 import type { FontResolution } from "../contracts.js";
 import type { WorkbookWindowSource } from "./window-source.js";
 import type { WorkbookAssetSource } from "./assets.js";

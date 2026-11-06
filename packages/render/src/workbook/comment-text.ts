@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import { markViewNode } from "../view-nodes.js";
 import { workbookRichTextFonts } from "./text-fonts.js";
 import { copyWorkbookTextStyle, decorateWorkbookText } from "./text-style.js";

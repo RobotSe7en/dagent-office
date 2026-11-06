@@ -1,6 +1,6 @@
-import { DocumentError, openDocument } from "@dagent-office/core";
-import { importXlsx, readDocumentZip } from "@dagent-office/office";
-import { serveWorkbookReads } from "@dagent-office/render";
+import { DocumentError, openDocument } from "@doffi/core";
+import { importXlsx, readDocumentZip } from "@doffi/office";
+import { serveWorkbookReads } from "@doffi/render";
 import type { WorkbookOpenRequest, WorkbookOpenResponse } from "./open-workbook.js";
 
 const scope = globalThis as unknown as {

@@ -1,5 +1,5 @@
-import { createAssetDescriptor, DocumentError } from "@dagent-office/core";
-import type { Annotation, ContentDocumentManifest, PresentationMetadata } from "@dagent-office/core";
+import { createAssetDescriptor, DocumentError } from "@doffi/core";
+import type { Annotation, ContentDocumentManifest, PresentationMetadata } from "@doffi/core";
 import { openOpc } from "../ooxml/package.js";
 import type { OpcPackage } from "../ooxml/package.js";
 import { fail, R, unsupported } from "../ooxml/xml.js";

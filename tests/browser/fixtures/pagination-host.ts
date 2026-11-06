@@ -1,9 +1,9 @@
 import { decodeTestPackage, type TestPackage } from './package-transport.js';
 import { openContentFixture as openDocument } from "../../content-fixture.js";
-import { createDocumentSession } from "@dagent-office/core";
-import type { ContentDocumentModel as DocumentModel, DocumentSession } from "@dagent-office/core";
-import { createLayoutFieldTransaction, mountDocumentInteraction, mountDocumentPreview, mountDocumentTextEditor } from "@dagent-office/editor";
-import type { DocumentInteractionView, DocumentPreview, DocumentPreviewOptions, DocumentRenderReport, DocumentTextEditor } from "@dagent-office/editor";
+import { createDocumentSession } from "@doffi/core";
+import type { ContentDocumentModel as DocumentModel, DocumentSession } from "@doffi/core";
+import { createLayoutFieldTransaction, mountDocumentInteraction, mountDocumentPreview, mountDocumentTextEditor } from "@doffi/editor";
+import type { DocumentInteractionView, DocumentPreview, DocumentPreviewOptions, DocumentRenderReport, DocumentTextEditor } from "@doffi/editor";
 
 export interface PaginationHost {
   model: DocumentModel | undefined;

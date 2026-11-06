@@ -1,5 +1,5 @@
-import { DocumentError, openDocument } from "@dagent-office/core";
-import type { ContentDocumentManifest, DocumentPackage, PresentationDocumentMetadata } from "@dagent-office/core";
+import { DocumentError, openDocument } from "@doffi/core";
+import type { ContentDocumentManifest, DocumentPackage, PresentationDocumentMetadata } from "@doffi/core";
 import type { DocumentZipOptions } from "./document-zip.js";
 import { openOpc } from "./ooxml/package.js";
 import type { OpcPackage } from "./ooxml/package.js";
@@ -143,7 +143,7 @@ class Importer {
     const documentMetadata: PresentationDocumentMetadata = { title, locale, presentation: metadata };
     const root = context.make("article", { "data-office-kind": "presentation", class: "presentation-default" }, this.roots);
     const html = '<!doctype html><html lang="' + escapeHtml(locale) + '"><head><meta charset="utf-8"><title>' + escapeHtml(title) + '</title><link rel="stylesheet" href="styles.css"></head><body>' + serialize(root) + '</body></html>';
-    const manifest: ContentDocumentManifest = { format: "dagent-office", formatVersion: 1, documentId: this.options.documentId, kind: "presentation", revision: 0,
+    const manifest: ContentDocumentManifest = { format: "doffi", formatVersion: 1, documentId: this.options.documentId, kind: "presentation", revision: 0,
       entrypoint: "content.html", styles: ["styles.css"], metadata: "metadata.json", annotations: "annotations.json", assets: context.assets };
     context.files.set("manifest.json", encode(JSON.stringify(manifest))); context.files.set("content.html", encode(html));
     context.files.set("metadata.json", encode(JSON.stringify(documentMetadata))); context.files.set("annotations.json", encode(JSON.stringify(context.annotations)));

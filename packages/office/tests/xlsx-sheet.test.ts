@@ -1,8 +1,8 @@
 import { dailyCi } from '../../../tests/ci-mode.js';
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_DOCUMENT_READ_LIMITS, createWorkbook, openDocument } from "@dagent-office/core";
-import type { WorkbookSheet } from "@dagent-office/core";
+import { DEFAULT_DOCUMENT_READ_LIMITS, createWorkbook, openDocument } from "@doffi/core";
+import type { WorkbookSheet } from "@doffi/core";
 import { openOpc } from "../src/ooxml/package.js";
 import { readWorkbook } from "../src/xlsx/workbook.js";
 import { readSheet, rowDimension } from "../src/xlsx/sheet.js";

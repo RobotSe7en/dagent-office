@@ -1,6 +1,6 @@
-import { DocumentError, parseContract } from "@dagent-office/core";
-import type { DocumentErrorData, DocumentPackage } from "@dagent-office/core";
-import type { DocxExportReport, DocxExportResult } from "@dagent-office/office";
+import { DocumentError, parseContract } from "@doffi/core";
+import type { DocumentErrorData, DocumentPackage } from "@doffi/core";
+import type { DocxExportReport, DocxExportResult } from "@doffi/office";
 export interface DocxWorkerRequest { readonly taskId: string; readonly files: [string, Uint8Array][] }
 export type DocxWorkerResponse = { readonly taskId: string; readonly ok: true; readonly bytes: Uint8Array; readonly report: DocxExportReport } | { readonly taskId: string; readonly ok: false; readonly error: DocumentErrorData };
 /** The host owns this short-lived worker and terminates it on document changes,

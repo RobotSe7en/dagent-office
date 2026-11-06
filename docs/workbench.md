@@ -28,7 +28,7 @@ session.commit(candidate);
 ## 普通 JavaScript 挂载
 
 ```ts
-import { mountDocumentWorkbench } from "@dagent-office/editor";
+import { mountDocumentWorkbench } from "@doffi/editor";
 
 const view = mountDocumentWorkbench(container, session, {
   onSubmitAnnotations: async (request) => host.submitDocumentRequest(request),
@@ -50,7 +50,7 @@ view.dispose();
 
 ## React 与 Playground
 
-可选入口 `@dagent-office/editor/react` 导出 `DocumentWorkbench`，接受 `session`、工作台选项及 `onViewChange`。会话由宿主创建和释放；普通入口不导入 React，非 React 消费者不需要安装 React。回调变化通过最新引用传递，不重建文档视图；会话及上下文配置变化才重新挂载。
+可选入口 `@doffi/editor/react` 导出 `DocumentWorkbench`，接受 `session`、工作台选项及 `onViewChange`。会话由宿主创建和释放；普通入口不导入 React，非 React 消费者不需要安装 React。回调变化通过最新引用传递，不重建文档视图；会话及上下文配置变化才重新挂载。
 
 Playground 提供报告协作样例和固定提案，使用公开 React 入口。固定示例提案调整当前请求的关联身份和修订后仍经过完整校验；它只能用于包含相应节点和内容的报告。界面交接给本地演示宿主，不执行模型。测试覆盖双批注请求、提案、应用、撤销重做、文档包下载重开及实际 DOCX 导入语义。
 

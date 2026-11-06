@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookCoordinate, WorkbookRange, WorkbookWindow } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DeepReadonly, WorkbookCoordinate, WorkbookRange, WorkbookWindow } from "@doffi/core";
 import type { AxisDimensions } from "./dimensions.js";
 import type { WorkbookPane, WorkbookViewportLayout } from "./viewport.js";
 

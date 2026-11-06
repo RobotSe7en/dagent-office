@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import { Ajv2020 } from "ajv/dist/2020.js";
-import { createAssetDescriptor, createDocumentSession, createPresentation, getContractJsonSchema, openDocument, parseContract, readPresentationGeometry } from "@dagent-office/core";
-import type { Annotation, DocumentOperation, DocumentSession, DocumentSessionOptions, PresentationDocumentMetadata, PresentationGeometry, TransactionPrepareOptions } from "@dagent-office/core";
+import { createAssetDescriptor, createDocumentSession, createPresentation, getContractJsonSchema, openDocument, parseContract, readPresentationGeometry } from "@doffi/core";
+import type { Annotation, DocumentOperation, DocumentSession, DocumentSessionOptions, PresentationDocumentMetadata, PresentationGeometry, TransactionPrepareOptions } from "@doffi/core";
 import { repository } from "./fixtures.js";
 
 const encode = (value: string) => new TextEncoder().encode(value), decode = (value: Uint8Array | undefined) => new TextDecoder().decode(value);

@@ -1,6 +1,6 @@
 import { A, attr, child, fail, R, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
-import type { PresentationObject } from "@dagent-office/core";
+import type { PresentationObject } from "@doffi/core";
 import { Context, value } from "./context.js";
 import type { Html } from "./context.js";
 import { importText as drawingText, importTextStyle as drawingTextStyle } from "../drawingml/text.js";

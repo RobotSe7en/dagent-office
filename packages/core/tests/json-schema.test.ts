@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { expect, test } from "vitest";
-import { CONTRACT_NAMES, DocumentError, getContractJsonSchema, parseContract } from "@dagent-office/core";
+import { CONTRACT_NAMES, DocumentError, getContractJsonSchema, parseContract } from "@doffi/core";
 import { invalidCases, manifest, repository, validCases } from "./fixtures.js";
 
 const ajv = new Ajv2020({ strict: true, allErrors: true });
@@ -85,5 +85,5 @@ test("schemas have unique versioned identifiers and generation does not share mu
   const properties = branches[0]!.properties;
   properties.format!.const = "changed";
   delete (schema as Record<string, unknown>).anyOf;
-  expect(getContractJsonSchema("document-manifest")).toHaveProperty("anyOf.0.properties.format.const", "dagent-office");
+  expect(getContractJsonSchema("document-manifest")).toHaveProperty("anyOf.0.properties.format.const", "doffi");
 });

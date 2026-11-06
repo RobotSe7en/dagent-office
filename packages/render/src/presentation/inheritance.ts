@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import { markViewNode, ownViewAttribute } from "../view-nodes.js";
 
 const ordinary = ["font-family", "font-size", "font-weight", "font-style", "color", "line-height", "letter-spacing", "text-align", "text-indent", "margin-left", "margin-right", "margin-top", "margin-bottom", "padding-top", "padding-right", "padding-bottom", "padding-left", "tab-size", "text-transform", "font-variant"];

@@ -48,7 +48,7 @@ def check_modern(root, body_schema):
             assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)?", message.get("created", ""))
             for body in message.findall("{" + M + "}txBody"):
                 clone = deepcopy(body)
-                clone.tag = "{urn:dagent-office:validation}body"
+                clone.tag = "{urn:doffi:validation}body"
                 body_schema.assertValid(clone)
         children = [E.QName(child) for child in comment]
         anchor = [child for child in children if child.namespace in [PC, AC] or child.localname == "unknownAnchor"]
@@ -75,7 +75,7 @@ def check_modern(root, body_schema):
 def check(directory):
     assert sha256(ARCHIVE.read_bytes()).hexdigest() == EXPECTED
     cases = []
-    with TemporaryDirectory(prefix="dagent-native-schemas-") as temporary:
+    with TemporaryDirectory(prefix="doffi-native-schemas-") as temporary:
         path = Path(temporary)
         with ZipFile(ARCHIVE) as archive:
             for name in archive.namelist():
@@ -86,7 +86,7 @@ def check(directory):
                    for namespace, name in [(P, "pml"), (A, "dml-main"), (C, "dml-chart"), (S, "sml")]}
         wrapper = path / "body.xsd"
         wrapper.write_text('<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:a="' + A +
-                           '" targetNamespace="urn:dagent-office:validation" elementFormDefault="qualified">'
+                           '" targetNamespace="urn:doffi:validation" elementFormDefault="qualified">'
                            '<xsd:import namespace="' + A + '" schemaLocation="dml-main.xsd"/>'
                            '<xsd:element name="body" type="a:CT_TextBody"/></xsd:schema>')
         body_schema = E.XMLSchema(E.parse(str(wrapper), parser))

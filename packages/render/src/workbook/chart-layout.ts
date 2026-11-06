@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookChart, WorkbookDisplayFormat, WorkbookNumberFormatter } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DeepReadonly, WorkbookChart, WorkbookDisplayFormat, WorkbookNumberFormatter } from "@doffi/core";
 import type { BasicChartLayout, BasicChartRect, BasicChartText } from "../chart.js";
 import type { FontResolution } from "../contracts.js";
 import { cssStringValue, property } from "../presentation/appearance.js";

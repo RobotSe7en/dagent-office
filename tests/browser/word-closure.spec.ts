@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { openDocument } from "@dagent-office/core";
-import { importDocx, readDocumentZip } from "@dagent-office/office";
+import { openDocument } from "@doffi/core";
+import { importDocx, readDocumentZip } from "@doffi/office";
 async function report(page: Page): Promise<void> {
   await page.goto("/"); await page.getByRole("button", { name: "打开报告协作样例", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "已打开" })).toContainText("修订 0");

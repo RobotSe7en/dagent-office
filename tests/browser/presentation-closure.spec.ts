@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { openDocument } from "@dagent-office/core";
-import { importPptx, readDocumentZip } from "@dagent-office/office";
+import { openDocument } from "@doffi/core";
+import { importPptx, readDocumentZip } from "@doffi/office";
 async function example(page: Page): Promise<void> { await page.setViewportSize({ width: 1600, height: 1000 }); await page.goto("/"); await page.getByRole("button", { name: "打开 PPT 协作样例", exact: true }).click(); await expect(page.getByRole("status").filter({ hasText: "已打开" })).toContainText("修订 0"); await expect(page.frameLocator('iframe[title="幻灯片只读预览"]').locator('[data-node-id="heading-p"]')).toHaveText("项目进展"); }
 async function typeHeading(page: Page): Promise<void> { const frame = page.frameLocator('iframe[title="幻灯片只读预览"]'); await frame.locator('[data-node-id="heading-p"]').click(); await page.getByRole("button", { name: "编辑文字", exact: true }).click(); const input = frame.getByRole("textbox", { name: "幻灯片文字输入" }); await input.press("End"); await page.keyboard.insertText("（人工）"); await expect(input).toContainText("项目进展（人工）"); await page.getByRole("button", { name: "完成输入", exact: true }).click(); }
 test("Playground PPT input/proposal/native/PDF/PNG/package/reopen uses the current revision", async ({ page }, info) => {

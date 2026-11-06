@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookChart } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DeepReadonly, WorkbookChart } from "@doffi/core";
 import { renderBasicChart } from "../chart.js";
 import type { BasicChartData, BasicChartLayout, BasicChartOptions } from "../chart.js";
 import type { BasicChartTextRun } from "../chart.js";

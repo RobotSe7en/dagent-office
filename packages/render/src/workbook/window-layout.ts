@@ -1,6 +1,6 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookNumberFormatter, WorkbookRuleReadResponse, WorkbookSnapshot } from "@dagent-office/core";
-import type { WorkbookFormulaSource, WorkbookNumberDisplay } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookNumberFormatter, WorkbookRuleReadResponse, WorkbookSnapshot } from "@doffi/core";
+import type { WorkbookFormulaSource, WorkbookNumberDisplay } from "@doffi/core";
 import type { FontResolution } from "../contracts.js";
 import type { FontProbeCache } from "../font-probe-cache.js";
 import { WorkbookCellSources } from "./cell-source.js";

@@ -1,4 +1,4 @@
-import type { WorkbookSnapshot } from "@dagent-office/core";
+import type { WorkbookSnapshot } from "@doffi/core";
 import type { AxisCell, AxisDimensions } from "./dimensions.js";
 import type { WorkbookPane, WorkbookViewportLayout } from "./viewport.js";
 

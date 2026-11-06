@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookChart, WorkbookChartVector, WorkbookDisplayFormat, WorkbookNumberFormatter, WorkbookSnapshot, WorkbookValue } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DeepReadonly, WorkbookChart, WorkbookChartVector, WorkbookDisplayFormat, WorkbookNumberFormatter, WorkbookSnapshot, WorkbookValue } from "@doffi/core";
 import type { BasicChartData } from "../chart.js";
 import { checkWindowIdentity } from "./window-source.js";
 import type { WorkbookChartCell, WorkbookChartData, WorkbookChartReadResponse, WorkbookChartReferenceData, WorkbookChartReferenceSlot } from "./chart-source.js";

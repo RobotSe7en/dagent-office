@@ -1,5 +1,5 @@
-import { DEFAULT_WORKBOOK_INDEXED_COLORS, DocumentError } from "@dagent-office/core";
-import type { WorkbookNumberFormatColor } from "@dagent-office/core";
+import { DEFAULT_WORKBOOK_INDEXED_COLORS, DocumentError } from "@doffi/core";
+import type { WorkbookNumberFormatColor } from "@doffi/core";
 import { officeFontSegments } from "../font-scripts.js";
 import { markViewNode } from "../view-nodes.js";
 import type { WorkbookSourceCell } from "./cell-source.js";

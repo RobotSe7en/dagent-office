@@ -6,11 +6,11 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { build } from "vite";
-import { importPptx, readDocumentZip } from "@dagent-office/office";
+import { importPptx, readDocumentZip } from "@doffi/office";
 import { writeOpcZip } from "../../packages/office/src/document-zip.js";
-import { createPresentation, readPresentationGeometry } from "@dagent-office/core";
-import type { DocumentPackage } from "@dagent-office/core";
-import type { DocumentPreviewOptions } from "@dagent-office/render";
+import { createPresentation, readPresentationGeometry } from "@doffi/core";
+import type { DocumentPackage } from "@doffi/core";
+import type { DocumentPreviewOptions } from "@doffi/render";
 import type { PresentationHost } from "./fixtures/presentation-host.js";
 declare global { interface Window { presentationHost: PresentationHost } }
 let code: string;
@@ -67,7 +67,7 @@ for (const producer of [false, true]) for (const file of readdirSync("examples/p
     for (let i = 0; i < state.report.pages.length; i++) {
       const clip = await slides.nth(i).boundingBox(); expect(clip!.width).toBeCloseTo(snapshot.metadata.presentation!.size.width * 4 / 3, 0); expect(clip!.height).toBeCloseTo(snapshot.metadata.presentation!.size.height * 4 / 3, 0);
       await testInfo.attach(`slide-${i + 1}`, { body: await slides.nth(i).screenshot({ path: `.cache/presentation-preview/${testInfo.project.name}/${producer ? "producer-" : "source-"}${file}-${i + 1}.png` }), contentType: "image/png" });
-      if (!producer && testInfo.project.name === "chromium" && !process.env.DAGENT_OFFICE_BROWSER_EXECUTABLE && ["04-shapes.pptx", "05-groups.pptx", "09-charts.pptx"].includes(file))
+      if (!producer && testInfo.project.name === "chromium" && !process.env.DOFFI_BROWSER_EXECUTABLE && ["04-shapes.pptx", "05-groups.pptx", "09-charts.pptx"].includes(file))
         await expect(slides.nth(i)).toHaveScreenshot(`${file}-${i + 1}.png`, { maxDiffPixelRatio: 0.005, threshold: 0.2 });
     }
   });

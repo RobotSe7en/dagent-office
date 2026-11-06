@@ -1,6 +1,6 @@
-import { resolvePresentationGeometry } from "@dagent-office/core";
-import type { DocumentEditingSession, DocumentOperation, PresentationGeometry } from "@dagent-office/core";
-import type { PreviewSource } from "@dagent-office/render";
+import { resolvePresentationGeometry } from "@doffi/core";
+import type { DocumentEditingSession, DocumentOperation, PresentationGeometry } from "@doffi/core";
+import type { PreviewSource } from "@doffi/render";
 export interface ObjectGestureHost {
     readonly session: DocumentEditingSession;
     readonly source: PreviewSource;

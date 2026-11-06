@@ -1,4 +1,4 @@
-import type { WorkbookHyperlink, WorkbookSheet } from "@dagent-office/core";
+import type { WorkbookHyperlink, WorkbookSheet } from "@doffi/core";
 import { attr, check, elements, fail, R, S, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import type { OpcPackage } from "../ooxml/package.js";

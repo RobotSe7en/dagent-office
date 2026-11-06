@@ -1,5 +1,5 @@
 {
-  "name": "dagent-office-workspace",
+  "name": "doffi-workspace",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,9 +10,9 @@
     "pnpm": ">=10.28.2 <11"
   },
   "scripts": {
-    "dev": "pnpm build:packages && pnpm --parallel --filter './packages/*' --filter @dagent-office/playground run dev",
+    "dev": "pnpm build:packages && pnpm --parallel --filter './packages/*' --filter @doffi/playground run dev",
     "build:packages": "tsc --build tsconfig.json && node scripts/generate-schemas.mjs && node scripts/build-render-browser.mjs",
-    "build": "pnpm build:packages && pnpm --filter @dagent-office/playground build",
+    "build": "pnpm build:packages && pnpm --filter @doffi/playground build",
     "typecheck": "pnpm build:packages && tsc --project apps/playground/tsconfig.json && tsc --project tsconfig.tools.json",
     "probe:workbook-model": "pnpm build:packages && node scripts/workbook-model-baseline.mjs",
     "probe:workbook-storage": "pnpm build:packages && node scripts/workbook-baseline.mjs",
@@ -22,7 +22,7 @@
     "browser:install": "node scripts/playwright.mjs install chromium --only-shell",
     "test:browser": "pnpm build && node scripts/playwright.mjs test",
     "pack:packages": "pnpm build:packages && node scripts/pack.mjs",
-    "check": "pnpm check:boundaries && pnpm build:packages && tsc --project apps/playground/tsconfig.json && tsc --project tsconfig.tools.json && vitest run && pnpm --filter @dagent-office/playground build",
+    "check": "pnpm check:boundaries && pnpm build:packages && tsc --project apps/playground/tsconfig.json && tsc --project tsconfig.tools.json && vitest run && pnpm --filter @doffi/playground build",
     "fixtures:docx": "python3 scripts/generate-docx-fixtures.py",
     "fixtures:pptx": "python3 scripts/generate-pptx-fixtures.py",
     "fixtures:xlsx": "python3 scripts/generate-xlsx-fixtures.py",
@@ -48,9 +48,9 @@
     "test:built": "vitest run"
   },
   "devDependencies": {
-    "@dagent-office/core": "workspace:*",
-    "@dagent-office/editor": "workspace:*",
-    "@dagent-office/office": "workspace:*",
+    "@doffi/core": "workspace:*",
+    "@doffi/editor": "workspace:*",
+    "@doffi/office": "workspace:*",
     "@playwright/test": "1.64.1",
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",
@@ -60,7 +60,11 @@
     "typescript": "6.0.3",
     "vite": "8.3.5",
     "vitest": "5.0.5",
-    "@dagent-office/render": "workspace:*",
-    "@dagent-office/node": "workspace:*"
+    "@doffi/render": "workspace:*",
+    "@doffi/node": "workspace:*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RobotSe7en/doffi.git"
   }
 }

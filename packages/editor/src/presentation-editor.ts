@@ -1,7 +1,7 @@
-import { createAssetDescriptor, createOpaqueId, DocumentError, PresentationPresetSchema, resolvePresentationGeometry } from "@dagent-office/core";
-import type { Anchor, Rectangle, DocumentEditingSession, DocumentNode, DocumentOperation, DocumentSelection, PresentationGeometry, PresentationObjectInput, TransactionPrepareOptions, TransactionReceipt } from "@dagent-office/core";
-import { mountPreview } from "@dagent-office/render";
-import type { DocumentPreviewOptions, DocumentRenderReport, FontResolution } from "@dagent-office/render";
+import { createAssetDescriptor, createOpaqueId, DocumentError, PresentationPresetSchema, resolvePresentationGeometry } from "@doffi/core";
+import type { Anchor, Rectangle, DocumentEditingSession, DocumentNode, DocumentOperation, DocumentSelection, PresentationGeometry, PresentationObjectInput, TransactionPrepareOptions, TransactionReceipt } from "@doffi/core";
+import { mountPreview } from "@doffi/render";
+import type { DocumentPreviewOptions, DocumentRenderReport, FontResolution } from "@doffi/render";
 import { bindObjectGestures } from "./presentation/gestures.js";
 import type { ObjectGestures } from "./presentation/gestures.js";
 import { createAppearanceControls } from "./presentation/appearance.js";

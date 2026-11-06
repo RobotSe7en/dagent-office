@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, DrawingTextProperties, WorkbookChart, WorkbookObject } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DeepReadonly, DrawingTextProperties, WorkbookChart, WorkbookObject } from "@doffi/core";
 import { markViewNode } from "../view-nodes.js";
 import { workbookRichTextFonts } from "./text-fonts.js";
 

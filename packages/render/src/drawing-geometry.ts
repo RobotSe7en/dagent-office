@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { PresentationPresetGeometry } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { PresentationPresetGeometry } from "@doffi/core";
 import { addArrows, strokeAttributes, svgFill } from "./presentation/appearance.js";
 import { svgElement, svgPath } from "./presentation/svg.js";
 import { markViewNode } from "./view-nodes.js";

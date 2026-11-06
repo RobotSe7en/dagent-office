@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookModel, WorkbookRuleReadRequest, WorkbookSnapshot } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookModel, WorkbookRuleReadRequest, WorkbookSnapshot } from "@doffi/core";
 import { modelRuleSource } from "./rule-source.js";
 import { modelAssetSource } from "./assets.js";
 import type { WorkbookAssetRequest } from "./assets.js";

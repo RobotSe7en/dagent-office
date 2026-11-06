@@ -4,9 +4,9 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { build } from "vite";
-import { importDocx } from "@dagent-office/office";
-import { createAssetDescriptor } from "@dagent-office/core";
-import type { DocumentPackage } from "@dagent-office/core";
+import { importDocx } from "@doffi/office";
+import { createAssetDescriptor } from "@doffi/core";
+import type { DocumentPackage } from "@doffi/core";
 import type { TextEditorHost } from "./fixtures/text-editor-host.js";
 declare global { interface Window { textEditorHost: TextEditorHost } }
 let code: string;

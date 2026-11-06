@@ -1,5 +1,5 @@
-import { parseWorkbookFormula, WorkbookTableStyleReferenceSchema, WorkbookTableStyleRegionSchema } from "@dagent-office/core";
-import type { WorkbookTable, WorkbookTableStyle, WorkbookTableStyleReference } from "@dagent-office/core";
+import { parseWorkbookFormula, WorkbookTableStyleReferenceSchema, WorkbookTableStyleRegionSchema } from "@doffi/core";
+import type { WorkbookTable, WorkbookTableStyle, WorkbookTableStyleReference } from "@doffi/core";
 import type { OpcPackage } from "../ooxml/package.js";
 import { attr, check, elements, fail, R, S, text, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";

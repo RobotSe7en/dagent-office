@@ -61,7 +61,7 @@ export function createPresentation(input: CreatePresentationOptions, readOptions
     + surface("slide-root-1", "slide") + surface("master-root-default", "master") + surface("layout-root-blank", "layout")
     + surface("layout-root-title", "layout", titleLayout) + surface("layout-root-body", "layout", bodyLayout) + '</article></body></html>';
   const files: DocumentPackage = new Map([
-    ["manifest.json", encode(JSON.stringify({ format: "dagent-office", formatVersion: 1, documentId: options.documentId, kind: "presentation", revision: 0,
+    ["manifest.json", encode(JSON.stringify({ format: "doffi", formatVersion: 1, documentId: options.documentId, kind: "presentation", revision: 0,
       entrypoint: "content.html", styles: ["styles.css"], metadata: "metadata.json", annotations: "annotations.json", assets: [] }))],
     ["content.html", encode(source)], ["metadata.json", encode(JSON.stringify(metadata))], ["annotations.json", encode("[]")],
     ["styles.css", encode('.theme-default{--office-theme-dk1:#000000;--office-theme-lt1:#ffffff;--office-theme-dk2:#44546a;--office-theme-lt2:#e7e6e6;--office-theme-accent1:#4472c4;--office-theme-accent2:#ed7d31;--office-theme-accent3:#a5a5a5;--office-theme-accent4:#ffc000;--office-theme-accent5:#5b9bd5;--office-theme-accent6:#70ad47;--office-theme-hlink:#0563c1;--office-theme-folHlink:#954f72;--office-major-ascii:"Liberation Sans";--office-major-east-asia:"Noto Sans CJK SC";--office-minor-ascii:"Liberation Sans";--office-minor-east-asia:"Noto Sans CJK SC";color:var(--office-theme-dk1);font-family:var(--office-minor-ascii),var(--office-minor-east-asia);font-size:18pt}p{margin:0}')],

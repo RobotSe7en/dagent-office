@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import { chartValueFraction } from "./chart-axis.js";
 
 export const MAX_CHART_PAINT_EXTENT = 1_000_000;

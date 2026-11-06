@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { mountDocumentPreview } from "@dagent-office/render";
-import type { WorkbookPreview, WorkbookPreviewSource } from "@dagent-office/render";
+import { mountDocumentPreview } from "@doffi/render";
+import type { WorkbookPreview, WorkbookPreviewSource } from "@doffi/render";
 
 export function WorkbookPane({ source, preparing, activation, onReady, onError }: {
   source: WorkbookPreviewSource; preparing: boolean; activation?: object | undefined;

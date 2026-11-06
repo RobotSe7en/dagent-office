@@ -2,7 +2,7 @@ import { dailyCi } from '../../../tests/ci-mode.js';
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createWorkbook, createSharedWorkbookFormulas, DEFAULT_DOCUMENT_READ_LIMITS, openDocument } from "@dagent-office/core";
+import { createWorkbook, createSharedWorkbookFormulas, DEFAULT_DOCUMENT_READ_LIMITS, openDocument } from "@doffi/core";
 import { openOpc } from "../src/ooxml/package.js";
 import { ImportControl } from "../src/import-control.js";
 import { readCell, cellFormula } from "../src/xlsx/cell.js";

@@ -1,6 +1,6 @@
 # 第二轮实施细则：PPT 编辑与独立文件闭环
 
-**状态：R2-01 至 R2-16 独立 PPT 闭环已完成并合并。** R2-14 至 R2-16 经 [PR #22](https://github.com/RobotSe7en/dagent-office/pull/22) 合并，合并提交为 `329835c`，最终 head `06634d5` 的[全部 CI](https://github.com/RobotSe7en/dagent-office/actions/runs/41252174219) 已通过。 实现范围和结果见 [Presentation 模型](presentation-model.md)、[独立样例](../examples/pptx/README.md)、[编辑闭环](presentation-editing.md)及 [PPTX 导出与验收](pptx-export.md)。PowerPoint/WPS 尚未实机验证。 R1-14 [独立 Word 闭环](word-closure.md)已完成，按用户决定延后 R1-15 达智接入，保留原任务编号及 R1-16 尚未完成的宿主验收项。当前进入[第三轮 Excel](iteration-3.md)；达智验证恢复时间另行安排。
+**状态：R2-01 至 R2-16 独立 PPT 闭环已完成并合并。** R2-14 至 R2-16 经 [PR #22](https://github.com/RobotSe7en/doffi/pull/22) 合并，合并提交为 `329835c`，最终 head `06634d5` 的[全部 CI](https://github.com/RobotSe7en/doffi/actions/runs/41252174219) 已通过。 实现范围和结果见 [Presentation 模型](presentation-model.md)、[独立样例](../examples/pptx/README.md)、[编辑闭环](presentation-editing.md)及 [PPTX 导出与验收](pptx-export.md)。PowerPoint/WPS 尚未实机验证。 R1-14 [独立 Word 闭环](word-closure.md)已完成，按用户决定延后 R1-15 达智接入，保留原任务编号及 R1-16 尚未完成的宿主验收项。当前进入[第三轮 Excel](iteration-3.md)；达智验证恢复时间另行安排。
 
 本细则记录已定决策、能力范围、依赖和验收门槛，具体实现及验收结果随交付更新。[总体架构](architecture.md)定义包职责，[三格式模型](data-model.md)定义唯一来源，[文档格式](document-format.md)和[交互协议](editing-protocol.md)定义文档与事务边界；第一轮历史任务见[第一轮细则](iteration-1.md)，五轮路线见[整体计划](implementation-plan.md)。
 
@@ -234,7 +234,7 @@ R2-01 为设计交付，只检查 Markdown 链接、代码示例的声明边界�
 
 ## 编辑闭环交付验证
 
-R2-08 至 R2-13 已通过 [PR #21](https://github.com/RobotSe7en/dagent-office/pull/21) 合并；最终提交 `265a89e` 的[四项 CI](https://github.com/RobotSe7en/dagent-office/actions/runs/41237755547) 全部通过。完整 `pnpm check` 通过 34 个文件、990 项工程测试，含打包消费与 Word 回归；普通输入、定义、图表、两类批注、区域、候选资源及 JS/React 提案有 Chromium、Firefox、WebKit 验证。真实 IME 用 CDP 在 Chromium 运行，另两个引擎明确跳过该项。三引擎各 21 项独立原生／浏览器对象范围比较通过。工具面板高度回归造成的拖拽失败已修复，并在三引擎复验。
+R2-08 至 R2-13 已通过 [PR #21](https://github.com/RobotSe7en/doffi/pull/21) 合并；最终提交 `265a89e` 的[四项 CI](https://github.com/RobotSe7en/doffi/actions/runs/41237755547) 全部通过。完整 `pnpm check` 通过 34 个文件、990 项工程测试，含打包消费与 Word 回归；普通输入、定义、图表、两类批注、区域、候选资源及 JS/React 提案有 Chromium、Firefox、WebKit 验证。真实 IME 用 CDP 在 Chromium 运行，另两个引擎明确跳过该项。三引擎各 21 项独立原生／浏览器对象范围比较通过。工具面板高度回归造成的拖拽失败已修复，并在三引擎复验。
 
 旧 Chromium 的编辑与工作台用例通过。推送后另行复查复现并修复了四项问题：片段提案绕过冻结图片清单、主题 `!important` 声明覆盖失败及重复规则增长、定义画布误报隐藏页面区域失效、原生主题外观编辑使用局部透明度造成显示值错误；各项加入回归。macOS Safari 的实际输入、候选应用、撤销和释放，以及最终提交的浏览器矩阵和旧 Chromium 验收均在该 CI 通过。以上是 HTML 编辑闭环的证据；原生 PPTX 导出、PowerPoint/WPS 和后续独立输出验收不由这些测试替代。
 

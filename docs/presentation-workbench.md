@@ -3,8 +3,8 @@
 PPT 复用宿主拥有的 `DocumentSession`、冻结请求、隔离候选和统一事务历史。SDK 提供普通 JS 和 React 入口，不执行模型调用、存储或授权判断。原生导出另见第二轮 R2-14；本页描述 HTML 包与编辑协作。
 
 ```ts
-import {createDocumentSession, openDocument} from "@dagent-office/core";
-import {mountDocumentWorkbench} from "@dagent-office/editor";
+import {createDocumentSession, openDocument} from "@doffi/core";
+import {mountDocumentWorkbench} from "@doffi/editor";
 
 const session = createDocumentSession(openDocument(authorizedFiles));
 const workbench = mountDocumentWorkbench(container, session, {
@@ -18,7 +18,7 @@ workbench.dispose();
 session.dispose();
 ```
 
-同一适配器也由 `mountPresentationWorkbench` 导出；`@dagent-office/editor/react` 提供 `PresentationWorkbench`，接受 `session`、相同选项和 `onViewChange`。普通 JS 子路径不引入 React。原 Word `mountDocumentWorkbench` 默认行为和 `DocumentWorkbench` React 入口保持 Word 类型。
+同一适配器也由 `mountPresentationWorkbench` 导出；`@doffi/editor/react` 提供 `PresentationWorkbench`，接受 `session`、相同选项和 `onViewChange`。普通 JS 子路径不引入 React。原 Word `mountDocumentWorkbench` 默认行为和 `DocumentWorkbench` React 入口保持 Word 类型。
 
 ## 冻结范围
 

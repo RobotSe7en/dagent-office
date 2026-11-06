@@ -1,4 +1,4 @@
-import type { WorkbookPrint, WorkbookPrintBand, WorkbookPrintRun } from "@dagent-office/core";
+import type { WorkbookPrint, WorkbookPrintBand, WorkbookPrintRun } from "@doffi/core";
 import { check, elements, fail, S, text, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import { attributes, boolean, finite, integer, number, one, spreadsheetText, value } from "./values.js";

@@ -6,13 +6,13 @@ R1-03 提供 `core` 的数据结构校验、推导类型、JSON Schema、稳定�
 
 ## 公开入口
 
-从 `@dagent-office/core` 导入契约：
+从 `@doffi/core` 导入契约：
 
 ```ts
 import {
   getContractJsonSchema,
   parseContract,
-} from "@dagent-office/core";
+} from "@doffi/core";
 
 // input 是宿主提供的未知数据；此处不执行文件、网络或模型调用。
 const manifest = parseContract("document-manifest", input);
@@ -76,7 +76,7 @@ const proposalSchema = getContractJsonSchema("edit-proposal");
 `pnpm build:packages` 在编译后从同一契约生成 15 份 JSON，位于核心构建目录的 `schemas`。各文件通过明确的公开子路径分发，例如：
 
 ```js
-import proposalSchema from "@dagent-office/core/schemas/edit-proposal.json"
+import proposalSchema from "@doffi/core/schemas/edit-proposal.json"
   with { type: "json" };
 ```
 

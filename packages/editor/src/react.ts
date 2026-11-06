@@ -1,6 +1,6 @@
 import { createElement, useEffect, useRef } from "react";
 import type { ReactElement } from "react";
-import type { DocumentEditingSession, DocumentSession } from "@dagent-office/core";
+import type { DocumentEditingSession, DocumentSession } from "@doffi/core";
 import { mountDocumentWorkbench } from "./workbench.js";
 import type { DocumentWorkbenchOptions, DocumentWorkbenchView } from "./workbench.js";
 import { mountPresentationEditor } from "./presentation-editor.js";

@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { describe,expect,it } from 'vitest';
-import { openDocument } from '@dagent-office/core';
-import { importXlsx } from '@dagent-office/office';
+import { openDocument } from '@doffi/core';
+import { importXlsx } from '@doffi/office';
 
 describe('independent native chart label sources',()=>{
   it.each(['','-producer'])('preserves%s actual flags and current signed values through package reopen',async suffix=>{

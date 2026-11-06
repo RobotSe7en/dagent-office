@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
-import { collectDocumentAssets, createAssetDescriptor, DocumentError, openDocument, parseContract } from "@dagent-office/core";
-import type { AssetDescriptor, AssetProvider, DocumentErrorCode, DocumentPackage } from "@dagent-office/core";
+import { collectDocumentAssets, createAssetDescriptor, DocumentError, openDocument, parseContract } from "@doffi/core";
+import type { AssetDescriptor, AssetProvider, DocumentErrorCode, DocumentPackage } from "@doffi/core";
 
 const encoder = new TextEncoder();
 function files(): Map<string, Uint8Array> {

@@ -1,9 +1,9 @@
 import { openContentFixture as openDocument } from "../../../tests/content-fixture.js";
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
-import { DEFAULT_DOCUMENT_READ_LIMITS } from "@dagent-office/core";
-import type { WordDocumentMetadata, WordMetadata } from "@dagent-office/core";
-import { exportDocx, importDocx, readDocumentZip } from "@dagent-office/office";
+import { DEFAULT_DOCUMENT_READ_LIMITS } from "@doffi/core";
+import type { WordDocumentMetadata, WordMetadata } from "@doffi/core";
+import { exportDocx, importDocx, readDocumentZip } from "@doffi/office";
 import { attr, child, elements, W, xml } from "../src/ooxml/xml.js";
 import type { XmlNode } from "../src/ooxml/xml.js";
 const encoder = new TextEncoder(), decoder = new TextDecoder();

@@ -1,6 +1,6 @@
 import { dailyCi } from '../../../tests/ci-mode.js';
 import { readFileSync } from "node:fs";
-import { DEFAULT_DOCUMENT_READ_LIMITS } from "@dagent-office/core";
+import { DEFAULT_DOCUMENT_READ_LIMITS } from "@doffi/core";
 import { expect, it } from "vitest";
 import { readDocumentZip } from "../src/document-zip.js";
 import { ImportControl } from "../src/import-control.js";

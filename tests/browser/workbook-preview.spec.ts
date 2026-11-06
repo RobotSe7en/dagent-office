@@ -1,7 +1,7 @@
 import { encodeTestPackage } from './package-transport.js';
 import { openSdkHost } from './sdk-host.js';
 import { expect, test } from '@playwright/test';
-import { openDocument } from '@dagent-office/core';
+import { openDocument } from '@doffi/core';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -200,7 +200,7 @@ for(const producer of [false,true])for(const sample of matrixCases.cases)test(`$
       expect(result.tabs).toEqual(snapshot.metadata.workbook.sheets.filter(sheet=>sheet.visibility==='visible').map(sheet=>sheet.name));
       expect(result.report.fonts.length).toBeGreaterThan(0);
       observations.push({sheet:sheet.name,last,report:result.report});
-      if(!last&&testInfo.project.name==='chromium'&&!process.env.DAGENT_OFFICE_BROWSER_EXECUTABLE){const path=testInfo.outputPath(sheet.name+'.png');await page.screenshot({path});await testInfo.attach(sheet.name+'.png',{path,contentType:'image/png'});}
+      if(!last&&testInfo.project.name==='chromium'&&!process.env.DOFFI_BROWSER_EXECUTABLE){const path=testInfo.outputPath(sheet.name+'.png');await page.screenshot({path});await testInfo.attach(sheet.name+'.png',{path,contentType:'image/png'});}
     }
     const path=testInfo.outputPath('public-reading.json');writeFileSync(path,JSON.stringify({file:sample.file,producer,sourceSha256:createHash('sha256').update(readFileSync('examples/xlsx/'+(producer?'producer/':'')+sample.file)).digest('hex'),hostBundleSha256:createHash('sha256').update(code).digest('hex'),observations},null,2));await testInfo.attach('public-reading.json',{path,contentType:'application/json'});
   }finally{expect(await page.evaluate(()=>window.workbookPreview.matrixFinish())).toEqual({unchanged:true,serializations:0,errors:[],frames:0,removed:true});}

@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookCell, WorkbookSheet, WorkbookSnapshot } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DeepReadonly, WorkbookCell, WorkbookSheet, WorkbookSnapshot } from "@doffi/core";
 import { WorkbookCellSources } from "./cell-source.js";
 import type { WorkbookSourceCell } from "./cell-source.js";
 import { workbookCellFormat } from "./cell-format.js";

@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import { markViewNode, ownViewStyle } from "../view-nodes.js";
 import { property, resolvedColor } from "./appearance.js";
 

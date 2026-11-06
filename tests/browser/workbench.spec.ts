@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { build } from "vite";
-import type { DocumentInteractionRequest, EditProposal } from "@dagent-office/core";
+import type { DocumentInteractionRequest, EditProposal } from "@doffi/core";
 import type { WorkbenchHost } from "./fixtures/workbench-host.js";
 
 declare global { interface Window { workbenchHost: WorkbenchHost } }

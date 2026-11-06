@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookCoordinate, WorkbookRange, WorkbookSheet, WorkbookSnapshot, WorkbookStyleApplication, WorkbookTable } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DeepReadonly, WorkbookCoordinate, WorkbookRange, WorkbookSheet, WorkbookSnapshot, WorkbookStyleApplication, WorkbookTable } from "@doffi/core";
 import { AxisDimensions } from "./dimensions.js";
 import { WorkbookMergeIndex } from "./projection.js";
 import { WorkbookTableRegions, workbookTableRegionBorders } from "./table-regions.js";

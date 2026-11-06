@@ -1,6 +1,6 @@
-import { DocumentError, parseContract } from "@dagent-office/core";
-import type { DocumentErrorData, DocumentPackage } from "@dagent-office/core";
-import type { PptxExportReport, PptxExportResult } from "@dagent-office/office";
+import { DocumentError, parseContract } from "@doffi/core";
+import type { DocumentErrorData, DocumentPackage } from "@doffi/core";
+import type { PptxExportReport, PptxExportResult } from "@doffi/office";
 export interface PptxWorkerRequest {
     readonly taskId: string;
     readonly files: [

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createWorkbook, openDocument } from "@dagent-office/core";
+import { createWorkbook, openDocument } from "@doffi/core";
 import { AxisDimensions, columnWidthPt, worksheetDimensions } from "../src/workbook/dimensions.js";
 
 describe("sparse worksheet dimensions", () => {

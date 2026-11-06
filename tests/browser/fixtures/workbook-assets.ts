@@ -1,5 +1,5 @@
-import { createAssetDescriptor, createWorkbook, openDocument } from '@dagent-office/core';
-import type { WorkbookManifest } from '@dagent-office/core';
+import { createAssetDescriptor, createWorkbook, openDocument } from '@doffi/core';
+import type { WorkbookManifest } from '@doffi/core';
 import { modelAssetSource, prepareWorkbookAssets } from '../../../packages/render/src/workbook/assets.js';
 
 export async function assetMeasurement(scope: HTMLElement, base64: string, mimeType: string) {

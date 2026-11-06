@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import { svgElement } from "../presentation/svg.js";
 import { markViewNode } from "../view-nodes.js";
 import type { WorkbookBorderPaint } from "./border-style.js";

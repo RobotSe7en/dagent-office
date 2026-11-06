@@ -1,4 +1,4 @@
-import type { WorkbookNoteBox, WorkbookNoteBoxDifference } from "@dagent-office/core";
+import type { WorkbookNoteBox, WorkbookNoteBoxDifference } from "@doffi/core";
 import type { Css } from "../ooxml/styles.js";
 import { check, elements, fail, S, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";

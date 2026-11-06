@@ -1,8 +1,8 @@
 import { openContentFixture as openDocument } from "../../../tests/content-fixture.js";
 import { readFileSync, readdirSync } from "node:fs";
 import { expect, test } from "vitest";
-import { createDocumentSession, DocumentError } from "@dagent-office/core";
-import { exportDocx, importDocx } from "@dagent-office/office";
+import { createDocumentSession, DocumentError } from "@doffi/core";
+import { exportDocx, importDocx } from "@doffi/office";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 const directory = new URL("../../../examples/docx/", import.meta.url);
 const fixture = (name: string) => new Uint8Array(readFileSync(new URL(name, directory)));
@@ -50,7 +50,7 @@ test("export is bounded and leaves source unchanged on failure", () => {
 });
 
 import { crossSectionRangesFixture, editedChineseFontFixture, nestedFieldFixture, styleInheritanceFixture, indentedTabsFixture } from "./regression-fixtures.js";
-import { readDocumentZip } from "@dagent-office/office";
+import { readDocumentZip } from "@doffi/office";
 for (const [name, input] of [
   ["cross-section ranges", () => crossSectionRangesFixture(false)], ["cross-section instruction", () => crossSectionRangesFixture(true)],
   ["nested complex field", () => nestedFieldFixture(false)], ["nested simple field", () => nestedFieldFixture(true)],

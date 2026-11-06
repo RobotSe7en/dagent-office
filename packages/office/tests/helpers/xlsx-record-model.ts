@@ -1,4 +1,4 @@
-import { createWorkbook, openDocument } from "@dagent-office/core";
+import { createWorkbook, openDocument } from "@doffi/core";
 import type { XlsxRecords } from "../../src/xlsx/read.js";
 import { WorkbookContent } from "../../src/xlsx/content.js";
 import { WorkbookDrawings } from "../../src/xlsx/drawing.js";

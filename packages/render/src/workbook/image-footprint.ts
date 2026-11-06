@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 
 export interface WorkbookImageFootprint { readonly width: number; readonly height: number; readonly frames: number; readonly pixels: number }
 const invalid = (): never => { throw new DocumentError("InvalidDocument", "An image has invalid or contradictory raster geometry."); };

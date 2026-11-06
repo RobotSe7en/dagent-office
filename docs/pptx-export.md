@@ -3,8 +3,8 @@
 R2-14～R2-16 使用第一方 PresentationML、DrawingML、图表和常量工作簿适配器，从当前 HTML/CSS、元数据及授权资源生成可编辑 PPTX。没有来源 PPTX 回写缓存，不使用富文本、演示、图表编辑器或 Office 转换库。通用 ZIP/XML/CSS 工具沿用既有适配边界；LibreOffice、XSD 和浏览器仅用于开发验收。
 
 ```ts
-import { openDocument } from "@dagent-office/core";
-import { exportPptx } from "@dagent-office/office";
+import { openDocument } from "@doffi/core";
+import { exportPptx } from "@doffi/office";
 
 const model = openDocument(authorizedPackage);
 const { bytes, report } = exportPptx(model, {

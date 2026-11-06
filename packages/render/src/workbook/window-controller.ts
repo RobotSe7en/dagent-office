@@ -1,5 +1,5 @@
-import { DEFAULT_WORKBOOK_RULE_LIMITS, DocumentError } from "@dagent-office/core";
-import type { WorkbookNumberFormatter, WorkbookRuleReadLimits, WorkbookRuleReadResponse, WorkbookSnapshot } from "@dagent-office/core";
+import { DEFAULT_WORKBOOK_RULE_LIMITS, DocumentError } from "@doffi/core";
+import type { WorkbookNumberFormatter, WorkbookRuleReadLimits, WorkbookRuleReadResponse, WorkbookSnapshot } from "@doffi/core";
 import type { FontResolution } from "../contracts.js";
 import type { WorkbookAssetSource } from "./assets.js";
 import { projectWorkbookAnnotations } from "./annotation-projection.js";

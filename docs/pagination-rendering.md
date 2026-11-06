@@ -5,8 +5,8 @@ R1-12 使用自研测量分页。预览、批注和正文编辑显示相同的 H
 ## 单独使用预览
 
 ```ts
-import { openDocument } from "@dagent-office/core";
-import { mountDocumentPreview } from "@dagent-office/render";
+import { openDocument } from "@doffi/core";
+import { mountDocumentPreview } from "@doffi/render";
 
 const model = openDocument(authorizedPackage);
 const view = mountDocumentPreview(container, model, { layout: "pages" });
@@ -37,7 +37,7 @@ const report = await view.settled();
 PAGE、NUMPAGES 和基本标题大纲 TOC 是派生显示；TOC 目前支持标题层级及 `\\o` 范围，不生成原生可点击目录链接。锁定字段和未支持的字段／开关组合保留缓存并报告 `UnsupportedField`，不默认为正确的新结果。
 
 ```ts
-import { createLayoutFieldTransaction } from "@dagent-office/render";
+import { createLayoutFieldTransaction } from "@doffi/render";
 const transaction = createLayoutFieldTransaction(session, report);
 session.commit(session.prepare(transaction));
 ```
@@ -57,7 +57,7 @@ session.commit(session.prepare(transaction));
 ## Node PDF、PNG 和字节协议
 
 ```ts
-import { createDocumentConverter } from "@dagent-office/node";
+import { createDocumentConverter } from "@doffi/node";
 const converter = createDocumentConverter({ maxConcurrency: 2 });
 try {
   const pdf = await converter.renderPdf(model);
@@ -72,7 +72,7 @@ try {
 
 PDF 将测量画布按真实纸张裁切，保留可搜索文字；PNG 使用同一页报告和尺寸。默认并发 2、超时 30 秒、输入／输出各 64 MiB、PNG 16M 像素。请求不能提高宿主预算。输出包含 Chromium 实际版本；不同字体、引擎版本的视觉结果分别记录。
 
-`dagent-office` CLI 从 stdin 读取逐行 JSON V1，从 stdout 输出关联任务结果，支持授权 DOCX／文档包 ZIP 字节。无 URL 或本地文件输入路径：
+`doffi` CLI 从 stdin 读取逐行 JSON V1，从 stdout 输出关联任务结果，支持授权 DOCX／文档包 ZIP 字节。无 URL 或本地文件输入路径：
 
 ```json
 {"protocolVersion":1,"taskId":"host-task","format":"pdf","input":{"format":"docx","documentId":"host-document","bytesBase64":"UEs..."}}
@@ -80,7 +80,7 @@ PDF 将测量画布按真实纸张裁切，保留可搜索文字；PNG 使用同
 
 示意的 `bytesBase64` 需替换为真实规范 Base64。DOCX 必须由宿主提供文档 ID；包中已有身份可额外断言匹配。协议严格拒绝未知字段、版本、格式、超限帧和非规范 Base64，错误仍关联 `taskId`；结果字节位于 `output.bytesBase64`。宿主可调用 `executeConversionRequest` 或自行管理 CLI 进程。
 
-`@dagent-office/node/dev` 的 `runConversionProcess` 提供有界单请求子进程，`createDevelopmentConversionMiddleware` 用于开发：默认检查实际 loopback socket，也允许宿主显式配置确切的 `allowedOrigins`；两种方式均检查 Host、实际监听端口、Origin、自定义请求头及上传期限，中间件不打开端口。Playground 的 PDF 按钮使用它；切换文档、修订变化、取消或卸载会丢弃迟到结果。远程 HTTP 的预览／编辑独立可用；远程开发转换的明确同源配置见 [Word 闭环](word-closure.md#远程开发访问)。正式远程转换服务的认证和部署由宿主提供。
+`@doffi/node/dev` 的 `runConversionProcess` 提供有界单请求子进程，`createDevelopmentConversionMiddleware` 用于开发：默认检查实际 loopback socket，也允许宿主显式配置确切的 `allowedOrigins`；两种方式均检查 Host、实际监听端口、Origin、自定义请求头及上传期限，中间件不打开端口。Playground 的 PDF 按钮使用它；切换文档、修订变化、取消或卸载会丢弃迟到结果。远程 HTTP 的预览／编辑独立可用；远程开发转换的明确同源配置见 [Word 闭环](word-closure.md#远程开发访问)。正式远程转换服务的认证和部署由宿主提供。
 
 ## 验证环境
 

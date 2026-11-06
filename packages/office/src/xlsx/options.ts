@@ -1,5 +1,5 @@
-import { DEFAULT_DOCUMENT_READ_LIMITS, DEFAULT_WORKBOOK_READ_LIMITS, DocumentError } from "@dagent-office/core";
-import type { DocumentReadLimits, WorkbookReadLimits } from "@dagent-office/core";
+import { DEFAULT_DOCUMENT_READ_LIMITS, DEFAULT_WORKBOOK_READ_LIMITS, DocumentError } from "@doffi/core";
+import type { DocumentReadLimits, WorkbookReadLimits } from "@doffi/core";
 import type { OfficeImportControl } from "../import-control.js";
 
 /** Native archive/XML budgets are separate from the generated HTML package.

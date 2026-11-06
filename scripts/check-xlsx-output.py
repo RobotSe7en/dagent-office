@@ -45,7 +45,7 @@ def coordinate(address):
 @contextmanager
 def schemas():
     assert sha256(ARCHIVE.read_bytes()).hexdigest() == EXPECTED
-    with TemporaryDirectory(prefix="dagent-xlsx-schemas-") as directory:
+    with TemporaryDirectory(prefix="doffi-xlsx-schemas-") as directory:
         path = Path(directory)
         with ZipFile(ARCHIVE) as archive:
             for name in archive.namelist():

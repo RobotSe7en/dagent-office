@@ -4,7 +4,7 @@ import {fileURLToPath} from "node:url";
 import {build} from "vite";
 import {expect,test} from "@playwright/test";
 import type {Page} from "@playwright/test";
-import {createAssetDescriptor} from "@dagent-office/core";
+import {createAssetDescriptor} from "@doffi/core";
 import type {PresentationWorkbenchHost} from "./fixtures/presentation-workbench-host.js";
 declare global{interface Window{presentationWorkbenchHost:PresentationWorkbenchHost}}
 let code:string;

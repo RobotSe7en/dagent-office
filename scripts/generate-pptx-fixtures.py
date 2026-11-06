@@ -583,7 +583,7 @@ def negative_cases(valid):
 
 def generate(output):
     output.mkdir(parents=True, exist_ok=True)
-    manifest = {"format": "dagent-office-pptx-fixtures", "version": 1, "generator": "Independent Python ZIP/XML, no SDK exporter or third-party Office library.", "cases": [], "negativeCases": []}
+    manifest = {"format": "doffi-pptx-fixtures", "version": 1, "generator": "Independent Python ZIP/XML, no SDK exporter or third-party Office library.", "cases": [], "negativeCases": []}
     valid = cases()
     for name, files, expected in valid:
         for path, data in files.items():

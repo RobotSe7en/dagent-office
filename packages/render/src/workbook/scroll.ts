@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 
 /** Keep a bounded native scrollbar while the worksheet retains its full point
  * extent. Wheel/keyboard movement uses logical points directly; only scrollbar

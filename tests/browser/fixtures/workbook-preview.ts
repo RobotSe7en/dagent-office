@@ -1,8 +1,8 @@
 import { decodeTestPackage, type TestPackage } from './package-transport.js';
-import { createWorkbookNumberFormatter, DocumentError, openDocument } from '@dagent-office/core';
-import type { DocumentSelection, WorkbookDocumentMetadata, WorkbookModel } from '@dagent-office/core';
-import { mountDocumentPreview } from '@dagent-office/render';
-import type { WorkbookPreview, WorkbookPreviewSource, WorkbookPreviewOptions } from '@dagent-office/render';
+import { createWorkbookNumberFormatter, DocumentError, openDocument } from '@doffi/core';
+import type { DocumentSelection, WorkbookDocumentMetadata, WorkbookModel } from '@doffi/core';
+import { mountDocumentPreview } from '@doffi/render';
+import type { WorkbookPreview, WorkbookPreviewSource, WorkbookPreviewOptions } from '@doffi/render';
 import { modelWindowSource } from '../../../packages/render/src/workbook/window-source.js';
 import { modelAssetSource } from '../../../packages/render/src/workbook/assets.js';
 import { modelChartSource } from '../../../packages/render/src/workbook/chart-source.js';
@@ -440,7 +440,7 @@ export async function autoRowRulesCancellation(entries: Entries) {
   const surface = await createWorkbookSurface(container, snapshot, { widthPt: 240, heightPt: 60 });
   const { measureWorkbookColumnFont } = await import('../../../packages/render/src/workbook/column-font.js');
   const { measureWorkbookAutoRows } = await import('../../../packages/render/src/workbook/auto-rows.js');
-  const { DEFAULT_WORKBOOK_RULE_LIMITS } = await import('@dagent-office/core');
+  const { DEFAULT_WORKBOOK_RULE_LIMITS } = await import('@doffi/core');
   const formatter = createWorkbookNumberFormatter({ dateSystem: '1900' }), normal = measureWorkbookColumnFont(surface.source, snapshot.metadata.workbook, 'sheet-1');
   const abort = new AbortController(), rules = modelRuleSource(model); let calls = 0, held: AbortSignal | undefined, release = () => {}, began = () => {};
   const started = new Promise<void>(resolve => { began = resolve; });

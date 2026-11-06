@@ -1,4 +1,4 @@
-import type { WorkbookTableStyle } from "@dagent-office/core";
+import type { WorkbookTableStyle } from "@doffi/core";
 
 export type WorkbookTableRegion = WorkbookTableStyle["elements"][number]["region"];
 export interface WorkbookBuiltinTableColor { readonly theme: number; readonly tint: number }

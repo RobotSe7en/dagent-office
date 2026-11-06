@@ -5,8 +5,8 @@
 R1-04 提供 `document` 类型、格式版本 1 的只读文档模型，R1-05 增加[资源校验、宿主资源收集和 ZIP 适配](resources-and-zip.md)，R2-02 增加 [Presentation 严格契约、新建与文档包模型](presentation-model.md)。输入是宿主已授权的虚拟文件 Map；核心不访问文件系统、网络或模型服务。
 
 ```ts
-import { openDocument } from "@dagent-office/core";
-import type { DocumentPackage } from "@dagent-office/core";
+import { openDocument } from "@doffi/core";
+import type { DocumentPackage } from "@doffi/core";
 
 declare const files: DocumentPackage; // 宿主提供的 UTF-8 文本和资源字节。
 const document = openDocument(files);

@@ -1,5 +1,5 @@
-import { createWorkbookNumberFormatter } from "@dagent-office/core";
-import type { WorkbookDisplayFormat } from "@dagent-office/core";
+import { createWorkbookNumberFormatter } from "@doffi/core";
+import type { WorkbookDisplayFormat } from "@doffi/core";
 import { layoutWorkbookNumbers } from "../../../packages/render/src/workbook/number-text-layout.js";
 
 export interface NumberTextCase { value: number; format?: WorkbookDisplayFormat; widthPt: number; heightPt?: number; styles?: Readonly<Record<string, string>> }

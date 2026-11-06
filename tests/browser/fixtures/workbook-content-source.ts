@@ -1,6 +1,6 @@
 import { measureChartClipping } from './workbook-chart-clipping.js';
 import { measureChartNumberFields, measureNativeChartLabels, measureControlledChartLabels } from './workbook-chart-labels.js';
-import type { WorkbookSnapshot } from '@dagent-office/core';
+import type { WorkbookSnapshot } from '@doffi/core';
 import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';
 import { disposeImageView, measureImageView, measurePictureFills } from './workbook-image-view.js';
 import { measureObjectGeometry } from './workbook-object-geometry.js';

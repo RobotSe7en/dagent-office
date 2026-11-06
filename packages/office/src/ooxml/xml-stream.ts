@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DocumentReadLimits } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DocumentReadLimits } from "@doffi/core";
 import { SaxesParser } from "saxes";
 import { fail, normalizeXmlNamespace } from "./xml.js";
 import type { XmlBudget, XmlNode } from "./xml.js";

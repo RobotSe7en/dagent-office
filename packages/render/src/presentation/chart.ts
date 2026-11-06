@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, PresentationChart, PresentationDataSet } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DeepReadonly, PresentationChart, PresentationDataSet } from "@doffi/core";
 import { markViewNode } from "../view-nodes.js";
 import { renderBasicChart } from "../chart.js";
 import type { DrawingGradientOrientation } from "../drawing-gradient.js";

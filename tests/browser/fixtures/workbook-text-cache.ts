@@ -1,4 +1,4 @@
-import { createWorkbook, createWorkbookNumberFormatter, openDocument } from '@dagent-office/core';
+import { createWorkbook, createWorkbookNumberFormatter, openDocument } from '@doffi/core';
 import { WorkbookCellTextCache, layoutCachedWorkbookCellTexts } from '../../../packages/render/src/workbook/cell-text-cache.js';
 import { viewNodeRole } from '../../../packages/render/src/view-nodes.js';
 

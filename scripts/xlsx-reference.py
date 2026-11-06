@@ -67,7 +67,7 @@ def main():
     if dependency_record.exists(): current["isolatedDependencies"] = json.loads(dependency_record.read_text())
     expected = json.loads((SAMPLES / "expected.json").read_text())
     baseline = None if args.record else json.loads((SAMPLES / "reference.json").read_text())
-    daily = os.environ.get("DAGENT_OFFICE_CI_MODE") == "daily" and not args.record
+    daily = os.environ.get("DOFFI_CI_MODE") == "daily" and not args.record
     selected = [case for case in expected["cases"] if not daily or not case["file"].startswith("15-")]
     if baseline: verify_saved(baseline)
     CACHE.mkdir(parents=True, exist_ok=True); records = []

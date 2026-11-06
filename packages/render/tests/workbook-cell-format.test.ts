@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createWorkbook, openDocument } from "@dagent-office/core";
-import type { WorkbookCell } from "@dagent-office/core";
+import { createWorkbook, openDocument } from "@doffi/core";
+import type { WorkbookCell } from "@doffi/core";
 import { workbookCellFormat } from "../src/workbook/cell-format.js";
 
 const base = openDocument(createWorkbook({ documentId: "cell-formats" }), { kind: "workbook" }).snapshot().metadata.workbook.sheets[0]!;

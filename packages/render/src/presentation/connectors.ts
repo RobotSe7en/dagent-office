@@ -1,5 +1,5 @@
-import { evaluatePresentationPreset, readPresentationGeometry } from "@dagent-office/core";
-import type { DeepReadonly, PresentationObject } from "@dagent-office/core";
+import { evaluatePresentationPreset, readPresentationGeometry } from "@doffi/core";
+import type { DeepReadonly, PresentationObject } from "@doffi/core";
 import { markViewNode } from "../view-nodes.js";
 import { svgElement } from "./svg.js";
 

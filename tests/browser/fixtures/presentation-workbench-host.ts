@@ -1,12 +1,12 @@
 import { decodeTestPackage, type TestPackage } from './package-transport.js';
-import { createDocumentSession,openDocument } from "@dagent-office/core";
-import type { AssetDescriptor,DeepReadonly,DocumentSession,PresentationEditProposal,PresentationInteractionRequest } from "@dagent-office/core";
-import { mountDocumentWorkbench } from "@dagent-office/editor";
-import type { PresentationWorkbenchView } from "@dagent-office/editor";
+import { createDocumentSession,openDocument } from "@doffi/core";
+import type { AssetDescriptor,DeepReadonly,DocumentSession,PresentationEditProposal,PresentationInteractionRequest } from "@doffi/core";
+import { mountDocumentWorkbench } from "@doffi/editor";
+import type { PresentationWorkbenchView } from "@doffi/editor";
 import { createElement } from "react";
 import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
-import { PresentationWorkbench } from "@dagent-office/editor/react";
+import { PresentationWorkbench } from "@doffi/editor/react";
 export interface PresentationWorkbenchHost {
   session:DocumentSession|undefined;
   view:PresentationWorkbenchView|undefined;

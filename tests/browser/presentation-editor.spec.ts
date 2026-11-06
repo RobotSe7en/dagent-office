@@ -4,9 +4,9 @@ import { fileURLToPath } from "node:url";
 import { build } from "vite";
 import { expect,test } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { createPresentation,openDocument } from "@dagent-office/core";
-import type { DocumentPackage } from "@dagent-office/core";
-import { importPptx,readDocumentZip } from "@dagent-office/office";
+import { createPresentation,openDocument } from "@doffi/core";
+import type { DocumentPackage } from "@doffi/core";
+import { importPptx,readDocumentZip } from "@doffi/office";
 import {writeOpcZip} from "../../packages/office/src/document-zip.js";
 import type { PresentationEditorHost } from "./fixtures/presentation-editor-host.js";
 declare global{interface Window{presentationEditorHost:PresentationEditorHost}}

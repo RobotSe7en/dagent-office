@@ -1,8 +1,8 @@
 import { decodeTestPackage, type TestPackage } from './package-transport.js';
-import { createDocumentSession, openDocument } from "@dagent-office/core";
-import type { DocumentEditingSession, DocumentSelection } from "@dagent-office/core";
-import { mountDocumentInteraction, mountDocumentPreview } from "@dagent-office/editor";
-import type { DocumentInteractionView, DocumentPreview } from "@dagent-office/editor";
+import { createDocumentSession, openDocument } from "@doffi/core";
+import type { DocumentEditingSession, DocumentSelection } from "@doffi/core";
+import { mountDocumentInteraction, mountDocumentPreview } from "@doffi/editor";
+import type { DocumentInteractionView, DocumentPreview } from "@doffi/editor";
 
 /** A separate plain JavaScript host for public API/lifecycle browser acceptance. */
 export interface InteractionHost {

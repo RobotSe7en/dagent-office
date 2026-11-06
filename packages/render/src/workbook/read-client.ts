@@ -1,5 +1,5 @@
-import { DocumentError, DocumentErrorDataSchema } from "@dagent-office/core";
-import type { WorkbookRuleReadRequest, WorkbookRuleReadResponse } from "@dagent-office/core";
+import { DocumentError, DocumentErrorDataSchema } from "@doffi/core";
+import type { WorkbookRuleReadRequest, WorkbookRuleReadResponse } from "@doffi/core";
 import type { WorkbookPreviewSource } from "./preview-contracts.js";
 import type { WorkbookWindowRequest, WorkbookWindowResponse } from "./window-source.js";
 import { checkWindowIdentity } from "./window-source.js";

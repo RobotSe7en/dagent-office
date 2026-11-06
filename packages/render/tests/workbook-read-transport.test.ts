@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { createWorkbook, DEFAULT_WORKBOOK_RULE_LIMITS, openDocument, readWorkbookRules } from '@dagent-office/core';
-import type { WorkbookModel } from '@dagent-office/core';
+import { createWorkbook, DEFAULT_WORKBOOK_RULE_LIMITS, openDocument, readWorkbookRules } from '@doffi/core';
+import type { WorkbookModel } from '@doffi/core';
 import { importXlsx } from '../../office/src/xlsx-import.js';
 import { connectWorkbookReads } from '../src/workbook/read-client.js';
 import { serveWorkbookReads } from '../src/workbook/read-server.js';

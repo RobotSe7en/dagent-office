@@ -1,5 +1,5 @@
 {
-  "format": "dagent-office-xlsx-fixtures",
+  "format": "doffi-xlsx-fixtures",
   "version": 1,
   "generator": "Independent Python ZIP/XML, no SDK exporter or spreadsheet library.",
   "cases": [

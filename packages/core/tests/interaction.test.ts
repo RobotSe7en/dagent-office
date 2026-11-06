@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { createDocumentSession, DocumentError, openDocument, parseContract } from "@dagent-office/core";
-import type { Annotation, DocumentInteractionRequest, DocumentOperation, DocumentSession, EditProposal } from "@dagent-office/core";
+import { createDocumentSession, DocumentError, openDocument, parseContract } from "@doffi/core";
+import type { Annotation, DocumentInteractionRequest, DocumentOperation, DocumentSession, EditProposal } from "@doffi/core";
 import { proposal as exampleProposal, request as exampleRequest, repository } from "./fixtures.js";
 
 function session(): DocumentSession {

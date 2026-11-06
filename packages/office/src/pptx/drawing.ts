@@ -1,5 +1,5 @@
-import { PresentationPresetSchema } from "@dagent-office/core";
-import type { PresentationObject } from "@dagent-office/core";
+import { PresentationPresetSchema } from "@doffi/core";
+import type { PresentationObject } from "@doffi/core";
 import { A, attr, C, check, child, elements, fail, MC, P, R, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import type { Css } from "../ooxml/styles.js";

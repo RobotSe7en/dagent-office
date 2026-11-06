@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_DOCUMENT_READ_LIMITS } from "@dagent-office/core";
+import { DEFAULT_DOCUMENT_READ_LIMITS } from "@doffi/core";
 import { openOpc } from "../src/ooxml/package.js";
 import { C, elements, xml } from "../src/ooxml/xml.js";
 import { readChartLabel, readChartReference, readChartVector } from "../src/xlsx/chart-data.js";

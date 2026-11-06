@@ -14,7 +14,7 @@ const p95 = (samples: number[]) => [...samples].sort((a, b) => a - b)[Math.ceil(
 // failures still retain the full JSON samples and process/resource report.
 test.use({ trace: 'off', screenshot: 'off', video: 'off' });
 test('pinned-resource native reading, actual selection and wheel feedback, DOM and cancellation', async ({ page, browserName }, info) => {
-  test.skip(process.env.DAGENT_WORKBOOK_BUDGET !== '1', 'Run through the explicit 4-vCPU/8-GiB acceptance wrapper.');
+  test.skip(process.env.DOFFI_WORKBOOK_BUDGET !== '1', 'Run through the explicit 4-vCPU/8-GiB acceptance wrapper.');
   test.setTimeout(240_000);
   const bundle = async (name: string) => {
     const result = await build({ configFile: false, build: { write: false, minify: false, lib: { entry: fileURLToPath(new URL('./fixtures/' + name + '.ts', import.meta.url)), formats: ['iife'], name: 'WorkbookBudget' } } });
@@ -29,7 +29,7 @@ test('pinned-resource native reading, actual selection and wheel feedback, DOM a
   const bytes = readFileSync('examples/xlsx/15-ten-thousand-rows.xlsx');
   try {
     await page.evaluate(({ worker, bytes }) => window.workbookBudget.openBudget(worker, bytes), { worker, bytes: [...bytes] });
-    const profile = process.env.DAGENT_WORKBOOK_CPU_PROFILE && browserName === 'chromium' ? await page.context().newCDPSession(page) : undefined;
+    const profile = process.env.DOFFI_WORKBOOK_CPU_PROFILE && browserName === 'chromium' ? await page.context().newCDPSession(page) : undefined;
     if (profile) {
       await profile.send('Profiler.enable'); await profile.send('Profiler.start');
       await profile.send('Tracing.start', { categories: 'devtools.timeline,disabled-by-default-devtools.timeline.frame,blink.user_timing,input,latencyInfo', transferMode: 'ReturnAsStream' });

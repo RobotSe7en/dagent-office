@@ -2,7 +2,7 @@ import {
   createAssetDescriptor,
   DocumentError,
   openDocument,
-} from "@dagent-office/core";
+} from "@doffi/core";
 import type {
   Annotation,
   ContentDocumentManifest,
@@ -12,7 +12,7 @@ import type {
   PageSetup,
   TextRange,
   WordMetadata,
-} from "@dagent-office/core";
+} from "@doffi/core";
 import type { DocumentZipOptions } from "./document-zip.js";
 import { openOpc } from "./ooxml/package.js";
 import type { OpcPackage } from "./ooxml/package.js";
@@ -510,7 +510,7 @@ class Importer {
       if (language && text(language)) metadata.locale = text(language);
     }
     const manifest: ContentDocumentManifest = {
-      format: "dagent-office",
+      format: "doffi",
       formatVersion: 1,
       documentId: this.documentId,
       kind: "document",

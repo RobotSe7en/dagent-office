@@ -31,7 +31,7 @@ export function createWorkbook(input: CreateWorkbookOptions, readOptions: OpenDo
     numberFormats: [{ formatId: "general", code: "General" }],
   } };
   const files: DocumentPackage = new Map([
-    ["manifest.json", encode(JSON.stringify({ format: "dagent-office", formatVersion: 1, documentId: options.documentId, kind: "workbook", revision: 0, chunks: [], styles: ["styles.css"], metadata: "metadata.json", annotations: "annotations.json", assets: [] }))],
+    ["manifest.json", encode(JSON.stringify({ format: "doffi", formatVersion: 1, documentId: options.documentId, kind: "workbook", revision: 0, chunks: [], styles: ["styles.css"], metadata: "metadata.json", annotations: "annotations.json", assets: [] }))],
     ["metadata.json", encode(JSON.stringify(metadata))], ["annotations.json", encode("[]")],
     ["styles.css", encode('.cell-default{--office-font-ascii:"Liberation Sans";--office-font-east-asia:"Noto Sans CJK SC";font-family:var(--office-font-ascii),var(--office-font-east-asia);font-size:11pt;color:#000000;background-color:#ffffff}')],
   ]);

@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { crc32, deflateRawSync } from "node:zlib";
 import { describe, expect, test } from "vitest";
-import { DocumentError, openDocument, parseContract } from "@dagent-office/core";
-import type { DocumentErrorCode } from "@dagent-office/core";
-import { DEFAULT_MAX_ZIP_BYTES, readDocumentZip, writeDocumentZip } from "@dagent-office/office";
+import { DocumentError, openDocument, parseContract } from "@doffi/core";
+import type { DocumentErrorCode } from "@doffi/core";
+import { DEFAULT_MAX_ZIP_BYTES, readDocumentZip, writeDocumentZip } from "@doffi/office";
 
 const encoder = new TextEncoder();
 function files(): Map<string, Uint8Array> {

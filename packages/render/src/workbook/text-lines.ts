@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import type { WorkbookTextProjection } from "./text-view.js";
 
 /** Split already shaped lines without flattening rich spans or inventing source

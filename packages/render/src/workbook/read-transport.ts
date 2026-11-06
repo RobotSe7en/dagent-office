@@ -1,7 +1,7 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookSnapshot } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookSnapshot } from "@doffi/core";
 
-export const WORKBOOK_READ_PROTOCOL: string = "dagent-office/workbook-read/1";
+export const WORKBOOK_READ_PROTOCOL: string = "doffi/workbook-read/1";
 export interface WorkbookReadTransportLimits {
   readonly maxCells: number;
   readonly maxCodeUnits: number;

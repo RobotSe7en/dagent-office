@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { Anchor, DeepReadonly, ContentDocumentModel, Rectangle, TextRange } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { Anchor, DeepReadonly, ContentDocumentModel, Rectangle, TextRange } from "@doffi/core";
 import type { RenderedPage } from "./contracts.js";
 import { viewNodeRole } from "./view-nodes.js";
 

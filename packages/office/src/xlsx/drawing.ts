@@ -1,5 +1,5 @@
-import { createAssetDescriptor, DocumentError, WorkbookPresetSchema } from "@dagent-office/core";
-import type { WorkbookManifest, WorkbookObject, WorkbookObjectHyperlink } from "@dagent-office/core";
+import { createAssetDescriptor, DocumentError, WorkbookPresetSchema } from "@doffi/core";
+import type { WorkbookManifest, WorkbookObject, WorkbookObjectHyperlink } from "@doffi/core";
 import type { OpcPackage } from "../ooxml/package.js";
 import { A, attr, C, check, elements, fail, R, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";

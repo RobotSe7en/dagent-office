@@ -31,7 +31,7 @@ function run(executable: string, args: string[], cwd: string) {
 }
 
 beforeAll(() => {
-  temporary = mkdtempSync(join(tmpdir(), "dagent office consumer-"));
+  temporary = mkdtempSync(join(tmpdir(), "doffi consumer-"));
   consumer = join(temporary, "consumer");
   mkdirSync(consumer);
   const archives = packPackages(join(temporary, "archives"));
@@ -73,12 +73,12 @@ test("packed packages load in Node and reject access to their internal files", (
   writeFileSync(join(consumer, "node.mjs"), [
     'import assert from "node:assert/strict";',
     'import { readFile } from "node:fs/promises";',
-    "for (const name of " + JSON.stringify(modules.map((name) => "@dagent-office/" + name)) + ") {",
+    "for (const name of " + JSON.stringify(modules.map((name) => "@doffi/" + name)) + ") {",
     "  const module = await import(name);",
     '  assert.equal(Object.prototype.toString.call(module), "[object Module]");',
     '  await assert.rejects(import(name + "/dist/index.js"), { code: "ERR_PACKAGE_PATH_NOT_EXPORTED" });',
     "}",
-    'const { CONTRACT_NAMES, DocumentError, getContractJsonSchema, openDocument, parseContract, createDocumentSession, createWorkbook } = await import("@dagent-office/core");',
+    'const { CONTRACT_NAMES, DocumentError, getContractJsonSchema, openDocument, parseContract, createDocumentSession, createWorkbook } = await import("@doffi/core");',
     "const input = " + readFileSync(join(repository, "examples/report/manifest.json"), "utf8") + ";",
     'assert.equal(parseContract("document-manifest", input).revision, 0);',
     'assert.throws(() => parseContract("document-manifest", { ...input, formatVersion: 2 }),',
@@ -102,8 +102,8 @@ test("packed packages load in Node and reject access to their internal files", (
     "assert.equal(session.undo().revision, 2);",
     "assert.equal(session.redo().revision, 3);",
     "session.dispose();",
-    'const { createAssetDescriptor, collectDocumentAssets } = await import("@dagent-office/core");',
-    'const { exportDocx, importDocx, readDocumentZip, writeDocumentZip } = await import("@dagent-office/office");',
+    'const { createAssetDescriptor, collectDocumentAssets } = await import("@doffi/core");',
+    'const { exportDocx, importDocx, readDocumentZip, writeDocumentZip } = await import("@doffi/office");',
     'const native = openDocument(importDocx(new Uint8Array(await readFile("input.docx")), {documentId:"packed-docx"}));',
     'assert.equal(native.snapshot().annotations[0].author.name, "审阅者");',
     'assert.equal(native.snapshot().metadata.word.revisions.length, 2);',
@@ -118,13 +118,19 @@ test("packed packages load in Node and reject access to their internal files", (
     'const collected = await collectDocumentAssets(files, { async readAsset() { throw new Error("Unexpected host read"); } });',
     'assert.deepEqual(openDocument(readDocumentZip(writeDocumentZip(collected))).snapshot(), document.snapshot());',
     "for (const name of CONTRACT_NAMES) {",
-    '  const schema = await import("@dagent-office/core/schemas/" + name + ".json", { with: { type: "json" } });',
+    '  const schema = await import("@doffi/core/schemas/" + name + ".json", { with: { type: "json" } });',
     "  assert.deepEqual(schema.default, getContractJsonSchema(name));",
     "}",
   ].join("\n"));
   run(process.execPath, ["node.mjs"], consumer);
+  const cli = spawnSync(join(consumer, "node_modules/.bin/doffi"), ["--help"], {
+    cwd: consumer, encoding: "utf8", timeout: 10_000,
+  });
+  expect(cli.error).toBeUndefined();
+  expect(cli.status, cli.stderr).toBe(0);
+  expect(cli.stdout).toMatch(/^doffi: /);
   for (const module of modules) {
-    const manifest = JSON.parse(readFileSync(join(consumer, "node_modules/@dagent-office", module, "package.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync(join(consumer, "node_modules/@doffi", module, "package.json"), "utf8"));
     for (const version of Object.values(manifest.dependencies ?? {})) {
       expect(version).not.toMatch(/^workspace:/);
     }
@@ -138,11 +144,11 @@ test("packed declarations resolve without borrowing workspace source or ambient 
     ["browser", ["core", "editor", "office"], ["ES2022", "DOM", "DOM.Iterable"]],
   ] as const) {
     writeFileSync(join(consumer, name + ".ts"), [...imported.flatMap((module, index) => [
-      "import * as Module" + index + ' from "@dagent-office/' + module + '";',
+      "import * as Module" + index + ' from "@doffi/' + module + '";',
       "void Module" + index + ";",
       "// @ts-expect-error Internal paths are outside the public package contract.",
-      "type Private" + index + ' = typeof import("@dagent-office/' + module + '/dist/index.js");',
-    ]), 'import { openDocument, parseContract, createDocumentSession } from "@dagent-office/core";',
+      "type Private" + index + ' = typeof import("@doffi/' + module + '/dist/index.js");',
+    ]), 'import { openDocument, parseContract, createDocumentSession } from "@doffi/core";',
       'const manifest = parseContract("document-manifest", {});',
       "const version: 1 = manifest.formatVersion;",
       "void version;",
@@ -163,9 +169,9 @@ test("packed declarations resolve without borrowing workspace source or ambient 
       "void text;",
       "// @ts-expect-error Parser-specific AST is not part of the public node interface.",
       'document.getNode("n")?.childNodes;',
-      'import { collectDocumentAssets, createAssetDescriptor } from "@dagent-office/core";',
-      'import type { AssetProvider } from "@dagent-office/core";',
-      'import { exportDocx, readDocumentZip, writeDocumentZip } from "@dagent-office/office";',
+      'import { collectDocumentAssets, createAssetDescriptor } from "@doffi/core";',
+      'import type { AssetProvider } from "@doffi/core";',
+      'import { exportDocx, readDocumentZip, writeDocumentZip } from "@doffi/office";',
       'const provider: AssetProvider = { async readAsset() { return undefined; } };',
       'const collected: Promise<ReadonlyMap<string, Uint8Array>> = collectDocumentAssets(files, provider);',
       'const archive: Uint8Array = writeDocumentZip(files);',
@@ -176,8 +182,8 @@ test("packed declarations resolve without borrowing workspace source or ambient 
       'const digest: string = createAssetDescriptor("assets/a.bin", "application/octet-stream", archive).sha256;',
       'void collected; void unpacked; void digest;',
       ...(name === "browser" ? [
-        'import { mountDocumentInteraction, mountDocumentWorkbench, mountDocumentTextEditor } from "@dagent-office/editor";',
-        'import type { DocumentInteractionView } from "@dagent-office/editor";',
+        'import { mountDocumentInteraction, mountDocumentWorkbench, mountDocumentTextEditor } from "@doffi/editor";',
+        'import type { DocumentInteractionView } from "@doffi/editor";',
         'declare const container: HTMLElement;',
         'const view: DocumentInteractionView = mountDocumentInteraction(container, session, {onSelectionChange(selection) { void selection?.baseRevision; }});',
         'view.setMode("region"); view.setZoom(1.25); view.selection(); view.fonts(); void view.ready; view.dispose();',
@@ -200,15 +206,15 @@ test("packed declarations resolve without borrowing workspace source or ambient 
 test("packed browser modules build in a plain JavaScript host without React", async () => {
   writeFileSync(join(consumer, "index.html"), '<main>External browser host</main><script type="module" src="/browser.js"></script>');
   writeFileSync(join(consumer, "browser.js"), ["core", "editor", "office"].map(
-    (module) => 'import "@dagent-office/' + module + '";',
-  ).join("\n") + '\nimport { openDocument, parseContract } from "@dagent-office/core";\n'
+    (module) => 'import "@doffi/' + module + '";',
+  ).join("\n") + '\nimport { openDocument, parseContract } from "@doffi/core";\n'
     + "const input = " + readFileSync(join(repository, "examples/report/manifest.json"), "utf8") + ";\n"
     + 'document.documentElement.dataset.revision = String(parseContract("document-manifest", input).revision);\n'
     + "const sources = " + JSON.stringify(reportSources) + ";\n"
     + "const files = new Map(Object.entries(sources).map(([path, source]) => [path, new TextEncoder().encode(source)]));\n"
     + 'document.documentElement.dataset.documentId = openDocument(files).snapshot().manifest.documentId;\n'
-    + 'import { createAssetDescriptor, collectDocumentAssets } from "@dagent-office/core";\n'
-    + 'import { readDocumentZip, writeDocumentZip } from "@dagent-office/office";\n'
+    + 'import { createAssetDescriptor, collectDocumentAssets } from "@doffi/core";\n'
+    + 'import { readDocumentZip, writeDocumentZip } from "@doffi/office";\n'
     + 'const collected = await collectDocumentAssets(files, { async readAsset() { return undefined; } });\n'
     + 'document.documentElement.dataset.roundtrip = openDocument(readDocumentZip(writeDocumentZip(collected))).snapshot().manifest.documentId;\n'
     + 'document.documentElement.dataset.digest = createAssetDescriptor("assets/a.bin", "application/octet-stream", new Uint8Array([97,98,99])).sha256;\n');
@@ -233,8 +239,8 @@ test("the optional packed React entry builds with independently installed React 
   run(process.execPath, [pnpm, "install", "--prefer-offline", "--ignore-scripts", "--ignore-workspace", "--no-frozen-lockfile", "--store-dir", store.stdout.trim()], directory);
   writeFileSync(join(directory, "entry.ts"), [
     'import { createElement } from "react";',
-    'import { DocumentWorkbench } from "@dagent-office/editor/react";',
-    'import type { DocumentSession } from "@dagent-office/core";',
+    'import { DocumentWorkbench } from "@doffi/editor/react";',
+    'import type { DocumentSession } from "@doffi/core";',
     'declare const session: DocumentSession;',
     'createElement(DocumentWorkbench, {session, onViewChange(view) { view?.buildRequest(); }});',
   ].join("\n"));

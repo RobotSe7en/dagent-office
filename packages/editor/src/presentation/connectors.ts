@@ -1,5 +1,5 @@
-import { evaluatePresentationPreset } from "@dagent-office/core";
-import type { DocumentEditingSession, DocumentOperation, DocumentNode } from "@dagent-office/core";
+import { evaluatePresentationPreset } from "@doffi/core";
+import type { DocumentEditingSession, DocumentOperation, DocumentNode } from "@doffi/core";
 export interface ConnectorHost {
     readonly session: DocumentEditingSession;
     node(id: string): Pick<DocumentNode, "parentNodeId" | "text"> | undefined;

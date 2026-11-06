@@ -5,8 +5,8 @@ import { createHash } from "node:crypto";
 import { existsSync,mkdirSync,readFileSync,readdirSync,rmSync,writeFileSync } from "node:fs";
 import { join,resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { createDocumentSession,openDocument,resolvePresentationGeometry } from "@dagent-office/core";
-import { exportPptx,importPptx,writeDocumentZip } from "@dagent-office/office";
+import { createDocumentSession,openDocument,resolvePresentationGeometry } from "@doffi/core";
+import { exportPptx,importPptx,writeDocumentZip } from "@doffi/office";
 const root=resolve(import.meta.dirname,".."),cache=join(root,".cache/pptx-export-acceptance");
 const run=(exe,args)=>execFileSync(exe,args,{cwd:root,encoding:"utf8",timeout:55_000,maxBuffer:8*1024*1024}).trim();
 const digest=bytes=>createHash("sha256").update(bytes).digest("hex");
@@ -35,7 +35,7 @@ assert.ok(text(external)[0].includes("外部编辑确认：项目进展"));asser
 const profile=join(cache,"lo-profile-"+process.pid),lo=["-env:UserInstallation="+pathToFileURL(profile).href,"--headless"];
 try{
   for(let offset=0;offset<cases.length;offset+=5){const batch=cases.slice(offset,offset+5).map(item=>join(cache,"native",item.filename));run("libreoffice",[...lo,"--convert-to","pptx","--outdir",join(cache,"reopened"),...batch]);run("libreoffice",[...lo,"--convert-to","pdf","--outdir",join(cache,"pdf"),...batch]);}
-  const schemaPython=process.env.DAGENT_OFFICE_SCHEMA_PYTHON??(existsSync(join(root,".cache/pptx-schema-venv/bin/python"))?join(root,".cache/pptx-schema-venv/bin/python"):"/usr/bin/python3");
+  const schemaPython=process.env.DOFFI_SCHEMA_PYTHON??(existsSync(join(root,".cache/pptx-schema-venv/bin/python"))?join(root,".cache/pptx-schema-venv/bin/python"):"/usr/bin/python3");
   run(schemaPython,[join(root,"scripts/check-pptx-output.py"),join(cache,"native")]);
   const records=[];
   for(const item of cases){const bytes=read(join(cache,"reopened",item.filename)),external=(()=>{try{return openDocument(importPptx(bytes,{documentId:"external-reopened"}));}catch(error){console.error(item.filename);throw error;}})(),before=item.source.snapshot(),after=external.snapshot();

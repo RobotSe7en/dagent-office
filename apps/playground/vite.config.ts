@@ -3,14 +3,14 @@ import { readFileSync, readdirSync } from "node:fs";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import type { Plugin } from "vite";
-import { createDevelopmentConversionMiddleware } from "@dagent-office/node/dev";
+import { createDevelopmentConversionMiddleware } from "@doffi/node/dev";
 
 function localConversion(): Plugin {
   const middleware = createDevelopmentConversionMiddleware({
     browserCacheDirectory: fileURLToPath(new URL("../../.playwright/", import.meta.url)),
-    ...(process.env.DAGENT_OFFICE_CHROMIUM_EXECUTABLE ? { browserExecutable: process.env.DAGENT_OFFICE_CHROMIUM_EXECUTABLE } : {}),
+    ...(process.env.DOFFI_CHROMIUM_EXECUTABLE ? { browserExecutable: process.env.DOFFI_CHROMIUM_EXECUTABLE } : {}),
     maxMessageBytes: 16 * 1024 * 1024,
-    allowedOrigins: (process.env.DAGENT_OFFICE_DEV_ALLOWED_ORIGINS ?? "").split(",").map((origin) => origin.trim()).filter(Boolean),
+    allowedOrigins: (process.env.DOFFI_DEV_ALLOWED_ORIGINS ?? "").split(",").map((origin) => origin.trim()).filter(Boolean),
   });
   return { name: "local-office-conversion", configureServer(server) { server.middlewares.use(middleware); }, configurePreviewServer(server) { server.middlewares.use(middleware); } };
 }

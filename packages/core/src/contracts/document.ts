@@ -14,7 +14,7 @@ export const AssetDescriptorSchema = z.strictObject({
 export type AssetDescriptor = z.infer<typeof AssetDescriptorSchema>;
 
 const manifestFields = {
-  format: z.literal("dagent-office"),
+  format: z.literal("doffi"),
   formatVersion: z.literal(FORMAT_VERSION),
   documentId: IdentifierSchema,
   revision: RevisionSchema,

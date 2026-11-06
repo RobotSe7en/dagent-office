@@ -2,9 +2,9 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
-import { createWorkbookScalarEvaluator, openDocument } from '@dagent-office/core';
-import type { WorkbookValue } from '@dagent-office/core';
-import { importXlsx } from '@dagent-office/office';
+import { createWorkbookScalarEvaluator, openDocument } from '@doffi/core';
+import type { WorkbookValue } from '@doffi/core';
+import { importXlsx } from '@doffi/office';
 
 it('matches independent scalar expectations while recording actual producer differences and ignoring wrong native caches', async () => {
   const bytes = readFileSync('packages/office/tests/fixtures/xlsx-scalar-semantics.xlsx');

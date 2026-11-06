@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createAssetDescriptor, createWorkbook, openDocument } from '@dagent-office/core';
-import type { WorkbookManifest } from '@dagent-office/core';
+import { createAssetDescriptor, createWorkbook, openDocument } from '@doffi/core';
+import type { WorkbookManifest } from '@doffi/core';
 import { modelAssetSource, prepareWorkbookAssets } from '../src/workbook/assets.js';
 import type { WorkbookAssetResponse, WorkbookAssetSource } from '../src/workbook/assets.js';
 const bytes = new Uint8Array(readFileSync('examples/presentation/assets/sample.png'));

@@ -3,8 +3,8 @@
 R1-06 提供 `createDocumentSession`，从已授权的 `DocumentModel` 建立隔离的编辑会话。`openDocument` 继续只读；会话通过相同的 HTML 文档包保存，不保留另一份编辑器 JSON。
 
 ```ts
-import { createDocumentSession, openDocument } from "@dagent-office/core";
-import type { DocumentPackage } from "@dagent-office/core";
+import { createDocumentSession, openDocument } from "@doffi/core";
+import type { DocumentPackage } from "@doffi/core";
 
 declare const files: DocumentPackage;
 const session = createDocumentSession(openDocument(files));

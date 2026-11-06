@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { importXlsx, writeDocumentZip } from '@dagent-office/office';
+import { importXlsx, writeDocumentZip } from '@doffi/office';
 
 let workbookZip: Buffer, reportZip: Buffer;
 declare global {

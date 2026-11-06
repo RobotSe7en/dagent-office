@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookCell, WorkbookRuleReadResponse, WorkbookSnapshot } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookCell, WorkbookRuleReadResponse, WorkbookSnapshot } from "@doffi/core";
 import { markViewNode } from "../view-nodes.js";
 import { workbookCellFormat } from "./cell-format.js";
 import type { WorkbookCellFormat } from "./cell-format.js";

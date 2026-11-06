@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import { resolvedWorkbookColor } from "./color.js";
 
 export function copyWorkbookTextStyle(original: HTMLElement, target: HTMLElement, background = false): CSSStyleDeclaration {

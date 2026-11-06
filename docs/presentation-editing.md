@@ -3,8 +3,8 @@
 R2-08 至 R2-13 提供第一方幻灯片／对象、文字／表格／备注、定义、基础图表和两类批注编辑器，以及请求／提案工作台，复用固定画布和 [PPT 事务](presentation-transactions.md)。交付状态及验证记录见[第二轮细则](iteration-2.md)；协作入口见 [PPT 工作台](presentation-workbench.md)。
 
 ```ts
-import { createDocumentSession, openDocument } from "@dagent-office/core";
-import { mountPresentationEditor } from "@dagent-office/editor";
+import { createDocumentSession, openDocument } from "@doffi/core";
+import { mountPresentationEditor } from "@doffi/editor";
 
 const session = createDocumentSession(openDocument(files));
 const view = mountPresentationEditor(container, session, {
@@ -16,7 +16,7 @@ view.setZoom(0.75);
 view.dispose(); // 宿主仍拥有 session 和保存行为。
 ```
 
-`@dagent-office/editor/react` 还提供 `PresentationEditor`，接受宿主会话、相同选项和 `onViewChange`。普通 JavaScript 使用不依赖 React。普通 JS 的 `mountDocumentWorkbench` 以 `{format:"presentation"}` 选择 PPT 适配器；也可直接使用 `mountPresentationWorkbench`。React 使用 `PresentationWorkbench`。Word 默认入口及 Word 协议保持原契约。
+`@doffi/editor/react` 还提供 `PresentationEditor`，接受宿主会话、相同选项和 `onViewChange`。普通 JavaScript 使用不依赖 React。普通 JS 的 `mountDocumentWorkbench` 以 `{format:"presentation"}` 选择 PPT 适配器；也可直接使用 `mountPresentationWorkbench`。React 使用 `PresentationWorkbench`。Word 默认入口及 Word 协议保持原契约。
 
 ## 幻灯片与对象
 

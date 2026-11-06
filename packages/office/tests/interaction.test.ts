@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
-import { createDocumentSession, openDocument } from "@dagent-office/core";
-import type { EditProposal } from "@dagent-office/core";
-import { importDocx, readDocumentZip, writeDocumentZip } from "@dagent-office/office";
+import { createDocumentSession, openDocument } from "@doffi/core";
+import type { EditProposal } from "@doffi/core";
+import { importDocx, readDocumentZip, writeDocumentZip } from "@doffi/office";
 
 const directory = new URL("../../../examples/docx/", import.meta.url);
 const cases = JSON.parse(readFileSync(new URL("expected.json", directory), "utf8")) as { file: string }[];

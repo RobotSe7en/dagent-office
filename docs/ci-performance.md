@@ -2,11 +2,11 @@
 
 本轮优化保留一万行支持目标。用户已选择：真实容量用例移出日常 CI，阶段合并前单独全量验收。其余功能、安全、失败、取消、像素及外部 Office 检查保持；约 5 分钟为日常 CI 关键路径优化目标，实际结果须用 GitHub runner 验证。
 
-[PR #26 最终工作流](https://github.com/RobotSe7en/dagent-office/actions/runs/42246509253)的 21 个作业已全部成功：从首个构建作业开始到日常汇总完成为 320 秒（5 分 20 秒），容量专项单独通过。该轮包含已授权的容量分流，不能将其当作原全量范围的同负载耗时。
+[PR #26 最终工作流](https://github.com/RobotSe7en/doffi/actions/runs/42246509253)的 21 个作业已全部成功：从首个构建作业开始到日常汇总完成为 320 秒（5 分 20 秒），容量专项单独通过。该轮包含已授权的容量分流，不能将其当作原全量范围的同负载耗时。
 
 ## 原始记录和诊断
 
-[PR #25 最终 CI](https://github.com/RobotSe7en/dagent-office/actions/runs/42223783754) 的浏览器作业共 2732 秒：Word/PPT 707 秒，现代工作簿 1299 秒，旧 Word/PPT 179 秒，旧工作簿 431 秒。工程检查 190 秒、Office 352 秒、Safari 112 秒。逐步骤记录见[基线](evidence/ci-performance-baseline.json)。
+[PR #25 最终 CI](https://github.com/RobotSe7en/doffi/actions/runs/42223783754) 的浏览器作业共 2732 秒：Word/PPT 707 秒，现代工作簿 1299 秒，旧 Word/PPT 179 秒，旧工作簿 431 秒。工程检查 190 秒、Office 352 秒、Safari 112 秒。逐步骤记录见[基线](evidence/ci-performance-baseline.json)。
 
 [本机 A/B](evidence/browser-test-overhead.json)在同一浏览器、固定 viewport、独立 context 内各执行相同六次网格渲染，每组四次并轮换顺序。完整首页与完整 trace 平均 1.94 秒；空白宿主与 API trace 0.99 秒。840KB 输入的逐字节数组传输约 3.58 秒，Base64 约 0.041 秒。后者只测测试协议传输；这些诊断不替代 CI 前后对比，也不证明 SDK 导入耗时变化。
 
@@ -38,7 +38,7 @@ gh workflow run ci.yml --ref <branch>
 - Office 按 Word／PPT／工作簿拆分，官方归档缓存按固定 SHA-256 复用；安装器仍核验摘要、重新解包并核对版本。独立打包与实际 Office 编辑／重开保留。
 - 每个浏览器分片输出逐用例 JSON 和执行摘要，Office 输出各命令耗时。汇总 job 只有所有分片成功才成功。
 
-`DAGENT_OFFICE_CI_MODE=daily` 只用于日常 CI。六项原生容量单元检查延后；浏览器 `@scale` 用例通过显式过滤延后，原断言保留。工作簿实际打开、切换、失败保留和授权资源仍有小样例覆盖。原生样例的字节、规范及负例审计继续执行；日常 Calc 重开省略一万行项。默认本地检查和参考记录命令保持完整模式，`--record` 永远不产生部分参考基线。
+`DOFFI_CI_MODE=daily` 只用于日常 CI。六项原生容量单元检查延后；浏览器 `@scale` 用例通过显式过滤延后，原断言保留。工作簿实际打开、切换、失败保留和授权资源仍有小样例覆盖。原生样例的字节、规范及负例审计继续执行；日常 Calc 重开省略一万行项。默认本地检查和参考记录命令保持完整模式，`--record` 永远不产生部分参考基线。
 
 原生公式语料拆为每日小样例与阶段容量两部分；共享公式跟随者、打印名称及图表／规则／表格公式的独立来源检查继续每天执行。
 

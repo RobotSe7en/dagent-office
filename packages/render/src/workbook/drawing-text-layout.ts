@@ -1,7 +1,7 @@
-import { DocumentError, evaluatePresentationPreset } from "@dagent-office/core";
+import { DocumentError, evaluatePresentationPreset } from "@doffi/core";
 import { measuredFontLineHeight } from "../font-line-height.js";
 import { applyDrawingTextOverflow } from "./drawing-text-overflow.js";
-import type { DeepReadonly, DrawingTextProperties, PresentationPresetGeometry, WorkbookChart, WorkbookObject } from "@dagent-office/core";
+import type { DeepReadonly, DrawingTextProperties, PresentationPresetGeometry, WorkbookChart, WorkbookObject } from "@doffi/core";
 import type { FontResolution } from "../contracts.js";
 import { resolvePreviewFontsInScope } from "../fonts.js";
 import { markViewNode } from "../view-nodes.js";

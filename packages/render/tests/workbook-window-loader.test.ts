@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { createWorkbook, openDocument } from "@dagent-office/core";
-import type { WorkbookDocumentMetadata, WorkbookManifest } from "@dagent-office/core";
+import { createWorkbook, openDocument } from "@doffi/core";
+import type { WorkbookDocumentMetadata, WorkbookManifest } from "@doffi/core";
 import { AxisDimensions } from "../src/workbook/dimensions.js";
 import { modelWindowSource } from "../src/workbook/window-source.js";
 import type { WorkbookWindowRequest, WorkbookWindowResponse, WorkbookWindowSource } from "../src/workbook/window-source.js";

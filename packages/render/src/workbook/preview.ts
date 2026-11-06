@@ -1,5 +1,5 @@
-import { createWorkbookNumberFormatter, DocumentError } from "@dagent-office/core";
-import type { DocumentSelection, WorkbookSnapshot } from "@dagent-office/core";
+import { createWorkbookNumberFormatter, DocumentError } from "@doffi/core";
+import type { DocumentSelection, WorkbookSnapshot } from "@doffi/core";
 import { createWorkbookPreviewChrome, workbookColumnLabel } from "./preview-chrome.js";
 import type { WorkbookPreview, WorkbookPreviewInput, WorkbookPreviewOptions, WorkbookRenderReport } from "./preview-contracts.js";
 import { decorateWorkbookPreview } from "./preview-decoration.js";

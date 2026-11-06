@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WordMetadata, WordNumberLevel } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WordMetadata, WordNumberLevel } from "@doffi/core";
 import type { OpcPackage } from "./package.js";
 import {
   A,

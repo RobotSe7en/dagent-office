@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { createWorkbook, openDocument } from '@dagent-office/core';
+import { createWorkbook, openDocument } from '@doffi/core';
 import { baselineRows, baselineColumns, generateBlock } from './workbook-baseline-fixture.mjs';
 
 // Public HTML package model probe. Native XLSX and calculation are separate gates.

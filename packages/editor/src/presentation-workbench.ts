@@ -1,7 +1,7 @@
-import { DocumentError, isPresentationCommentPoint, parseContract } from "@dagent-office/core";
-import type { CandidateChange, DocumentSession, PresentationAnnotationSubmissionHandler, PresentationEditProposal, PresentationInteractionRequest, PresentationInteractionRequestInput, TransactionPrepareOptions, TransactionReceipt } from "@dagent-office/core";
-import { mountPreview } from "@dagent-office/render";
-import type { DocumentPreview } from "@dagent-office/render";
+import { DocumentError, isPresentationCommentPoint, parseContract } from "@doffi/core";
+import type { CandidateChange, DocumentSession, PresentationAnnotationSubmissionHandler, PresentationEditProposal, PresentationInteractionRequest, PresentationInteractionRequestInput, TransactionPrepareOptions, TransactionReceipt } from "@doffi/core";
+import { mountPreview } from "@doffi/render";
+import type { DocumentPreview } from "@doffi/render";
 import { mountPresentationEditor } from "./presentation-editor.js";
 import type { PresentationEditorOptions, PresentationEditorView } from "./presentation-editor.js";
 import type { DocumentInteractionView } from "./interaction.js";

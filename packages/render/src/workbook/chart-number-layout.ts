@@ -1,4 +1,4 @@
-import { DocumentError } from '@dagent-office/core';
+import { DocumentError } from '@doffi/core';
 import type { BasicChartScene } from '../chart.js';
 import { fitWorkbookFill } from './number-layout.js';
 

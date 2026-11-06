@@ -1,4 +1,4 @@
-import type { WorkbookValue } from "@dagent-office/core";
+import type { WorkbookValue } from "@doffi/core";
 import { createWorkbookTextView } from "../../../packages/render/src/workbook/text-view.js";
 import { layoutWorkbookTexts } from "../../../packages/render/src/workbook/text-layout.js";
 

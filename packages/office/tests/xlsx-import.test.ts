@@ -1,9 +1,9 @@
 import { dailyCi } from '../../../tests/ci-mode.js';
 import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { DocumentError, openDocument } from "@dagent-office/core";
-import { importXlsx } from "@dagent-office/office";
-import type { OfficeImportProgress, XlsxImportOptions } from "@dagent-office/office";
+import { DocumentError, openDocument } from "@doffi/core";
+import { importXlsx } from "@doffi/office";
+import type { OfficeImportProgress, XlsxImportOptions } from "@doffi/office";
 import { readDocumentZip, writeOpcZip } from "../src/document-zip.js";
 
 const source = (name: string) => readFileSync(`examples/xlsx/${name}.xlsx`);

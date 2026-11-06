@@ -1,5 +1,5 @@
-import { createSharedWorkbookFormulas, DocumentError } from "@dagent-office/core";
-import type { WorkbookSheet } from "@dagent-office/core";
+import { createSharedWorkbookFormulas, DocumentError } from "@doffi/core";
+import type { WorkbookSheet } from "@doffi/core";
 import { readDocumentZipAsync } from "../document-zip.js";
 import { ImportControl } from "../import-control.js";
 import { openOpcFiles } from "../ooxml/package.js";

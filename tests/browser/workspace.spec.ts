@@ -3,8 +3,8 @@ import { fileURLToPath } from "node:url";
 import { build } from "vite";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { openDocument } from "@dagent-office/core";
-import { importPptx, readDocumentZip } from "@dagent-office/office";
+import { openDocument } from "@doffi/core";
+import { importPptx, readDocumentZip } from "@doffi/office";
 import type {} from "./fixtures/interaction-host.js";
 
 async function report(page: Page): Promise<void> {
@@ -23,6 +23,8 @@ async function selectText(page: Page, from = 2, to = 8): Promise<void> {
 
 test("document library filters and switches between isolated sessions while retaining history", async ({ page }) => {
   await report(page);
+  await expect(page).toHaveTitle("doffi Playground");
+  await expect(page.getByRole("link", { name: "doffi Playground", exact: true })).toBeVisible();
   const sidebar = page.getByRole("complementary", { name: "文档列表", exact: true });
   expect((await sidebar.boundingBox())!.x).toBeLessThan((await page.getByRole("region", { name: "文档工作区", exact: true }).boundingBox())!.x);
   await page.getByRole("button", { name: "载入固定示例提案", exact: true }).click();

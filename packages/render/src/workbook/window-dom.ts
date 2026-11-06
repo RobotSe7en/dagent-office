@@ -1,4 +1,4 @@
-import type { WorkbookCell } from "@dagent-office/core";
+import type { WorkbookCell } from "@doffi/core";
 import type { WorkbookGridCell } from "./projection.js";
 import type { WorkbookWindowFrame } from "./window-loader.js";
 import { markViewNode } from "../view-nodes.js";

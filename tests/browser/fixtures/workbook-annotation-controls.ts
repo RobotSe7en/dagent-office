@@ -1,5 +1,5 @@
-import { createWorkbook, createWorkbookNumberFormatter, openDocument } from '@dagent-office/core';
-import type { Annotation, WorkbookDocumentMetadata } from '@dagent-office/core';
+import { createWorkbook, createWorkbookNumberFormatter, openDocument } from '@doffi/core';
+import type { Annotation, WorkbookDocumentMetadata } from '@doffi/core';
 import { createWorkbookSurface } from '../../../packages/render/src/workbook/surface.js';
 import { WorkbookWindowController } from '../../../packages/render/src/workbook/window-controller.js';
 import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';

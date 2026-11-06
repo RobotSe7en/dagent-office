@@ -1,10 +1,10 @@
 {
-  "name": "@dagent-office/core",
+  "name": "@doffi/core",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "license": "UNLICENSED",
-  "description": "Strict document and host-interaction contracts for dagent-office",
+  "description": "Strict document and host-interaction contracts for doffi",
   "files": [
     "dist",
     "ECMA-376-GEOMETRY-LICENSE.txt"
@@ -44,5 +44,10 @@
   },
   "devDependencies": {
     "@types/css-tree": "3.2.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RobotSe7en/doffi.git",
+    "directory": "packages/core"
   }
 }

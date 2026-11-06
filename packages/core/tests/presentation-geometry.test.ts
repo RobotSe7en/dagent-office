@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { evaluatePresentationPreset, PresentationPresetSchema } from "@dagent-office/core";
+import { evaluatePresentationPreset, PresentationPresetSchema } from "@doffi/core";
 
 for (const preset of [...PresentationPresetSchema.options, "straightConnector1", "bentConnector2", "bentConnector3", "bentConnector4", "bentConnector5"]) {
   test("evaluates selected preset geometry without platform or XML input: " + preset, () => {

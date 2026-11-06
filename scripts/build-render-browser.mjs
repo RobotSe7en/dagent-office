@@ -9,5 +9,5 @@ await build({ configFile: false, logLevel: "error", build: {
   rolldownOptions: { output: { banner: "/*! @license\n" + notice + "\n*/", comments: { legal: true } } },
   outDir: fileURLToPath(new URL("../packages/render/dist/", import.meta.url)), target: "es2022",
   lib: { entry: fileURLToPath(new URL("../packages/render/src/browser-entry.ts", import.meta.url)),
-    formats: ["iife"], name: "DagentOfficeRenderer", fileName: () => "browser-script.js" },
+    formats: ["iife"], name: "DoffiRenderer", fileName: () => "browser-script.js" },
 } });

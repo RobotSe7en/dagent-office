@@ -1,5 +1,5 @@
-import { DEFAULT_DOCUMENT_READ_LIMITS, DocumentError, openDocument } from "@dagent-office/core";
-import type { DocumentPackage, DocumentReadLimits, OpenDocumentOptions } from "@dagent-office/core";
+import { DEFAULT_DOCUMENT_READ_LIMITS, DocumentError, openDocument } from "@doffi/core";
+import type { DocumentPackage, DocumentReadLimits, OpenDocumentOptions } from "@doffi/core";
 import { Inflate, Zip, ZipDeflate } from "fflate/browser";
 import { inspectZip, invalidZip, updateCrc32, zipLimit } from "./zip-format.js";
 import type { ZipEntry } from "./zip-format.js";

@@ -5,7 +5,7 @@ R2-02 实现 Presentation 的严格契约、新建文稿及只读 HTML 文档包
 ## 公开入口
 
 ```ts
-import { createPresentation, openDocument, readPresentationGeometry } from "@dagent-office/core";
+import { createPresentation, openDocument, readPresentationGeometry } from "@doffi/core";
 
 const files = createPresentation({ documentId: "host-supplied-id", title: "项目进展" });
 const model = openDocument(files);

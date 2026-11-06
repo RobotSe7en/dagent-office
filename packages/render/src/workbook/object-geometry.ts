@@ -1,5 +1,5 @@
-import { DocumentError, evaluatePresentationPreset } from "@dagent-office/core";
-import type { DeepReadonly, PresentationPresetGeometry, WorkbookObject } from "@dagent-office/core";
+import { DocumentError, evaluatePresentationPreset } from "@doffi/core";
+import type { DeepReadonly, PresentationPresetGeometry, WorkbookObject } from "@doffi/core";
 import { createDrawingGeometryView } from "../drawing-geometry.js";
 import { workbookDrawingOrientation } from "./drawing-view.js";
 

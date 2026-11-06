@@ -1,10 +1,10 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 import {
   CONTRACT_NAMES, DocumentError, getContractJsonSchema, parseContract,
-} from "@dagent-office/core";
+} from "@doffi/core";
 import type {
   ContractName, DocumentContentOperation, DocumentErrorCode, DocumentManifest, EditProposal,
-} from "@dagent-office/core";
+} from "@doffi/core";
 import { annotations, invalidCases, manifest, metadata, proposal, request, validCases } from "./fixtures.js";
 
 function failure(name: ContractName, input: unknown, code?: DocumentErrorCode): DocumentError {

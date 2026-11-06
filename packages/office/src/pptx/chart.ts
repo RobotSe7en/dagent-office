@@ -1,4 +1,4 @@
-import type { PresentationChart, PresentationDataSet } from "@dagent-office/core";
+import type { PresentationChart, PresentationDataSet } from "@doffi/core";
 import { A, attr, C, check, child, elements, fail, R, text, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import { Context, integer, value } from "./context.js";

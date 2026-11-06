@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import { markViewNode } from "../view-nodes.js";
 
 interface Box { left: number; top: number; right: number; bottom: number }

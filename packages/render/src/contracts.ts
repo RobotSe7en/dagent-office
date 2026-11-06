@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DocumentErrorData, PageSetup, Rectangle } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DocumentErrorData, PageSetup, Rectangle } from "@doffi/core";
 
 
 /** Font names stay in the source. This report describes only the current preview. */

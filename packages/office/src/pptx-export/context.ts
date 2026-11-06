@@ -1,5 +1,5 @@
-import { createOpaqueId, DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, ContentDocumentModel, DocumentPackage, DocumentReadLimits, ContentDocumentSnapshot, PresentationMetadata, PresentationObject } from "@dagent-office/core";
+import { createOpaqueId, DocumentError } from "@doffi/core";
+import type { DeepReadonly, ContentDocumentModel, DocumentPackage, DocumentReadLimits, ContentDocumentSnapshot, PresentationMetadata, PresentationObject } from "@doffi/core";
 import { OutputOpc } from "../export/opc.js";
 import { children, parseSource } from "../export/source.js";
 import type { SourceElement, SourceTree } from "../export/source.js";

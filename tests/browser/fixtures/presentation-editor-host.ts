@@ -1,8 +1,8 @@
 import { decodeTestPackage, type TestPackage } from './package-transport.js';
-import { createDocumentSession, openDocument } from "@dagent-office/core";
-import type { DocumentSession } from "@dagent-office/core";
-import { mountPresentationEditor } from "@dagent-office/editor";
-import type { PresentationEditorView, PresentationEditorOptions } from "@dagent-office/editor";
+import { createDocumentSession, openDocument } from "@doffi/core";
+import type { DocumentSession } from "@doffi/core";
+import { mountPresentationEditor } from "@doffi/editor";
+import type { PresentationEditorView, PresentationEditorOptions } from "@doffi/editor";
 export interface PresentationEditorHost {
   session:DocumentSession|undefined;
   view:PresentationEditorView|undefined;

@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookSheet, WorkbookValue } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DeepReadonly, WorkbookSheet, WorkbookValue } from "@doffi/core";
 import type { WorkbookCellSources } from "./cell-source.js";
 import type { AxisDimensions } from "./dimensions.js";
 import { intersectRect, paneRect } from "./projection.js";

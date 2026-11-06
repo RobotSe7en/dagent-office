@@ -1,14 +1,14 @@
-import { DocumentError, openDocument } from "@dagent-office/core";
+import { DocumentError, openDocument } from "@doffi/core";
 import type { BrowserRenderBridge, BrowserRenderResult } from "./contracts.js";
 import { mountPreview } from "./preview.js";
 
-declare global { interface Window { __dagentOfficeRender: BrowserRenderBridge } }
+declare global { interface Window { __doffiRender: BrowserRenderBridge } }
 let renderer: ReturnType<typeof mountPreview> | undefined;
 function failure(reason: unknown): BrowserRenderResult {
   const error = reason instanceof DocumentError ? reason : new DocumentError("ExportFailed", "Browser rendering failed.");
   return { ok: false, error: error.toJSON() };
 }
-window.__dagentOfficeRender = {
+window.__doffiRender = {
   async mount(files, options) {
     try {
       renderer?.dispose();

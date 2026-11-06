@@ -16,7 +16,7 @@ function run(command, args, env = process.env) {
 }
 const pnpm = process.env.npm_execpath;
 if (!pnpm) throw Error('Run capacity acceptance through pnpm.');
-if (process.env.DAGENT_OFFICE_CI_MODE === 'daily') throw Error('Stage capacity acceptance cannot run in daily mode.');
+if (process.env.DOFFI_CI_MODE === 'daily') throw Error('Stage capacity acceptance cannot run in daily mode.');
 run(process.execPath, [pnpm, 'run', 'check:xlsx-fixtures']);
 run(process.execPath, [pnpm, 'run', 'check:xlsx-reference']);
 const unitReport = resolve(directory, 'unit-scale.json');
@@ -27,7 +27,7 @@ const files = ['workbook-storage', 'workbook-preview', 'workbook-read-worker', '
 const selection = '@scale|completes the public reading matrix';
 run(process.execPath, ['scripts/playwright.mjs', 'test', ...files, '--grep=' + selection, '--reporter=list', '--output=.cache/workbook-reading-matrix-modern']);
 run(process.execPath, ['scripts/playwright.mjs', 'test', ...files, '--grep=' + selection, '--project=chromium', '--reporter=list', '--output=.cache/workbook-reading-matrix-legacy'],
-  { ...process.env, DAGENT_OFFICE_BROWSER_EXECUTABLE: resolve(root, '.cache/legacy-browser/chromium-1041/chrome-linux/chrome') });
+  { ...process.env, DOFFI_BROWSER_EXECUTABLE: resolve(root, '.cache/legacy-browser/chromium-1041/chrome-linux/chrome') });
 run(process.execPath, ['scripts/collect-workbook-reading-matrix.mjs', '--output', resolve(directory, 'reading-matrix.json')]);
 
 // Use four available logical CPUs, preferring distinct guest-reported cores.
@@ -49,11 +49,11 @@ for (const cpu of cpus) { if (selected.length === 4) break; if (!selected.includ
 const identity = userInfo(), environment = ['PATH', 'FONTCONFIG_FILE', 'FONTCONFIG_PATH', 'XDG_DATA_HOME', 'LD_LIBRARY_PATH', 'PLAYWRIGHT_BROWSERS_PATH']
   .filter(name => process.env[name] !== undefined).map(name => '--setenv=' + name + '=' + process.env[name]);
 for (const browser of ['chromium', 'firefox', 'webkit', 'legacy-chromium']) {
-  run('sudo', ['-n', 'systemd-run', '--wait', '--pipe', '--collect', '--unit=dagent-scale-' + browser + '-' + process.pid,
+  run('sudo', ['-n', 'systemd-run', '--wait', '--pipe', '--collect', '--unit=doffi-scale-' + browser + '-' + process.pid,
     '--uid=' + identity.uid, '--gid=' + identity.gid, '--working-directory=' + root, ...environment,
     '-p', 'MemoryMax=8G', '-p', 'MemorySwapMax=0', '-p', 'CPUQuota=400%', '-p', 'AllowedCPUs=' + selected.join(','),
     process.execPath, 'scripts/workbook-reading-budget.mjs', '--browser', browser]);
 }
 run(process.execPath, ['scripts/collect-workbook-reading-budget.mjs', '--output', resolve(directory, 'reading-budget.json')]);
-writeFileSync(acceptance, JSON.stringify({ sourceHead: process.env.DAGENT_SOURCE_HEAD ?? execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
+writeFileSync(acceptance, JSON.stringify({ sourceHead: process.env.DOFFI_SOURCE_HEAD ?? execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
   complete: true, fullNativeReferences: true, logicalCpus: selected, matrixCases: 128, cells: 200000, formulas: 20000, chunks: 40 }, null, 2) + '\n');

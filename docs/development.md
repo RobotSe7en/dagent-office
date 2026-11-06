@@ -13,9 +13,13 @@ pnpm dev
 
 `pnpm dev` 先构建库，再同时运行库编译监听与 Vite。开发服务器绑定本机，访问终端显示的地址；停止命令时一并结束监听进程。
 
-Playground 通过公开入口打开 DOCX/文档包、选择文字／对象／区域、管理批注、缩放、撤销重做、下载当前会话的文档包及重开。开发宿主将公开合成样例作为静态资源提供；SDK 不自行访问样例目录。它使用 React 生命周期挂载同一 DOM 组件，SDK 的 `core`、`office` 和 `node` 不依赖 React；编辑器专用 React 包装通过可选 `@dagent-office/editor/react` 入口提供；普通 JS 入口不要求 React。
+Playground 通过公开入口打开 DOCX/文档包、选择文字／对象／区域、管理批注、缩放、撤销重做、下载当前会话的文档包及重开。开发宿主将公开合成样例作为静态资源提供；SDK 不自行访问样例目录。它使用 React 生命周期挂载同一 DOM 组件，SDK 的 `core`、`office` 和 `node` 不依赖 React；编辑器专用 React 包装通过可选 `@doffi/editor/react` 入口提供；普通 JS 入口不要求 React。
 
-内部 workspace 暂用 `@dagent-office/core`、`@dagent-office/editor`、`@dagent-office/office`、`@dagent-office/render` 和 `@dagent-office/node`。版本均为 `0.0.0`，包均设为 `private`，许可证字段为 `UNLICENSED`；正式名称和第一方许可证仍按发布计划确定。
+项目名称为 `doffi`，内部 workspace 使用 `@doffi/core`、`@doffi/editor`、`@doffi/office`、`@doffi/render` 和 `@doffi/node`；Playground 为 `@doffi/playground`，Node CLI 为 `doffi`。版本均为 `0.0.0`，包均设为 `private`，许可证字段为 `UNLICENSED`；npm scope 归属、第一方许可证和正式发布仍按发布计划确认。
+
+运行时环境变量统一使用 `DOFFI_*` 前缀，验收使用 `DOFFI_SOURCE_HEAD` 和 `DOFFI_WORKBOOK_*`。Playground 转换路由为 `/__doffi/convert`，请求头为 `X-Doffi-Dev: 1`，浏览器渲染桥为 `window.__doffiRender`，显示设置使用 `doffi:layout`。
+
+V1 文档包使用 `format: "doffi"`、`urn:doffi:contract:*` Schema 标识及 `doffi/workbook-read/1` Worker 协议标识。本次更名按用户决定不保留旧名称的兼容入口。独立原生样例、实际字体环境路径和历史验收证据保留原始内容。
 
 ## 构建与类型检查
 
@@ -62,7 +66,7 @@ pnpm test:browser
 本机已经安装 Google Chrome 时，可显式选择其渠道：
 
 ```bash
-DAGENT_OFFICE_BROWSER_CHANNEL=chrome pnpm test:browser
+DOFFI_BROWSER_CHANNEL=chrome pnpm test:browser
 ```
 
 未设置渠道时使用对应 Playwright 版本的 Chromium，不进行自动渠道回退。当前截图基线使用锁定的 Chromium 与 Noto 中文字体；补充的仿宋/楷体浏览器用例还需要[固定开源字体环境](fonts.md)。环境和字体摘要见[参考记录](../examples/docx/reference.json)。使用 Chrome 渠道只能作额外验证，不能静默刷新固定基线。独立参考检查使用 `pnpm check:docx-reference`，更新方法见[DOCX 读取](docx-import.md#独立样例与验收)。

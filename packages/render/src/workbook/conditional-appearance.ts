@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { DeepReadonly, WorkbookConditionalRule, WorkbookRuleReadResponse, WorkbookSheet } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DeepReadonly, WorkbookConditionalRule, WorkbookRuleReadResponse, WorkbookSheet } from "@doffi/core";
 import type { WorkbookSourceCell } from "./cell-source.js";
 import { resolvedWorkbookColor } from "./color.js";
 import { WorkbookStyleLayers, workbookStylePropertyGroup } from "./style-layers.js";

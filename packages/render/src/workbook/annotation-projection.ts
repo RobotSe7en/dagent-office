@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { Annotation, DeepReadonly, WorkbookComment, WorkbookRange, WorkbookSnapshot } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { Annotation, DeepReadonly, WorkbookComment, WorkbookRange, WorkbookSnapshot } from "@doffi/core";
 import type { AxisDimensions } from "./dimensions.js";
 import { intersectRect, paneRect, WorkbookMergeIndex } from "./projection.js";
 import type { WorkbookRect } from "./projection.js";

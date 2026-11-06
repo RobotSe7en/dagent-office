@@ -1,6 +1,6 @@
 import { expect,test } from "vitest";
-import { createDocumentSession,createPresentation,openDocument,resolvePresentationGeometry } from "@dagent-office/core";
-import type { DocumentOperation,DocumentSession } from "@dagent-office/core";
+import { createDocumentSession,createPresentation,openDocument,resolvePresentationGeometry } from "@doffi/core";
+import type { DocumentOperation,DocumentSession } from "@doffi/core";
 const blank=()=>createDocumentSession(openDocument(createPresentation({documentId:"definitions"})));
 const p=(s:DocumentSession)=>s.snapshot().metadata.presentation!;
 function prepare(s:DocumentSession,operations:DocumentOperation[]){const{documentId,revision}=s.snapshot().manifest;return s.prepare({protocolVersion:1,documentId,baseRevision:revision,operations});}

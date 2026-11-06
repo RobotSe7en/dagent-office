@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createWorkbook, openDocument } from "@dagent-office/core";
-import type { WorkbookConditionalRule, WorkbookDataValidation } from "@dagent-office/core";
+import { createWorkbook, openDocument } from "@doffi/core";
+import type { WorkbookConditionalRule, WorkbookDataValidation } from "@doffi/core";
 import { openOpc, openOpcFiles } from "../src/ooxml/package.js";
 import type { OpcPackage } from "../src/ooxml/package.js";
 import { readConditionalRules, readDataValidations } from "../src/xlsx/rules.js";

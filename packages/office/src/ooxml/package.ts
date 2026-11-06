@@ -2,8 +2,8 @@ import {
   DEFAULT_DOCUMENT_READ_LIMITS,
   DocumentError,
   PackagePathSchema,
-} from "@dagent-office/core";
-import type { DocumentPackage, DocumentReadLimits } from "@dagent-office/core";
+} from "@doffi/core";
+import type { DocumentPackage, DocumentReadLimits } from "@doffi/core";
 import { readDocumentZip } from "../document-zip.js";
 import type { DocumentZipOptions } from "../document-zip.js";
 import { PKG, attr, elements, fail, xml } from "./xml.js";

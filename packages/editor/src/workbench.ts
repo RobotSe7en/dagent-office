@@ -1,8 +1,8 @@
-import { DocumentError, parseContract } from "@dagent-office/core";
+import { DocumentError, parseContract } from "@doffi/core";
 import type {
   AnnotationSubmissionHandler, CandidateChange, DocumentInteractionRequest, ContentDocumentModel, DocumentSelection,
   DocumentSession, EditProposal, InteractionRequestInput, TransactionReceipt,
-} from "@dagent-office/core";
+} from "@doffi/core";
 import { mountDocumentInteraction } from "./interaction.js";
 import type { DocumentInteractionOptions, DocumentInteractionView } from "./interaction.js";
 import { mountDocumentPreview } from "./preview.js";
@@ -11,7 +11,7 @@ import { mountDocumentTextEditor } from "./rich-text.js";
 import type { DocumentTextEditor } from "./rich-text.js";
 import { mountPresentationWorkbench } from "./presentation-workbench.js";
 import type { PresentationWorkbenchOptions,PresentationWorkbenchView } from "./presentation-workbench.js";
-import { createLayoutFieldTransaction } from "@dagent-office/render";
+import { createLayoutFieldTransaction } from "@doffi/render";
 import { workspaceControls } from "./workspace.js";
 
 function immutable<Value>(value: Value): Value {

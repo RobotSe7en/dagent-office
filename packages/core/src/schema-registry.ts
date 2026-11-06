@@ -63,7 +63,7 @@ function checkEnvelope(name: ContractName, input: unknown): void {
   const data = object(input);
   if (!data) return;
   if (name === "document-manifest") {
-    if (typeof data.format === "string" && data.format !== "dagent-office") {
+    if (typeof data.format === "string" && data.format !== "doffi") {
       throw new DocumentError("UnsupportedFormat", "The document format is not supported.");
     }
     checkVersion(data.formatVersion, FORMAT_VERSION);
@@ -152,7 +152,7 @@ export function getContractJsonSchema(name: ContractName): ContractJsonSchema {
   return {
     ...schema,
     $schema: "https://json-schema.org/draft/2020-12/schema",
-    $id: "urn:dagent-office:contract:" + name + ":"
+    $id: "urn:doffi:contract:" + name + ":"
       + (formatContracts.has(name) ? FORMAT_VERSION : PROTOCOL_VERSION),
   };
 }

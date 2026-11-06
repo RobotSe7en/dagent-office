@@ -40,8 +40,8 @@ Office 重开基线采用用户确认的 LibreOffice；Word／WPS 尚未验证�
 Vite 可以监听 `0.0.0.0`。PDF 转换中间件默认仅允许本机连接；远程开发需由宿主明确列出当前同源地址，例如：
 
 ```bash
-DAGENT_OFFICE_DEV_ALLOWED_ORIGINS=http://192.168.31.221:5174 \
-  pnpm --filter @dagent-office/playground exec vite --host 0.0.0.0 --port 5174 --strictPort
+DOFFI_DEV_ALLOWED_ORIGINS=http://192.168.31.221:5174 \
+  pnpm --filter @doffi/playground exec vite --host 0.0.0.0 --port 5174 --strictPort
 ```
 
 列表以逗号分隔，仅接受确切的 HTTP(S) origin，不能使用通配符、凭据或路径。请求的 Host、端口、Origin 和开发标记仍需匹配。这个开发选项不替代正式宿主的认证、授权和部署边界。

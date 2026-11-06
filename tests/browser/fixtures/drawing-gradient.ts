@@ -1,4 +1,4 @@
-import { evaluatePresentationPreset } from '@dagent-office/core';
+import { evaluatePresentationPreset } from '@doffi/core';
 import { createDrawingGeometryView } from '../../../packages/render/src/drawing-geometry.js';
 
 export async function measureDrawingGradients() {

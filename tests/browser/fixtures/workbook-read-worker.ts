@@ -1,8 +1,8 @@
-import { DocumentError, openDocument } from '@dagent-office/core';
-import type { WorkbookModel } from '@dagent-office/core';
-import { importXlsx } from '@dagent-office/office';
-import { serveWorkbookReads } from '@dagent-office/render';
-import type { WorkbookReadServer } from '@dagent-office/render';
+import { DocumentError, openDocument } from '@doffi/core';
+import type { WorkbookModel } from '@doffi/core';
+import { importXlsx } from '@doffi/office';
+import { serveWorkbookReads } from '@doffi/render';
+import type { WorkbookReadServer } from '@doffi/render';
 
 const scope = globalThis as unknown as { onmessage: ((event: MessageEvent<{ kind: string; documentId: string; bytes: Uint8Array; port: MessagePort }>) => void) | null; postMessage(value: unknown): void };
 let model: WorkbookModel | undefined, server: WorkbookReadServer | undefined, loading = false;

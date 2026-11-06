@@ -1,5 +1,5 @@
-import { DocumentError } from "@dagent-office/core";
-import type { WorkbookNumberDisplayPart } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { WorkbookNumberDisplayPart } from "@doffi/core";
 
 export type MeasuredNumberPart = { readonly kind: "text"; readonly text: string; readonly width: number } | { readonly kind: "space"; readonly width: number };
 export interface MeasuredNumberDisplay { readonly parts: readonly MeasuredNumberPart[]; readonly width: number; readonly overflow: boolean }

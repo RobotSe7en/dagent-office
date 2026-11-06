@@ -1,4 +1,4 @@
-import type { Anchor, Annotation, AnnotationReply, PresentationMetadata, PresentationObject, TextRange } from "@dagent-office/core";
+import type { Anchor, Annotation, AnnotationReply, PresentationMetadata, PresentationObject, TextRange } from "@doffi/core";
 import { attr, check, child, elements, fail, P, R, text, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import { Context, integer, points, rootName, unsigned, value } from "./context.js";

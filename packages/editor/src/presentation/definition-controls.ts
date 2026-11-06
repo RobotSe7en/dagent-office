@@ -1,4 +1,4 @@
-import type { CandidateChange, DocumentEditingSession, DocumentOperation } from "@dagent-office/core";
+import type { CandidateChange, DocumentEditingSession, DocumentOperation } from "@doffi/core";
 export interface DefinitionControlsHost {
     readonly session: DocumentEditingSession;
     activeSlide(): string;

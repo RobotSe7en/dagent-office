@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
 import { Ajv2020 } from "ajv/dist/2020.js";
-import { DocumentError, getContractJsonSchema, openDocument, parseContract } from "@dagent-office/core";
-import type { Annotation, PresentationDocumentMetadata } from "@dagent-office/core";
-import { importDocx, importPptx, readDocumentZip, writeDocumentZip } from "@dagent-office/office";
+import { DocumentError, getContractJsonSchema, openDocument, parseContract } from "@doffi/core";
+import type { Annotation, PresentationDocumentMetadata } from "@doffi/core";
+import { importDocx, importPptx, readDocumentZip, writeDocumentZip } from "@doffi/office";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 
 const directory = new URL("../../../examples/pptx/", import.meta.url);

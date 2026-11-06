@@ -1,4 +1,4 @@
-import { DocumentError } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
 import { officeFontSegments } from "../font-scripts.js";
 import type { OfficeFontRole } from "../font-scripts.js";
 import type { WorkbookSourceCell } from "./cell-source.js";

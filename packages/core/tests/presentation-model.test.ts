@@ -3,8 +3,8 @@ import { Ajv2020 } from "ajv/dist/2020.js";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
-import { createDocumentSession, createPresentation, DocumentError, getContractJsonSchema, parseContract, readPresentationGeometry } from "@dagent-office/core";
-import type { Annotation, DocumentErrorCode, PresentationDocumentMetadata } from "@dagent-office/core";
+import { createDocumentSession, createPresentation, DocumentError, getContractJsonSchema, parseContract, readPresentationGeometry } from "@doffi/core";
+import type { Annotation, DocumentErrorCode, PresentationDocumentMetadata } from "@doffi/core";
 import { repository } from "./fixtures.js";
 
 const encoder = new TextEncoder(), decoder = new TextDecoder();

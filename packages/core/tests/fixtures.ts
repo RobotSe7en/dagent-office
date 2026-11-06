@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import type {
   Annotation, ContractName, DocumentInteractionRequest, DocumentManifest,
   WordDocumentMetadata, EditProposal,
-} from "@dagent-office/core";
+} from "@doffi/core";
 
 export const repository = fileURLToPath(new URL("../../../", import.meta.url));
 function read(path: string): unknown {

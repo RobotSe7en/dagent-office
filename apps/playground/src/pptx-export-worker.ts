@@ -1,5 +1,5 @@
-import { DocumentError, openDocument } from "@dagent-office/core";
-import { exportPptx } from "@dagent-office/office";
+import { DocumentError, openDocument } from "@doffi/core";
+import { exportPptx } from "@doffi/office";
 import type { PptxWorkerRequest, PptxWorkerResponse } from "./export-pptx.js";
 const scope = globalThis as unknown as {
     onmessage: ((event: MessageEvent<PptxWorkerRequest>) => void) | null;

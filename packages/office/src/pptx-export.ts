@@ -1,5 +1,5 @@
-import { DEFAULT_DOCUMENT_READ_LIMITS, DocumentError, openDocument } from "@dagent-office/core";
-import type { ContentDocumentModel } from "@dagent-office/core";
+import { DEFAULT_DOCUMENT_READ_LIMITS, DocumentError, openDocument } from "@doffi/core";
+import type { ContentDocumentModel } from "@doffi/core";
 import { writeOpcZip } from "./document-zip.js";
 import { attributes, declaration, empty, escapeXml } from "./export/xml.js";
 import { xml } from "./ooxml/xml.js";

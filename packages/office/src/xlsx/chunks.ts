@@ -1,7 +1,7 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
-import { DocumentError } from "@dagent-office/core";
-import type { DocumentReadLimits, WorkbookChunkDescriptor, WorkbookCoordinate } from "@dagent-office/core";
+import { DocumentError } from "@doffi/core";
+import type { DocumentReadLimits, WorkbookChunkDescriptor, WorkbookCoordinate } from "@doffi/core";
 import { encode, textHtml } from "./values.js";
 
 /** UTF-8 accounting before concatenating or encoding generated source. Input is
