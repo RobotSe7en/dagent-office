@@ -17,12 +17,12 @@ import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
 import type { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback, measureDrawingTextOverflow, measureDrawingOverflowEdges } from './fixtures/workbook-drawing-text.js';
 import type { measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } from './fixtures/workbook-surface.js';
 import type { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } from './fixtures/workbook-shadow.js';
-import type { measureWorkbookCharts, measureWorkbookChartAxes, measureWorkbookChartTextFonts, measureWorkbookChartMarkers, measureWorkbookChartGrid, measureWorkbookChartColors, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } from './fixtures/workbook-chart.js';
+import type { measureWorkbookCharts, measureWorkbookChartAxes, measureWorkbookChartFiniteScales, measureNativeFiniteCharts, measureWorkbookChartTextFonts, measureWorkbookChartMarkers, measureWorkbookChartGrid, measureWorkbookChartColors, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } from './fixtures/workbook-chart.js';
 import { bindWorkbookChartData } from "../../packages/render/src/workbook/chart-values.js";
 import type { BasicChartData } from '../../packages/render/src/chart.js';
 import { modelChartSource, DEFAULT_CHART_READ_LIMITS } from '../../packages/render/src/workbook/chart-source.js';
 
-declare global { interface Window { workbookChartHost: { measureWorkbookChartAxes: typeof measureWorkbookChartAxes; measureWorkbookChartTextFonts: typeof measureWorkbookChartTextFonts; measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartGrid: typeof measureWorkbookChartGrid; measureWorkbookChartMarkers: typeof measureWorkbookChartMarkers; measureWorkbookChartColors: typeof measureWorkbookChartColors; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
+declare global { interface Window { workbookChartHost: { measureWorkbookChartAxes: typeof measureWorkbookChartAxes; measureWorkbookChartFiniteScales: typeof measureWorkbookChartFiniteScales; measureNativeFiniteCharts: typeof measureNativeFiniteCharts; measureWorkbookChartTextFonts: typeof measureWorkbookChartTextFonts; measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartGrid: typeof measureWorkbookChartGrid; measureWorkbookChartMarkers: typeof measureWorkbookChartMarkers; measureWorkbookChartColors: typeof measureWorkbookChartColors; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
 
 declare global { interface Window { workbookShadowHost: { measureWorkbookShadows: typeof measureWorkbookShadows; mountWorkbookShadowPixels: typeof mountWorkbookShadowPixels; disposeWorkbookShadowPixels: typeof disposeWorkbookShadowPixels } } }
 
@@ -243,6 +243,36 @@ for (const rtl of [false, true]) test(`native picture fills keep page orientatio
   await page.evaluate(() => window.workbookContentHost.disposeImageView()); await expect(gallery).toHaveCount(0);
 });
 test.beforeEach(async ({ page }) => { await page.goto('/'); await page.addScriptTag({ content: code }); });
+
+test('finite chart endpoints and subnormal values retain bounded coordinates across direct and composed scales', async ({ page }) => {
+  const snapshot = inputs.find(input => input.name === '07-three-charts')!.snapshot;
+  const result = await page.evaluate(snapshot => window.workbookChartHost.measureWorkbookChartFiniteScales(snapshot), snapshot);
+  expect(result).toMatchObject({ unchanged: true, cleaned: true }); expect(result.results).toHaveLength(24);
+  for (const item of result.results) for (const view of [item.basic, item.full]) {
+    expect(view.actual).toBe(view.declared); expect(view.invalid).toBe(false); expect(view.points.length).toBeGreaterThan(0);
+    for (const y of view.points) { expect(y).toBeGreaterThanOrEqual(view.top - .001); expect(y).toBeLessThanOrEqual(view.top + view.height + .001); }
+    if (item.kind === 'line') {
+      expect(view.points[0]).toBeCloseTo(item.reverseValues ? view.top : view.top + view.height, 1);
+      if (item.index < 2) expect(view.points[2]).toBeCloseTo(item.reverseValues ? view.top + view.height : view.top, 1);
+    }
+  }
+});
+
+test('independent native and Calc finite chart intervals compose current values without overflowing geometry', async ({ page }) => {
+  for (const suffix of ['', '-producer']) {
+    const model = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-finite-scales' + suffix + '.xlsx'), { documentId: 'native-finite' }), { kind: 'workbook' }), snapshot = model.snapshot();
+    const response = await modelChartSource(model).read({ ...DEFAULT_CHART_READ_LIMITS, documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, chartIds: snapshot.metadata.workbook.charts!.map(chart => chart.chartId) }, new AbortController().signal);
+    const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
+    try {
+      const bindings = bindWorkbookChartData(snapshot, response, formatter), result = await page.evaluate(({ snapshot, bindings }) => window.workbookChartHost.measureNativeFiniteCharts(snapshot, bindings), { snapshot, bindings });
+      expect(result.unchanged).toBe(true); expect(result.results).toHaveLength(10);
+      for (const [index, item] of result.results.entries()) {
+        expect(item.nodes).toBe(item.actual); expect(item.invalid).toBe(false); expect(item.points).toBe(3);
+        expect(item.values).toEqual(index < 8 ? [-9e307, 0, 9e307] : [0, Number.MIN_VALUE, Number.MIN_VALUE * 2]);
+      }
+    } finally { formatter.dispose(); }
+  }
+});
 
 test('physical DrawingML gradients preserve diagonal stop coverage and the scaled flag in browser pixels', async ({ page }) => {
   const result = await page.evaluate(() => window.workbookContentHost.measureDrawingGradients());

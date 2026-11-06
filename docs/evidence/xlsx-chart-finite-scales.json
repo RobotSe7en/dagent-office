@@ -1,0 +1,353 @@
+{
+  "scope": "Independent finite-double chart intervals and Calc numerical preservation.\n\nWide intervals can exceed the largest double even though both endpoints are\nfinite. Subnormal source values and any producer underflow remain distinct.\n",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "fontManifest": [
+    {
+      "file": "LiberationSans-Regular.ttf",
+      "sha256": "4659bc0c58c5028dd488ec928d41d9265db43d9b669fc14ca8b0832daca7b144"
+    }
+  ],
+  "sourceSha256": "175c4397953b9d3a56c374087047b6c48abad815af504963776973c0a1f558fe",
+  "cases": [
+    {
+      "kind": "line",
+      "reverse": false,
+      "automatic": false,
+      "values": [
+        -9e+307,
+        0,
+        9e+307
+      ],
+      "source": {
+        "axis": {
+          "orientation": "minMax",
+          "max": "9e307",
+          "min": "-9e307"
+        },
+        "majorUnit": "3e307",
+        "values": [
+          "-9e+307",
+          "0",
+          "9e+307"
+        ]
+      },
+      "producer": {
+        "axis": {
+          "orientation": "minMax",
+          "max": "9E+307",
+          "min": "-9E+307"
+        },
+        "majorUnit": "3E+307",
+        "values": [
+          "-9E+307",
+          "0",
+          "9E+307"
+        ]
+      }
+    },
+    {
+      "kind": "line",
+      "reverse": false,
+      "automatic": true,
+      "values": [
+        -9e+307,
+        0,
+        9e+307
+      ],
+      "source": {
+        "axis": {
+          "orientation": "minMax"
+        },
+        "majorUnit": null,
+        "values": [
+          "-9e+307",
+          "0",
+          "9e+307"
+        ]
+      },
+      "producer": {
+        "axis": {
+          "orientation": "minMax"
+        },
+        "majorUnit": null,
+        "values": [
+          "-9E+307",
+          "0",
+          "9E+307"
+        ]
+      }
+    },
+    {
+      "kind": "line",
+      "reverse": true,
+      "automatic": false,
+      "values": [
+        -9e+307,
+        0,
+        9e+307
+      ],
+      "source": {
+        "axis": {
+          "orientation": "maxMin",
+          "max": "9e307",
+          "min": "-9e307"
+        },
+        "majorUnit": "3e307",
+        "values": [
+          "-9e+307",
+          "0",
+          "9e+307"
+        ]
+      },
+      "producer": {
+        "axis": {
+          "orientation": "maxMin",
+          "max": "9E+307",
+          "min": "-9E+307"
+        },
+        "majorUnit": "3E+307",
+        "values": [
+          "-9E+307",
+          "0",
+          "9E+307"
+        ]
+      }
+    },
+    {
+      "kind": "line",
+      "reverse": true,
+      "automatic": true,
+      "values": [
+        -9e+307,
+        0,
+        9e+307
+      ],
+      "source": {
+        "axis": {
+          "orientation": "maxMin"
+        },
+        "majorUnit": null,
+        "values": [
+          "-9e+307",
+          "0",
+          "9e+307"
+        ]
+      },
+      "producer": {
+        "axis": {
+          "orientation": "maxMin"
+        },
+        "majorUnit": null,
+        "values": [
+          "-9E+307",
+          "0",
+          "9E+307"
+        ]
+      }
+    },
+    {
+      "kind": "column",
+      "reverse": false,
+      "automatic": false,
+      "values": [
+        -9e+307,
+        0,
+        9e+307
+      ],
+      "source": {
+        "axis": {
+          "orientation": "minMax",
+          "max": "9e307",
+          "min": "-9e307"
+        },
+        "majorUnit": "3e307",
+        "values": [
+          "-9e+307",
+          "0",
+          "9e+307"
+        ]
+      },
+      "producer": {
+        "axis": {
+          "orientation": "minMax",
+          "max": "9E+307",
+          "min": "-9E+307"
+        },
+        "majorUnit": "3E+307",
+        "values": [
+          "-9E+307",
+          "0",
+          "9E+307"
+        ]
+      }
+    },
+    {
+      "kind": "column",
+      "reverse": false,
+      "automatic": true,
+      "values": [
+        -9e+307,
+        0,
+        9e+307
+      ],
+      "source": {
+        "axis": {
+          "orientation": "minMax"
+        },
+        "majorUnit": null,
+        "values": [
+          "-9e+307",
+          "0",
+          "9e+307"
+        ]
+      },
+      "producer": {
+        "axis": {
+          "orientation": "minMax"
+        },
+        "majorUnit": null,
+        "values": [
+          "-9E+307",
+          "0",
+          "9E+307"
+        ]
+      }
+    },
+    {
+      "kind": "column",
+      "reverse": true,
+      "automatic": false,
+      "values": [
+        -9e+307,
+        0,
+        9e+307
+      ],
+      "source": {
+        "axis": {
+          "orientation": "maxMin",
+          "max": "9e307",
+          "min": "-9e307"
+        },
+        "majorUnit": "3e307",
+        "values": [
+          "-9e+307",
+          "0",
+          "9e+307"
+        ]
+      },
+      "producer": {
+        "axis": {
+          "orientation": "maxMin",
+          "max": "9E+307",
+          "min": "-9E+307"
+        },
+        "majorUnit": "3E+307",
+        "values": [
+          "-9E+307",
+          "0",
+          "9E+307"
+        ]
+      }
+    },
+    {
+      "kind": "column",
+      "reverse": true,
+      "automatic": true,
+      "values": [
+        -9e+307,
+        0,
+        9e+307
+      ],
+      "source": {
+        "axis": {
+          "orientation": "maxMin"
+        },
+        "majorUnit": null,
+        "values": [
+          "-9e+307",
+          "0",
+          "9e+307"
+        ]
+      },
+      "producer": {
+        "axis": {
+          "orientation": "maxMin"
+        },
+        "majorUnit": null,
+        "values": [
+          "-9E+307",
+          "0",
+          "9E+307"
+        ]
+      }
+    },
+    {
+      "kind": "line",
+      "reverse": false,
+      "automatic": true,
+      "values": [
+        0,
+        5e-324,
+        1e-323
+      ],
+      "source": {
+        "axis": {
+          "orientation": "minMax"
+        },
+        "majorUnit": null,
+        "values": [
+          "0",
+          "5e-324",
+          "1e-323"
+        ]
+      },
+      "producer": {
+        "axis": {
+          "orientation": "minMax"
+        },
+        "majorUnit": null,
+        "values": [
+          "0",
+          "5E-324",
+          "1E-323"
+        ]
+      }
+    },
+    {
+      "kind": "column",
+      "reverse": false,
+      "automatic": true,
+      "values": [
+        0,
+        5e-324,
+        1e-323
+      ],
+      "source": {
+        "axis": {
+          "orientation": "minMax"
+        },
+        "majorUnit": null,
+        "values": [
+          "0",
+          "5e-324",
+          "1e-323"
+        ]
+      },
+      "producer": {
+        "axis": {
+          "orientation": "minMax"
+        },
+        "majorUnit": null,
+        "values": [
+          "0",
+          "5E-324",
+          "1E-323"
+        ]
+      }
+    }
+  ],
+  "limits": [
+    "Native source and actual producer values/axes are checked independently, including numerical loss. No Excel/WPS or whole-chart visual fidelity is claimed."
+  ]
+}

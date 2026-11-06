@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chartAxisTicks } from "../src/chart-axis.js";
+import { chartAxisTicks, chartValueFraction, chartValueScale } from "../src/chart-axis.js";
 
 describe("finite bounded chart ticks", () => {
   it("keeps decimal endpoints without accumulation drift", () => {
@@ -15,8 +15,25 @@ describe("finite bounded chart ticks", () => {
   });
   it("admits finite subnormal steps and exact budgets but rejects overflow and excess ticks", () => {
     expect(chartAxisTicks(0, Number.MIN_VALUE * 3, Number.MIN_VALUE, 3)).toEqual([0, Number.MIN_VALUE, Number.MIN_VALUE * 2, Number.MIN_VALUE * 3]);
-    for (const input of [[0, 1, .1, 9], [0, 1, 0, 100], [0, Infinity, 1, 100], [-1e308, 1e308, 1e307, 100], [1, 1, 1, 100], [0, 1, NaN, 100]]) {
+    for (const input of [[0, 1, .1, 9], [0, 1, 0, 100], [0, Infinity, 1, 100], [-1e308, 1e308, 1e307, 19], [1, 1, 1, 100], [0, 1, NaN, 100]]) {
       expect(() => chartAxisTicks(input[0]!, input[1]!, input[2]!, input[3]!)).toThrowError(expect.objectContaining({ code: "ResourceLimitExceeded" }));
+    }
+  });
+  it('normalizes and steps across finite endpoints whose difference or indexed offset overflows', () => {
+    const maximum = Number.MAX_VALUE;
+    expect(chartAxisTicks(-1e308, 1e308, 1e307, 20)).toHaveLength(21);
+    expect(chartAxisTicks(-maximum, maximum, maximum, 2)).toEqual([-maximum, 0, maximum]);
+    expect([-maximum, 0, maximum].map(value => chartValueFraction(value, -maximum, maximum))).toEqual([0, .5, 1]);
+    expect([-maximum, 0, maximum].map(value => chartValueFraction(value, -maximum, maximum, true))).toEqual([1, .5, 0]);
+    expect(chartValueFraction(1e308, -1e308, -9e307)).toBeCloseTo(20);
+    const chart = { kind: 'line' as const, legend: 'none' as const, showLabels: false };
+    expect(chartValueScale({ ...chart, minimum: 1e308, majorUnit: 1e308 }, [{ values: [1e308, 1.7e308] }])).toEqual({ minimum: 1e308, maximum, unit: 1e308 });
+    for (const values of [[-1e308, 1e308], [maximum], [Number.MIN_VALUE], [-Number.MIN_VALUE, Number.MIN_VALUE]]) {
+      const scale = chartValueScale(chart, [{ values }]);
+      expect([scale.minimum, scale.maximum, scale.unit].every(Number.isFinite)).toBe(true);
+      expect(scale.maximum).toBeGreaterThan(scale.minimum); expect(scale.unit).toBeGreaterThan(0);
+      expect(chartAxisTicks(scale.minimum, scale.maximum, scale.unit, 1024).length).toBeGreaterThan(1);
+      for (const value of values) { expect(chartValueFraction(value, scale.minimum, scale.maximum)).toBeGreaterThanOrEqual(0); expect(chartValueFraction(value, scale.minimum, scale.maximum)).toBeLessThanOrEqual(1); }
     }
   });
 });

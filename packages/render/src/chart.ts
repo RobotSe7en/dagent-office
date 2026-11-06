@@ -5,7 +5,7 @@ import { cssStringValue, numeric, property, resolvedColor, strokeAttributes, svg
 import { svgElement as createSvgElement } from "./presentation/svg.js";
 import type { DrawingGradientBounds } from "./drawing-gradient.js";
 import { appendChartMarker } from "./chart-marker.js";
-import { chartAxisTicks, chartCategoryAxis, chartAxisPlacement, chartValueScale } from "./chart-axis.js";
+import { chartAxisTicks, chartCategoryAxis, chartAxisPlacement, chartValueScale, chartValueFraction } from "./chart-axis.js";
 import { officeFontSegments } from "./font-scripts.js";
 import type { OfficeFontRole } from "./font-scripts.js";
 
@@ -190,7 +190,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     const { minimum, maximum, unit } = scale;
     const majorTicks = chartAxisTicks(minimum, maximum, unit, 1024, 0.001);
     const y = (v: number): number => {
-      const position = top + (chart.reverseValues ? (v - minimum) : (maximum - v)) / (maximum - minimum) * h;
+      const fraction = chartValueFraction(v, minimum, maximum, !chart.reverseValues), position = top + fraction * h;
       if (!Number.isFinite(position)) throw new DocumentError("ResourceLimitExceeded", "Chart values exceed the finite preview coordinate scale.");
       return position;
     };
@@ -211,7 +211,10 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     }
     const minorUnit = numeric(valStyle, "--office-axis-minor-unit", unit / 5);
     if (minorUnit > 0 && chart.showValueAxis !== false) {
-      for (const value of chartAxisTicks(minimum, maximum, minorUnit, 4096)) if (Math.abs((value - minimum) / unit - Math.round((value - minimum) / unit)) > 0.001) tick(axisX, y(value), false, valStyle, true);
+      for (const [index, value] of chartAxisTicks(minimum, maximum, minorUnit, 4096).entries()) {
+        const offset = index === 0 ? 0 : index * (minorUnit / unit);
+        if (Math.abs(offset - Math.round(offset)) > 0.001) tick(axisX, y(value), false, valStyle, true);
+      }
     }
     const baseline = y(Math.max(minimum, Math.min(maximum, 0))), axisY = top + axes!.y * h;
     if (chart.showCategoryAxis !== false) svg.append(svgElement(document, "line", { x1: left, y1: axisY, x2: right, y2: axisY, "data-sdk-chart-axis": "category", ...strokeAttributes(document, catStyle, "--office-line", "#b7b7b7") }));

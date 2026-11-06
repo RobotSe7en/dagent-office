@@ -9,9 +9,21 @@ export function chartValueScale(chart: DeepReadonly<ChartAppearance>, series: re
   for (const item of series) if (!item.hidden) for (const value of item.values) if (value !== null) { low = Math.min(low, value); high = Math.max(high, value); }
   if (low === 0 && high === 0) high = 1;
   const minimum = chart.minimum ?? low, largest = chart.maximum ?? high;
-  const rough = (largest - minimum) / 8 || 1, power = 10 ** Math.floor(Math.log10(rough)), factor = rough / power;
+  const span = largest - minimum;
+  const rough = span > 0 ? Math.max(Number.MIN_VALUE, Number.isFinite(span) ? span / 8 : largest / 8 - minimum / 8) : 1;
+  const power = Math.max(Number.MIN_VALUE, 10 ** Math.floor(Math.log10(rough))), factor = rough / power;
   const unit = chart.majorUnit ?? (factor <= 1 ? 1 : factor <= 2 ? 2 : factor <= 5 ? 5 : 10) * power;
-  return { minimum, maximum: chart.maximum ?? (Math.floor(largest / unit) + 1) * unit, unit };
+  const automatic = Math.min(Number.MAX_VALUE, (Math.floor(largest / unit) + 1) * unit);
+  return { minimum, maximum: chart.maximum ?? Math.max(automatic, Math.min(Number.MAX_VALUE, minimum + unit)), unit };
+}
+
+/** Normalize finite values without requiring the full interval or numerator
+ * to fit in a double. Preserve the direct path's precision for ordinary data. */
+export function chartValueFraction(value: number, minimum: number, maximum: number, reversed = false): number {
+  const span = maximum - minimum, offset = reversed ? maximum - value : value - minimum;
+  if (Number.isFinite(span) && Number.isFinite(offset)) return offset / span;
+  const scale = Math.max(Math.abs(value), Math.abs(minimum), Math.abs(maximum));
+  return (reversed ? maximum / scale - value / scale : value / scale - minimum / scale) / (maximum / scale - minimum / scale);
 }
 
 /** Fractions run left-to-right / top-to-bottom. Native axPos remains source
@@ -24,7 +36,7 @@ export function chartAxisPlacement(chart: DeepReadonly<ChartAppearance>, categor
     readonly categoryOutside: number; readonly valueOutside: number;
   } {
   const between = property(value, "--office-axis-cross-between", "between");
-  if (!["between", "midCat"].includes(between) || !Number.isSafeInteger(count) || count < 1 || ![minimum, maximum, maximum - minimum].every(Number.isFinite) || maximum <= minimum)
+  if (!["between", "midCat"].includes(between) || !Number.isSafeInteger(count) || count < 1 || ![minimum, maximum].every(Number.isFinite) || maximum <= minimum)
     throw new DocumentError("InvalidDocument", "Chart axis intervals are invalid.");
   const crossing = (style: CSSStyleDeclaration, low: number, high: number, integral = false): number => {
     const raw = property(style, "--office-axis-crosses-at"), kind = property(style, "--office-axis-crosses", "autoZero"), position = property(style, "--office-axis-position");
@@ -40,7 +52,7 @@ export function chartAxisPlacement(chart: DeepReadonly<ChartAppearance>, categor
   const categoryAt = crossing(category, minimum, maximum), valueAt = crossing(value, 1, slots + 1, true);
   const vertical = (at: number): number => chart.reverseValues ? at : 1 - at;
   const horizontal = (at: number): number => chart.reverseCategories ? 1 - at : at;
-  const y = vertical((categoryAt - minimum) / (maximum - minimum)), x = horizontal((valueAt - 1) / slots);
+  const y = vertical(chartValueFraction(categoryAt, minimum, maximum)), x = horizontal((valueAt - 1) / slots);
   const labels = (style: CSSStyleDeclaration, at: number, project: (at: number) => number): number => {
     const option = property(style, "--office-axis-label-position", "nextTo");
     if (!["high", "low", "nextTo", "none"].includes(option)) throw new DocumentError("InvalidDocument", "Chart tick-label placement is invalid.");
@@ -71,12 +83,12 @@ export function chartCategoryAxis(count: number, left: number, width: number, be
  * At large magnitudes a positive unit may not advance the value at all; reject
  * that scale even when axes/ticks are hidden and no node budget would fire. */
 export function chartAxisTicks(minimum: number, maximum: number, unit: number, maxSteps: number, tolerance = 0): readonly number[] {
-  const span = maximum - minimum, steps = span / unit;
+  const span = maximum - minimum, steps = Number.isFinite(span) ? span / unit : maximum / unit - minimum / unit;
   if (!Number.isSafeInteger(maxSteps) || maxSteps <= 0 || !Number.isFinite(tolerance) || tolerance < 0 || tolerance >= 1
-    || ![minimum, maximum, unit, span, steps].every(Number.isFinite) || span <= 0 || unit <= 0 || steps > maxSteps) throw new DocumentError("ResourceLimitExceeded", "Chart axis ticks exceed the finite preview scale or tick budget.");
+    || ![minimum, maximum, unit, steps].every(Number.isFinite) || maximum <= minimum || unit <= 0 || steps > maxSteps) throw new DocumentError("ResourceLimitExceeded", "Chart axis ticks exceed the finite preview scale or tick budget.");
   const values: number[] = [];
   for (let index = 0; index <= Math.floor(steps + tolerance); index++) {
-    const value = minimum + index * unit;
+    const offset = index * unit, value = Number.isFinite(offset) ? minimum + offset : (minimum / unit + index) * unit;
     if (!Number.isFinite(value) || index > 0 && value <= values[index - 1]!) throw new DocumentError("ResourceLimitExceeded", "Chart tick units do not advance at this numeric scale.");
     values.push(value);
   }

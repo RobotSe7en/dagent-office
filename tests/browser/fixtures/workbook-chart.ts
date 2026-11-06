@@ -7,6 +7,61 @@ import { WorkbookContentSources } from '../../../packages/render/src/workbook/co
 import { createWorkbookChartText } from '../../../packages/render/src/workbook/drawing-text.js';
 import type { WorkbookChartTextRole } from '../../../packages/render/src/workbook/drawing-text.js';
 
+export async function measureNativeFiniteCharts(snapshot: WorkbookSnapshot, bindings: readonly WorkbookChartBinding[]) {
+  const container = document.createElement('div'); document.body.append(container);
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 520, heightPt: 340 }), sources = new WorkbookContentSources(surface.document, snapshot);
+  const charts = snapshot.metadata.workbook.charts!, projection = sources.project(surface.source, charts.map(chart => chart.nodeId)), before = surface.source.innerHTML;
+  const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
+  try {
+    const results = [];
+    for (const chart of charts) {
+      const binding = bindings.find(binding => binding.chartId === chart.chartId)!;
+      if (binding.kind !== 'available') throw Error('Independent finite chart source is unavailable');
+      const result = layoutWorkbookChart(surface.view, projection.get(chart.nodeId)!, chart, binding, 480, 300, 'native-finite-' + chart.chartId, formatter); surface.view.append(result.element);
+      const svg = result.element.querySelector('svg')!, walker = surface.document.createTreeWalker(result.element, 0xffff_ffff); let actual = 1; while (walker.nextNode()) actual++;
+      results.push({ nodes: result.nodes, actual, invalid: /NaN|Infinity/.test(svg.outerHTML), points: svg.querySelectorAll('[data-sdk-chart-point=column],[data-sdk-chart-marker-role=point]').length,
+        values: binding.data.series.flatMap(series => series.values), line: svg.querySelector('[data-sdk-chart-line]')?.getAttribute('d') ?? null });
+      result.element.remove();
+    }
+    return { results, unchanged: before === surface.source.innerHTML };
+  } finally { formatter.dispose(); sources.dispose(); surface.dispose(); container.remove(); }
+}
+
+export async function measureWorkbookChartFiniteScales(snapshot: WorkbookSnapshot) {
+  const container = document.createElement('div'); document.body.append(container);
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 520, heightPt: 340 }), sources = new WorkbookContentSources(surface.document, snapshot);
+  const { minimum: _minimum, maximum: _maximum, majorUnit: _majorUnit, ...original } = snapshot.metadata.workbook.charts![0]!;
+  const source = sources.project(surface.source, [original.nodeId]).get(original.nodeId)!, before = surface.source.innerHTML;
+  const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem }), largest = Number.MAX_VALUE;
+  const cases = [
+    { values: [-1e308, 0, 1e308], axis: { minimum: -1e308, maximum: 1e308, majorUnit: 5e307 } },
+    { values: [-largest, 0, largest], axis: { minimum: -largest, maximum: largest, majorUnit: largest } },
+    { values: [-1e308, 0, 1e308], axis: {} }, { values: [0, 1e308, largest], axis: {} },
+    { values: [0, Number.MIN_VALUE, Number.MIN_VALUE * 2], axis: {} },
+    { values: [1e308, 1.4e308, 1.7e308], axis: { minimum: 1e308, majorUnit: 1e308 } },
+  ];
+  try {
+    const results = [];
+    for (const [index, item] of cases.entries()) for (const kind of ['line', 'column'] as const) for (const reverseValues of [false, true]) {
+      const chart = { ...original, ...item.axis, kind, reverseValues, titleVisible: false, showLabels: false, valueAxisCssClass: '', categoryAxisCssClass: '' };
+      const data: BasicChartData = { categories: ['Low', 'Middle', 'High'], series: chart.series.map(series => ({ seriesId: series.seriesId, name: 'Values', values: item.values })) };
+      const inspect = (element: HTMLElement, declared: number) => {
+        const walker = surface.document.createTreeWalker(element, 0xffff_ffff); let actual = 1; while (walker.nextNode()) actual++;
+        const svg = element.querySelector('svg')!, frame = svg.querySelector('rect')!;
+        const points = kind === 'column' ? [...svg.querySelectorAll<SVGRectElement>('[data-sdk-chart-point=column]')].map(rect => rect.y.baseVal.value)
+          : [...svg.querySelectorAll<SVGPathElement>('[data-sdk-chart-line]')].flatMap(path => [...path.getAttribute('d')!.matchAll(/[ML]([-+.\dEe]+)\s+([-+.\dEe]+)/g)].map(point => Number(point[2])));
+        return { actual, declared, invalid: /NaN|Infinity/.test(svg.outerHTML), top: frame.y.baseVal.value, height: frame.height.baseVal.value, points };
+      };
+      const direct = createWorkbookChartView(source, chart, data, 480, 300, 'finite-' + index + kind + reverseValues, { formatNumber: String }); surface.view.append(direct.element);
+      const basic = inspect(direct.element, direct.nodes); direct.element.remove();
+      const composed = layoutWorkbookChart(surface.view, source, chart, { kind: 'available', chartId: chart.chartId, data, titles: {}, diagnostics: [], valueFormats: data.series.map(series => series.values.map(() => undefined)), categoryNumbers: [null, null, null] }, 480, 300, 'finite-composed-' + index + kind + reverseValues, formatter);
+      surface.view.append(composed.element); const full = inspect(composed.element, composed.nodes); composed.element.remove();
+      results.push({ index, kind, reverseValues, basic, full });
+    }
+    return { results, unchanged: before === surface.source.innerHTML, cleaned: !surface.view.querySelector('[data-office-view=workbook-chart-font-measurement]') };
+  } finally { formatter.dispose(); sources.dispose(); surface.dispose(); container.remove(); }
+}
+
 export async function measureWorkbookChartAxes(snapshot: WorkbookSnapshot, plots: readonly BasicChartData[]) {
   const container = document.createElement('div'); document.body.append(container);
   const css = '.axis-ignore-position{--office-axis-position:t}.axis-label-high{--office-axis-label-position:high}.axis-label-low{--office-axis-label-position:low}.axis-label-nextTo{--office-axis-label-position:nextTo}';
