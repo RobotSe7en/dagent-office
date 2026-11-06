@@ -37,6 +37,8 @@ export interface BasicChartOptions {
    * Presentation callers retain the established automatic layout. */
   readonly layout?: BasicChartLayout;
   readonly orientation?: DrawingGradientOrientation;
+  readonly negativeColumns?: "white";
+  readonly showLabelsOverMaximum?: boolean;
   /** The owning format selects negative-value semantics explicitly. Value
    * labels keep their signed source numbers under the magnitude policy. */
   readonly pieValues?: "nonnegative" | "magnitude";
@@ -51,11 +53,18 @@ export type BasicChartNumberContext = { readonly kind: "value-axis"; readonly st
   | { readonly kind: "data-label"; readonly content: "value" | "percent"; readonly seriesId: string; readonly index: number; readonly style: CSSStyleDeclaration };
 export interface BasicChartRect { readonly x: number; readonly y: number; readonly width: number; readonly height: number }
 export interface BasicChartLayout { readonly plot: BasicChartRect; readonly title?: BasicChartRect; readonly legend?: BasicChartRect }
+export interface BasicChartScene {
+  readonly svg: SVGSVGElement; readonly serial: string; readonly width: number; readonly height: number;
+  readonly plot: BasicChartRect; readonly legend?: BasicChartRect;
+  readonly legendPosition: ChartAppearance["legend"];
+  readonly labels: readonly { readonly node: SVGTextElement; readonly outsidePie: boolean; readonly anchorX: number; readonly anchorY: number; readonly leader?: Readonly<Record<string, string | number>> }[];
+  readonly automaticCategoryLabels: boolean;
+}
 const defaultPalette = ["#4472c4", "#ed7d31", "#a5a5a5", "#ffc000", "#5b9bd5", "#70ad47"];
 // Native auto delegates its shape to the application. Keep one stable shape
 // per original series, even when other series or source points are hidden.
 const automaticMarkers = ["circle", "square", "diamond", "triangle", "x", "plus", "star", "dash", "dot"] as const;
-export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartAppearance>, data: BasicChartData, width: number, height: number, serial: string, account: (amount: number) => void, options: BasicChartOptions): void {
+export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartAppearance>, data: BasicChartData, width: number, height: number, serial: string, account: (amount: number) => void, options: BasicChartOptions): BasicChartScene {
   const svgElement: typeof createSvgElement = (document, tag, attributes) => { account(1); return createSvgElement(document, tag, attributes); };
   const document = node.ownerDocument, formatNumber = options.formatNumber, styles = new Map<string, CSSStyleDeclaration>();
   // Validated source CSS has no structural pseudo-classes. One probe per
@@ -82,7 +91,14 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     return resolvedColor(document, base, name, property(base, name, fallback));
   });
   const varyColors = options.varyColors ?? chart.kind === "pie";
-  const font = (s: CSSStyleDeclaration): Record<string, string> => ({ "font-size": String(parseFloat(s.fontSize) * 0.75), "font-weight": s.fontWeight, "font-style": s.fontStyle, fill: property(s, "--office-text-color") ? resolvedColor(document, s, "--office-text") : s.color });
+  const fontScale = (s: CSSStyleDeclaration): number => {
+    const value = Number(property(s, "--office-text-font-scale", "1"));
+    if (!Number.isFinite(value) || value < 0 || value > 1) throw new DocumentError("InvalidDocument", "A chart text font scale must be in [0,1].");
+    return value;
+  };
+  const font = (s: CSSStyleDeclaration): Record<string, string> => ({ "font-size": String(parseFloat(s.fontSize) * 0.75 * fontScale(s)), "font-weight": s.fontWeight, "font-style": s.fontStyle,
+    "letter-spacing": String((parseFloat(s.letterSpacing) || 0) * .75 * fontScale(s)), "word-spacing": String((parseFloat(s.wordSpacing) || 0) * .75 * fontScale(s)),
+    fill: property(s, "--office-text-color") ? resolvedColor(document, s, "--office-text") : s.color });
   const text = (value: string, x: number, y: number, s = base, anchor = "middle"): SVGTextElement => {
     options.accountText?.(value.length);
     const label = svgElement(document, "text", { x, y, "text-anchor": anchor, "dominant-baseline": "middle", ...font(s) });
@@ -99,7 +115,10 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     };
     const lines = value.split("\n");
     if (lines.length === 1) line(label, value);
-    else lines.forEach((value, index) => { const span = svgElement(document, "tspan", { x, dy: index ? "1.2em" : String(-(lines.length - 1) * parseFloat(s.fontSize) * 0.75 * 0.6) }); label.append(span); line(span, value); });
+    else {
+      const height = (parseFloat(s.lineHeight) || parseFloat(s.fontSize) * 1.2) * .75 * fontScale(s) * (1 - numeric(s, "--office-text-line-spacing-reduction", 0));
+      lines.forEach((value, index) => { const span = svgElement(document, "tspan", { x, dy: String(index ? height : -(lines.length - 1) * height / 2), "data-sdk-chart-text-line": "" }); label.append(span); line(span, value); });
+    }
     svg.append(label); return label;
   };
   const catStyle = style(chart.categoryAxisCssClass), valStyle = style(chart.valueAxisCssClass), gridStyle = style(chart.gridCssClass);
@@ -120,14 +139,22 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
   const top = options.layout?.plot.y ?? titleHeight + (chart.kind === "pie" ? 15 : 18) + (chart.legend === "top" ? legendBand : 0) + (categoryTop ? 16 : 0);
   const right = options.layout ? left + options.layout.plot.width : width - (chart.kind === "pie" ? 12 : valueRight ? 28 : 16) - (chart.legend === "right" ? legendBand : 0), bottom = options.layout ? top + options.layout.plot.height : height - (chart.kind === "pie" ? 8 : categoryTop ? 12 : 26) - (chart.legend === "bottom" ? legendBand : 0);
   const w = Math.max(1, right - left), h = Math.max(1, bottom - top);
+  const labels: BasicChartScene["labels"][number][] = [];
+  const scene: BasicChartScene = { svg, serial, width, height, plot: { x: left, y: top, width: w, height: h }, legendPosition: chart.legend, ...(options.layout?.legend ? { legend: options.layout.legend } : {}), labels,
+    automaticCategoryLabels: !property(catStyle, "--office-axis-label-skip") };
   svg.append(svgElement(document, "rect", { x: left, y: top, width: w, height: h, fill: svgFill(document, plotStyle, svg, serial + "-plot", { x: left, y: top, width: w, height: h }, "--office-fill", "none", account, options.orientation), ...strokeAttributes(document, plotStyle) }));
-  if (!data.series.length) return;
+  if (!data.series.length) return scene;
   const seriesStyle = new Map(data.series.map(series => [series.seriesId, style(seriesDefinitions.get(series.seriesId)?.cssClass)]));
   const pointStyle = (seriesId: string, index: number): CSSStyleDeclaration => {
     const series = seriesDefinitions.get(seriesId), point = pointDefinitions.get(pointKey(seriesId, sourceIndex(index)));
     return point ? style([series?.cssClass, point.cssClass].filter(Boolean).join(" ")) : seriesStyle.get(seriesId)!;
   };
-  const fill = (seriesId: string, index: number, s: CSSStyleDeclaration, bounds: DrawingGradientBounds): string => svgFill(document, s, svg, serial + "-paint-" + ++paintSerial, bounds, "--office-fill", palette[(varyColors ? sourceIndex(index) : seriesIndexes.get(seriesId)!) % palette.length]!, account, options.orientation);
+  const fill = (seriesId: string, index: number, s: CSSStyleDeclaration, bounds: DrawingGradientBounds, negativeColumn = false): string => {
+    const invert = property(s, "--office-invert-negative", "false");
+    if (invert !== "true" && invert !== "false") throw new DocumentError("InvalidDocument", "A chart negative-fill flag must be a boolean.");
+    if (negativeColumn && options.negativeColumns === "white" && invert === "true" && property(s, "--office-fill-kind") !== "none") return "#ffffff";
+    return svgFill(document, s, svg, serial + "-paint-" + ++paintSerial, bounds, "--office-fill", palette[(varyColors ? sourceIndex(index) : seriesIndexes.get(seriesId)!) % palette.length]!, account, options.orientation);
+  };
   const marker = (seriesId: string, index: number, x: number, y: number, role: "point" | "legend"): void => {
     const definition = seriesDefinitions.get(seriesId), override = index < 0 ? undefined : pointDefinitions.get(pointKey(seriesId, sourceIndex(index)));
     const requested = override?.marker ?? definition?.marker ?? "none", size = override?.markerSize ?? definition?.markerSize ?? 5;
@@ -144,8 +171,11 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     if (requested === "auto") group.dataset.sdkChartMarkerAuto = "true";
     if (index >= 0) group.dataset.sdkChartSourceIndex = String(sourceIndex(index));
   };
-  const label = (series: BasicChartData["series"][number], index: number, value: number, x: number, y: number, percent?: number, baseline?: number): void => {
+  const label = (series: BasicChartData["series"][number], index: number, value: number, x: number, y: number, percent?: number, baseline?: number, pieAnchor?: readonly [number, number]): void => {
     if (!chart.showLabels) return;
+    if (chart.kind !== "pie" && options.showLabelsOverMaximum === false && (value < scale.minimum || value > scale.maximum)) return;
+    if (chart.kind !== "pie" && options.showLabelsOverMaximum === true) y = Math.max(top, Math.min(bottom, y));
+    const anchorX = pieAnchor?.[0] ?? x, anchorY = pieAnchor?.[1] ?? y;
     const seriesDefinition = seriesDefinitions.get(series.seriesId), point = pointDefinitions.get(pointKey(series.seriesId, sourceIndex(index)));
     const s = style([chart.labelCssClass, seriesDefinition?.labelCssClass, point?.labelCssClass].filter(Boolean).join(" "));
     const contents = chart.labelContents ?? ["value"], separator = cssStringValue(property(s, "--office-label-separator", ", "));
@@ -164,6 +194,10 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     }
     const displayed = text(values.join(separator), x, y, s, anchor); displayed.dataset.sdkChartLabel = "data-label";
     displayed.dataset.seriesId = series.seriesId; displayed.dataset.pointIndex = String(sourceIndex(index));
+    const leaders = property(s, "--office-label-show-leader-lines", "false");
+    if (leaders !== "true" && leaders !== "false") throw new DocumentError("InvalidDocument", "A chart leader-line flag must be a boolean.");
+    labels.push({ node: displayed, outsidePie: chart.kind === "pie" && position === "outEnd", anchorX, anchorY,
+      ...(leaders === "true" ? { leader: strokeAttributes(document, s, "--office-label-leader-line", "#898989") } : {}) });
   };
   if (chart.kind === "pie") {
     const series = data.series[0]!;
@@ -185,7 +219,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
       const s = pointStyle(series.seriesId, index), appearance = { fill: fill(series.seriesId, index, s, bounds), ...strokeAttributes(document, s) };
       if (sweep >= Math.PI * 2 - 1e-9) svg.append(svgElement(document, "circle", { cx, cy, r: radius, ...appearance }));
       else svg.append(svgElement(document, "path", { d: `M${cx} ${cy}L${cx + radius * Math.cos(angle)} ${cy + radius * Math.sin(angle)}A${radius} ${radius} 0 ${sweep > Math.PI ? 1 : 0} 1 ${cx + radius * Math.cos(end)} ${cy + radius * Math.sin(end)}Z`, ...appearance }));
-      label(series, index, value, cx + radius * 0.65 * Math.cos(middle), cy + radius * 0.65 * Math.sin(middle), fraction); angle = end;
+      label(series, index, value, cx + radius * 0.65 * Math.cos(middle), cy + radius * 0.65 * Math.sin(middle), fraction, undefined, [cx + radius * Math.cos(middle), cy + radius * Math.sin(middle)]); angle = end;
     });
   } else {
     const { minimum, maximum, unit } = scale;
@@ -229,7 +263,8 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     if (chart.showCategoryAxis !== false) {
       const skip = Math.max(1, numeric(catStyle, "--office-axis-label-skip", 1)), tickSkip = Math.max(1, numeric(catStyle, "--office-axis-tick-skip", 1));
       const offset = 6 + 10 * numeric(catStyle, "--office-axis-label-offset", 100) / 100;
-      data.categories.forEach((category, index) => { if (index % skip === 0 && property(catStyle, "--office-axis-label-position") !== "none") text(options.formatCategory?.(index, catStyle) ?? category, x(index), top + axes!.categoryLabel * h + (categoryTop ? -offset : offset), catStyle).dataset.sdkChartLabel = "category-axis"; });
+      const alignment = property(catStyle, "--office-axis-label-align", "ctr"), anchor = alignment === "l" ? "start" : alignment === "r" ? "end" : "middle";
+      data.categories.forEach((category, index) => { if (index % skip === 0 && property(catStyle, "--office-axis-label-position") !== "none") text(options.formatCategory?.(index, catStyle) ?? category, x(index), top + axes!.categoryLabel * h + (categoryTop ? -offset : offset), catStyle, anchor).dataset.sdkChartLabel = "category-axis"; });
       for (let index = 0; index < category.tickCount; index++) {
         const position = category.tick(index);
         if (index % tickSkip === 0) tick(position, axisY, true, catStyle);
@@ -251,7 +286,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
         const px = x(index), py = y(value), point = pointStyle(series.seriesId, index);
         if (chart.kind === "column") {
           const bounds = { x: px - total / 2 + seriesIndex * bar * (1 - overlap), y: Math.min(py, baseline), width: bar, height: Math.abs(py - baseline) };
-          plotLayer.append(svgElement(document, "rect", { ...bounds, "data-sdk-chart-point": "column", fill: fill(series.seriesId, index, point, bounds), ...strokeAttributes(document, point) }));
+          plotLayer.append(svgElement(document, "rect", { ...bounds, "data-sdk-chart-point": "column", fill: fill(series.seriesId, index, point, bounds, value < 0), ...strokeAttributes(document, point) }));
         }
         else {
           segments.push((connected ? "L" : "M") + px + " " + py); connected = true;
@@ -269,6 +304,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     const legend = options.layout?.legend;
     let cursor = legend ? legend.x + (legend.width - total) / 2 : left + (w - total) / 2;
     entries.forEach((entry, index) => {
+      const previous = svg.lastChild;
       const x = horizontal ? cursor : legend ? legend.x + 8 : chart.legend === "left" ? 12 : right + 12; cursor += widths[index]!;
       const y = horizontal ? legend ? legend.y + legend.height / 2 : chart.legend === "top" ? top - 14 : height - 14
         : (legend ? legend.y + legend.height / 2 : top + h / 2) + (index - (entries.length - 1) / 2) * slot;
@@ -276,6 +312,11 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
       if (chart.kind === "line") { svg.append(svgElement(document, "line", { x1: x, y1: y, x2: x + keyWidth, y2: y, ...strokeAttributes(document, s, "--office-line", palette[(varyColors && entry.index >= 0 ? sourceIndex(entry.index) : seriesIndexes.get(entry.series.seriesId)!) % palette.length]!) })); marker(entry.series.seriesId, entry.index, x + keyWidth / 2, y, "legend"); }
       else svg.append(svgElement(document, "rect", { x, y: y - 3, width: keyWidth, height: 7, fill: fill(entry.series.seriesId, Math.max(0, entry.index), s, { x, y: y - 3, width: keyWidth, height: 7 }) }));
       text(entry.name, x + keyWidth + 3, y + 1, legendStyle, "start");
+      const group = svgElement(document, "g", { "data-sdk-chart-legend-entry": "" });
+      let child = previous?.nextSibling ?? svg.firstChild;
+      while (child) { const next = child.nextSibling; group.append(child); child = next; }
+      svg.append(group);
     });
   }
+  return scene;
 }

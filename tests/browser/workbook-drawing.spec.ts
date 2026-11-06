@@ -1,3 +1,4 @@
+import type { measureNativeChartLabels, measureControlledChartLabels } from './fixtures/workbook-chart-labels.js';
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -22,7 +23,7 @@ import { bindWorkbookChartData } from "../../packages/render/src/workbook/chart-
 import type { BasicChartData } from '../../packages/render/src/chart.js';
 import { modelChartSource, DEFAULT_CHART_READ_LIMITS } from '../../packages/render/src/workbook/chart-source.js';
 
-declare global { interface Window { workbookChartHost: { measureWorkbookChartAxes: typeof measureWorkbookChartAxes; measureWorkbookChartFiniteScales: typeof measureWorkbookChartFiniteScales; measureNativeFiniteCharts: typeof measureNativeFiniteCharts; measureWorkbookChartTextFonts: typeof measureWorkbookChartTextFonts; measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartGrid: typeof measureWorkbookChartGrid; measureWorkbookChartMarkers: typeof measureWorkbookChartMarkers; measureWorkbookChartColors: typeof measureWorkbookChartColors; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
+declare global { interface Window { workbookChartHost: { measureControlledChartLabels: typeof measureControlledChartLabels; measureNativeChartLabels: typeof measureNativeChartLabels; measureWorkbookChartAxes: typeof measureWorkbookChartAxes; measureWorkbookChartFiniteScales: typeof measureWorkbookChartFiniteScales; measureNativeFiniteCharts: typeof measureNativeFiniteCharts; measureWorkbookChartTextFonts: typeof measureWorkbookChartTextFonts; measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartGrid: typeof measureWorkbookChartGrid; measureWorkbookChartMarkers: typeof measureWorkbookChartMarkers; measureWorkbookChartColors: typeof measureWorkbookChartColors; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
 
 declare global { interface Window { workbookShadowHost: { measureWorkbookShadows: typeof measureWorkbookShadows; mountWorkbookShadowPixels: typeof mountWorkbookShadowPixels; disposeWorkbookShadowPixels: typeof disposeWorkbookShadowPixels } } }
 
@@ -243,6 +244,40 @@ for (const rtl of [false, true]) test(`native picture fills keep page orientatio
   await page.evaluate(() => window.workbookContentHost.disposeImageView()); await expect(gallery).toHaveCount(0);
 });
 test.beforeEach(async ({ page }) => { await page.goto('/'); await page.addScriptTag({ content: code }); });
+
+test('native label limits, signed white negative columns and pie leader lines use measured current-source geometry',async({page})=>{
+  for(const suffix of ['', '-producer']){
+    const model=openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-labels'+suffix+'.xlsx'),{documentId:'native-labels'}),{kind:'workbook'}),snapshot=model.snapshot();
+    const response=await modelChartSource(model).read({...DEFAULT_CHART_READ_LIMITS,documentId:snapshot.manifest.documentId,revision:0,chartIds:snapshot.metadata.workbook.charts!.map(chart=>chart.chartId)},new AbortController().signal);
+    const formatter=createWorkbookNumberFormatter({dateSystem:snapshot.metadata.workbook.dateSystem});
+    const bindings=bindWorkbookChartData(snapshot,response,formatter);formatter.dispose();
+    const result=await page.evaluate(({snapshot,bindings})=>window.workbookChartHost.measureNativeChartLabels(snapshot,bindings),{snapshot,bindings});
+    expect(result).toMatchObject({unchanged:true,cleaned:true});expect(result.results).toHaveLength(12);
+    for(const [index,item] of result.results.entries()){
+      expect(item.nodes).toBe(item.actual);expect(item.invalid).toBe(false);
+      for(const label of item.labels){expect(label.x).toBeGreaterThanOrEqual(-.01);expect(label.y).toBeGreaterThanOrEqual(-.01);expect(label.x+label.width).toBeLessThanOrEqual(480.01);expect(label.y+label.height).toBeLessThanOrEqual(300.01);}
+      if(!suffix&&index<6)expect(item.labels.map(label=>label.text)).toEqual(index%3===2?['-2','1','6']:['1']);
+      if(index===8||index===9){
+        expect(item.values[0]).toBe(-2);expect(item.bars[0]!.fill).toBe(suffix ? 'rgba(68,114,196,1)' : '#ffffff');
+        expect(item.negativePixel).toEqual(suffix?[68,114,196,255]:[255,255,255,255]);
+        expect(item.bars[0]!.y).toBeGreaterThan(item.bars[1]!.y);expect(item.labels.some(label=>label.text==='-2')).toBe(true);
+      }
+      if(!suffix&&index===10)expect(item.leaders).toBe(0);
+      if(!suffix&&index===11)expect(item.leaders).toBeGreaterThan(0);
+    }
+  }
+});
+
+test('chart text spacing, explicit axis alignment and wrapped legends use final measured fonts',async({page})=>{
+  const model=openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-labels.xlsx'),{documentId:'controlled-labels'}),{kind:'workbook'}),snapshot=model.snapshot();
+  const response=await modelChartSource(model).read({...DEFAULT_CHART_READ_LIMITS,documentId:snapshot.manifest.documentId,revision:0,chartIds:snapshot.metadata.workbook.charts!.map(chart=>chart.chartId)},new AbortController().signal),formatter=createWorkbookNumberFormatter({dateSystem:snapshot.metadata.workbook.dateSystem});
+  const bindings=bindWorkbookChartData(snapshot,response,formatter);formatter.dispose();
+  const result=await page.evaluate(({snapshot,bindings})=>window.workbookChartHost.measureControlledChartLabels(snapshot,bindings),{snapshot,bindings});
+  expect(result).toMatchObject({unchanged:true,cleaned:true,overrideFill:'rgba(68,114,196,1)'});
+  for(const item of result.results){expect(item.size).toBe('9');expect(Number(item.spacing)).toBeCloseTo(1,5);expect(item.lineOffsets).toEqual([-7.5,15]);expect(item.anchors).toEqual(Array(3).fill(item.alignment==='left'?'start':'end'));if(item.alignment==='left')expect(item.skipped).toBeGreaterThan(0);else expect(item.skipped).toBe(0);}
+  expect(result.legend.rect.height).toBeGreaterThan(28);
+  for(const box of result.legend.groups){expect(box.x).toBeGreaterThanOrEqual(result.legend.rect.x);expect(box.y).toBeGreaterThanOrEqual(result.legend.rect.y);expect(box.x+box.width).toBeLessThanOrEqual(result.legend.rect.x+result.legend.rect.width+.01);expect(box.y+box.height).toBeLessThanOrEqual(result.legend.rect.y+result.legend.rect.height+.01);}
+});
 
 test('finite chart endpoints and subnormal values retain bounded coordinates across direct and composed scales', async ({ page }) => {
   const snapshot = inputs.find(input => input.name === '07-three-charts')!.snapshot;

@@ -1,0 +1,60 @@
+import { createWorkbookNumberFormatter } from '@dagent-office/core';
+import type { WorkbookSnapshot } from '@dagent-office/core';
+import { createWorkbookSurface } from '../../../packages/render/src/workbook/surface.js';
+import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';
+import { layoutWorkbookChart } from '../../../packages/render/src/workbook/chart-layout.js';
+import type { WorkbookChartBinding } from '../../../packages/render/src/workbook/chart-values.js';
+
+export async function measureNativeChartLabels(snapshot: WorkbookSnapshot, bindings: readonly WorkbookChartBinding[]) {
+  const container=document.createElement('div');document.body.append(container);
+  const surface=await createWorkbookSurface(container,snapshot,{widthPt:520,heightPt:340}),sources=new WorkbookContentSources(surface.document,snapshot),formatter=createWorkbookNumberFormatter({dateSystem:snapshot.metadata.workbook.dateSystem});
+  const charts=snapshot.metadata.workbook.charts!,projection=sources.project(surface.source,charts.map(chart=>chart.nodeId)),before=surface.source.innerHTML;
+  try {
+    const results=[];
+    for(const chart of charts){
+      const binding=bindings.find(binding=>binding.chartId===chart.chartId)!;if(binding.kind!=='available')throw Error('Native labels need current values');
+      const result=layoutWorkbookChart(surface.view,projection.get(chart.nodeId)!,chart,binding,480,300,'labels-'+chart.chartId,formatter);surface.view.append(result.element);
+      const walker=surface.document.createTreeWalker(result.element,0xffff_ffff);let actual=1;while(walker.nextNode())actual++;
+      const svg=result.element.querySelector('svg')!;
+      const labels=[...svg.querySelectorAll<SVGTextElement>('[data-sdk-chart-label=data-label]')].map(node=>{const b=node.getBBox(),matrix=node.transform.baseVal.consolidate()?.matrix;return {text:node.textContent,index:Number(node.dataset.pointIndex),x:b.x+(matrix?.e??0),y:b.y+(matrix?.f??0),width:b.width,height:b.height};});
+      const bars=[...svg.querySelectorAll<SVGRectElement>('[data-sdk-chart-point=column]')].map(node=>({y:node.y.baseVal.value,height:node.height.baseVal.value,fill:node.getAttribute('fill'),stroke:node.getAttribute('stroke')}));
+      let negativePixel:number[]|undefined;
+      if(chart.kind==='column'&&chart.minimum!<0&&binding.data.series[0]!.values[0]!<0){
+        const bar=svg.querySelector<SVGRectElement>('[data-sdk-chart-point=column]')!,clone=svg.cloneNode(true) as SVGSVGElement;clone.setAttribute('width','480');clone.setAttribute('height','300');
+        const url=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(clone)],{type:'image/svg+xml'})),image=new Image();
+        try{image.src=url;await image.decode();const canvas=document.createElement('canvas');canvas.width=480;canvas.height=300;const context=canvas.getContext('2d')!;context.drawImage(image,0,0);negativePixel=[...context.getImageData(Math.floor(bar.x.baseVal.value+bar.width.baseVal.value/2),Math.floor(bar.y.baseVal.value+bar.height.baseVal.value/2),1,1).data];}
+        finally{image.removeAttribute('src');URL.revokeObjectURL(url);}
+      }
+      results.push({labels,bars,negativePixel,values:binding.data.series[0]!.values,leaders:svg.querySelectorAll('[data-sdk-chart-leader-line]').length,invalid:/NaN|Infinity/.test(svg.outerHTML),nodes:result.nodes,actual,plot:result.layout.plot,over:chart.showLabelsOverMaximum,kind:chart.kind});
+      result.element.remove();
+    }
+    return {results,unchanged:surface.source.innerHTML===before,cleaned:!surface.source.querySelector('[data-office-view=workbook-chart-label-measurement]')};
+  } finally{projection.dispose();sources.dispose();formatter.dispose();surface.dispose();container.remove();}
+}
+
+export async function measureControlledChartLabels(snapshot: WorkbookSnapshot, bindings: readonly WorkbookChartBinding[]) {
+  const container=document.createElement('div');document.body.append(container);
+  const css='.measured-label{font-family:"Liberation Sans";font-size:18pt;line-height:30pt;letter-spacing:2pt;--office-text-font-scale:0.5}.align-left{--office-axis-label-align:l}.align-right{--office-axis-label-align:r;--office-axis-label-skip:1}.keep-negative{--office-invert-negative:false}';
+  const surface=await createWorkbookSurface(container,{...snapshot,styles:[...snapshot.styles,{path:'measured-label.css',css}]},{widthPt:520,heightPt:340}),sources=new WorkbookContentSources(surface.document,snapshot),formatter=createWorkbookNumberFormatter({dateSystem:snapshot.metadata.workbook.dateSystem});
+  const charts=snapshot.metadata.workbook.charts!,projection=sources.project(surface.source,charts.map(chart=>chart.nodeId)),before=surface.source.innerHTML;
+  try{
+    const results=[];
+    for(const alignment of ['left','right']){
+      const original=charts[0]!,old=bindings.find(binding=>binding.chartId===original.chartId)!;if(old.kind!=='available')throw Error('No controlled chart');
+      const chart={...original,minimum:-4,maximum:8,labelCssClass:'measured-label',categoryAxisCssClass:'align-'+alignment,textCssClass:'measured-label',legend:'none' as const};
+      const binding={...old,data:{...old.data,categories:Array(3).fill('A long mixed category 中😀\nSecond line')}};
+      const result=layoutWorkbookChart(surface.view,projection.get(chart.nodeId)!,chart,binding,300,220,'controlled-'+alignment,formatter);surface.view.append(result.element);
+      const labels=[...result.element.querySelectorAll<SVGTextElement>('[data-sdk-chart-label=category-axis]')];
+      results.push({alignment,anchors:labels.map(node=>node.getAttribute('text-anchor')),skipped:labels.filter(node=>node.dataset.sdkChartAutomaticSkip).length,size:labels[0]!.getAttribute('font-size'),spacing:labels[0]!.getAttribute('letter-spacing'),lineOffsets:[...labels[0]!.querySelectorAll('[data-sdk-chart-text-line]')].map(node=>Number(node.getAttribute('dy')))});
+      result.element.remove();
+    }
+    const original=charts[8]!,binding=bindings.find(binding=>binding.chartId===original.chartId)!;if(binding.kind!=='available')throw Error('No negative source');
+    const overridden={...original,pointStyles:[{seriesId:original.series[0]!.seriesId,index:0,cssClass:'keep-negative'}]};
+    const negative=layoutWorkbookChart(surface.view,projection.get(original.nodeId)!,overridden,binding,480,300,'point-negative',formatter),overrideFill=negative.element.querySelector('[data-sdk-chart-point=column]')!.getAttribute('fill');negative.element.replaceChildren();
+    const pie=charts[10]!,old=bindings.find(binding=>binding.chartId===pie.chartId)!;if(old.kind!=='available')throw Error('No pie source');
+    const names=['Northern region quarterly\nActual delivery','Southern region quarterly\nActual delivery','Eastern region quarterly\nActual delivery'];
+    const legend=layoutWorkbookChart(surface.view,projection.get(pie.nodeId)!,{...pie,showLabels:false,legend:'bottom',legendCssClass:'measured-label'},{...old,data:{...old.data,categories:names}},360,260,'wrapped-legend',formatter);surface.view.append(legend.element);
+    const groups=[...legend.element.querySelectorAll<SVGGElement>('[data-sdk-chart-legend-entry]')].map(node=>{const b=node.getBBox(),m=node.transform.baseVal.consolidate()!.matrix;return{x:b.x+m.e,y:b.y+m.f,width:b.width,height:b.height};});
+    const result={results,overrideFill,legend:{rect:legend.layout.legend!,groups},unchanged:surface.source.innerHTML===before,cleaned:!surface.source.querySelector('[data-office-view=workbook-chart-label-measurement]')};legend.element.remove();return result;
+  }finally{projection.dispose();sources.dispose();formatter.dispose();surface.dispose();container.remove();}
+}

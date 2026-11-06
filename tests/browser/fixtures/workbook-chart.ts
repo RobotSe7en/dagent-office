@@ -441,7 +441,7 @@ export async function measureWorkbookChartTitleContents(snapshot: WorkbookSnapsh
 
 export async function measureWorkbookComposedChart(snapshot: WorkbookSnapshot, bindings: readonly WorkbookChartBinding[]) {
   const container = document.createElement('div'); document.body.append(container);
-  const css = '.axis-top{--office-axis-position:t;--office-axis-crosses:max}.axis-right{--office-axis-position:r;--office-axis-crosses:max}svg,text,div{font-size:99pt!important}';
+  const css = '.axis-top{--office-axis-position:t;--office-axis-crosses:max}.axis-right{--office-axis-position:r;--office-axis-crosses:max}svg,text{font-size:99pt!important}';
   const surface = await createWorkbookSurface(container, { ...snapshot, styles: [...snapshot.styles, { path: 'chart-layout-probe.css', css }] }, { widthPt: 600, heightPt: 300 });
   const sources = new WorkbookContentSources(surface.document, snapshot), formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
   try {

@@ -7,6 +7,7 @@ import { markViewNode } from "../view-nodes.js";
 import { resolvePreviewFontsInScope } from "../fonts.js";
 import type { FontResolution } from "../contracts.js";
 import { workbookDrawingOrientation } from "./drawing-view.js";
+import { layoutBasicChartLabels } from "../chart-label-layout.js";
 
 export interface WorkbookChartViewOptions {
   /** Required: the workbook compositor owns number formats, locale and dates.
@@ -18,9 +19,8 @@ export interface WorkbookChartViewOptions {
   readonly layout?: BasicChartLayout;
   readonly maxNodes?: number; readonly maxPoints?: number; readonly maxCodeUnits?: number;
 }
-export interface WorkbookChartViewDiagnostic {
-  readonly code: "negative-pie-magnitude"; readonly chartId: string; readonly negativePoints: number;
-}
+export type WorkbookChartViewDiagnostic = { readonly code: "negative-pie-magnitude"; readonly chartId: string; readonly negativePoints: number }
+  | { readonly code: "chart-label-overflow"; readonly chartId: string; readonly labels: number };
 export interface WorkbookChartView {
   readonly element: HTMLElement; readonly nodes: number; readonly peakNodes: number;
   readonly fonts: readonly FontResolution[];
@@ -53,8 +53,8 @@ export function createWorkbookChartView(source: HTMLElement, chart: DeepReadonly
   for (const series of data.series) { accountText(series.name.length); points += series.values.length; }
   if (points > maxPoints) throw new DocumentError("ResourceLimitExceeded", "Derived chart data exceeds its point budget.");
   const negativePoints = chart.kind === "pie" ? data.series.reduce((count, series) => count + (series.hidden ? 0 : series.values.filter(value => value !== null && value < 0).length), 0) : 0;
-  const diagnostics: readonly WorkbookChartViewDiagnostic[] = Object.freeze(negativePoints
-    ? [Object.freeze({ code: "negative-pie-magnitude" as const, chartId: chart.chartId, negativePoints })] : []);
+  const diagnostics: WorkbookChartViewDiagnostic[] = negativePoints
+    ? [Object.freeze({ code: "negative-pie-magnitude" as const, chartId: chart.chartId, negativePoints })] : [];
   const element = markViewNode(document.createElement("div")), probes: HTMLElement[] = [];
   const textRuns: BasicChartTextRun[] = []; let fontScope: HTMLElement | undefined, fontNodes = 0;
   element.dataset.officeView = "workbook-chart"; element.dataset.sourceNodeId = chart.nodeId;
@@ -75,7 +75,7 @@ export function createWorkbookChartView(source: HTMLElement, chart: DeepReadonly
       do { account(1); if (walker.currentNode.nodeType === 3) accountText(walker.currentNode.textContent!.length); } while (walker.nextNode());
       element.append(title);
     }
-    renderBasicChart(element, chart, data, widthPt, heightPt, id, account, { formatNumber: options.formatNumber, ...(options.formatCategory ? { formatCategory: options.formatCategory } : {}), pieValues: "magnitude", orientation: workbookDrawingOrientation(source),
+    const scene = renderBasicChart(element, chart, data, widthPt, heightPt, id, account, { formatNumber: options.formatNumber, ...(options.formatCategory ? { formatCategory: options.formatCategory } : {}), pieValues: "magnitude", negativeColumns: "white", showLabelsOverMaximum: chart.showLabelsOverMaximum ?? false, orientation: workbookDrawingOrientation(source),
       // MS-OI29500 §2.1.1571: specified multiple series disable by-point
       // variation, even when visibility later leaves only one rendered series.
       varyColors: (chart.varyColors ?? chart.kind === "pie") && chart.series.length === 1, accountText, onTextRun: run => { textRuns.push(run); }, ...(options.layout ? { layout: options.layout } : {}), ...(title ? { title } : {}), style(classes) {
@@ -98,7 +98,15 @@ export function createWorkbookChartView(source: HTMLElement, chart: DeepReadonly
       fonts = resolvePreviewFontsInScope(document, fontScope, "[data-office-script]");
       for (const { run, probe } of pairs) run.node.setAttribute("font-family", view.getComputedStyle(probe).fontFamily);
     }
-    return Object.freeze({ element, nodes: nodes - probes.length - fontNodes, peakNodes, diagnostics, fonts });
+    // A private shadow measurement keeps source-wide SVG/text selectors out
+    // while the final resolved fonts determine real label bounds.
+    account(2); const measurement = document.createElement("span");
+    measurement.style.cssText = "all:initial!important;position:absolute!important;visibility:hidden!important";
+    measurement.dataset.officeView = "workbook-chart-label-measurement";
+    measurement.attachShadow({ mode: "closed" }).append(element); source.append(measurement);
+    try { const labels = layoutBasicChartLabels(scene, account); if (labels) diagnostics.push(Object.freeze({ code: "chart-label-overflow", chartId: chart.chartId, labels })); }
+    finally { element.remove(); measurement.remove(); account(-2); }
+    return Object.freeze({ element, nodes: nodes - probes.length - fontNodes, peakNodes, diagnostics: Object.freeze(diagnostics), fonts });
   } catch (error) { element.replaceChildren(); throw error; }
   finally { fontScope?.remove(); for (const probe of probes) probe.remove(); }
 }

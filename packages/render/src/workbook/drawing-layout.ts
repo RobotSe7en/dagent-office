@@ -179,7 +179,7 @@ export async function layoutWorkbookDrawings(surface: Pick<WorkbookSurface, "sou
               { maxNodes: remaining(), maxCodeUnits: Math.max(1, limits.maxCodeUnits - units) });
             account(chart.nodes); textUnits(chart.element.textContent ?? ""); chart.element.style.overflow = "hidden"; content.append(chart.element);
             if (!partIndex) { fonts.push(...chart.fonts); usedFallbackLineMetrics ||= chart.usedFallbackLineMetrics;
-              diagnostics.push(...chart.diagnostics.filter(diagnostic => diagnostic.code === "negative-pie-magnitude"));
+              diagnostics.push(...chart.diagnostics.filter(diagnostic => diagnostic.code === "negative-pie-magnitude" || diagnostic.code === "chart-label-overflow"));
               if (chart.overflowingTitles.length) diagnostics.push({ code: "chart-title-overflow", nodeId: object.nodeId }); }
           }
         }
