@@ -1,3 +1,4 @@
+import { decodeTestPackage, type TestPackage } from './package-transport.js';
 import { openContentFixture as openDocument } from "../../content-fixture.js";
 import { createDocumentSession } from "@dagent-office/core";
 import type { ContentDocumentModel as DocumentModel, DocumentSession } from "@dagent-office/core";
@@ -10,7 +11,7 @@ export interface PaginationHost {
   view: DocumentPreview | DocumentInteractionView | DocumentTextEditor | undefined;
   interaction: DocumentInteractionView | undefined;
   errors: string[];
-  mount(files: [string, number[]][], mode?: "preview" | "edit" | "interaction", options?: DocumentPreviewOptions): Promise<void>;
+  mount(files: TestPackage, mode?: "preview" | "edit" | "interaction", options?: DocumentPreviewOptions): Promise<void>;
   layout(): DocumentRenderReport;
   updateFields(): Promise<void>;
 }
@@ -20,7 +21,7 @@ window.paginationHost = {
   model: undefined, session: undefined, view: undefined, interaction: undefined, errors: [],
   async mount(files, mode = "preview", options = {}) {
     this.view?.dispose(); this.session?.dispose(); this.session = undefined; this.interaction = undefined; this.errors = [];
-    this.model = openDocument(new Map(files.map(([path, bytes]) => [path, new Uint8Array(bytes)])));
+    this.model = openDocument(decodeTestPackage(files));
     if (mode === "preview") this.view = mountDocumentPreview(container, this.model, options);
     else {
       this.session = createDocumentSession(this.model);

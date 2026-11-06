@@ -1,3 +1,4 @@
+import { decodeTestPackage, type TestPackage } from './package-transport.js';
 import { createWorkbookNumberFormatter, DEFAULT_WORKBOOK_RULE_LIMITS, openDocument, readWorkbookRules } from '@dagent-office/core';
 import type { WorkbookDocumentMetadata } from '@dagent-office/core';
 import { createWorkbookSurface } from '../../../packages/render/src/workbook/surface.js';
@@ -12,8 +13,8 @@ import { maximumWorkbookSkew } from '../../../packages/render/src/workbook/skew-
 import { WorkbookCellTextCache } from '../../../packages/render/src/workbook/cell-text-cache.js';
 import { modelRuleSource } from '../../../packages/render/src/workbook/rule-source.js';
 
-export async function windowLayoutMeasurement(entries: readonly [string, number[]][], views: readonly { sheetId: string; viewport: WorkbookViewport; maxCellFragments?: number }[], rtl = false, cacheEnabled = false) {
-  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)]));
+export async function windowLayoutMeasurement(entries: TestPackage, views: readonly { sheetId: string; viewport: WorkbookViewport; maxCellFragments?: number }[], rtl = false, cacheEnabled = false) {
+  const files = decodeTestPackage(entries);
   const metadata = JSON.parse(new TextDecoder().decode(files.get('metadata.json'))) as WorkbookDocumentMetadata;
   for (const sheet of metadata.workbook.sheets) sheet.rightToLeft = rtl;
   files.set('metadata.json', new TextEncoder().encode(JSON.stringify(metadata)));
@@ -103,9 +104,9 @@ export async function windowLayoutMeasurement(entries: readonly [string, number[
   } finally { cache?.clear(); loader.dispose(); formatter.dispose(); surface.dispose(); container.remove(); }
 }
 
-export async function autoRowMeasurement(entries: readonly [string, number[]][], ids: readonly string[]) {
+export async function autoRowMeasurement(entries: TestPackage, ids: readonly string[]) {
   const { measureWorkbookAutoRows } = await import('../../../packages/render/src/workbook/auto-rows.js');
-  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)]));
+  const files = decodeTestPackage(entries);
   const model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
   const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem, hostLocale: 'zh-CN' });
   const container = document.createElement('div'); document.body.append(container);
@@ -139,9 +140,9 @@ export async function autoRowMeasurement(entries: readonly [string, number[]][],
   } finally { formatter.dispose(); surface.dispose(); container.remove(); }
 }
 
-export async function autoRowSourceSafety(entries: readonly [string, number[]][], hidden = false) {
+export async function autoRowSourceSafety(entries: TestPackage, hidden = false) {
   const { measureWorkbookAutoRows } = await import('../../../packages/render/src/workbook/auto-rows.js');
-  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
+  const files = decodeTestPackage(entries), model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
   const container = document.createElement('div'); document.body.append(container);
   const surface = await createWorkbookSurface(container, snapshot, { widthPt: 600, heightPt: 360 });
   const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem }), provider = modelWindowSource(model), sheetId = hidden ? snapshot.metadata.workbook.sheets[1]!.sheetId : snapshot.metadata.workbook.activeSheetId;

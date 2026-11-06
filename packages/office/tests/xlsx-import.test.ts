@@ -1,3 +1,4 @@
+import { dailyCi } from '../../../tests/ci-mode.js';
 import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DocumentError, openDocument } from "@dagent-office/core";
@@ -11,10 +12,10 @@ interface Expected { file: string; sheets: string[]; cellCount: number; formulaC
 const expected = JSON.parse(readFileSync("examples/xlsx/expected.json", "utf8")).cases as Expected[];
 
 describe("public native workbook import", () => {
-  it("opens all 32 independent and producer sources through unified openDocument with their complete feature package", async () => {
+  for (const scale of [false, true]) it.skipIf(dailyCi && scale)("opens all 32 independent and producer sources through unified openDocument with their complete feature package" + (scale ? " @scale" : " (small corpus)"), async () => {
     let count = 0;
-    for (const directory of ["examples/xlsx", "examples/xlsx/producer"]) for (const name of readdirSync(directory).filter(name => name.endsWith(".xlsx"))) {
-      const documentId = "public-native-" + ++count;
+    for (const directory of ["examples/xlsx", "examples/xlsx/producer"]) for (const name of readdirSync(directory).filter(name => name.endsWith(".xlsx") && name.startsWith("15-") === scale)) {
+      const documentId = "public-native-" + (scale ? "scale-" : "small-") + ++count;
       const files = await importXlsx(readFileSync(`${directory}/${name}`), { documentId });
       const model = openDocument(files, { kind: "workbook" }), snapshot = model.snapshot(), book = snapshot.metadata.workbook;
       expect(snapshot.manifest).toMatchObject({ documentId, kind: "workbook", revision: 0 });
@@ -44,7 +45,7 @@ describe("public native workbook import", () => {
       if (name.startsWith("15-")) { expect(snapshot.manifest.chunks).toHaveLength(40); expect(model.getCell("sheet-1", 9999, 19)?.value).toEqual({ type: "number", value: 3_400_152 }); }
       expect(openDocument(model.serialize(), { kind: "workbook" }).snapshot()).toEqual(snapshot);
     }
-    expect(count).toBe(32);
+    expect(count).toBe(scale ? 2 : 30);
   });
   it("rejects all 17 negative sources and late unmapped parts without exposing a partial package", async () => {
     const names = readdirSync("examples/xlsx/invalid").filter(name => name.endsWith(".xlsx")); expect(names).toHaveLength(17);

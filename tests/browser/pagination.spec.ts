@@ -1,3 +1,4 @@
+import { openSdkHost } from './sdk-host.js';
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
@@ -16,7 +17,7 @@ test.beforeAll(async () => {
   code = output.flatMap((item) => item.type === "chunk" ? [item.code] : []).join("\n");
 });
 async function mount(page: Page, files: DocumentPackage, mode: "preview" | "edit" | "interaction" = "preview", options: DocumentPreviewOptions = {}): Promise<void> {
-  await page.goto("/"); await page.addScriptTag({ type: "module", content: code }); await page.waitForFunction(() => !!window.paginationHost);
+  await openSdkHost(page); await page.addScriptTag({ type: "module", content: code }); await page.waitForFunction(() => !!window.paginationHost);
   await page.evaluate(({ entries, mode, options }) => window.paginationHost.mount(entries, mode, options), {
     entries: [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]), mode, options,
   });

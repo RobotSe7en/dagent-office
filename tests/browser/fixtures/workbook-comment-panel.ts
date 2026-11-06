@@ -1,3 +1,4 @@
+import { decodeTestPackage, type TestPackage } from './package-transport.js';
 import { createWorkbookCommentView } from '../../../packages/render/src/workbook/comment-view.js';
 import type { WorkbookCommentView } from '../../../packages/render/src/workbook/comment-view.js';
 import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';
@@ -5,8 +6,8 @@ import { createWorkbookSurface } from '../../../packages/render/src/workbook/sur
 import { openDocument } from '@dagent-office/core';
 import type { Annotation, WorkbookDocumentMetadata } from '@dagent-office/core';
 
-export async function mentionPanelMeasurement(entries: readonly [string, number[]][], checkBoxes = false) {
-  const model = openDocument(new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
+export async function mentionPanelMeasurement(entries: TestPackage, checkBoxes = false) {
+  const model = openDocument(decodeTestPackage(entries), { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
   const container = document.createElement('div'); document.body.append(container);
   const surface = await createWorkbookSurface(container, snapshot, { widthPt: 420, heightPt: 300 }), sources = new WorkbookContentSources(surface.document, snapshot);
   const results = [];
@@ -36,8 +37,8 @@ export async function mentionPanelMeasurement(entries: readonly [string, number[
   } finally { sources.dispose(); surface.dispose(); container.remove(); }
 }
 
-export async function commentPanelMeasurement(entries: readonly [string, number[]][], recovered: boolean) {
-  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), decoder = new TextDecoder(), encoder = new TextEncoder();
+export async function commentPanelMeasurement(entries: TestPackage, recovered: boolean) {
+  const files = decodeTestPackage(entries), decoder = new TextDecoder(), encoder = new TextEncoder();
   const annotations = JSON.parse(decoder.decode(files.get('annotations.json')!)) as Annotation[], metadata = JSON.parse(decoder.decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata;
   const first = annotations[0]!, native = metadata.workbook.comments!.find(comment => comment.annotationId === first.annotationId)!;
   if (recovered) {

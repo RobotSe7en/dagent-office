@@ -1,3 +1,4 @@
+import { decodeTestPackage, type TestPackage } from './package-transport.js';
 import { createWorkbookNumberFormatter, openDocument } from '@dagent-office/core';
 import type { WorkbookDocumentMetadata } from '@dagent-office/core';
 import { createWorkbookSurface } from '../../../packages/render/src/workbook/surface.js';
@@ -10,8 +11,8 @@ import { createWorkbookCommentText } from '../../../packages/render/src/workbook
 import { resolvePreviewFontsInScope } from '../../../packages/render/src/fonts.js';
 import { readWorkbookViewRange, selectWorkbookView } from '../../../packages/render/src/workbook/selection.js';
 
-export async function windowControllerMeasurement(entries: readonly [string, number[]][]) {
-  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), decoder = new TextDecoder(), encoder = new TextEncoder();
+export async function windowControllerMeasurement(entries: TestPackage) {
+  const files = decodeTestPackage(entries), decoder = new TextDecoder(), encoder = new TextEncoder();
   const metadata = JSON.parse(decoder.decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata, sheet = metadata.workbook.sheets[0]!;
   sheet.frozen = { rows: 2, columns: 1 };
   for (const object of metadata.workbook.objects ?? []) object.anchor = { kind: 'absolute', xPt: 12, yPt: 12, widthPt: object.kind === 'chart' ? 360 : 220, heightPt: object.kind === 'chart' ? 220 : 150 };
@@ -111,8 +112,8 @@ export async function windowControllerMeasurement(entries: readonly [string, num
   }
 }
 
-export async function annotationWindowMeasurement(entries: readonly [string, number[]][]) {
-  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)]));
+export async function annotationWindowMeasurement(entries: TestPackage) {
+  const files = decodeTestPackage(entries);
   const model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot(), initial = model.serialize(), sheet = snapshot.metadata.workbook.sheets[0]!;
   const container = document.createElement('div'); document.body.append(container);
   const surface = await createWorkbookSurface(container, snapshot, { widthPt: 420, heightPt: 300 });
@@ -134,8 +135,8 @@ export async function annotationWindowMeasurement(entries: readonly [string, num
   } finally { controller.dispose(); formatter.dispose(); surface.dispose(); container.remove(); }
 }
 
-export async function commentTextMeasurement(entries: readonly [string, number[]][], rich: boolean | 'singleAccounting' | 'doubleAccounting' = false) {
-  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), encoder = new TextEncoder(), decoder = new TextDecoder();
+export async function commentTextMeasurement(entries: TestPackage, rich: boolean | 'singleAccounting' | 'doubleAccounting' = false) {
+  const files = decodeTestPackage(entries), encoder = new TextEncoder(), decoder = new TextDecoder();
   if (rich) {
     const manifest = JSON.parse(decoder.decode(files.get('manifest.json')!)) as { content: string; styles: string[] };
     const template = document.createElement('template'); template.innerHTML = decoder.decode(files.get(manifest.content)!);

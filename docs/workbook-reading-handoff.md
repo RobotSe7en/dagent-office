@@ -1,6 +1,8 @@
 # 第三轮工作簿读取交接
 
-R3-01～08 的模型、原生读取和只读验收已完成。交付为分支 `feat/workbook-reading` 的 [PR #25](https://github.com/RobotSe7en/dagent-office/pull/25)；最终提交的四项 CI 全部成功后才合并，实际 CI／合并状态以该 PR 为准。完整范围和退出条件以 [iteration-3.md](iteration-3.md) 为准。
+R3-01～08 已完成并通过 [PR #25](https://github.com/RobotSe7en/dagent-office/pull/25) 合并，提交 `c1d8dea`。三位子智能体审查、8 项修复复核、最终 HEAD `d4f250e` 的四项 CI 全部成功；main 合并树与该 HEAD 相同。当前分支 `perf/browser-ci` 优先处理用户要求的整体 CI 优化，随后继续 R3-09～16 编辑计算和 R3-17～20 输出验收，任务编号不变。
+
+用户已选择容量用例移出日常 CI，保留阶段合并前完整验收和一万行目标，具体规则见[CI 执行](ci-performance.md)。
 
 ## 授权与约束
 

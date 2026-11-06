@@ -1,3 +1,5 @@
+import { encodeTestPackage } from './package-transport.js';
+import { openSdkHost } from './sdk-host.js';
 import { openContentFixture as openDocument } from "../content-fixture.js";
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -17,9 +19,9 @@ test.beforeAll(async () => {
   const output = Array.isArray(result) ? result[0]!.output : "output" in result ? result.output : [];
   code = output.flatMap(item => item.type === "chunk" ? [item.code] : []).join("\n");
 });
-const entries = (files: DocumentPackage): [string, number[]][] => [...files].map(([path, bytes]) => [path, [...bytes]]);
+const entries = encodeTestPackage;
 async function mount(page: Page, files: DocumentPackage, options: DocumentPreviewOptions = {}): Promise<void> {
-  await page.goto("/"); await page.addScriptTag({ type: "module", content: code }); await page.waitForFunction(() => !!window.presentationHost);
+  await openSdkHost(page); await page.addScriptTag({ type: "module", content: code }); await page.waitForFunction(() => !!window.presentationHost);
   await page.evaluate(args => window.presentationHost.mount(args.files, args.options), { files: entries(files), options });
 }
 const fixture = (name: string, producer = false): DocumentPackage => importPptx(new Uint8Array(readFileSync(`examples/pptx/${producer ? "producer/" : ""}${name}.pptx`)), { documentId: "ppt-preview" });

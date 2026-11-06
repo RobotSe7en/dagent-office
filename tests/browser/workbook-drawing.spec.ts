@@ -1,3 +1,4 @@
+import { openSdkHost } from './sdk-host.js';
 import type { measureChartClipping } from './fixtures/workbook-chart-clipping.js';
 import type { measureChartNumberFields, measureNativeChartLabels, measureControlledChartLabels } from './fixtures/workbook-chart-labels.js';
 import { expect, test } from '@playwright/test';
@@ -244,7 +245,7 @@ for (const rtl of [false, true]) test(`native picture fills keep page orientatio
   }
   await page.evaluate(() => window.workbookContentHost.disposeImageView()); await expect(gallery).toHaveCount(0);
 });
-test.beforeEach(async ({ page }) => { await page.goto('/'); await page.addScriptTag({ content: code }); });
+test.beforeEach(async ({ page }) => { await openSdkHost(page); await page.addScriptTag({ content: code }); });
 
 test('finite out-of-axis segments retain intersections, blank gaps and clipped marker ink without unbounded coordinates',async({page})=>{
   const snapshot=inputs.find(input=>input.name==='07-three-charts')!.snapshot,result=await page.evaluate(snapshot=>window.workbookChartHost.measureChartClipping(snapshot),snapshot);

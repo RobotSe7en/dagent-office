@@ -1,3 +1,5 @@
+import { encodeTestPackage } from './package-transport.js';
+import { openSdkHost } from './sdk-host.js';
 import { expect, test } from '@playwright/test';
 import { openDocument } from '@dagent-office/core';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -9,9 +11,9 @@ import { importXlsx } from '../../packages/office/src/xlsx-import.js';
 import type * as fixture from './fixtures/workbook-preview.js';
 declare global { interface Window { workbookPreview: typeof fixture } }
 let code = '';
-const inputs: { name: string; files: [string, number[]][] }[] = [];
-let readAheadFiles: [string, number[]][] = [];
-let sparseRowFiles: [string, number[]][] = [];
+const inputs: { name: string; files: [string, string][] }[] = [];
+let readAheadFiles: [string, string][] = [];
+let sparseRowFiles: [string, string][] = [];
 test.beforeAll(async () => {
   const bundle = await build({ configFile: false, build: { write: false, minify: false, lib: { entry: fileURLToPath(new URL('./fixtures/workbook-preview.ts', import.meta.url)), formats: ['iife'], name: 'WorkbookPreview' } } });
   if (!Array.isArray(bundle) && !('output' in bundle)) throw Error('Unexpected preview bundle');
@@ -21,14 +23,14 @@ test.beforeAll(async () => {
     sheet.rowDimensions = [{ from: 4, to: 6, hidden: true }];
   });
   const sparseRows = scalarWorkbook([0, 128].map(row => ({ row, column: 0, value: { type: 'number' as const, value: row + 1 } })));
-  sparseRowFiles = [...sparseRows.serialize()].map(([path, bytes]) => [path, [...bytes]]);
-  readAheadFiles = [...dense.serialize()].map(([path, bytes]) => [path, [...bytes]]);
+  sparseRowFiles = encodeTestPackage(sparseRows.serialize());
+  readAheadFiles = encodeTestPackage(dense.serialize());
   for (const name of ['09-classic-notes', '10-modern-threads', '08-images-shapes']) {
     const files = await importXlsx(readFileSync(`examples/xlsx/${name}.xlsx`), { documentId: 'public-preview' });
-    inputs.push({ name, files: [...files].map(([path, bytes]) => [path, [...bytes]]) });
+    inputs.push({ name, files: encodeTestPackage(files) });
   }
 });
-test.beforeEach(async ({ page }) => { await page.goto('/'); await page.addScriptTag({ content: code }); });
+test.beforeEach(async ({ page }) => { await openSdkHost(page); await page.addScriptTag({ content: code }); });
 for (const rtl of [false, true]) test(`public workbook preview selects cells and switches sheets without serializing source in ${rtl ? 'RTL' : 'LTR'}`, async ({ page }) => {
   for (const input of inputs.filter(input => input.name !== '08-images-shapes')) {
     const start = await page.evaluate(({ files, rtl }) => window.workbookPreview.mountPublicPreview(files, rtl), { files: input.files, rtl });
@@ -64,7 +66,7 @@ test('initial failures release their candidate and a host retry can satisfy the 
 
 test('public read-only validation shows native prompts and the actual violating value without rewriting source', async ({ page }) => {
   const files = await importXlsx(readFileSync('examples/xlsx/06-rules-validation.xlsx'), { documentId: 'validation-preview' });
-  const entries = [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]);
+  const entries = encodeTestPackage(files);
   await page.evaluate(entries => window.workbookPreview.mountPublicPreview(entries, false), entries);
   for (let row = 2; row <= 8; row++) {
     const point = await page.evaluate(row => window.workbookPreview.previewAction('point-E-' + row), row) as { x: number; y: number };
@@ -80,7 +82,7 @@ test('public read-only validation shows native prompts and the actual violating 
 });
 test('failed or late rule responses preserve the last complete public window', async ({ page }) => {
   const files = await importXlsx(readFileSync('examples/xlsx/06-rules-validation.xlsx'), { documentId: 'rules-lifecycle' });
-  const result = await page.evaluate(entries => window.workbookPreview.ruleWindowLifecycle(entries), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  const result = await page.evaluate(entries => window.workbookPreview.ruleWindowLifecycle(entries), encodeTestPackage(files));
   expect(result).toEqual({ failures: ['InvalidDocument', 'RevisionConflict'], cancelled: true, aborted: true, retainedLatest: true });
 });
 
@@ -88,7 +90,7 @@ test('worksheet-wide prompt suppression retains current validation status and so
   const files = new Map(await importXlsx(readFileSync('examples/xlsx/06-rules-validation.xlsx'), { documentId: 'quiet-validation' }));
   const metadata = JSON.parse(new TextDecoder().decode(files.get('metadata.json')!)); metadata.workbook.sheets[0].disableValidationPrompts = true;
   files.set('metadata.json', new TextEncoder().encode(JSON.stringify(metadata)));
-  await page.evaluate(entries => window.workbookPreview.mountPublicPreview(entries, false), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  await page.evaluate(entries => window.workbookPreview.mountPublicPreview(entries, false), encodeTestPackage(files));
   const point = await page.evaluate(() => window.workbookPreview.previewAction('point-E-3')) as { x: number; y: number }; await page.mouse.click(point.x, point.y);
   expect(await page.evaluate(() => window.workbookPreview.previewInspect())).toMatchObject({ validation: '当前值不符合验证规则。', value: '99', unchanged: true,
     report: { diagnostics: [expect.objectContaining({ code: 'validation-invalid', row: 2, column: 4 })] } });
@@ -173,7 +175,7 @@ test('cancelled automatic rule reads release typography before a late custom res
 });
 
 const matrixCases=JSON.parse(readFileSync('examples/xlsx/expected.json','utf8')) as {cases:{file:string;sheets:string[];values?:Record<string,number|boolean|string>}[]};
-for(const producer of [false,true])for(const sample of matrixCases.cases)test(`${producer?'producer':'source'} ${sample.file} completes the public reading matrix without changing its package`,async({page},testInfo)=>{
+for(const producer of [false,true])for(const sample of matrixCases.cases)test(`${producer?'producer':'source'} ${sample.file} completes the public reading matrix without changing its package`,{tag:sample.file.startsWith('15-')?'@scale':[]},async({page},testInfo)=>{
   if(sample.file.startsWith('15-'))test.slow();
   const files=await importXlsx(readFileSync('examples/xlsx/'+(producer?'producer/':'')+sample.file),{documentId:'matrix-'+sample.file.slice(0,2)});
   const model=openDocument(files,{kind:'workbook'}),snapshot=model.snapshot(),saved=model.serialize();

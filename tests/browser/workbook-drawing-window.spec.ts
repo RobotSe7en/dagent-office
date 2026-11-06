@@ -1,3 +1,5 @@
+import { encodeTestPackage } from './package-transport.js';
+import { openSdkHost } from './sdk-host.js';
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -11,7 +13,7 @@ import type { nativeNoteMeasurement } from './fixtures/workbook-native-notes.js'
 
 declare global { interface Window { workbookDrawingWindow: { nativeNoteMeasurement: typeof nativeNoteMeasurement; drawingWindowMeasurement: typeof drawingWindowMeasurement; gradientWindowMeasurement: typeof gradientWindowMeasurement; currentChartWindowMeasurement: typeof currentChartWindowMeasurement; windowControllerMeasurement: typeof windowControllerMeasurement; annotationWindowMeasurement: typeof annotationWindowMeasurement; commentTextMeasurement: typeof commentTextMeasurement; commentPanelMeasurement: typeof commentPanelMeasurement; mentionPanelMeasurement: typeof mentionPanelMeasurement; annotationControlsAction: typeof annotationControlsAction; mountAnnotationControls: typeof mountAnnotationControls } } }
 let code = '';
-const inputs: { name: string; files: [string, number[]][] }[] = [];
+const inputs: { name: string; files: [string, string][] }[] = [];
 const comments: typeof inputs = [];
 test.beforeAll(async () => {
   const bundle = await build({ configFile: false, build: { write: false, minify: false, lib: { entry: fileURLToPath(new URL('./fixtures/workbook-drawing-window.ts', import.meta.url)), formats: ['iife'], name: 'WorkbookDrawingWindow' } } });
@@ -19,14 +21,14 @@ test.beforeAll(async () => {
   const output = Array.isArray(bundle) ? bundle.flatMap(part => part.output) : bundle.output; code = output.filter(part => part.type === 'chunk').map(part => part.code).join('\n');
   for (const prefix of ['', 'producer/']) for (const name of ['07-three-charts', '08-images-shapes']) {
     const files = await importXlsx(readFileSync(`examples/xlsx/${prefix}${name}.xlsx`), { documentId: 'drawing-window' });
-    inputs.push({ name: prefix + name, files: [...files].map(([path, bytes]) => [path, [...bytes]]) });
+    inputs.push({ name: prefix + name, files: encodeTestPackage(files) });
   }
   for (const prefix of ['', 'producer/']) for (const name of ['09-classic-notes', '10-modern-threads']) {
     const files = await importXlsx(readFileSync(`examples/xlsx/${prefix}${name}.xlsx`), { documentId: 'comment-window' });
-    comments.push({ name: prefix + name, files: [...files].map(([path, bytes]) => [path, [...bytes]]) });
+    comments.push({ name: prefix + name, files: encodeTestPackage(files) });
   }
 });
-test.beforeEach(async ({ page }) => { await page.goto('/'); await page.addScriptTag({ content: code }); });
+test.beforeEach(async ({ page }) => { await openSdkHost(page); await page.addScriptTag({ content: code }); });
 test('visible native note boxes preserve selected VML appearance and exact source text in all frozen panes', async ({ page }) => {
   const files = comments.find(input => input.name === '09-classic-notes')!.files;
   for (const rtl of [false, true]) for (const vertical of ['top', 'center', 'bottom', 'justify', 'distributed']) {
@@ -52,20 +54,20 @@ test('hidden notes stay in the panel and native visible VML sources open without
   }
   for(const suffix of ['', '-producer']) {
     const files=await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-dual-note-boxes-visible'+suffix+'.xlsx'),{documentId:'visible-native'});
-    const result=await page.evaluate(entries=>window.workbookDrawingWindow.nativeNoteMeasurement(entries),[...files].map(([path,bytes])=>[path,[...bytes]] as [string,number[]]));
+    const result=await page.evaluate(entries=>window.workbookDrawingWindow.nativeNoteMeasurement(entries),encodeTestPackage(files));
     expect(result).toMatchObject({unchanged:true,preserved:true,released:true});expect(result.actual).toBe(result.nodes);expect(result.notes.length).toBeGreaterThan(0);expect(result.notes.every(note=>note.exact)).toBe(true);
   }
 });
 test('native chart labels and points use current formulas while wrong cell and chart caches remain unchanged', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-formulas.xlsx'), { documentId: 'current-chart-window' });
-  const result = await page.evaluate(entries => window.workbookDrawingWindow.currentChartWindowMeasurement(entries), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  const result = await page.evaluate(entries => window.workbookDrawingWindow.currentChartWindowMeasurement(entries), encodeTestPackage(files));
   expect(result).toMatchObject({ objects: 1, unavailable: 0, sourceUnchanged: true, released: true });
   expect(result.text).toContain('Current values'); expect(result.text).toContain('Point0'); expect(result.text).not.toContain('Cache');
   expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: 'error-point', detail: '#DIV/0!' }));
 });
 test('modern mentions retain exact text and people in a non-interactive panel while conflicting locations require recovery', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-comment-mentions.xlsx'), { documentId: 'mention-panel' });
-  const result = await page.evaluate(entries => window.workbookDrawingWindow.mentionPanelMeasurement(entries), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  const result = await page.evaluate(entries => window.workbookDrawingWindow.mentionPanelMeasurement(entries), encodeTestPackage(files));
   expect(result).toMatchObject({ unchanged: true, released: true }); expect(result.results).toHaveLength(5);
   expect(result.results.every(item => item.exact && item.interactive === 0)).toBe(true);
   expect(result.results.flatMap(item => item.labels)).toEqual([...Array(3).fill('提及：复核人'), '提及：只被提及']);
@@ -75,7 +77,7 @@ test('modern mentions retain exact text and people in a non-interactive panel wh
 });
 test('revision UIDs remain opaque source metadata while compatibility identity conflicts have a visible recovery explanation', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-comment-uids.xlsx'), { documentId: 'uid-panel' });
-  const result = await page.evaluate(entries => window.workbookDrawingWindow.mentionPanelMeasurement(entries), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  const result = await page.evaluate(entries => window.workbookDrawingWindow.mentionPanelMeasurement(entries), encodeTestPackage(files));
   expect(result).toMatchObject({ unchanged: true, released: true });
   expect(result.results.map(item => item.status)).toEqual(['resolved', 'needs_reanchor', 'open']);
   expect(result.results.every(item => item.exact && item.interactive === 0 && !item.labels.length)).toBe(true);
@@ -127,7 +129,7 @@ test('fixed gradient fields retain native directions while source scaling and Ca
   const cases = JSON.parse(readFileSync('docs/evidence/xlsx-gradient-rotation.json', 'utf8')).cases as { rotation: number; rotates: boolean | null; angle: number; scaled: boolean; sourcePdf: { normalizedVector: number[]; aspect: number }; producerPdf: { normalizedVector: number[]; aspect: number } }[];
   for (const suffix of ['', '-producer']) {
     const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-gradient-rotation' + suffix + '.xlsx'), { documentId: 'gradient-window' });
-    const result = await page.evaluate(entries => window.workbookDrawingWindow.gradientWindowMeasurement(entries), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    const result = await page.evaluate(entries => window.workbookDrawingWindow.gradientWindowMeasurement(entries), encodeTestPackage(files));
     expect(result).toMatchObject({ unchanged: true, released: true }); expect(result.results).toHaveLength(32);
     for (const [index, item] of result.results.entries()) {
       expect(item.nodes).toBe(item.actual); expect(item.objects).toBe(1); expect(item.vector.every(Number.isFinite)).toBe(true);
@@ -248,7 +250,7 @@ for (const rtl of [false, true]) test(`annotation entries open read-only comment
 test('classic dual-box notes use VML while preserving alternate properties and reporting differences without changing body offsets', async ({ page }) => {
   for (const name of ['conflict', 'same-anchor', 'visible', 'commentPr-only']) {
     const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-dual-note-boxes-' + name + '.xlsx'), { documentId: 'dual-box-panel-' + name });
-    const result = await page.evaluate(entries => window.workbookDrawingWindow.mentionPanelMeasurement(entries, true), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    const result = await page.evaluate(entries => window.workbookDrawingWindow.mentionPanelMeasurement(entries, true), encodeTestPackage(files));
     expect(result).toMatchObject({ unchanged: true, released: true }); expect(result.results).toHaveLength(1);
     const item = result.results[0]!; expect(item.exact).toBe(true); expect(item.interactive).toBe(0); expect(item.nodes).toBe(item.actualNodes);
     expect(item.errors).toEqual(['ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded']);

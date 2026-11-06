@@ -1,3 +1,4 @@
+import { openSdkHost } from './sdk-host.js';
 import { expect, test } from '@playwright/test';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -14,24 +15,24 @@ test.beforeAll(async () => {
   }
   workerCode = await bundle('workbook-read-worker'); hostCode = await bundle('workbook-read-host');
 });
-test.beforeEach(async ({ page }) => { await page.goto('/'); await page.addScriptTag({ content: hostCode }); });
+test.beforeEach(async ({ page }) => { await openSdkHost(page); await page.addScriptTag({ content: hostCode }); });
 test('native XLSX pictures and charts stay in a host Worker and feed the public preview through bounded reads', async ({ page }) => {
   for (const name of ['07-three-charts', '08-images-shapes']) {
-    const result = await page.evaluate(({ code, bytes, name }) => window.workbookReadHost.nativeWorkerRead(code, bytes, name, false), { code: workerCode, bytes: [...readFileSync(`examples/xlsx/${name}.xlsx`)], name });
+    const result = await page.evaluate(({ code, bytes, name }) => window.workbookReadHost.nativeWorkerRead(code, bytes, name, false), { code: workerCode, bytes: readFileSync(`examples/xlsx/${name}.xlsx`).toString('base64'), name });
     expect(result).toMatchObject({ frozen: true, retained: true, detachedInput: true, failures: [] });
     expect(['InvalidOperation', 'OperationCancelled']).toContain(result.closed); expect(result.progress).toBeGreaterThan(0);
     expect(result.first.objectFragmentCount).toBeGreaterThan(0); expect(result.first.documentId).toBe(name); expect(result.largestReplyUnits).toBeLessThan(1024 * 1024);
   }
 });
 test('native conditional and validation states reach the public preview through the host Worker', async ({ page }) => {
-  const result = await page.evaluate(({ code, bytes }) => window.workbookReadHost.nativeWorkerRead(code, bytes, 'worker-rules', false), { code: workerCode, bytes: [...readFileSync('examples/xlsx/06-rules-validation.xlsx')] });
+  const result = await page.evaluate(({ code, bytes }) => window.workbookReadHost.nativeWorkerRead(code, bytes, 'worker-rules', false), { code: workerCode, bytes: readFileSync('examples/xlsx/06-rules-validation.xlsx').toString('base64') });
   expect(result).toMatchObject({ frozen: true, retained: true, failures: [], first: { diagnostics: [expect.objectContaining({ code: 'validation-invalid', row: 2, column: 4 })] } });
   expect(result.ruleStates!.cells.map(cell => cell.validation?.state)).toEqual(['valid', 'invalid', 'valid', 'valid', 'valid', 'valid', 'valid']);
   expect(result.largestReplyUnits).toBeLessThan(1024 * 1024);
 });
-test('10,000 actual XLSX rows open and scroll through the production read transport without moving full cell chunks to the main thread', async ({ page, browserName }, info) => {
+test('10,000 actual XLSX rows open and scroll through the production read transport without moving full cell chunks to the main thread', { tag: '@scale' }, async ({ page, browserName }, info) => {
   test.setTimeout(120_000);
-  const bytes = [...readFileSync('examples/xlsx/15-ten-thousand-rows.xlsx')];
+  const bytes = readFileSync('examples/xlsx/15-ten-thousand-rows.xlsx').toString('base64');
   const profile = process.env.DAGENT_WORKBOOK_CPU_PROFILE && browserName === 'chromium' ? await page.context().newCDPSession(page) : undefined;
   if (profile) { await profile.send('Profiler.enable'); await profile.send('Profiler.start'); }
   const result = await page.evaluate(({ code, bytes }) => window.workbookReadHost.nativeWorkerRead(code, bytes, 'ten-thousand-native', true), { code: workerCode, bytes });

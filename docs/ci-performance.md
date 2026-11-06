@@ -1,0 +1,41 @@
+# CI 执行与阶段验收
+
+本轮优化保留一万行支持目标。用户已选择：真实容量用例移出日常 CI，阶段合并前单独全量验收。其余功能、安全、失败、取消、像素及外部 Office 检查保持；约 5 分钟为日常 CI 关键路径优化目标，实际结果须用 GitHub runner 验证。
+
+## 原始记录和诊断
+
+[PR #25 最终 CI](https://github.com/RobotSe7en/dagent-office/actions/runs/42223783754) 的浏览器作业共 2732 秒：Word/PPT 707 秒，现代工作簿 1299 秒，旧 Word/PPT 179 秒，旧工作簿 431 秒。工程检查 190 秒、Office 352 秒、Safari 112 秒。逐步骤记录见[基线](evidence/ci-performance-baseline.json)。
+
+[本机 A/B](evidence/browser-test-overhead.json)在同一浏览器、固定 viewport、独立 context 内各执行相同六次网格渲染，每组四次并轮换顺序。完整首页与完整 trace 平均 1.94 秒；空白宿主与 API trace 0.99 秒。840KB 输入的逐字节数组传输约 3.58 秒，Base64 约 0.041 秒。后者只测测试协议传输；这些诊断不替代 CI 前后对比，也不证明 SDK 导入耗时变化。
+
+复现时先独占启动生产预览端口 4173，再运行：
+
+```sh
+PLAYWRIGHT_BROWSERS_PATH="$PWD/.playwright" node scripts/probe-browser-test-overhead.mjs
+```
+
+## 日常模式
+
+- SDK 与 Playground 只构建一次，同一 workflow 的后续 job 下载该次不可变产物；类型、边界及测试照常检查。本地 `pnpm check` 也只构建一次。
+- 浏览器按四个引擎和 Word／PPT／工作簿分为独立 job，每个仍 `workers:1`。文件集合保留原矩阵；固定资源验收继续独占顺序执行。
+- SDK 探针使用同源空白宿主，实际 Playground、远程 HTTP 和工作台流程保留原首页。每例仍新建独立 context/page，不复用模型或 Worker。
+- 成功用例不采集完整 trace。首次失败保留错误与截图，随后的一次诊断重跑记录完整 trace；`failOnFlakyTests:true` 使首次失败仍导致 CI 失败。固定资源性能测试明确禁止重试及截图，保留首次失败样本。
+- 测试包使用 Base64 跨协议传输，SDK 仍接收独立字节数组，原始来源和容量断言不变。
+- Office 按 Word／PPT／工作簿拆分，官方归档缓存按固定 SHA-256 复用；安装器仍核验摘要、重新解包并核对版本。独立打包与实际 Office 编辑／重开保留。
+- 每个浏览器分片输出逐用例 JSON 和执行摘要，Office 输出各命令耗时。汇总 job 只有所有分片成功才成功。
+
+`DAGENT_OFFICE_CI_MODE=daily` 只用于日常 CI。六项原生容量单元检查延后；浏览器 `@scale` 用例通过显式过滤延后，原断言保留。工作簿实际打开、切换、失败保留和授权资源仍有小样例覆盖。原生样例的字节、规范及负例审计继续执行；日常 Calc 重开省略一万行项。默认本地检查和参考记录命令保持完整模式，`--record` 永远不产生部分参考基线。
+
+## 阶段合并前
+
+阶段 PR 加上 `stage-acceptance` 标签，或手动运行 CI 并开启 `stage_acceptance`。最终 HEAD 必须同时通过全部日常检查和 `workbook-scale`。标签保留期间的新提交会重新验收，旧 HEAD 的结果不能代替。
+
+专项运行完整原生 XLSX 参考、六项真实容量单元检查、四引擎 128 份公开来源／生产者矩阵及其余实际大数据集成用例，然后依次执行四逻辑 CPU／8GiB／无交换资源验收。20 万实际单元格、2 万公式、40 块、首屏、交互、DOM、内存和取消门槛保持。[阶段脚本](../scripts/workbook-scale-acceptance.mjs)核对实际执行、当前包摘要及全部资源条件后才写成功记录。
+
+```sh
+pnpm check:workbook-scale
+```
+
+前提为 Linux/systemd/cgroup v2、至少四个可用逻辑 CPU、已固定的四个浏览器、字体及 LibreOffice 环境。脚本需要无交互 sudo 创建临时受限服务；不更改持久系统服务。
+
+正式结果位于 `.cache/workbook-scale-acceptance/` 并作为 CI artifact 上传。汇总器的 `--output <file>` 写入显式结果路径；原 `--record` 入口仍用于明确更新已提交证据，普通 CI 不改写参考基线。

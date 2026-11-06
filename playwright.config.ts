@@ -5,7 +5,10 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   forbidOnly: Boolean(process.env.CI),
-  retries: 0,
+  // Passing tests need no trace capture. A retry records the complete failure
+  // context; even a passing retry remains a failed gate.
+  retries: 1,
+  failOnFlakyTests: true,
   snapshotPathTemplate: "{testDir}/{testFilePath}-snapshots/{arg}-{platform}{ext}",
   projects: [
     { name: "chromium", use: { browserName: "chromium", ...(process.env.DAGENT_OFFICE_BROWSER_EXECUTABLE ? { launchOptions: { executablePath: process.env.DAGENT_OFFICE_BROWSER_EXECUTABLE } } : {}) } },
@@ -19,7 +22,8 @@ export default defineConfig({
       : {}),
     baseURL: "http://127.0.0.1:4173",
     viewport: { width: 1280, height: 800 },
-    trace: "retain-on-failure",
+    trace: "on-first-retry",
+    screenshot: "only-on-failure",
   },
   webServer: {
     command: "pnpm --filter @dagent-office/playground preview --port 4173 --strictPort",

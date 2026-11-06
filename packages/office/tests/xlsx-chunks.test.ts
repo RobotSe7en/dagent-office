@@ -1,3 +1,4 @@
+import { dailyCi } from '../../../tests/ci-mode.js';
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -24,7 +25,7 @@ describe("bounded native cell-to-chunk assembly", () => {
     for (const descriptor of chunks.descriptors) expect(createHash("sha256").update(chunks.files.get(descriptor.path)!).digest("hex")).toBe(descriptor.sha256);
     expect(utf8Bytes("a😀禰󠄀é\r\n")).toBe(encoder.encode("a😀禰󠄀é\r\n").length);
   });
-  it("maps all 200,000 actual native cell records to 40 chunks and reopens typed formula caches", async () => {
+  it.skipIf(dailyCi)("maps all 200,000 actual native cell records to 40 chunks and reopens typed formula caches @scale", async () => {
     const nativeLimits = { ...DEFAULT_DOCUMENT_READ_LIMITS, maxFileBytes: 32 * 1024 * 1024, maxNodes: 2_000_000 }, control = new ImportControl();
     const opc = openOpc(readFileSync("examples/xlsx/15-ten-thousand-rows.xlsx"), { limits: nativeLimits }), part = "xl/worksheets/sheet1.xml", shared = createSharedWorkbookFormulas();
     const styles = { defaultCell: () => ({ cssClass: "cell-default", numberFormatId: "general" }), run: () => undefined, cell: () => ({ cssClass: "cell-default", numberFormatId: "general" }), tabStyle: () => "cell-default" };

@@ -1,3 +1,4 @@
+import { openSdkHost } from './sdk-host.js';
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
@@ -13,7 +14,7 @@ const report = ["manifest.json", "content.html", "styles.css", "metadata.json", 
 ] as [string, number[]]);
 const exampleProposal = JSON.parse(readFileSync(new URL("../../examples/report.proposal.json", import.meta.url), "utf8")) as EditProposal;
 async function mount(page: Page): Promise<void> {
-  await page.goto("/"); await page.addScriptTag({ type: "module", content: hostCode });
+  await openSdkHost(page); await page.addScriptTag({ type: "module", content: hostCode });
   await page.waitForFunction(() => !!window.workbenchHost); await page.evaluate((files) => window.workbenchHost.mount(files), report);
 }
 async function generated(page: Page): Promise<DocumentInteractionRequest> {

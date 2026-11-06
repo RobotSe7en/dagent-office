@@ -102,3 +102,8 @@ Office CI 固定使用官方 LibreOffice 25.8.1.1 归档，`node scripts/install
 Office CI 另显式运行 `node scripts/install-acceptance-fonts.mjs`，从固定 Debian 归档解出与参考相同的 Noto Sans／Serif CJK Regular/Bold 和 Color Emoji，仅保存到 `.cache/acceptance-fonts/`。归档及逐字体 SHA-256 都要通过，来源、版本与许可见[验收字体清单](../scripts/fixtures/acceptance-fonts.json)。生成的 Fontconfig 配置在当前作业内替换这些字体的解析，系统文件不变；本地使用时显式设置脚本输出的 `FONTCONFIG_FILE`。CI 会通过 `GITHUB_ENV` 传给后续步骤，日志／配置／许可保留在该缓存目录。此为开发验收设置，SDK 不下载字体。
 
 LibreOffice 24.2 在含未使用自定义布局的新建文稿重存中会生成重复原生对象 ID；此结果在隔离 Ubuntu 24.04 中复现，SDK 继续明确拒绝，不放宽重复身份校验。本轮外部打开、实际编辑和重存验收以固定的 25.8.1.1 为准，其他 Office 版本需单独验证。
+
+
+## CI 运行方式
+
+整体检查、日常容量分流、阶段合并前完整验收、失败追踪和耗时报告见 [CI 执行](ci-performance.md)。

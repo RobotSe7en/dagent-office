@@ -1,3 +1,4 @@
+import { openSdkHost } from './sdk-host.js';
 import { readFileSync,readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
@@ -16,7 +17,7 @@ test.beforeAll(async()=>{
   const output=Array.isArray(result)?result[0]!.output:"output" in result?result.output:[];code=output.flatMap(item=>item.type==="chunk"?[item.code]:[]).join("\n");
 });
 function example():DocumentPackage{return new Map([...readdirSync("examples/presentation").filter(name=>/\.(json|html|css)$/.test(name)),"assets/sample.png"].map(path=>[path,new Uint8Array(readFileSync("examples/presentation/"+path))]));}
-async function mount(page:Page,files:DocumentPackage=createPresentation({documentId:"editor"})):Promise<void>{await page.goto("/");await page.addScriptTag({type:"module",content:code});await page.waitForFunction(()=>!!window.presentationEditorHost);await page.evaluate(files=>window.presentationEditorHost.mount(files),[...files].map(([path,bytes])=>[path,[...bytes]] as [string,number[]]));}
+async function mount(page:Page,files:DocumentPackage=createPresentation({documentId:"editor"})):Promise<void>{await openSdkHost(page);await page.addScriptTag({type:"module",content:code});await page.waitForFunction(()=>!!window.presentationEditorHost);await page.evaluate(files=>window.presentationEditorHost.mount(files),[...files].map(([path,bytes])=>[path,[...bytes]] as [string,number[]]));}
 async function settled(page:Page):Promise<void>{await page.evaluate(()=>window.presentationEditorHost.view!.ready);}
 const frame=(page:Page)=>page.frameLocator("iframe");
 

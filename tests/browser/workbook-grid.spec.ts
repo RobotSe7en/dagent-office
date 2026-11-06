@@ -1,3 +1,5 @@
+import { encodeTestPackage } from './package-transport.js';
+import { openSdkHost } from './sdk-host.js';
 import { expect, test } from "@playwright/test";
 import { openDocument } from "@dagent-office/core";
 import type { WorkbookDocumentMetadata } from "@dagent-office/core";
@@ -68,7 +70,7 @@ test.beforeAll(async () => {
   const output = Array.isArray(bundle) ? bundle.flatMap(part => part.output) : bundle.output;
   code = output.filter(part => part.type === 'chunk').map(part => part.code).join('\n');
 });
-test.beforeEach(async ({ page }) => { await page.goto('/'); await page.addScriptTag({ content: code }); await page.waitForFunction(() => !!window.workbookGridHost); });
+test.beforeEach(async ({ page }) => { await openSdkHost(page); await page.addScriptTag({ content: code }); await page.waitForFunction(() => !!window.workbookGridHost); });
 
 for (const rtl of [false, true]) test(`merged frozen fragments preserve full content geometry in ${rtl ? 'RTL' : 'LTR'}`, async ({ page }) => {
   const report = await page.evaluate(async rtl => {
@@ -158,7 +160,7 @@ test('owned font probes retain identical glyph diagnostics without repeating ras
 test('a cached window validates every new source and invalidates text when a provider changes its content', async ({ page }) => {
   const files = await importXlsx(readFileSync('examples/xlsx/01-values-text.xlsx'), { documentId: 'cached-window-source' });
   const result = await page.evaluate(entries => window.workbookGridHost.windowLayoutMeasurement(entries,
-    [{ sheetId: 'sheet-1', viewport: { widthPt: 350, heightPt: 120, scrollLeftPt: 0, scrollTopPt: 0 } }], false, true), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 350, heightPt: 120, scrollLeftPt: 0, scrollTopPt: 0 } }], false, true), encodeTestPackage(files));
   expect(result.unchanged).toBe(true); expect(result.cacheSafety).toHaveLength(1);
   expect(result.cacheSafety[0]).toMatchObject({ rejected: 'InvalidDocument', rejectedNumeric: 'InvalidDocument', retained: true, changedText: '新的😀禰󠄀', leaked: 0 });
   expect(result.cacheSafety[0]!.offsets.map(part => part[2]).join('')).toBe('新的😀禰󠄀');
@@ -557,7 +559,7 @@ for (const rtl of [false, true]) test(`native table styles compose per property 
   const model = openDocument(files, { kind: 'workbook' }), sheets = model.snapshot().metadata.workbook.sheets;
   const report = await page.evaluate(async ({ entries, sheets, rtl }) => window.workbookGridHost.windowLayoutMeasurement(entries,
     sheets.map(sheetId => ({ sheetId, viewport: { widthPt: 240, heightPt: 180, scrollLeftPt: 0, scrollTopPt: 0 } })), rtl),
-  { entries: [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]), sheets: sheets.map(sheet => sheet.sheetId), rtl });
+  { entries: encodeTestPackage(files), sheets: sheets.map(sheet => sheet.sheetId), rtl });
   expect(report.unchanged).toBe(true);
   const byName = new Map(sheets.map((sheet, index) => [sheet.name, report.results[index]!]));
   const cell = (name: string, row = 0, column = 0) => byName.get(name)!.cells.find(cell => cell.row === row && cell.column === column)!;
@@ -604,7 +606,7 @@ for (const rtl of [false, true]) test(`custom table differentials retain clearin
     .named-region{font-weight:bold;font-size:11pt;color:#800080;--office-cell-foreground-color:#800080;--office-cell-foreground-tint:0}
   `));
   const report = await page.evaluate(({ entries, rtl }) => window.workbookGridHost.windowLayoutMeasurement(entries,
-    [{ sheetId: 'sheet-1', viewport: { widthPt: 240, heightPt: 180, scrollLeftPt: 0, scrollTopPt: 0 } }], rtl), { entries: [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]), rtl });
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 240, heightPt: 180, scrollLeftPt: 0, scrollTopPt: 0 } }], rtl), { entries: encodeTestPackage(files), rtl });
   const result = report.results[0]!, cell = (row: number, column: number) => result.cells.find(cell => cell.row === row && cell.column === column)!;
   expect(cell(0, 0).color).toBe('rgb(204, 0, 0)'); expect(cell(0, 0).weight).toBe('400'); expect(cell(0, 1).weight).toBe('400');
   expect(result.fillPaints.find(cell => cell.row === 0 && cell.column === 0)!.color).toBe('transparent');
@@ -618,7 +620,7 @@ for (const rtl of [false, true]) test(`composed native workbook windows retain v
   for (const name of ['01-values-text', '02-styles-dates', '03-structure']) {
     const files = await importXlsx(readFileSync(`examples/xlsx/${name}.xlsx`), { documentId: 'composed-' + name });
     const report = await page.evaluate(async ({ entries, rtl }) => window.workbookGridHost.windowLayoutMeasurement(entries,
-      [{ sheetId: 'sheet-1', viewport: { widthPt: 680, heightPt: 230, scrollLeftPt: 0, scrollTopPt: 0 } }], rtl), { entries: [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]), rtl });
+      [{ sheetId: 'sheet-1', viewport: { widthPt: 680, heightPt: 230, scrollLeftPt: 0, scrollTopPt: 0 } }], rtl), { entries: encodeTestPackage(files), rtl });
     expect(report.unchanged).toBe(true);
     const result = report.results[0]!;
     expect(result.detached).toBe(true); expect(result.same).toBe(true); expect(result.retainedSources).toBe(0); expect(result.retainedMeasurements).toBe(0);
@@ -644,7 +646,7 @@ for (const rtl of [false, true]) test(`composed native workbook windows retain v
 test('composed native rotated cells share text fill and border geometry inside clipped windows', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-rotated-cells.xlsx'), { documentId: 'rotated-window' });
   const report = await page.evaluate(async entries => window.workbookGridHost.windowLayoutMeasurement(entries,
-    ['sheet-3', 'sheet-8', 'sheet-13', 'sheet-18'].map(sheetId => ({ sheetId, viewport: { widthPt: 240, heightPt: 120, scrollLeftPt: 50, scrollTopPt: 18 } }))), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    ['sheet-3', 'sheet-8', 'sheet-13', 'sheet-18'].map(sheetId => ({ sheetId, viewport: { widthPt: 240, heightPt: 120, scrollLeftPt: 50, scrollTopPt: 18 } }))), encodeTestPackage(files));
   expect(report.unchanged).toBe(true);
   for (const result of report.results) {
     const cell = result.cells.find(cell => cell.row === 1 && cell.column === 1)!;
@@ -668,7 +670,7 @@ for (const rtl of [false, true]) test(`composed merged fills and text keep full 
     'div{width:999pt!important;height:888pt!important}svg{width:777pt!important;height:666pt!important}'));
   const widthPt = 350, heightPt = 120;
   const report = await page.evaluate(async ({ entries, rtl, widthPt, heightPt }) => window.workbookGridHost.windowLayoutMeasurement(entries,
-    [{ sheetId: 'sheet-1', viewport: { widthPt, heightPt, scrollLeftPt: 30, scrollTopPt: 15 } }], rtl), { entries: [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]), rtl, widthPt, heightPt });
+    [{ sheetId: 'sheet-1', viewport: { widthPt, heightPt, scrollLeftPt: 30, scrollTopPt: 15 } }], rtl), { entries: encodeTestPackage(files), rtl, widthPt, heightPt });
   const result = report.results[0]!, merged = result.cells.filter(cell => cell.row === 1 && cell.column === 1);
   expect(report.unchanged).toBe(true); expect(merged).toHaveLength(4); expect(result.widthPt).toBeCloseTo(widthPt, 1); expect(result.heightPt).toBeCloseTo(heightPt, 1);
   expect(result.gridLines).toBe(4);
@@ -690,7 +692,7 @@ test('composed rotated merge uses its covered perimeter for text and fill coupli
     'tr[data-row="1"] td[data-column="1"]{--office-cell-text-rotation:45;--office-cell-border-left-kind:none;--office-cell-border-right-kind:none;--office-cell-border-top-kind:none;--office-cell-border-bottom-kind:none;--office-cell-fill-kind:solid;--office-cell-fill-color:#ddeeff}' +
     'tr[data-row="5"] td[data-column="1"]{--office-cell-border-bottom-kind:thin;--office-cell-border-bottom-color:#778899}'));
   const report = await page.evaluate(async entries => window.workbookGridHost.windowLayoutMeasurement(entries,
-    [{ sheetId: 'sheet-1', viewport: { widthPt: 350, heightPt: 120, scrollLeftPt: 30, scrollTopPt: 15 } }]), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 350, heightPt: 120, scrollLeftPt: 30, scrollTopPt: 15 } }]), encodeTestPackage(files));
   const result = report.results[0]!, merged = result.cells.filter(cell => cell.row === 1 && cell.column === 1);
   expect(merged).toHaveLength(4);
   for (const cell of merged) expect(cell.shape.topOffsetPt).toBeCloseTo(cell.shape.heightPt, 6);
@@ -701,7 +703,7 @@ test('composed rotated merge uses its covered perimeter for text and fill coupli
 test('composed native plain and rich text formats preserve source styles and fields through affixes, repetition and stacking', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-text-formats.xlsx'), { documentId: 'text-format-window' });
   const report = await page.evaluate(async entries => window.workbookGridHost.windowLayoutMeasurement(entries,
-    [{ sheetId: 'sheet-1', viewport: { widthPt: 300, heightPt: 400, scrollLeftPt: 0, scrollTopPt: 0 } }]), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 300, heightPt: 400, scrollLeftPt: 0, scrollTopPt: 0 } }]), encodeTestPackage(files));
   const result = report.results[0]!, cell = (row: number) => result.cells.find(cell => cell.row === row && cell.column === 0)!;
   expect(result.same).toBe(true); expect(result.detached).toBe(true); expect(report.unchanged).toBe(true);
   expect(cell(0).text).toBe('ID 001😀'); expect(cell(0).offsets.map(part => part[2]).join('')).toBe('001😀');
@@ -727,7 +729,7 @@ test('composed native plain and rich text formats preserve source styles and fie
 for (const rtl of [false, true]) test(`composed native conditional rules and validation use current source in ${rtl ? 'RTL' : 'LTR'}`, async ({ page }) => {
   const files = await importXlsx(readFileSync('examples/xlsx/06-rules-validation.xlsx'), { documentId: 'rules-window' });
   const report = await page.evaluate(async ({ entries, rtl }) => window.workbookGridHost.windowLayoutMeasurement(entries,
-    [{ sheetId: 'sheet-1', viewport: { widthPt: 420, heightPt: 220, scrollLeftPt: 0, scrollTopPt: 0 } }], rtl), { entries: [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]), rtl });
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 420, heightPt: 220, scrollLeftPt: 0, scrollTopPt: 0 } }], rtl), { entries: encodeTestPackage(files), rtl });
   const result = report.results[0]!, cell = (row: number, column: number) => result.cells.find(cell => cell.row === row && cell.column === column)!;
   expect(report.unchanged).toBe(true); expect(result.retainedSources).toBe(0); expect(result.same).toBe(true);
   // Independent source DXF 0 is FF9C0006; DXF 1 changes only fill.
@@ -743,7 +745,7 @@ for (const rtl of [false, true]) test(`composed native conditional rules and val
 test('native color scales preserve constant and repeated threshold paints from independent PDFs', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-color-scales.xlsx'), { documentId: 'scale-paints' });
   const report = await page.evaluate(async entries => window.workbookGridHost.windowLayoutMeasurement(entries,
-    Array.from({ length: 8 }, (_, index) => ({ sheetId: `sheet-${index + 1}`, viewport: { widthPt: 150, heightPt: 110, scrollLeftPt: 0, scrollTopPt: 0 } }))), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    Array.from({ length: 8 }, (_, index) => ({ sheetId: `sheet-${index + 1}`, viewport: { widthPt: 150, heightPt: 110, scrollLeftPt: 0, scrollTopPt: 0 } }))), encodeTestPackage(files));
   const red = 'rgb(255, 0, 0)', yellow = 'rgb(255, 255, 0)', green = 'rgb(0, 255, 0)';
   const expected = [[red, red, red], [red, red, red], [red, 'rgb(128, 127, 0)', green], [green, green, green], [green, green, green], [red, yellow, green], [red, red, green], [red, green, green]];
   for (const [index, result] of report.results.entries()) expect(result.fillPaints.filter(cell => cell.column === 0 && cell.row < 3).map(cell => cell.color)).toEqual(expected[index]);
@@ -763,7 +765,7 @@ for (const rtl of [false, true]) test(`conditional property priority overrides t
   files.set('metadata.json', encoder.encode(JSON.stringify(metadata)));
   files.set('styles.css', encoder.encode(decoder.decode(files.get('styles.css')!) + '.cf-first{font-weight:normal;color:#112233}.cf-last{font-style:italic;font-weight:bold;color:#ff0000;background-color:#ffff00}.cf-unknown{color:#ff00ff}'));
   const report = await page.evaluate(({ entries, rtl }) => window.workbookGridHost.windowLayoutMeasurement(entries,
-    [{ sheetId: 'sheet-1', viewport: { widthPt: 240, heightPt: 160, scrollLeftPt: 0, scrollTopPt: 0 } }], rtl), { entries: [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]), rtl });
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 240, heightPt: 160, scrollLeftPt: 0, scrollTopPt: 0 } }], rtl), { entries: encodeTestPackage(files), rtl });
   const result = report.results[0]!, cell = (row: number, column: number) => result.cells.find(cell => cell.row === row && cell.column === column)!;
   expect(cell(0, 0).weight).toBe('400'); expect(cell(0, 0).color).toBe('rgb(17, 34, 51)');
   expect(cell(0, 1).color).toBe('rgb(255, 255, 255)');
@@ -780,7 +782,7 @@ test('rules display current formula values while preserving deliberately wrong n
   metadata.workbook.sheets[0]!.conditionalRules = [{ ruleId: 'current', kind: 'expression', expression: '=TRUE', priority: 1, stopIfTrue: false, origin: { row: 0, column: 4 }, ranges: [{ from: { row: 0, column: 4 }, to: { row: 14, column: 4 } }] }];
   files.set('metadata.json', encoder.encode(JSON.stringify(metadata)));
   const report = await page.evaluate(entries => window.workbookGridHost.windowLayoutMeasurement(entries,
-    [{ sheetId: 'sheet-1', viewport: { widthPt: 420, heightPt: 300, scrollLeftPt: 0, scrollTopPt: 0 } }]), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 420, heightPt: 300, scrollLeftPt: 0, scrollTopPt: 0 } }]), encodeTestPackage(files));
   const cells = report.results[0]!.cells.filter(cell => cell.column === 4 && cell.row <= 14), expected = JSON.parse(readFileSync('docs/evidence/xlsx-scalar-semantics.json', 'utf8')).cases;
   for (const cell of cells) {
     const value = expected[cell.row].expected;
@@ -799,7 +801,7 @@ test('conditional font attributes override rich runs while text-format explicit 
   files.set('metadata.json', encoder.encode(JSON.stringify(metadata)));
   files.set('styles.css', encoder.encode(decoder.decode(files.get('styles.css')!) + '.conditional-font{font-weight:normal;color:#112233}'));
   const report = await page.evaluate(entries => window.workbookGridHost.windowLayoutMeasurement(entries,
-    [{ sheetId: 'sheet-1', viewport: { widthPt: 300, heightPt: 400, scrollLeftPt: 0, scrollTopPt: 0 } }]), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 300, heightPt: 400, scrollLeftPt: 0, scrollTopPt: 0 } }]), encodeTestPackage(files));
   const cells = report.results[0]!.cells;
   expect(cells.find(cell => cell.row === 10 && cell.column === 0)!.runs.map(run => [run.color, run.weight, run.style])).toEqual([['rgb(255, 0, 0)', '400', 'normal'], ['rgb(255, 0, 0)', '400', 'italic']]);
   expect(cells.find(cell => cell.row === 11 && cell.column === 0)!.runs.map(run => [run.color, run.weight, run.style])).toEqual([['rgb(17, 34, 51)', '400', 'normal'], ['rgb(17, 34, 51)', '400', 'italic']]);
@@ -857,7 +859,7 @@ test('native whole-value fills match independent fixed-font PDF words in both wo
   const selected = reference.map((value, index) => ({ value, index })).filter(({ value }) => value.group === 'horizontal' && value.horizontal === 'fill');
   const report = await page.evaluate(({ entries, ids }) => window.workbookGridHost.windowLayoutMeasurement(entries,
     ids.map(sheetId => ({ sheetId, viewport: { widthPt: 280, heightPt: 130, scrollLeftPt: 0, scrollTopPt: 0 } }))),
-    { entries: [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]), ids: selected.map(({ index }) => 'sheet-' + (index + 1)) });
+    { entries: encodeTestPackage(files), ids: selected.map(({ index }) => 'sheet-' + (index + 1)) });
   for (const [index, result] of report.results.entries()) {
     const expected = selected[index]!.value.words.filter(word => !['Origin', 'After'].includes(word.text)).map(word => word.text).join('');
     expect(result.cells.find(cell => cell.row === 1 && cell.column === 1)!.text).toBe(expected);
@@ -868,7 +870,7 @@ test('native whole-value fills match independent fixed-font PDF words in both wo
 test('native text spills through true blanks and styled blanks while values, formulas and merges block it', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-cell-flow.xlsx'), { documentId: 'native-text-overflow' });
   const report = await page.evaluate(entries => window.workbookGridHost.windowLayoutMeasurement(entries,
-    [1, 2, 3, 4, 5].map(index => ({ sheetId: 'sheet-' + index, viewport: { widthPt: 280, heightPt: 120, scrollLeftPt: 0, scrollTopPt: 0 } }))), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    [1, 2, 3, 4, 5].map(index => ({ sheetId: 'sheet-' + index, viewport: { widthPt: 280, heightPt: 120, scrollLeftPt: 0, scrollTopPt: 0 } }))), encodeTestPackage(files));
   for (const [index, result] of report.results.entries()) {
     const cell = result.cells.find(cell => cell.row === 1 && cell.column === 1)!;
     expect(cell.text).toBe('Alpha beta gamma delta epsilon'); expect(cell.offsets.map(item => item[2]).join('')).toBe(cell.text);
@@ -880,7 +882,7 @@ test('native text spills through true blanks and styled blanks while values, for
 
 test('offscreen source anchors remain visible only when their bounded ink reaches an unblocked pane', async ({ page }) => {
   const files = new Map(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-cell-flow.xlsx'), { documentId: 'offscreen-overflow' }));
-  const encoded = [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]);
+  const encoded = encodeTestPackage(files);
   const report = await page.evaluate(entries => window.workbookGridHost.windowLayoutMeasurement(entries,
     [1, 2, 3, 4, 5, 6].map(index => ({ sheetId: 'sheet-' + index, viewport: { widthPt: 120, heightPt: 110, scrollLeftPt: index === 6 ? 110 : 160, scrollTopPt: 0 } }))), encoded);
   for (const [index, result] of report.results.entries()) {
@@ -893,7 +895,7 @@ test('offscreen source anchors remain visible only when their bounded ink reache
   }
   const encoder = new TextEncoder(); files.set('styles.css', encoder.encode(new TextDecoder().decode(files.get('styles.css')!) + 'tr[data-row="1"] td[data-column="1"]{--office-cell-text-rotation:135}'));
   const rotated = await page.evaluate(entries => window.workbookGridHost.windowLayoutMeasurement(entries,
-    [{ sheetId: 'sheet-1', viewport: { widthPt: 120, heightPt: 110, scrollLeftPt: 140, scrollTopPt: 0 } }]), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 120, heightPt: 110, scrollLeftPt: 140, scrollTopPt: 0 } }]), encodeTestPackage(files));
   expect(rotated.results[0]!.overflowCount).toBeGreaterThan(0); expect(rotated.results[0]!.cells.find(cell => cell.row === 1 && cell.column === 1)).toBeDefined();
   expect(rotated.unchanged).toBe(true); expect(report.unchanged).toBe(true);
 });
@@ -901,7 +903,7 @@ test('offscreen source anchors remain visible only when their bounded ink reache
 for (const rtl of [false, true]) test(`native center across selection preserves cell geometry and source in ${rtl ? 'RTL' : 'LTR'}`, async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-cell-flow.xlsx'), { documentId: 'continuous-span' });
   const report = await page.evaluate(({ entries, rtl }) => window.workbookGridHost.windowLayoutMeasurement(entries,
-    [{ sheetId: 'sheet-6', viewport: { widthPt: 300, heightPt: 120, scrollLeftPt: 0, scrollTopPt: 0 } }], rtl), { entries: [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]), rtl });
+    [{ sheetId: 'sheet-6', viewport: { widthPt: 300, heightPt: 120, scrollLeftPt: 0, scrollTopPt: 0 } }], rtl), { entries: encodeTestPackage(files), rtl });
   const cell = report.results[0]!.cells.find(cell => cell.row === 1 && cell.column === 1)!;
   expect(cell.shape.widthPt).toBeCloseTo(cell.rect.width * 3, 1); expect(cell.clipWidthPt).toBeCloseTo(cell.shape.widthPt, 1);
   expect(cell.text).toBe('Ab'); expect(cell.offsets).toEqual([[0, 2, 'Ab']]);
@@ -911,7 +913,7 @@ for (const rtl of [false, true]) test(`native center across selection preserves 
 test('RTL overflow follows physical text direction even when the offscreen source is in a later logical column', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-cell-flow.xlsx'), { documentId: 'rtl-offscreen' });
   const report = await page.evaluate(entries => window.workbookGridHost.windowLayoutMeasurement(entries,
-    [25, 26, 27, 28, 29].map(index => ({ sheetId: 'sheet-' + index, viewport: { widthPt: 30, heightPt: 110, scrollLeftPt: 0, scrollTopPt: 0 } })), true), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    [25, 26, 27, 28, 29].map(index => ({ sheetId: 'sheet-' + index, viewport: { widthPt: 30, heightPt: 110, scrollLeftPt: 0, scrollTopPt: 0 } })), true), encodeTestPackage(files));
   for (const result of report.results) {
     const cell = result.cells.find(cell => cell.row === 1 && cell.column === 1)!;
     expect(cell, result.sheetId).toBeDefined(); expect(cell.rect.x).toBeGreaterThan(30); expect(cell.clipWidthPt).toBeLessThanOrEqual(30);
@@ -929,7 +931,7 @@ test('offscreen implicit rotated cells keep their skewed fills and shared border
     + ['left', 'right', 'top', 'bottom'].map(side => `--office-cell-border-${side}-kind:thin;--office-cell-border-${side}-color:#ff00ff;`).join('') + '}'));
   const model = openDocument(files, { kind: 'workbook' }); expect(model.getCell('sheet-1', 1, 0)).toBeUndefined();
   const report = await page.evaluate(entries => window.workbookGridHost.windowLayoutMeasurement(entries,
-    [{ sheetId: 'sheet-1', viewport: { widthPt: 120, heightPt: 110, scrollLeftPt: 160, scrollTopPt: 0 } }]), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    [{ sheetId: 'sheet-1', viewport: { widthPt: 120, heightPt: 110, scrollLeftPt: 160, scrollTopPt: 0 } }]), encodeTestPackage(files));
   const result = report.results[0]!;
   expect(result.overflowFills).toEqual(expect.arrayContaining([expect.objectContaining({ color: 'rgba(18,52,86,1)' })]));
   expect(result.overflowFills.every(fill => fill.widthPt <= 120)).toBe(true); expect(result.borderColors).toContain('rgba(255,0,255,1)');
@@ -938,7 +940,7 @@ test('offscreen implicit rotated cells keep their skewed fills and shared border
 
 test('the combined cell-fragment budget counts offscreen origins in addition to the visible grid', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-cell-flow.xlsx'), { documentId: 'fragment-budget' });
-  const entries = [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]);
+  const entries = encodeTestPackage(files);
   const result = await page.evaluate(async entries => {
     const view = { sheetId: 'sheet-25', viewport: { widthPt: 30, heightPt: 60, scrollLeftPt: 0, scrollTopPt: 15 }, maxCellFragments: 1 };
     let error = ''; try { await window.workbookGridHost.windowLayoutMeasurement(entries, [view], true); error = 'accepted'; } catch (failure) { error = (failure as { code: string }).code; }
@@ -952,7 +954,7 @@ test('the combined cell-fragment budget counts offscreen origins in addition to 
 test('stable automatic row heights use all actual columns, native wrapping and font sizes without changing source', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-cell-flow.xlsx'), { documentId: 'automatic-row-flow' });
   const report = await page.evaluate(entries => window.workbookGridHost.autoRowMeasurement(entries, ['sheet-49', 'sheet-50', 'sheet-51']),
-    [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    encodeTestPackage(files));
   expect(report).toMatchObject({ unchanged: true, retained: 0, errors: ['ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'OperationCancelled'] });
   expect(report.largest).toBeLessThanOrEqual(8192);
   const [wrapped, lines, large] = report.results;
@@ -966,7 +968,7 @@ test('stable automatic row heights use all actual columns, native wrapping and f
 test('automatic row indexing respects native fixed defaults, exceptions, hidden rows, merges and distant content', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-row-heights.xlsx'), { documentId: 'native-auto-height-cases' });
   const report = await page.evaluate(entries => window.workbookGridHost.autoRowMeasurement(entries, Array.from({ length: 21 }, (_, i) => 'sheet-' + (i + 1))),
-    [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    encodeTestPackage(files));
   expect(report.unchanged).toBe(true); expect(report.retained).toBe(0);
   const heights = report.results.map(result => result.heights[1]);
   expect(heights[0]).toBeGreaterThan(55); expect(heights[1]).toBe(18); expect(heights[2]).toBe(heights[0]);
@@ -983,7 +985,7 @@ test('automatic row indexing respects native fixed defaults, exceptions, hidden 
 test('automatic row fonts retain explicit sheet defaults independently of a larger Normal font and smaller explicit cells', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-row-font-floor.xlsx'), { documentId: 'native-row-font-floor' });
   const report = await page.evaluate(entries => window.workbookGridHost.autoRowMeasurement(entries, Array.from({ length: 12 }, (_, index) => 'sheet-' + (index + 1))),
-    [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    encodeTestPackage(files));
   expect(report.unchanged).toBe(true); expect(report.retained).toBe(0);
   for (const [index, result] of report.results.entries()) {
     expect(result.heights[1]).toBe(index < 6 ? 15 : 30);
@@ -995,7 +997,7 @@ test('automatic row fonts retain explicit sheet defaults independently of a larg
 test('automatic rows discover implicit table and conditional fonts and validation-only current formula text', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-row-appearance.xlsx'), { documentId: 'native-row-appearance' });
   const report = await page.evaluate(entries => window.workbookGridHost.autoRowMeasurement(entries, Array.from({ length: 9 }, (_, index) => 'sheet-' + (index + 1))),
-    [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    encodeTestPackage(files));
   expect(report.unchanged).toBe(true); expect(report.retained).toBe(0);
   const heights = report.results.map(result => result.heights[1]!);
   for (const index of [0, 2, 3, 4, 8]) { expect(heights[index]).toBeGreaterThan(21); expect(heights[index]).toBeLessThan(29); }
@@ -1007,14 +1009,14 @@ test('automatic rows discover implicit table and conditional fonts and validatio
 
 test('automatic row prototypes validate every source and release all nodes on malformed replies and in-flight cancellation', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-row-heights.xlsx'), { documentId: 'row-prototype-validation' });
-  const report = await page.evaluate(entries => window.workbookGridHost.autoRowSourceSafety(entries), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+  const report = await page.evaluate(entries => window.workbookGridHost.autoRowSourceSafety(entries), encodeTestPackage(files));
   expect(report).toEqual({ errors: ['InvalidDocument', 'InvalidDocument', 'InvalidDocument', 'InvalidDocument', 'OperationCancelled'], retained: [0, 0, 0, 0, 0], executed: false, unchanged: true });
 });
 
 
 test('hidden columns use their stored widths for automatic row height while display columns and drawing anchors remain shared', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-hidden-row-heights.xlsx'), { documentId: 'hidden-auto-height' });
-  const entries = [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]);
+  const entries = encodeTestPackage(files);
   const report = await page.evaluate(entries => window.workbookGridHost.autoRowMeasurement(entries, Array.from({ length: 12 }, (_, i) => 'sheet-' + (i + 1))), entries);
   expect(report.unchanged).toBe(true); expect(report.retained).toBe(0);
   const heights = report.results.map(result => result.heights[1]!);
@@ -1077,7 +1079,7 @@ test('accounting underlines fill the cell while preserving font metrics, source 
 
 test('independent native accounting styles render from text and numeric cells in LTR and RTL windows including cached candidates', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-cell-flow.xlsx'), { documentId: 'native-accounting-window' });
-  const entries = [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]);
+  const entries = encodeTestPackage(files);
   const ids = [21, 22, 23, 24, 45, 46, 47, 48], viewport = { widthPt: 220, heightPt: 130, scrollLeftPt: 0, scrollTopPt: 0, overscanRows: 0, overscanColumns: 0 };
   const report = await page.evaluate(({ entries, ids, viewport }) => window.workbookGridHost.windowLayoutMeasurement(entries, ids.map(id => ({ sheetId: 'sheet-' + id, viewport }))), { entries, ids, viewport });
   expect(report.unchanged).toBe(true);
@@ -1102,7 +1104,7 @@ test('native underline ink participates in automatic row height while Calc forma
   const results = [];
   for (const suffix of ['', '-producer']) {
     const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-accounting-underlines' + suffix + '.xlsx'), { documentId: 'accounting-auto' + suffix });
-    const result = await page.evaluate(entries => window.workbookGridHost.autoRowMeasurement(entries, Array.from({ length: 20 }, (_, index) => 'sheet-' + (index + 1))), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    const result = await page.evaluate(entries => window.workbookGridHost.autoRowMeasurement(entries, Array.from({ length: 20 }, (_, index) => 'sheet-' + (index + 1))), encodeTestPackage(files));
     expect(result.unchanged).toBe(true); expect(result.retained).toBe(0);
     const heights = result.results.map(item => item.heights[1]!);
     expect(heights[8]).toBe(15); expect(heights[9]).toBe(15);

@@ -1,3 +1,4 @@
+import { decodeTestPackage, type TestPackage } from './package-transport.js';
 import { createWorkbookNumberFormatter, openDocument } from '@dagent-office/core';
 import type { WorkbookDocumentMetadata } from '@dagent-office/core';
 import { createWorkbookSurface } from '../../../packages/render/src/workbook/surface.js';
@@ -8,8 +9,8 @@ import { WorkbookWindowController } from '../../../packages/render/src/workbook/
 import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';
 import { layoutWorkbookNoteBoxes } from '../../../packages/render/src/workbook/note-boxes.js';
 
-export async function nativeNoteMeasurement(entries: readonly [string, number[]][], control?: { vertical: string; rtl: boolean }) {
-  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), decoder = new TextDecoder(), encoder = new TextEncoder();
+export async function nativeNoteMeasurement(entries: TestPackage, control?: { vertical: string; rtl: boolean }) {
+  const files = decodeTestPackage(entries), decoder = new TextDecoder(), encoder = new TextEncoder();
   if (control) {
     const metadata = JSON.parse(decoder.decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata, sheet = metadata.workbook.sheets[0]!;
     sheet.frozen = { rows: 2, columns: 1 }; sheet.rightToLeft = control.rtl;

@@ -1,3 +1,4 @@
+import { dailyCi } from '../../../tests/ci-mode.js';
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { unzipSync } from "fflate";
@@ -16,7 +17,7 @@ function coordinate(address: string): { row: number; column: number } {
   return { row: Number(match[2]) - 1, column: column - 1 };
 }
 
-it("parses independent native and Calc formula sources, including shared followers and print names", () => {
+it.skipIf(dailyCi)("parses independent native and Calc formula sources, including shared followers and print names @scale", () => {
   let parsed = 0, shared = 0;
   for (const directory of [root, resolve(root, "producer")]) for (const file of expected.cases) {
     const parts = unzipSync(readFileSync(resolve(directory, file.file)));

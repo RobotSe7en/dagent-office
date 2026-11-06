@@ -1,9 +1,12 @@
+import { parseArgs } from 'node:util';
+import { resolve as outputResolve } from 'node:path';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFileSync,readdirSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {build} from 'vite';
-if(process.argv.length!==3||process.argv[2]!=='--record')throw Error('Use --record to collect the fully passing four-engine public matrix.');
+const { values: outputOptions } = parseArgs({ options: { record: { type: 'boolean' }, output: { type: 'string' } } });
+if (Boolean(outputOptions.record) === Boolean(outputOptions.output)) throw Error('Use exactly one of --record or --output <file> to save verified evidence.');
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const expected=JSON.parse(readFileSync('examples/xlsx/expected.json','utf8')).cases;
 const built=await build({configFile:false,build:{write:false,minify:false,lib:{entry:join(process.cwd(),'tests/browser/fixtures/workbook-preview.ts'),formats:['iife'],name:'WorkbookPreview'}}});
@@ -31,5 +34,5 @@ for(const browser of ['chromium','firefox','webkit','legacy-chromium']){
 }
 const evidence={scope:'R3-06–08 public reading matrix: all selected sources and unchanged actual Calc producers. Feature-specific fixed-font and native semantic evidence remains separate; this is not a pixel-identity claim.',
   hostBundleSha256:bundle,testSha256:sha(readFileSync('tests/browser/workbook-preview.spec.ts')),runs};
-writeFileSync('docs/evidence/workbook-reading-matrix.json',JSON.stringify(evidence,null,2)+'\n');
+writeFileSync(outputOptions.output ? outputResolve(outputOptions.output) : 'docs/evidence/workbook-reading-matrix.json',JSON.stringify(evidence,null,2)+'\n');
 process.stdout.write('Recorded 128 complete public source/producer cases on the current bundle.\n');
