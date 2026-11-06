@@ -3,12 +3,12 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { importXlsx } from '../../packages/office/src/xlsx-import.js';
-import type { currentChartWindowMeasurement, drawingWindowMeasurement } from './fixtures/workbook-drawing-window.js';
+import type { currentChartWindowMeasurement, drawingWindowMeasurement, gradientWindowMeasurement } from './fixtures/workbook-drawing-window.js';
 import type { annotationWindowMeasurement, commentTextMeasurement, windowControllerMeasurement } from './fixtures/workbook-window-controller.js';
 import type { commentPanelMeasurement, mentionPanelMeasurement } from './fixtures/workbook-comment-panel.js';
 import type { annotationControlsAction, mountAnnotationControls } from './fixtures/workbook-annotation-controls.js';
 
-declare global { interface Window { workbookDrawingWindow: { drawingWindowMeasurement: typeof drawingWindowMeasurement; currentChartWindowMeasurement: typeof currentChartWindowMeasurement; windowControllerMeasurement: typeof windowControllerMeasurement; annotationWindowMeasurement: typeof annotationWindowMeasurement; commentTextMeasurement: typeof commentTextMeasurement; commentPanelMeasurement: typeof commentPanelMeasurement; mentionPanelMeasurement: typeof mentionPanelMeasurement; annotationControlsAction: typeof annotationControlsAction; mountAnnotationControls: typeof mountAnnotationControls } } }
+declare global { interface Window { workbookDrawingWindow: { drawingWindowMeasurement: typeof drawingWindowMeasurement; gradientWindowMeasurement: typeof gradientWindowMeasurement; currentChartWindowMeasurement: typeof currentChartWindowMeasurement; windowControllerMeasurement: typeof windowControllerMeasurement; annotationWindowMeasurement: typeof annotationWindowMeasurement; commentTextMeasurement: typeof commentTextMeasurement; commentPanelMeasurement: typeof commentPanelMeasurement; mentionPanelMeasurement: typeof mentionPanelMeasurement; annotationControlsAction: typeof annotationControlsAction; mountAnnotationControls: typeof mountAnnotationControls } } }
 let code = '';
 const inputs: { name: string; files: [string, number[]][] }[] = [];
 const comments: typeof inputs = [];
@@ -82,6 +82,45 @@ test('page-oriented picture fills retain complete pane budgets and isolated fail
     const result = await page.evaluate(({ files, rtl }) => window.workbookDrawingWindow.drawingWindowMeasurement(files, rtl, false, true), { files: input.files, rtl });
     expect(result).toMatchObject({ detached: true, unchanged: true, preserved: true, cleaned: true, released: true, clearedImages: true, removed: true, uniqueIds: true, cancelled: 'OperationCancelled', unhandled: [], pageOrientedImages: 4, imageCount: 4, imageUrls: 1, live: 1, cropError: 'ResourceLimitExceeded' });
     expect(result.nodes).toBe(result.actualNodes); expect(result.errors).toEqual(Array(6).fill('ResourceLimitExceeded'));
+  }
+});
+
+test('chart plot series and marker gradients share fixed fill orientation across clipped panes', async ({ page }) => {
+  const input = inputs.find(input => input.name === '07-three-charts')!;
+  const result = await page.evaluate(files => window.workbookDrawingWindow.drawingWindowMeasurement(files, false, false, false, true), input.files);
+  expect(result).toMatchObject({ detached: true, unchanged: true, preserved: true, cleaned: true, released: true, removed: true, uniqueIds: true, cancelled: 'OperationCancelled', unhandled: [] });
+  expect(result.nodes).toBe(result.actualNodes); expect(result.fixedPaints.length).toBeGreaterThan(20); expect(result.fixedPaints.some(paint => paint.marker)).toBe(true);
+  for (const paint of result.fixedPaints) { expect(Math.abs(paint.dy)).toBeLessThan(.0002); expect(paint.dx).toBeGreaterThan(0); }
+});
+
+test('fixed gradient fields retain native directions while source scaling and Calc geometry losses stay separate', async ({ page }) => {
+  const cases = JSON.parse(readFileSync('docs/evidence/xlsx-gradient-rotation.json', 'utf8')).cases as { rotation: number; rotates: boolean | null; angle: number; scaled: boolean; sourcePdf: { normalizedVector: number[]; aspect: number }; producerPdf: { normalizedVector: number[]; aspect: number } }[];
+  for (const suffix of ['', '-producer']) {
+    const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-gradient-rotation' + suffix + '.xlsx'), { documentId: 'gradient-window' });
+    const result = await page.evaluate(entries => window.workbookDrawingWindow.gradientWindowMeasurement(entries), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    expect(result).toMatchObject({ unchanged: true, released: true }); expect(result.results).toHaveLength(32);
+    for (const [index, item] of result.results.entries()) {
+      expect(item.nodes).toBe(item.actual); expect(item.objects).toBe(1); expect(item.vector.every(Number.isFinite)).toBe(true);
+      for (const [sample, pixel] of item.pixels.entries()) {
+        const expected = sample ? [89, 0, 166, 255] : [166, 0, 89, 255];
+        for (const [channel, value] of expected.entries()) expect(Math.abs(pixel[channel]!-value), `gradient ${index}, sample ${sample}`).toBeLessThanOrEqual(5);
+      }
+      const source = cases[index]!, native = source[suffix ? 'producerPdf' : 'sourcePdf'];
+      if (!suffix && source.rotates !== false) {
+        const [width, height] = item.size, expected = source.angle === 0 ? [width!, 0] : source.scaled ? [width!, height!] : [(width!+height!)/2, (width!+height!)/2];
+        for (const axis of [0, 1]) expect(item.localVector[axis]).toBeCloseTo(expected[axis]!, 3);
+        // The chosen rotating-field policy keeps the original coverage.
+        // Calc repaints the page bounding rectangle for this same source.
+        if (source.rotation === 45 && source.angle === 0) for (const axis of [0, 1]) { expect(item.vector[axis]).toBeCloseTo(2/3, 4); expect(native.normalizedVector[axis]).toBeCloseTo(1, 2); }
+      }
+      // Calc drops scaled and redefines rotating fields. Compare the actual
+      // fixed/unscaled sources, and every separately saved producer field.
+      if (suffix || source.rotates === false && (!source.scaled || source.angle === 0)) {
+        const direction = Math.atan2(item.vector[1]!, item.vector[0]!*item.aspect), expected = Math.atan2(native.normalizedVector[1]!, native.normalizedVector[0]!*native.aspect);
+        expect(Math.abs(Math.atan2(Math.sin(direction-expected), Math.cos(direction-expected)))).toBeLessThan(.003);
+        if (source.rotation !== 90) for (const axis of [0, 1]) expect(item.vector[axis]).toBeCloseTo(native.normalizedVector[axis]!, 2);
+      }
+    }
   }
 });
 

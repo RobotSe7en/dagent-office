@@ -84,7 +84,7 @@ export function composePresentation(document: Document, model: ContentDocumentMo
       const preset = definition.kind === "geometry" ? definition.preset : definition.kind === "connector" ? node.dataset.officeConnectorPreset ?? (definition.routing === "straight" ? "straightConnector1" : "bentConnector3") : "rect";
       const evaluated = evaluatePresentationPreset(preset, g.width, g.height, adjustments);
       const boxColor=computed.backgroundColor,boxPaint=definition.kind!=="connector"&&preset!=="line"&&boxColor!=="transparent"&&!/rgba\([^)]*,\s*0\)$/.test(boxColor)?boxColor:undefined;
-      const svg = createDrawingGeometryView(document, computed, { preset, geometry: evaluated, widthPt: g.width, heightPt: g.height, id,
+      const svg = createDrawingGeometryView(document, computed, { preset, geometry: evaluated, widthPt: g.width, heightPt: g.height, id, orientation: { rotationDegrees: g.rotation, flipH: g.flipH, flipV: g.flipV },
         fillFallback: boxPaint ?? (definition.kind === "geometry" && preset !== "line" ? "#4472c4" : "none"),
         strokeFallback: definition.kind === "connector" || preset === "line" ? "#000000" : "none", maxNodes: limits.maxNodes - count });
       if(definition.kind!=="connector"&&preset!=="line")styleView(node,{"background-color":"transparent"});
@@ -112,7 +112,7 @@ export function composePresentation(document: Document, model: ContentDocumentMo
             if (width > 1_000_000 || height > 1_000_000) throw new DocumentError("ResourceLimitExceeded", "Text auto-fit exceeds its geometry budget.");
             const resolved = evaluatePresentationPreset(preset, width, height, adjustments), rect = resolved.textRect;
             const previousNodes = svg.querySelectorAll("*").length + 1;
-            const replacement = createDrawingGeometryView(document, computed, { preset, geometry: resolved, widthPt: width, heightPt: height, id,
+            const replacement = createDrawingGeometryView(document, computed, { preset, geometry: resolved, widthPt: width, heightPt: height, id, orientation: { rotationDegrees: g.rotation, flipH: g.flipH, flipV: g.flipV },
               fillFallback: boxPaint ?? (definition.kind === "geometry" && preset !== "line" ? "#4472c4" : "none"),
               strokeFallback: definition.kind === "connector" || preset === "line" ? "#000000" : "none", maxNodes: limits.maxNodes - count + previousNodes });
             account(replacement.querySelectorAll("*").length + 1 - previousNodes);
@@ -147,7 +147,7 @@ export function composePresentation(document: Document, model: ContentDocumentMo
       }
     } else if (definition.kind === "chart") {
       const chart = metadata.charts.find(c => c.chartId === definition.chartId)!, data = metadata.dataSets.find(d => d.dataSetId === chart.dataSetId)!;
-      renderChart(node, chart, data, g.width, g.height, id, account);
+      renderChart(node, chart, data, g.width, g.height, id, account, { rotationDegrees: g.rotation, flipH: g.flipH, flipV: g.flipV });
     }
     for (const field of node.querySelectorAll<HTMLElement>('[data-office-field="slidenum"]')) {
       if (field.querySelector(".sdk-field-display")) continue;

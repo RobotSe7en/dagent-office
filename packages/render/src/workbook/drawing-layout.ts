@@ -151,7 +151,7 @@ export async function layoutWorkbookDrawings(surface: Pick<WorkbookSurface, "sou
         const id = `workbook-object-${index}-${partIndex}`;
         const framePaint = (paint: "fill" | "stroke"): void => {
           const background = style.backgroundColor, hasBackground = background !== "transparent" && !/rgba\([^)]*,\s*0\)$/.test(background);
-          const svg = createDrawingGeometryView(document, style, { preset, geometry, widthPt: rect.width, heightPt: rect.height, id: id + "-" + paint, paint, maxNodes: remaining(),
+          const svg = createDrawingGeometryView(document, style, { preset, geometry, widthPt: rect.width, heightPt: rect.height, id: id + "-" + paint, paint, maxNodes: remaining(), orientation: item.orientation,
             fillFallback: preset === "line" ? "none" : hasBackground ? background : object.kind === "geometry" ? "#4472c4" : "none", strokeFallback: preset === "line" ? "#000000" : "none" });
           account(countNodes(svg)); content.append(svg);
         };

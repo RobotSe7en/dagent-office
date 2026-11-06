@@ -30,17 +30,20 @@ for (const producer of ["", "producer/"])
             }
         });
 function nativeId(source: DocumentModel, id: string): number { const p = source.snapshot().metadata.presentation!, object = p.objects.find(object => object.nodeId === id)!; return Number(object.nativeId ?? 2); }
-test.each([undefined, false, true])("current-source gradient scaling %s survives native export and reopen", scaled => {
+test.each([undefined, false, true].flatMap(scaled => [false, true].map(rotates => ({ scaled, rotates }))))("current-source gradient scaling $scaled and rotation $rotates survive native export and reopen", ({ scaled, rotates }) => {
     const session = createDocumentSession(openDocument(createPresentation({ documentId: "gradient-export" })));
-    const style = '--office-fill-kind:linear;--office-fill-angle:45;--office-fill-stop-count:2;--office-fill-stop-0-position:0;--office-fill-stop-0-color:#ff0000;--office-fill-stop-1-position:1;--office-fill-stop-1-color:#0000ff' + (scaled === undefined ? '' : ';--office-fill-scaled:' + scaled);
+    const style = '--office-fill-kind:linear;--office-fill-angle:45;--office-fill-stop-count:2;--office-fill-stop-0-position:0;--office-fill-stop-0-color:#ff0000;--office-fill-stop-1-position:1;--office-fill-stop-1-color:#0000ff;--office-fill-rotate-with-shape:' + rotates + (scaled === undefined ? '' : ';--office-fill-scaled:' + scaled);
     try {
-        session.commit(session.prepare({ protocolVersion: 1, documentId: "gradient-export", baseRevision: 0, operations: [{ op: "insertPresentationObject", parentNodeId: "slide-root-1", geometry: { x: 20, y: 20, width: 200, height: 100, rotation: 0, flipH: false, flipV: false }, object: { kind: "geometry", preset: "rect", style } }] }));
+        session.commit(session.prepare({ protocolVersion: 1, documentId: "gradient-export", baseRevision: 0, operations: [{ op: "insertPresentationObject", parentNodeId: "slide-root-1", geometry: { x: 20, y: 20, width: 200, height: 100, rotation: 45, flipH: true, flipV: false }, object: { kind: "geometry", preset: "rect", style } }] }));
         const output = exportPptx(session), native = unzipSync(output.bytes);
         expect(strFromU8(native['ppt/slides/slide1.xml']!)).toContain(`<a:lin ang="2700000" scaled="${scaled === true ? 1 : 0}"`);
+        expect(strFromU8(native['ppt/slides/slide1.xml']!)).toContain(`<a:gradFill rotWithShape="${rotates ? 1 : 0}"`);
         const target = openDocument(importPptx(output.bytes, { documentId: "gradient-reopen" }));
         const object = target.snapshot().metadata.presentation!.objects.find(object => object.kind === 'geometry')!, appearance = target.getNode(object.nodeId)!.attributes.style;
         expect(appearance).toContain('--office-fill-scaled:' + (scaled === true));
         expect(appearance).toContain('--office-fill-angle:45');
+        expect(appearance).toContain('--office-fill-rotate-with-shape:' + rotates);
+        expect(target.getNode(object.nodeId)!.attributes).toMatchObject({ 'data-office-rotation': '45', 'data-office-flip-h': 'true' });
     } finally { session.dispose(); }
 });
 test("unspecified and explicit-zero outline widths survive native export and reopen", () => {

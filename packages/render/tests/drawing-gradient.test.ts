@@ -30,4 +30,18 @@ describe('DrawingML physical linear-gradient geometry', () => {
     for (const width of [-1, NaN, Infinity]) expect(() => drawingGradientLine({ x: 0, y: 0, width, height: 1 }, 0, true)).toThrowError(expect.objectContaining({ code: 'InvalidOperation' }));
     expect(() => drawingGradientLine({ x: Number.MAX_VALUE, y: 0, width: Number.MAX_VALUE, height: 1 }, 0, true)).toThrowError(expect.objectContaining({ code: 'ResourceLimitExceeded' }));
   });
+  it('keeps fixed fills in page axes across rotations and single or double reflections', () => {
+    const bounds = { x: 0, y: 0, width: 200, height: 100 };
+    expect(drawingGradientLine(bounds, 0, false, { rotationDegrees: 90, flipH: false, flipV: false })).toEqual({ x1: 100, y1: 100, x2: 100, y2: 0 });
+    for (const rotationDegrees of [-90, 45, 90, 135, 180, 270, 360]) for (const flipH of [false, true]) for (const flipV of [false, true]) {
+      const line = drawingGradientLine(bounds, 0, false, { rotationDegrees, flipH, flipV }), angle = rotationDegrees*Math.PI/180;
+      const world = (x: number, y: number) => ({ x: (x-100)*(flipH ? -1 : 1)*Math.cos(angle) - (y-50)*(flipV ? -1 : 1)*Math.sin(angle), y: (x-100)*(flipH ? -1 : 1)*Math.sin(angle) + (y-50)*(flipV ? -1 : 1)*Math.cos(angle) });
+      const first = world(line.x1, line.y1), last = world(line.x2, line.y2);
+      expect(first.y).toBeCloseTo(0, 10); expect(last.y).toBeCloseTo(0, 10);
+      expect(last.x-first.x).toBeCloseTo((200*Math.abs(Math.cos(angle))+100*Math.abs(Math.sin(angle)))*(flipH ? -1 : 1), 9);
+      expect(Object.isFrozen(line)).toBe(true);
+    }
+    expect(() => drawingGradientLine(bounds, 0, false, { rotationDegrees: Infinity, flipH: false, flipV: false })).toThrowError(expect.objectContaining({ code: 'InvalidOperation' }));
+    expect(drawingGradientLine({ x: 2, y: 3, width: 0, height: 0 }, 45, true, { rotationDegrees: 45, flipH: true, flipV: false })).toEqual({ x1: 2, y1: 3, x2: 2, y2: 3 });
+  });
 });

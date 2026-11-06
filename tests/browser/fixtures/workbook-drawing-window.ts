@@ -18,6 +18,37 @@ import { annotationWindowMeasurement, commentTextMeasurement, windowControllerMe
 import { commentPanelMeasurement, mentionPanelMeasurement } from './workbook-comment-panel.js';
 import { annotationControlsAction, mountAnnotationControls } from './workbook-annotation-controls.js';
 
+export async function gradientWindowMeasurement(entries: readonly [string, number[]][]) {
+  const model = openDocument(new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
+  const container = document.createElement('div'); document.body.append(container);
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 420, heightPt: 300 }), formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
+  const controller = new WorkbookWindowController(surface, { cells: modelWindowSource(model), assets: modelAssetSource(model), charts: modelChartSource(model) }, formatter);
+  try {
+    const results = [];
+    for (const sheet of snapshot.metadata.workbook.sheets) {
+      await controller.render(sheet.sheetId, { widthPt: 420, heightPt: 300, scrollLeftPt: 0, scrollTopPt: 0 });
+      const current = controller.current!, body = current.element.querySelector<HTMLElement>('[data-office-view=workbook-drawing-body]')!, gradient = body.querySelector('linearGradient')!;
+      const matrix = new DOMMatrix(surface.document.defaultView!.getComputedStyle(body).transform), width = parseFloat(body.style.width), height = parseFloat(body.style.height);
+      const [x1, y1, x2, y2] = ['x1', 'y1', 'x2', 'y2'].map(key => Number(gradient.getAttribute(key)));
+      const dx = matrix.a*(x2!-x1!) + matrix.c*(y2!-y1!), dy = matrix.b*(x2!-x1!) + matrix.d*(y2!-y1!);
+      const bboxWidth = Math.abs(matrix.a)*width + Math.abs(matrix.c)*height, bboxHeight = Math.abs(matrix.b)*width + Math.abs(matrix.d)*height;
+      const walker = surface.document.createTreeWalker(current.element, 0xffff_ffff); let actual = 1; while (walker.nextNode()) actual++;
+      const ns = 'http://www.w3.org/2000/svg', outer = document.createElementNS(ns, 'svg'), group = document.createElementNS(ns, 'g'), graphic = body.querySelector('svg')!.cloneNode(true) as SVGSVGElement;
+      outer.setAttribute('width', '400'); outer.setAttribute('height', '320'); outer.setAttribute('viewBox', '0 0 400 320');
+      group.setAttribute('transform', `translate(200 160) matrix(${matrix.a} ${matrix.b} ${matrix.c} ${matrix.d} 0 0) translate(${-width/2} ${-height/2})`);
+      graphic.setAttribute('width', String(width)); graphic.setAttribute('height', String(height)); graphic.style.width = width+'px'; graphic.style.height = height+'px'; group.append(graphic); outer.append(group);
+      const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(outer)], { type: 'image/svg+xml' })), image = new Image(); let pixels: number[][];
+      try {
+        image.src = url; await image.decode(); const canvas = document.createElement('canvas'); canvas.width = 400; canvas.height = 320; const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
+        pixels = [-.15, .15].map(fraction => [...context.getImageData(Math.round(200+dx*fraction), Math.round(160+dy*fraction), 1, 1).data]);
+      } finally { image.removeAttribute('src'); URL.revokeObjectURL(url); }
+      results.push({ nodes: current.nodes, actual, vector: [dx/bboxWidth, dy/bboxHeight], localVector: [x2!-x1!, y2!-y1!], size: [width, height], aspect: bboxWidth/bboxHeight, pixels, objects: current.objects.length });
+    }
+    const after = model.serialize(); controller.dispose();
+    return { results, unchanged: [...before].every(([path, bytes]) => bytes.length === after.get(path)!.length && bytes.every((value, index) => value === after.get(path)![index])), released: !surface.view.childNodes.length && !surface.source.childNodes.length };
+  } finally { controller.dispose(); formatter.dispose(); surface.dispose(); container.remove(); }
+}
+
 export async function currentChartWindowMeasurement(entries: readonly [string, number[]][]) {
   const model = openDocument(new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
   const container = document.createElement('div'); document.body.append(container);
@@ -33,7 +64,7 @@ export async function currentChartWindowMeasurement(entries: readonly [string, n
   } finally { controller.dispose(); formatter.dispose(); surface.dispose(); container.remove(); }
 }
 
-export async function drawingWindowMeasurement(entries: readonly [string, number[]][], rtl: boolean, overflow = false, pageOrientedPictures = false) {
+export async function drawingWindowMeasurement(entries: readonly [string, number[]][], rtl: boolean, overflow = false, pageOrientedPictures = false, fixedGradients = false) {
   const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), decoder = new TextDecoder(), encoder = new TextEncoder();
   const metadata = JSON.parse(decoder.decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata;
   const sheet = metadata.workbook.sheets[0]!; sheet.frozen = { rows: 2, columns: 1 }; sheet.rightToLeft = rtl;
@@ -41,6 +72,19 @@ export async function drawingWindowMeasurement(entries: readonly [string, number
   metadata.workbook.objects?.reverse(); // Source HTML, rather than this array, owns stacking.
   files.set('metadata.json', encoder.encode(JSON.stringify(metadata)));
   const manifest = JSON.parse(decoder.decode(files.get('manifest.json')!)) as { styles: string[]; content: string };
+  if (fixedGradients) {
+    const template = document.createElement('template'); template.innerHTML = decoder.decode(files.get(manifest.content)!);
+    for (const chart of metadata.workbook.charts!) {
+      chart.plotCssClass = 'fixed-gradient';
+      chart.seriesStyles = chart.series.map(series => ({ ...chart.seriesStyles?.find(style => style.seriesId === series.seriesId), seriesId: series.seriesId, cssClass: 'fixed-gradient', ...(chart.kind === 'line' ? { marker: 'circle' as const, markerSize: 7 } : {}) }));
+      for (const point of chart.pointStyles ?? []) point.cssClass = 'fixed-gradient';
+      const element = template.content.querySelector<HTMLElement>('[data-node-id="' + chart.nodeId + '"]')!; element.classList.add('fixed-gradient'); element.dataset.officeRotation = '45';
+    }
+    files.set('metadata.json', encoder.encode(JSON.stringify(metadata)));
+    files.set(manifest.content, encoder.encode('<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="' + manifest.styles[0]! + '"></head><body>' + template.content.querySelector('[data-office-kind="workbook-content"]')!.outerHTML + '</body></html>'));
+    const declarations = ['--office-fill', '--office-marker-fill'].flatMap(prefix => [`${prefix}-kind:linear`, `${prefix}-angle:0`, `${prefix}-rotate-with-shape:false`, `${prefix}-scaled:false`, `${prefix}-stop-count:2`, `${prefix}-stop-0-position:0`, `${prefix}-stop-0-color:#ff0000`, `${prefix}-stop-1-position:1`, `${prefix}-stop-1-color:#0000ff`]).join(';');
+    files.set(manifest.styles[0]!, encoder.encode(decoder.decode(files.get(manifest.styles[0]!)!) + '.fixed-gradient{' + declarations + '}'));
+  }
   let overflowId: string | undefined;
   if (overflow) {
     const object = metadata.workbook.objects!.find(object => object.kind === 'text')!; overflowId = object.nodeId;
@@ -136,7 +180,12 @@ export async function drawingWindowMeasurement(entries: readonly [string, number
     }
     const after = model.serialize(), unchanged = [...initial].every(([path, bytes]) => bytes.length === after.get(path)!.length && bytes.every((byte, index) => byte === after.get(path)![index]));
     const normalized = [...files].filter(([path, bytes]) => bytes.length !== initial.get(path)!.length || bytes.some((byte, index) => byte !== initial.get(path)![index])).map(([path]) => path);
-    const result = { normalized, expectedOrder, overflowParts, canonicalIds: active.element.querySelectorAll('[data-node-id]').length, objects, fragments, nodes: active.nodes, actualNodes: count, uniqueIds: new Set(ids).size === ids.length, detached, unchanged,
+    const fixedPaints = [...active.element.querySelectorAll<SVGLinearGradientElement>('linearGradient')].map(gradient => {
+      const body = gradient.closest<HTMLElement>('[data-office-view=workbook-drawing-body]')!, matrix = new DOMMatrix(surface.document.defaultView!.getComputedStyle(body).transform);
+      const dx = Number(gradient.getAttribute('x2'))-Number(gradient.getAttribute('x1')), dy = Number(gradient.getAttribute('y2'))-Number(gradient.getAttribute('y1'));
+      return { marker: gradient.id.includes('-marker-'), dx: matrix.a*dx+matrix.c*dy, dy: matrix.b*dx+matrix.d*dy };
+    });
+    const result = { normalized, expectedOrder, overflowParts, fixedPaints, canonicalIds: active.element.querySelectorAll('[data-node-id]').length, objects, fragments, nodes: active.nodes, actualNodes: count, uniqueIds: new Set(ids).size === ids.length, detached, unchanged,
       gridCells: grid.element.querySelectorAll('[role="gridcell"]').length, live: [...created].filter(url => !revoked.has(url)).length,
       imageCount: originals.length, pageOrientedImages: active.element.querySelectorAll('[data-office-view=workbook-image-fill]').length, imageUrls: new Set(originals.map(image => image.src)).size, assets: active.assets, shadowPixels: active.shadowPixels,
       fonts: active.fonts.length, diagnostics: active.diagnostics.map(diagnostic => diagnostic.code), errors, cropError, cancelled, unavailable, staleDiagnostics,
@@ -149,4 +198,4 @@ export async function drawingWindowMeasurement(entries: readonly [string, number
     URL.createObjectURL = originalCreate; URL.revokeObjectURL = originalRevoke; window.removeEventListener('unhandledrejection', rejection);
   }
 }
-Object.assign(window, { workbookDrawingWindow: { drawingWindowMeasurement, currentChartWindowMeasurement, windowControllerMeasurement, annotationWindowMeasurement, commentTextMeasurement, commentPanelMeasurement, mentionPanelMeasurement, annotationControlsAction, mountAnnotationControls } });
+Object.assign(window, { workbookDrawingWindow: { drawingWindowMeasurement, gradientWindowMeasurement, currentChartWindowMeasurement, windowControllerMeasurement, annotationWindowMeasurement, commentTextMeasurement, commentPanelMeasurement, mentionPanelMeasurement, annotationControlsAction, mountAnnotationControls } });

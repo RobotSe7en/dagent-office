@@ -276,7 +276,7 @@ test('independent native and Calc finite chart intervals compose current values 
 
 test('physical DrawingML gradients preserve diagonal stop coverage and the scaled flag in browser pixels', async ({ page }) => {
   const result = await page.evaluate(() => window.workbookContentHost.measureDrawingGradients());
-  expect(result.errors).toEqual(Array(4).fill('InvalidDocument'));
+  expect(result.errors).toEqual(Array(5).fill('InvalidDocument'));
   for (const entry of result.cases) {
     expect(entry.units).toBe('userSpaceOnUse');
     const expected = entry.scaled ? [0, 0, 200, 100] : [25, -25, 175, 125];

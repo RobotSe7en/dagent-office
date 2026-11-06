@@ -6,6 +6,7 @@ import type { BasicChartTextRun } from "../chart.js";
 import { markViewNode } from "../view-nodes.js";
 import { resolvePreviewFontsInScope } from "../fonts.js";
 import type { FontResolution } from "../contracts.js";
+import { workbookDrawingOrientation } from "./drawing-view.js";
 
 export interface WorkbookChartViewOptions {
   /** Required: the workbook compositor owns number formats, locale and dates.
@@ -74,7 +75,7 @@ export function createWorkbookChartView(source: HTMLElement, chart: DeepReadonly
       do { account(1); if (walker.currentNode.nodeType === 3) accountText(walker.currentNode.textContent!.length); } while (walker.nextNode());
       element.append(title);
     }
-    renderBasicChart(element, chart, data, widthPt, heightPt, id, account, { formatNumber: options.formatNumber, ...(options.formatCategory ? { formatCategory: options.formatCategory } : {}), pieValues: "magnitude",
+    renderBasicChart(element, chart, data, widthPt, heightPt, id, account, { formatNumber: options.formatNumber, ...(options.formatCategory ? { formatCategory: options.formatCategory } : {}), pieValues: "magnitude", orientation: workbookDrawingOrientation(source),
       // MS-OI29500 §2.1.1571: specified multiple series disable by-point
       // variation, even when visibility later leaves only one rendered series.
       varyColors: (chart.varyColors ?? chart.kind === "pie") && chart.series.length === 1, accountText, onTextRun: run => { textRuns.push(run); }, ...(options.layout ? { layout: options.layout } : {}), ...(title ? { title } : {}), style(classes) {

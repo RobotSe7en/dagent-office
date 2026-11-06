@@ -24,7 +24,7 @@ export async function measureDrawingGradients() {
       } finally { image.removeAttribute('src'); URL.revokeObjectURL(url); }
     }
     const errors = [];
-    for (const [property, value] of [['--office-fill-angle', '45deg'], ['--office-fill-scaled', 'yes'], ['--office-fill-stop-1-position', '-1'], ['--office-fill-stop-0-position', '2']]) {
+    for (const [property, value] of [['--office-fill-angle', '45deg'], ['--office-fill-scaled', 'yes'], ['--office-fill-stop-1-position', '-1'], ['--office-fill-stop-0-position', '2'], ['--office-fill-rotate-with-shape', 'yes']]) {
       const previous = paint.style.getPropertyValue(property!); paint.style.setProperty(property!, value!);
       try { createDrawingGeometryView(document, getComputedStyle(paint), input); errors.push('accepted'); }
       catch (error) { errors.push((error as { code: string }).code); }

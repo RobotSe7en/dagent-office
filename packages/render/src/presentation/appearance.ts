@@ -1,7 +1,7 @@
 import { DocumentError } from "@dagent-office/core";
 import { svgElement } from "./svg.js";
 import { drawingGradientLine } from "../drawing-gradient.js";
-import type { DrawingGradientBounds } from "../drawing-gradient.js";
+import type { DrawingGradientBounds, DrawingGradientOrientation } from "../drawing-gradient.js";
 
 export const property = (style: CSSStyleDeclaration, name: string, fallback = ""): string => style.getPropertyValue(name).trim() || fallback;
 export function cssStringValue(value: string): string {
@@ -39,7 +39,7 @@ export function resolvedColor(document: Document, style: CSSStyleDeclaration, pr
   const alpha = Math.max(0, Math.min(1, nativeAlpha * numeric(style, prefix + "-alpha", 1)));
   return `rgba(${values.join(",")},${alpha})`;
 }
-export function svgFill(document: Document, style: CSSStyleDeclaration, svg: SVGSVGElement, id: string, bounds: DrawingGradientBounds, prefix = "--office-fill", fallback = "none", account?: (amount: number) => void): string {
+export function svgFill(document: Document, style: CSSStyleDeclaration, svg: SVGSVGElement, id: string, bounds: DrawingGradientBounds, prefix = "--office-fill", fallback = "none", account?: (amount: number) => void, orientation?: DrawingGradientOrientation): string {
   const kind = property(style, prefix + "-kind");
   if (kind === "none") return "none";
   if (kind !== "linear") return kind === "solid" || property(style, prefix + "-color") ? resolvedColor(document, style, prefix) : fallback === "none" ? "none" : resolvedColor(document,style,prefix,fallback);
@@ -50,7 +50,9 @@ export function svgFill(document: Document, style: CSSStyleDeclaration, svg: SVG
   if (scaled !== "true" && scaled !== "false") throw new DocumentError("InvalidDocument", "A drawing gradient scale flag must be a boolean.");
   const angle = property(style, prefix + "-angle", "0");
   if (!/^-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(angle)) throw new DocumentError("InvalidDocument", "A drawing gradient angle must be a source number.");
-  const line = drawingGradientLine(bounds, Number(angle), scaled === "true");
+  const rotates = property(style, prefix + "-rotate-with-shape", "true");
+  if (rotates !== "true" && rotates !== "false") throw new DocumentError("InvalidDocument", "A drawing gradient rotation flag must be a boolean.");
+  const line = drawingGradientLine(bounds, Number(angle), scaled === "true", rotates === "false" ? orientation : undefined);
   const gradient = svgElement(document, "linearGradient", { id, gradientUnits: "userSpaceOnUse", "color-interpolation": "sRGB", ...line });
   let previous = -1;
   for (let n = 0; n < count; n++) {

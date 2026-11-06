@@ -1,0 +1,2760 @@
+{
+  "scope": "Independent rotated linear gradients, Calc normalization and PDF vectors.\n\nSource flags/angles, producer properties and effective native paint vectors are\nseparate facts. They do not establish Excel/WPS behavior or SDK policy.\n",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "fontManifest": [
+    {
+      "file": "LiberationSans-Regular.ttf",
+      "sha256": "4659bc0c58c5028dd488ec928d41d9265db43d9b669fc14ca8b0832daca7b144"
+    }
+  ],
+  "sourceSha256": "432f7ac9663923d6895561e42c248310254bb032c2538a0884c4769d5715816b",
+  "specification": "https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.gradientfill?view=openxml-3.0.1",
+  "cases": [
+    {
+      "rotation": 0,
+      "rotates": true,
+      "angle": 0,
+      "scaled": false,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "1"
+        },
+        "linear": {
+          "ang": "0",
+          "scaled": "0"
+        },
+        "transform": {
+          "rot": "0",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0"
+        },
+        "transform": {},
+        "transformExtent": {
+          "cx": "2285640",
+          "cy": "1142640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426600",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 2.0,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 2.001,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "rotation": 0,
+      "rotates": true,
+      "angle": 0,
+      "scaled": true,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "1"
+        },
+        "linear": {
+          "ang": "0",
+          "scaled": "1"
+        },
+        "transform": {
+          "rot": "0",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0"
+        },
+        "transform": {},
+        "transformExtent": {
+          "cx": "2285640",
+          "cy": "1142640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426600",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 2.0,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 2.001,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "rotation": 0,
+      "rotates": true,
+      "angle": 45,
+      "scaled": false,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "1"
+        },
+        "linear": {
+          "ang": "2700000",
+          "scaled": "0"
+        },
+        "transform": {
+          "rot": "0",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "2700000"
+        },
+        "transform": {},
+        "transformExtent": {
+          "cx": "2285640",
+          "cy": "1142640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426600",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 2.0,
+        "normalizedVector": [
+          0.75,
+          1.5
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 2.001,
+        "normalizedVector": [
+          0.75,
+          1.5
+        ]
+      }
+    },
+    {
+      "rotation": 0,
+      "rotates": true,
+      "angle": 45,
+      "scaled": true,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "1"
+        },
+        "linear": {
+          "ang": "2700000",
+          "scaled": "1"
+        },
+        "transform": {
+          "rot": "0",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "2700000"
+        },
+        "transform": {},
+        "transformExtent": {
+          "cx": "2285640",
+          "cy": "1142640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426600",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 2.0,
+        "normalizedVector": [
+          0.75,
+          1.5
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 2.001,
+        "normalizedVector": [
+          0.75,
+          1.5
+        ]
+      }
+    },
+    {
+      "rotation": 0,
+      "rotates": false,
+      "angle": 0,
+      "scaled": false,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0",
+          "scaled": "0"
+        },
+        "transform": {
+          "rot": "0",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0"
+        },
+        "transform": {},
+        "transformExtent": {
+          "cx": "2285640",
+          "cy": "1142640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426600",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 2.0,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 2.001,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "rotation": 0,
+      "rotates": false,
+      "angle": 0,
+      "scaled": true,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0",
+          "scaled": "1"
+        },
+        "transform": {
+          "rot": "0",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0"
+        },
+        "transform": {},
+        "transformExtent": {
+          "cx": "2285640",
+          "cy": "1142640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426600",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 2.0,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 2.001,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "rotation": 0,
+      "rotates": false,
+      "angle": 45,
+      "scaled": false,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "2700000",
+          "scaled": "0"
+        },
+        "transform": {
+          "rot": "0",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "2700000"
+        },
+        "transform": {},
+        "transformExtent": {
+          "cx": "2285640",
+          "cy": "1142640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426600",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 2.0,
+        "normalizedVector": [
+          0.75,
+          1.5
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 2.001,
+        "normalizedVector": [
+          0.75,
+          1.5
+        ]
+      }
+    },
+    {
+      "rotation": 0,
+      "rotates": false,
+      "angle": 45,
+      "scaled": true,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "2700000",
+          "scaled": "1"
+        },
+        "transform": {
+          "rot": "0",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "2700000"
+        },
+        "transform": {},
+        "transformExtent": {
+          "cx": "2285640",
+          "cy": "1142640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426600",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 2.0,
+        "normalizedVector": [
+          0.75,
+          1.5
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 2.001,
+        "normalizedVector": [
+          0.75,
+          1.5
+        ]
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": true,
+      "angle": 0,
+      "scaled": false,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "1"
+        },
+        "linear": {
+          "ang": "0",
+          "scaled": "0"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "2700000"
+        },
+        "transform": {
+          "rot": "2700000"
+        },
+        "transformExtent": {
+          "cx": "1142640",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426960",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          1.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": true,
+      "angle": 0,
+      "scaled": true,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "1"
+        },
+        "linear": {
+          "ang": "0",
+          "scaled": "1"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "2700000"
+        },
+        "transform": {
+          "rot": "2700000"
+        },
+        "transformExtent": {
+          "cx": "1142640",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426960",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          1.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": true,
+      "angle": 45,
+      "scaled": false,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "1"
+        },
+        "linear": {
+          "ang": "2700000",
+          "scaled": "0"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "5400000"
+        },
+        "transform": {
+          "rot": "2700000"
+        },
+        "transformExtent": {
+          "cx": "1142640",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426960",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          0.0,
+          1.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": true,
+      "angle": 45,
+      "scaled": true,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "1"
+        },
+        "linear": {
+          "ang": "2700000",
+          "scaled": "1"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "5400000"
+        },
+        "transform": {
+          "rot": "2700000"
+        },
+        "transformExtent": {
+          "cx": "1142640",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426960",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          0.0,
+          1.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "angle": 0,
+      "scaled": false,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0",
+          "scaled": "0"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0"
+        },
+        "transform": {
+          "rot": "2700000"
+        },
+        "transformExtent": {
+          "cx": "1142640",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426960",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "angle": 0,
+      "scaled": true,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0",
+          "scaled": "1"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0"
+        },
+        "transform": {
+          "rot": "2700000"
+        },
+        "transformExtent": {
+          "cx": "1142640",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426960",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "angle": 45,
+      "scaled": false,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "2700000",
+          "scaled": "0"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "2700000"
+        },
+        "transform": {
+          "rot": "2700000"
+        },
+        "transformExtent": {
+          "cx": "1142640",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426960",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          1.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "angle": 45,
+      "scaled": true,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "2700000",
+          "scaled": "1"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "2700000"
+        },
+        "transform": {
+          "rot": "2700000"
+        },
+        "transformExtent": {
+          "cx": "1142640",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426960",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          1.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "rotation": 90,
+      "rotates": true,
+      "angle": 0,
+      "scaled": false,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "1"
+        },
+        "linear": {
+          "ang": "0",
+          "scaled": "0"
+        },
+        "transform": {
+          "rot": "5400000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "5400000"
+        },
+        "transform": {
+          "rot": "5400000"
+        },
+        "transformExtent": {
+          "cx": "1142640",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426960",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 2.0,
+        "normalizedVector": [
+          0.0,
+          1.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 2.001,
+        "normalizedVector": [
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "rotation": 90,
+      "rotates": true,
+      "angle": 0,
+      "scaled": true,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "1"
+        },
+        "linear": {
+          "ang": "0",
+          "scaled": "1"
+        },
+        "transform": {
+          "rot": "5400000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "5400000"
+        },
+        "transform": {
+          "rot": "5400000"
+        },
+        "transformExtent": {
+          "cx": "1142640",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426960",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 2.0,
+        "normalizedVector": [
+          0.0,
+          1.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 2.001,
+        "normalizedVector": [
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "rotation": 90,
+      "rotates": true,
+      "angle": 45,
+      "scaled": false,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "1"
+        },
+        "linear": {
+          "ang": "2700000",
+          "scaled": "0"
+        },
+        "transform": {
+          "rot": "5400000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "8100000"
+        },
+        "transform": {
+          "rot": "5400000"
+        },
+        "transformExtent": {
+          "cx": "1142640",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426960",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 2.0,
+        "normalizedVector": [
+          -0.75,
+          1.5
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 2.001,
+        "normalizedVector": [
+          -0.75,
+          1.5
+        ]
+      }
+    },
+    {
+      "rotation": 90,
+      "rotates": true,
+      "angle": 45,
+      "scaled": true,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "1"
+        },
+        "linear": {
+          "ang": "2700000",
+          "scaled": "1"
+        },
+        "transform": {
+          "rot": "5400000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "8100000"
+        },
+        "transform": {
+          "rot": "5400000"
+        },
+        "transformExtent": {
+          "cx": "1142640",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426960",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 2.0,
+        "normalizedVector": [
+          -0.75,
+          1.5
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 2.001,
+        "normalizedVector": [
+          -0.75,
+          1.5
+        ]
+      }
+    },
+    {
+      "rotation": 90,
+      "rotates": false,
+      "angle": 0,
+      "scaled": false,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0",
+          "scaled": "0"
+        },
+        "transform": {
+          "rot": "5400000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0"
+        },
+        "transform": {
+          "rot": "5400000"
+        },
+        "transformExtent": {
+          "cx": "1142640",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426960",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 2.0,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 2.001,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "rotation": 90,
+      "rotates": false,
+      "angle": 0,
+      "scaled": true,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0",
+          "scaled": "1"
+        },
+        "transform": {
+          "rot": "5400000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0"
+        },
+        "transform": {
+          "rot": "5400000"
+        },
+        "transformExtent": {
+          "cx": "1142640",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426960",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 2.0,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 2.001,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "rotation": 90,
+      "rotates": false,
+      "angle": 45,
+      "scaled": false,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "2700000",
+          "scaled": "0"
+        },
+        "transform": {
+          "rot": "5400000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "2700000"
+        },
+        "transform": {
+          "rot": "5400000"
+        },
+        "transformExtent": {
+          "cx": "1142640",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426960",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 2.0,
+        "normalizedVector": [
+          0.75,
+          1.5
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 2.001,
+        "normalizedVector": [
+          0.75,
+          1.5
+        ]
+      }
+    },
+    {
+      "rotation": 90,
+      "rotates": false,
+      "angle": 45,
+      "scaled": true,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "2700000",
+          "scaled": "1"
+        },
+        "transform": {
+          "rot": "5400000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "2700000"
+        },
+        "transform": {
+          "rot": "5400000"
+        },
+        "transformExtent": {
+          "cx": "1142640",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426960",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 2.0,
+        "normalizedVector": [
+          0.75,
+          1.5
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 2.001,
+        "normalizedVector": [
+          0.75,
+          1.5
+        ]
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "angle": 0,
+      "scaled": false,
+      "flipH": true,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0",
+          "scaled": "0"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "1",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "10800000"
+        },
+        "transform": {
+          "flipH": "1",
+          "rot": "2700000"
+        },
+        "transformExtent": {
+          "cx": "1142280",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "360"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426600",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          -1.0,
+          0.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "angle": 0,
+      "scaled": true,
+      "flipH": true,
+      "flipV": false,
+      "source": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0",
+          "scaled": "1"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "1",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "10800000"
+        },
+        "transform": {
+          "flipH": "1",
+          "rot": "2700000"
+        },
+        "transformExtent": {
+          "cx": "1142280",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "360"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426600",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          -1.0,
+          0.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "angle": 0,
+      "scaled": false,
+      "flipH": false,
+      "flipV": true,
+      "source": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0",
+          "scaled": "0"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "1"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0"
+        },
+        "transform": {
+          "flipV": "1",
+          "rot": "2700000"
+        },
+        "transformExtent": {
+          "cx": "1142280",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "-360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426240",
+            "row": "9",
+            "rowOff": "189720"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "angle": 0,
+      "scaled": true,
+      "flipH": false,
+      "flipV": true,
+      "source": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0",
+          "scaled": "1"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "1"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0"
+        },
+        "transform": {
+          "flipV": "1",
+          "rot": "2700000"
+        },
+        "transformExtent": {
+          "cx": "1142280",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "-360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426240",
+            "row": "9",
+            "rowOff": "189720"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "angle": 0,
+      "scaled": false,
+      "flipH": true,
+      "flipV": true,
+      "source": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0",
+          "scaled": "0"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "1",
+          "flipV": "1"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "10800000"
+        },
+        "transform": {
+          "flipH": "1",
+          "flipV": "1",
+          "rot": "2700000"
+        },
+        "transformExtent": {
+          "cx": "1142280",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "360"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426600",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          -1.0,
+          0.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "angle": 0,
+      "scaled": true,
+      "flipH": true,
+      "flipV": true,
+      "source": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "0",
+          "scaled": "1"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "1",
+          "flipV": "1"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "10800000"
+        },
+        "transform": {
+          "flipH": "1",
+          "flipV": "1",
+          "rot": "2700000"
+        },
+        "transformExtent": {
+          "cx": "1142280",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "360"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426600",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          -1.0,
+          0.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": null,
+      "angle": 0,
+      "scaled": false,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {},
+        "linear": {
+          "ang": "0",
+          "scaled": "0"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "2700000"
+        },
+        "transform": {
+          "rot": "2700000"
+        },
+        "transformExtent": {
+          "cx": "1142640",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426960",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          1.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": null,
+      "angle": 45,
+      "scaled": false,
+      "flipH": false,
+      "flipV": false,
+      "source": {
+        "gradient": {},
+        "linear": {
+          "ang": "2700000",
+          "scaled": "0"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "transformExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        },
+        "anchor": "oneCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "0",
+            "row": "4",
+            "rowOff": "0"
+          }
+        },
+        "anchorExtent": {
+          "cx": "2286000",
+          "cy": "1143000"
+        }
+      },
+      "producer": {
+        "gradient": {
+          "rotWithShape": "0"
+        },
+        "linear": {
+          "ang": "5400000"
+        },
+        "transform": {
+          "rot": "2700000"
+        },
+        "transformExtent": {
+          "cx": "1142640",
+          "cy": "2285640"
+        },
+        "anchor": "twoCellAnchor",
+        "markers": {
+          "from": {
+            "col": "2",
+            "colOff": "360",
+            "row": "4",
+            "rowOff": "0"
+          },
+          "to": {
+            "col": "4",
+            "colOff": "426960",
+            "row": "9",
+            "rowOff": "190080"
+          }
+        },
+        "anchorExtent": null
+      },
+      "sourcePdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          0.0,
+          1.0
+        ]
+      },
+      "producerPdf": {
+        "bands": 128,
+        "aspect": 1.0,
+        "normalizedVector": [
+          0.0,
+          1.0
+        ]
+      }
+    }
+  ],
+  "limits": [
+    "Calc rewrites rotating gradients as fixed fields with adjusted angles, drops scaled and can change flip appearance on reopen. Source flags/angles remain independent.",
+    "Native quarter-turn geometry can change extents; transform extents and anchor markers remain recorded separately.",
+    "Normalized native band vectors are rounded to three decimals and do not claim whole-page pixels or Excel/WPS machine verification."
+  ]
+}

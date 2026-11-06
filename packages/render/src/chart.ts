@@ -3,7 +3,7 @@ import { DocumentError } from "@dagent-office/core";
 import { markViewNode, ownViewAttribute } from "./view-nodes.js";
 import { cssStringValue, numeric, property, resolvedColor, strokeAttributes, svgFill } from "./presentation/appearance.js";
 import { svgElement as createSvgElement } from "./presentation/svg.js";
-import type { DrawingGradientBounds } from "./drawing-gradient.js";
+import type { DrawingGradientBounds, DrawingGradientOrientation } from "./drawing-gradient.js";
 import { appendChartMarker } from "./chart-marker.js";
 import { chartAxisTicks, chartCategoryAxis, chartAxisPlacement, chartValueScale, chartValueFraction } from "./chart-axis.js";
 import { officeFontSegments } from "./font-scripts.js";
@@ -36,6 +36,7 @@ export interface BasicChartOptions {
   /** The owning compositor may reserve measured text boxes around the plot.
    * Presentation callers retain the established automatic layout. */
   readonly layout?: BasicChartLayout;
+  readonly orientation?: DrawingGradientOrientation;
   /** The owning format selects negative-value semantics explicitly. Value
    * labels keep their signed source numbers under the magnitude policy. */
   readonly pieValues?: "nonnegative" | "magnitude";
@@ -119,14 +120,14 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
   const top = options.layout?.plot.y ?? titleHeight + (chart.kind === "pie" ? 15 : 18) + (chart.legend === "top" ? legendBand : 0) + (categoryTop ? 16 : 0);
   const right = options.layout ? left + options.layout.plot.width : width - (chart.kind === "pie" ? 12 : valueRight ? 28 : 16) - (chart.legend === "right" ? legendBand : 0), bottom = options.layout ? top + options.layout.plot.height : height - (chart.kind === "pie" ? 8 : categoryTop ? 12 : 26) - (chart.legend === "bottom" ? legendBand : 0);
   const w = Math.max(1, right - left), h = Math.max(1, bottom - top);
-  svg.append(svgElement(document, "rect", { x: left, y: top, width: w, height: h, fill: svgFill(document, plotStyle, svg, serial + "-plot", { x: left, y: top, width: w, height: h }, "--office-fill", "none", account), ...strokeAttributes(document, plotStyle) }));
+  svg.append(svgElement(document, "rect", { x: left, y: top, width: w, height: h, fill: svgFill(document, plotStyle, svg, serial + "-plot", { x: left, y: top, width: w, height: h }, "--office-fill", "none", account, options.orientation), ...strokeAttributes(document, plotStyle) }));
   if (!data.series.length) return;
   const seriesStyle = new Map(data.series.map(series => [series.seriesId, style(seriesDefinitions.get(series.seriesId)?.cssClass)]));
   const pointStyle = (seriesId: string, index: number): CSSStyleDeclaration => {
     const series = seriesDefinitions.get(seriesId), point = pointDefinitions.get(pointKey(seriesId, sourceIndex(index)));
     return point ? style([series?.cssClass, point.cssClass].filter(Boolean).join(" ")) : seriesStyle.get(seriesId)!;
   };
-  const fill = (seriesId: string, index: number, s: CSSStyleDeclaration, bounds: DrawingGradientBounds): string => svgFill(document, s, svg, serial + "-paint-" + ++paintSerial, bounds, "--office-fill", palette[(varyColors ? sourceIndex(index) : seriesIndexes.get(seriesId)!) % palette.length]!, account);
+  const fill = (seriesId: string, index: number, s: CSSStyleDeclaration, bounds: DrawingGradientBounds): string => svgFill(document, s, svg, serial + "-paint-" + ++paintSerial, bounds, "--office-fill", palette[(varyColors ? sourceIndex(index) : seriesIndexes.get(seriesId)!) % palette.length]!, account, options.orientation);
   const marker = (seriesId: string, index: number, x: number, y: number, role: "point" | "legend"): void => {
     const definition = seriesDefinitions.get(seriesId), override = index < 0 ? undefined : pointDefinitions.get(pointKey(seriesId, sourceIndex(index)));
     const requested = override?.marker ?? definition?.marker ?? "none", size = override?.markerSize ?? definition?.markerSize ?? 5;
@@ -136,7 +137,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     const bounds = { x: x - size / 2, y: y - size / 2, width: size, height: size };
     const automatic = palette[(varyColors ? sourceIndex(position) : seriesIndexes.get(seriesId)!) % palette.length]!;
     const color = property(point, "--office-marker-fill-kind") || property(point, "--office-marker-fill-color")
-      ? svgFill(document, point, svg, serial + "-marker-" + ++paintSerial, bounds, "--office-marker-fill", automatic, account)
+      ? svgFill(document, point, svg, serial + "-marker-" + ++paintSerial, bounds, "--office-marker-fill", automatic, account, options.orientation)
       : fill(seriesId, position, point, bounds);
     const group = appendChartMarker(role === "point" ? plotLayer : svg, symbol, size, x, y, color, strokeAttributes(document, point, "--office-marker-line", automatic), svgElement)!;
     group.dataset.sdkChartMarkerRole = role; group.dataset.seriesId = seriesId;

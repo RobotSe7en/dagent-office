@@ -233,7 +233,11 @@ pnpm probe:workbook-model
 
 预设路径的 SVG 生成现由 PPT 与工作簿共用，包含基本填充、描边、渐变和箭头的节点预算；多路径图形的箭头使用不同 SVG 身份。工作簿适配保留自己的锚点和源所有权，不构造伪造的 PPT 模型。原始／Calc 的形状颜色及共享渐变、箭头边界已通过三浏览器测试；PPT 的 16 个预设、组变换、连接线、文字自适应、主题颜色和既有截图回归保持通过。零宽／零高线条有描边外扩时继续参与裁剪。复合线、特殊渐变参数、阴影及工作簿文字的最终绘制仍需单独核对，这次共享不等同于完整 DrawingML 外观验收。
 
-共享线性渐变按实际填充区域计算物理方向和完整色标跨度，区分固定角度与随宽高缩放的 `scaled` 标志；文字框自动扩展时重新计算，图表柱条、扇区和图例使用各自区域。非正方形区域的斜向渐变已通过三浏览器像素检查，现有形状／分组／图表回归及 PPT 导出重开检查通过。原生缺省属性保持可继承，最终缺省角度为 0、`scaled=false`，依据 [ECMA 渐变方向说明](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.lineargradientfill.scaled?view=openxml-3.0.1)及 [MS-OI29500 §2.1.1284](https://officeprotocoldocs-f5hpbjgea6b8gneq.b02.azurefd.net/files/MS-OI29500/%5BMS-OI29500%5D.pdf)。旋转／翻转与 `rotWithShape=false` 的最终合成仍待完成，不据此宣称全部渐变外观通过验收。
+共享线性渐变按实际填充区域计算物理方向和完整色标跨度，区分固定角度与随宽高缩放的 `scaled` 标志；文字框自动扩展时重新计算，图表柱条、扇区和图例使用各自区域。非正方形区域的斜向渐变已通过三浏览器像素检查，现有形状／分组／图表回归及 PPT 导出重开检查通过。原生缺省属性保持可继承，最终缺省角度为 0、`scaled=false`，依据 [ECMA 渐变方向说明](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.lineargradientfill.scaled?view=openxml-3.0.1)及 [MS-OI29500 §2.1.1284](https://officeprotocoldocs-f5hpbjgea6b8gneq.b02.azurefd.net/files/MS-OI29500/%5BMS-OI29500%5D.pdf)。旋转／翻转现在按下面的填充模式合成，完整外观矩阵仍待验收。
+
+绘图渐变按 [gradFill 定义](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.gradientfill?view=openxml-3.0.1)保留原生开关和角度。用户已选择 `rotWithShape=true` 时保持原填充随形状一起旋转及原覆盖范围；不按 Calc 重新铺色。false 时，在页坐标的旋转框包围矩形内计算渐变，再将方向反变换到对象局部空间；单翻转会共轭旋转方向，显式反射保留。几何和图表适配都将所属对象方向传给共享填充层，涵盖绘图区、系列、扇区、图例及标记；PPT 自动扩展后也重新计算。所有坐标要求有限，色标节点继续计入同一候选预算，未知旋转标志明确失败。
+
+[32 组独立来源](evidence/xlsx-gradient-rotation.json)记录源／Calc 重存属性和分别重开后的 PDF 色带矢量，包含角度、缩放、单双翻转及省略开关。Calc 将随形状模式改存为固定模式并加上旋转角，删除 `scaled`，部分翻转组合重开会改变颜色方向；另有 90° 变换尺寸变化，锚点、变换尺寸及原生宽高比分别记录。SDK 保留实际来源，不恢复生产者丢失的属性。显示检查分别核对原始旋转覆盖策略、固定模式的方向／原生相同语义矢量及实际颜色采样，不把有差异的项计为保真通过，也不以归一化填充方向代替整个对象的几何验收。Excel/WPS 尚未实机验证。
 
 同一原生继承规则也用于描边：`ln/@w` 缺省时不覆盖主题线宽，完全无继承值时使用 0.75pt；显式零宽保持为零。工作簿主题继承及零宽通过三浏览器检查，共享 PPT 导入、原生导出重开与形状／分组／连接线／图表回归通过。已保存包中的显式线宽保持原值。
 
