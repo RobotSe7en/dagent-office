@@ -2,7 +2,7 @@ import type { ChartAppearance, DeepReadonly } from "@dagent-office/core";
 import { DocumentError } from "@dagent-office/core";
 import { svgElement } from "./presentation/svg.js";
 
-type Marker = NonNullable<DeepReadonly<ChartAppearance>["seriesStyles"]>[number]["marker"];
+type Marker = Exclude<NonNullable<DeepReadonly<ChartAppearance>["seriesStyles"]>[number]["marker"], "auto">;
 /** ECMA-376 §21.2.3.27: dash/dot are filled rectangles; open symbols have
  * a square fill beneath their internal strokes. All coordinates are points. */
 export function appendChartMarker(svg: SVGElement, marker: Marker, size: number, x: number, y: number,

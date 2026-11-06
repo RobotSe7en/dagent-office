@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { IdentifierSchema } from "./primitives.js";
 
-const marker = z.enum(["none", "circle", "square", "diamond", "triangle", "x", "star", "plus", "dot", "dash"]);
+const marker = z.enum(["none", "auto", "circle", "square", "diamond", "triangle", "x", "star", "plus", "dot", "dash"]);
 /** Shared basic chart appearance, independent of the authoritative data source. */
 export const ChartAppearanceSchema = z.strictObject({
   kind: z.enum(["column", "line", "pie"]),

@@ -42,6 +42,9 @@ export type BasicChartNumberContext = { readonly kind: "value-axis"; readonly st
 export interface BasicChartRect { readonly x: number; readonly y: number; readonly width: number; readonly height: number }
 export interface BasicChartLayout { readonly plot: BasicChartRect; readonly title?: BasicChartRect; readonly legend?: BasicChartRect }
 const defaultPalette = ["#4472c4", "#ed7d31", "#a5a5a5", "#ffc000", "#5b9bd5", "#70ad47"];
+// Native auto delegates its shape to the application. Keep one stable shape
+// per original series, even when other series or source points are hidden.
+const automaticMarkers = ["circle", "square", "diamond", "triangle", "x", "plus", "star", "dash", "dot"] as const;
 export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartAppearance>, data: BasicChartData, width: number, height: number, serial: string, account: (amount: number) => void, options: BasicChartOptions): void {
   const svgElement: typeof createSvgElement = (document, tag, attributes) => { account(1); return createSvgElement(document, tag, attributes); };
   const document = node.ownerDocument, formatNumber = options.formatNumber, styles = new Map<string, CSSStyleDeclaration>();
@@ -105,7 +108,8 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
   const fill = (seriesId: string, index: number, s: CSSStyleDeclaration, bounds: DrawingGradientBounds): string => svgFill(document, s, svg, serial + "-paint-" + ++paintSerial, bounds, "--office-fill", palette[(varyColors ? sourceIndex(index) : seriesIndexes.get(seriesId)!) % palette.length]!, account);
   const marker = (seriesId: string, index: number, x: number, y: number, role: "point" | "legend"): void => {
     const definition = seriesDefinitions.get(seriesId), override = index < 0 ? undefined : pointDefinitions.get(pointKey(seriesId, sourceIndex(index)));
-    const symbol = override?.marker ?? definition?.marker ?? "none", size = override?.markerSize ?? definition?.markerSize ?? 5;
+    const requested = override?.marker ?? definition?.marker ?? "none", size = override?.markerSize ?? definition?.markerSize ?? 5;
+    const symbol = requested === "auto" ? automaticMarkers[seriesIndexes.get(seriesId)! % automaticMarkers.length]! : requested;
     if (symbol === "none") return;
     const point = index < 0 ? seriesStyle.get(seriesId)! : pointStyle(seriesId, index), position = Math.max(0, index);
     const bounds = { x: x - size / 2, y: y - size / 2, width: size, height: size };
@@ -114,7 +118,9 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
       ? svgFill(document, point, svg, serial + "-marker-" + ++paintSerial, bounds, "--office-marker-fill", automatic, account)
       : fill(seriesId, position, point, bounds);
     const group = appendChartMarker(role === "point" ? plotLayer : svg, symbol, size, x, y, color, strokeAttributes(document, point, "--office-marker-line", automatic), svgElement)!;
-    group.dataset.sdkChartMarkerRole = role; if (index >= 0) group.dataset.sdkChartSourceIndex = String(sourceIndex(index));
+    group.dataset.sdkChartMarkerRole = role; group.dataset.seriesId = seriesId;
+    if (requested === "auto") group.dataset.sdkChartMarkerAuto = "true";
+    if (index >= 0) group.dataset.sdkChartSourceIndex = String(sourceIndex(index));
   };
   const label = (series: BasicChartData["series"][number], index: number, value: number, x: number, y: number, percent?: number, baseline?: number): void => {
     if (!chart.showLabels) return;

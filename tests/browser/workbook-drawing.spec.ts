@@ -34,6 +34,7 @@ let formatCharts: typeof referenceTitles;
 let code = '';
 const gridCharts: { snapshot: WorkbookSnapshot; plots: BasicChartData[] }[] = [];
 const markerCharts: { producer: boolean; snapshot: WorkbookSnapshot; plots: BasicChartData[] }[] = [];
+const automaticMarkerCharts: { snapshot: WorkbookSnapshot; plots: BasicChartData[] }[] = [];
 const colorCharts: { theme: string; snapshot: WorkbookSnapshot; plots: BasicChartData[] }[] = [];
 let nativeText: WorkbookSnapshot;
 let overflowText: WorkbookSnapshot;
@@ -44,6 +45,13 @@ const textEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-drawing-text-se
 const shadowEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-drawing-shadow-semantics.json', 'utf8')) as { sourceSha256: string; cases: { rotation: number; flipH: boolean; flipV: boolean; rotateWithShape: boolean; direction: number; distancePt: number; observed: { offsetPt: number[] } }[] };
 const blurEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-shadow-blur-semantics.json', 'utf8')) as { sourceSha256: string; cases: { blurPt: number; observed: { sharpEdgeOffsetPt?: number; samples: { offsetPt: number; rgb: number[] }[] } }[] };
 test.beforeAll(async () => {
+  {
+    const model = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-auto-markers.xlsx'), { documentId: 'auto-markers' }), { kind: 'workbook' }), snapshot = model.snapshot();
+    const response = await modelChartSource(model).read({ ...DEFAULT_CHART_READ_LIMITS, documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, chartIds: snapshot.metadata.workbook.charts!.map(chart => chart.chartId) }, new AbortController().signal);
+    const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
+    const plots = bindWorkbookChartData(snapshot, response, formatter).map(binding => { if (binding.kind !== 'available') throw Error('Automatic marker data unavailable'); return binding.data; });
+    formatter.dispose(); automaticMarkerCharts.push({ snapshot, plots });
+  }
   for (const suffix of ['', '-producer']) {
     const model = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-grid' + suffix + '.xlsx'), { documentId: 'grid' + suffix }), { kind: 'workbook' }), snapshot = model.snapshot();
     const response = await modelChartSource(model).read({ ...DEFAULT_CHART_READ_LIMITS, documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, chartIds: snapshot.metadata.workbook.charts!.map(chart => chart.chartId) }, new AbortController().signal);
@@ -626,6 +634,39 @@ test('native point marker geometry, independent paint and inherited properties r
       expect(compacted).toHaveLength(1); expect(compacted[0]).toMatchObject(appearance);
       if (!point.gradient) expect(compacted[0]!.fill).toBe(fill);
       expect(compacted[0]!.paths.map(path => path?.match(/M/g)?.length)).toEqual(paths.map(path => path?.match(/M/g)?.length));
+    }
+  }
+});
+
+test('explicit automatic markers retain native source and choose stable series shapes across hidden points and series', async ({ page }) => {
+  const cases = JSON.parse(readFileSync('docs/evidence/xlsx-chart-auto-markers.json', 'utf8')).cases as { series: number; symbol: string; pointSymbol?: string; pointSize?: number; pointPaint?: string }[];
+  for (const input of automaticMarkerCharts) {
+    const result = await page.evaluate(({ snapshot, plots }) => window.workbookChartHost.measureWorkbookChartMarkers(snapshot, plots), input);
+    expect(result.unchanged).toBe(true); expect(result.budget).toBe('ResourceLimitExceeded');
+    for (const [index, item] of result.normal.entries()) {
+      const expected = cases[index]!; expect(item.nodes).toBe(item.declared);
+      for (let series = 0; series < expected.series; series++) {
+        const automatic = series ? 'square' : 'circle', base = expected.symbol === 'auto' ? automatic : expected.symbol;
+        const markers = item.markers.filter(marker => marker.seriesId === 'series-' + series);
+        expect(markers.filter(marker => marker.role === 'legend')).toMatchObject([{ symbol: base, automatic: expected.symbol === 'auto' }]);
+        const points = markers.filter(marker => marker.role === 'point');
+        expect(points.map(point => point.sourceIndex)).toEqual(expected.pointSymbol === 'none' ? ['0', '2'] : ['0', '1', '2']);
+        for (const point of points) {
+          const override = point.sourceIndex === '1', requested = override ? expected.pointSymbol ?? expected.symbol : expected.symbol;
+          expect(point.symbol).toBe(requested === 'auto' ? automatic : requested); expect(point.automatic).toBe(requested === 'auto');
+          expect(point.width).toBeCloseTo(override ? expected.pointSize ?? 10 : 10, 4);
+          expect(point.height).toBeCloseTo(point.width, 4);
+          if (override && expected.pointPaint === 'none') expect(point.fill).toBe('none');
+        }
+        const compacted = result.compacted[index]!; expect(compacted.nodes).toBe(compacted.declared);
+        expect(compacted.markers.filter(marker => marker.role === 'point' && marker.seriesId === 'series-' + series).map(({ symbol, automatic, sourceIndex }) => ({ symbol, automatic, sourceIndex })))
+          .toEqual(points.filter(point => point.sourceIndex !== '0').map(({ symbol, automatic, sourceIndex }) => ({ symbol, automatic, sourceIndex })));
+      }
+      if (expected.series === 2) {
+        const hidden = result.hidden[index]!; expect(hidden.nodes).toBe(hidden.declared);
+        expect(hidden.markers.every(marker => marker.seriesId === 'series-1' && marker.symbol === 'square' && marker.automatic)).toBe(true);
+        expect(hidden.markers.filter(marker => marker.role === 'point')).toHaveLength(3);
+      }
     }
   }
 });

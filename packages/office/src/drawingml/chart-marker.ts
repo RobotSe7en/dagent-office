@@ -22,7 +22,7 @@ export function chartMarker(source: XmlNode | undefined): {
   const marker = val(source, "symbol"), size = child(source, "size", C);
   const markerSize = size && val(source, "size") === undefined ? 5 : decimal(source, "size");
   if (child(source, "symbol", C) && marker === undefined) fail(source, "A chart marker symbol is missing its value.");
-  if (marker !== undefined && !["none", "circle", "square", "diamond", "triangle", "x", "star", "plus", "dot", "dash"].includes(marker)) unsupported(source, "This chart marker shape is not supported.");
+  if (marker !== undefined && !["none", "auto", "circle", "square", "diamond", "triangle", "x", "star", "plus", "dot", "dash"].includes(marker)) unsupported(source, "This chart marker shape is not supported.");
   if (markerSize !== undefined && (!Number.isInteger(markerSize) || markerSize < 2 || markerSize > 72)) fail(source, "A chart marker size exceeds native bounds.");
   const css: Css = {};
   for (const [key, value] of Object.entries(appearance(child(source, "spPr", C)))) css[key.replace("--office-", "--office-marker-")] = value;
