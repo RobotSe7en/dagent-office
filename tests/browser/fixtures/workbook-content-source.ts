@@ -6,7 +6,7 @@ import { measureDrawingGradients } from './drawing-gradient.js';
 import { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback, measureDrawingTextOverflow, measureDrawingOverflowEdges } from './workbook-drawing-text.js';
 import { measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } from './workbook-surface.js';
 import { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } from './workbook-shadow.js';
-import { measureWorkbookCharts, measureWorkbookChartTextFonts, measureWorkbookChartMarkers, measureWorkbookChartGrid, measureWorkbookChartColors, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } from './workbook-chart.js';
+import { measureWorkbookCharts, measureWorkbookChartAxes, measureWorkbookChartTextFonts, measureWorkbookChartMarkers, measureWorkbookChartGrid, measureWorkbookChartColors, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } from './workbook-chart.js';
 
 function sourceText(root: Node): string {
   if (root.nodeType === 3) return root.textContent ?? '';
@@ -43,4 +43,4 @@ export function rejectContentSource(snapshot: WorkbookSnapshot, maxNodes?: numbe
 }
 Object.assign(window, { workbookContentHost: { measureContentSource, rejectContentSource, measureImageView, disposeImageView, measureObjectGeometry, measureDrawingGradients, measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback, measureDrawingTextOverflow, measureDrawingOverflowEdges, measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } });
 Object.assign(window, { workbookShadowHost: { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } });
-Object.assign(window, { workbookChartHost: { measureWorkbookChartTextFonts, measureWorkbookCharts, measureWorkbookChartMarkers, measureWorkbookChartGrid, measureWorkbookChartColors, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } });
+Object.assign(window, { workbookChartHost: { measureWorkbookChartAxes, measureWorkbookChartTextFonts, measureWorkbookCharts, measureWorkbookChartMarkers, measureWorkbookChartGrid, measureWorkbookChartColors, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } });

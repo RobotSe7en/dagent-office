@@ -4,6 +4,7 @@ import { attributes, boolean, finite, integer, one, spreadsheetText, value } fro
 import { validateDrawingEffects, validateDrawingFill, validateDrawingLine } from "./drawing-style.js";
 import { drawingTextStyle } from "./drawing-text.js";
 import { chartMarkerFlag } from "../drawingml/chart-marker.js";
+import { chartAxisCrossing } from "../drawingml/chart-axis.js";
 
 const children: Readonly<Record<string, readonly string[]>> = {
   chartSpace: ["date1904", "lang", "roundedCorners", "chart", "spPr", "txPr"],
@@ -18,8 +19,8 @@ const children: Readonly<Record<string, readonly string[]>> = {
   dLbls: ["dLbl", "delete", "numFmt", "spPr", "txPr", "dLblPos", "showLegendKey", "showVal", "showCatName", "showSerName", "showPercent", "showBubbleSize", "separator", "showLeaderLines", "leaderLines", "extLst"],
   dLbl: ["idx", "delete", "numFmt", "spPr", "txPr", "dLblPos", "showLegendKey", "showVal", "showCatName", "showSerName", "showPercent", "showBubbleSize", "separator"],
   leaderLines: ["spPr"], hiLowLines: ["spPr"], legend: ["legendPos", "layout", "overlay", "spPr", "txPr"],
-  catAx: ["axId", "scaling", "delete", "axPos", "majorGridlines", "title", "numFmt", "majorTickMark", "minorTickMark", "tickLblPos", "spPr", "txPr", "crossAx", "crosses", "auto", "lblAlgn", "lblOffset", "tickLblSkip", "tickMarkSkip", "noMultiLvlLbl"],
-  valAx: ["axId", "scaling", "delete", "axPos", "majorGridlines", "title", "numFmt", "majorTickMark", "minorTickMark", "tickLblPos", "spPr", "txPr", "crossAx", "crosses", "crossBetween", "majorUnit", "minorUnit"],
+  catAx: ["axId", "scaling", "delete", "axPos", "majorGridlines", "title", "numFmt", "majorTickMark", "minorTickMark", "tickLblPos", "spPr", "txPr", "crossAx", "crosses", "crossesAt", "auto", "lblAlgn", "lblOffset", "tickLblSkip", "tickMarkSkip", "noMultiLvlLbl"],
+  valAx: ["axId", "scaling", "delete", "axPos", "majorGridlines", "title", "numFmt", "majorTickMark", "minorTickMark", "tickLblPos", "spPr", "txPr", "crossAx", "crosses", "crossesAt", "crossBetween", "majorUnit", "minorUnit"],
   scaling: ["orientation", "max", "min"], majorGridlines: ["spPr"], layout: [],
 };
 const booleans = new Set(["date1904", "roundedCorners", "autoTitleDeleted", "plotVisOnly", "showDLblsOverMax", "overlay", "varyColors", "invertIfNegative", "smooth", "bubble3D", "delete", "showLegendKey", "showVal", "showCatName", "showSerName", "showPercent", "showBubbleSize", "showLeaderLines", "auto", "noMultiLvlLbl"]);
@@ -86,6 +87,7 @@ export function validateWorksheetChart(source: XmlNode): XmlNode {
     }
     if (node.name === "lang") { attributes(node, ["val"]); check(node, [], C); const language = value(node, "val"); if (!language || !/^[A-Za-z]{1,8}(?:-[A-Za-z0-9]{1,8})*$/.test(language)) fail(node, "A chart editing language is invalid."); return node; }
     if (node.name === "marker" && parent?.name === "lineChart") return withValue(node, chartMarkerFlag(node) ? "1" : "0");
+    if (node.name === "crossesAt") return node; // Strictly audited with its parent axis below.
     if (booleans.has(node.name) || numeric.has(node.name) || enums[node.name]) {
       attributes(node, ["val"]); check(node, [], C);
       if (booleans.has(node.name)) boolean(node, "val", true);
@@ -108,6 +110,7 @@ export function validateWorksheetChart(source: XmlNode): XmlNode {
     }
     const allowed = children[node.name]; if (!allowed) unsupported(node, "This native chart feature is outside the selected chart reader.");
     attributes(node, []); check(node, allowed, C);
+    if (node.name === "catAx" || node.name === "valAx") chartAxisCrossing(node);
     if (node.name === "dLbls") chartLabelLeaderLines(node);
     if (node.name === "ser") {
       const selected = parent?.name === "barChart" ? ["invertIfNegative"] : parent?.name === "lineChart" ? ["marker", "smooth"] : ["explosion"];

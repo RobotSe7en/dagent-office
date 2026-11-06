@@ -136,7 +136,7 @@ export function importChart(context: Context, reference: XmlNode, frame: Html): 
   for (const axis of axes) {
     check(axis, ["axId", "scaling", "delete", "axPos", "majorGridlines", "minorGridlines", "title", "numFmt", "majorTickMark", "minorTickMark", "tickLblPos", "spPr", "txPr", "crossAx", "crosses", "crossesAt", "auto", "lblAlgn", "lblOffset", "tickLblSkip", "tickMarkSkip", "noMultiLvlLbl", "crossBetween", "majorUnit", "minorUnit", "extLst"], C);
     const axisId = val(axis, "axId"); if (!axisId || axisIds.has(axisId)) fail(axis, "Chart axis identities are missing or duplicated."); axisIds.add(axisId);
-    if (child(axis, "title", C) || child(axis, "minorGridlines", C) || child(axis, "crossesAt", C)) unsupported(axis, "Axis titles, minor grid lines and custom crossing points are not supported.");
+    if (child(axis, "title", C) || child(axis, "minorGridlines", C)) unsupported(axis, "Axis titles and minor grid lines are not supported.");
     const scaling = child(axis, "scaling", C);
     check(scaling, ["orientation", "max", "min", "logBase", "extLst"], C);
     if (child(scaling, "logBase", C)) unsupported(axis, "Logarithmic axes are not supported.");

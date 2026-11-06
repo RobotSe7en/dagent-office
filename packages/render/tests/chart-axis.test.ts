@@ -40,3 +40,31 @@ describe('shared category intervals', () => {
     for (const count of [0, -1, 1.5, Infinity, 0x1_0000_0000]) expect(() => chartCategoryAxis(count, 0, 120, true, false)).toThrowError(expect.objectContaining({ code: 'ResourceLimitExceeded' }));
   });
 });
+
+describe('Office axis placement', () => {
+  const style = (values: Record<string, string> = {}) => ({ getPropertyValue: (name: string) => values[name] ?? '' }) as CSSStyleDeclaration;
+  it('crosses on the perpendicular scale, clamps to its bounds and ignores axPos', async () => {
+    const { chartAxisPlacement } = await import('../src/chart-axis.js');
+    const chart = { kind: 'line' as const, legend: 'none' as const, showLabels: false };
+    const category = style({ '--office-axis-crosses-at': '-2', '--office-axis-position': 't' }), value = style({ '--office-axis-crosses-at': '2', '--office-axis-position': 'r' });
+    expect(chartAxisPlacement(chart, category, value, -4, 4, 3)).toMatchObject({ x: 1 / 3, y: .75, categoryTop: false, valueRight: false });
+    expect(chartAxisPlacement({ ...chart, reverseCategories: true, reverseValues: true }, category, value, -4, 4, 3)).toMatchObject({ x: 1 - 1 / 3, y: .25, categoryTop: true, valueRight: true });
+    expect(chartAxisPlacement(chart, style({ '--office-axis-crosses-at': '1e308' }), style({ '--office-axis-crosses-at': '-1e308' }), -4, 4, 3)).toMatchObject({ x: 0, y: 0, categoryTop: true, valueRight: false });
+    expect(chartAxisPlacement(chart, style(), style(), 1, 4, 3).y).toBe(1);
+    expect(chartAxisPlacement(chart, style(), style(), -4, -1, 3).y).toBe(0);
+  });
+  it('keeps labels at high/low ends independently from the axis and reverses their sides', async () => {
+    const { chartAxisPlacement } = await import('../src/chart-axis.js');
+    const chart = { kind: 'column' as const, legend: 'none' as const, showLabels: false };
+    for (const reverse of [false, true]) {
+      const at = chartAxisPlacement({ ...chart, reverseCategories: reverse, reverseValues: reverse }, style({ '--office-axis-label-position': 'high', '--office-axis-crosses-at': '2' }), style({ '--office-axis-label-position': 'low', '--office-axis-crosses-at': '2', '--office-axis-cross-between': 'midCat' }), -4, 4, 3);
+      expect(at).toMatchObject({ x: .5, y: reverse ? .75 : .25, categoryLabel: reverse ? 1 : 0, valueLabel: reverse ? 1 : 0, categoryTop: !reverse, valueRight: reverse });
+    }
+  });
+  it('rejects nonfinite, nonintegral category crossings and malformed persisted CSS', async () => {
+    const { chartAxisPlacement } = await import('../src/chart-axis.js');
+    const chart = { kind: 'line' as const, legend: 'none' as const, showLabels: false };
+    for (const invalid of ['NaN', 'Infinity', '0x10', '2.5', '1e309']) expect(() => chartAxisPlacement(chart, style(), style({ '--office-axis-crosses-at': invalid }), -4, 4, 3)).toThrowError(expect.objectContaining({ code: 'InvalidDocument' }));
+    expect(() => chartAxisPlacement(chart, style({ '--office-axis-crosses': 'minimum' }), style(), -4, 4, 3)).toThrowError(expect.objectContaining({ code: 'InvalidDocument' }));
+  });
+});

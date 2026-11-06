@@ -7,6 +7,37 @@ import { WorkbookContentSources } from '../../../packages/render/src/workbook/co
 import { createWorkbookChartText } from '../../../packages/render/src/workbook/drawing-text.js';
 import type { WorkbookChartTextRole } from '../../../packages/render/src/workbook/drawing-text.js';
 
+export async function measureWorkbookChartAxes(snapshot: WorkbookSnapshot, plots: readonly BasicChartData[]) {
+  const container = document.createElement('div'); document.body.append(container);
+  const css = '.axis-ignore-position{--office-axis-position:t}.axis-label-high{--office-axis-label-position:high}.axis-label-low{--office-axis-label-position:low}.axis-label-nextTo{--office-axis-label-position:nextTo}';
+  const surface = await createWorkbookSurface(container, { ...snapshot, styles: [...snapshot.styles, { path: 'axis-control.css', css }] }, { widthPt: 520, heightPt: 340 });
+  const sources = new WorkbookContentSources(surface.document, snapshot), charts = snapshot.metadata.workbook.charts!;
+  const projected = sources.project(surface.source, charts.map(chart => chart.nodeId)), before = surface.source.innerHTML;
+  const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
+  const read = (index: number, control = '', composed = false) => {
+    const original = charts[index]!, chart = { ...original, categoryAxisCssClass: [original.categoryAxisCssClass, control].filter(Boolean).join(' '), valueAxisCssClass: [original.valueAxisCssClass, control].filter(Boolean).join(' ') };
+    const source = projected.get(original.nodeId)!, data = plots[index]!;
+    const result = composed ? layoutWorkbookChart(surface.view, source, chart, { kind: 'available', chartId: chart.chartId, data, titles: {}, diagnostics: [],
+      valueFormats: data.series.map(series => series.values.map(() => undefined)), categoryNumbers: data.categories.map(() => null) }, 480, 300, 'composed-axes-' + index, formatter)
+      : createWorkbookChartView(source, chart, data, 480, 300, 'axes-' + index, { formatNumber: String });
+    surface.view.append(result.element);
+    try {
+      const svg = result.element.querySelector('svg')!, frame = svg.querySelector('rect')!;
+      const left = frame.x.baseVal.value, top = frame.y.baseVal.value, width = frame.width.baseVal.value, height = frame.height.baseVal.value;
+      const category = svg.querySelector<SVGLineElement>('[data-sdk-chart-axis=category]')!, value = svg.querySelector<SVGLineElement>('[data-sdk-chart-axis=value]')!;
+      const labels = (kind: string) => [...svg.querySelectorAll<SVGTextElement>('[data-sdk-chart-label=' + kind + ']')].map(node => ({ x: (node.x.baseVal[0]!.value - left) / width, y: (node.y.baseVal[0]!.value - top) / height, anchor: node.getAttribute('text-anchor') }));
+      const walker = surface.document.createTreeWalker(result.element, 0xffff_ffff); let nodes = 1; while (walker.nextNode()) nodes++;
+      return { x: (value.x1.baseVal.value - left) / width, y: (category.y1.baseVal.value - top) / height, plot: [left, top, width, height], categoryLabels: labels('category-axis'), valueLabels: labels('value-axis'), nodes, declared: result.nodes };
+    } finally { result.element.remove(); }
+  };
+  try {
+    const normal = charts.map((_, index) => read(index)), ignored = charts.map((_, index) => read(index, 'axis-ignore-position'));
+    const composed = charts.map((_, index) => read(index, '', true));
+    const labels = [13, 16].map(index => ({ reverse: charts[index]!.reverseValues, results: ['nextTo', 'high', 'low'].map(position => ({ position, value: read(index, 'axis-label-' + position) })) }));
+    return { normal, ignored, composed, labels, unchanged: surface.source.innerHTML === before };
+  } finally { formatter.dispose(); sources.dispose(); surface.dispose(); container.remove(); }
+}
+
 export async function measureWorkbookChartTextFonts(snapshot: WorkbookSnapshot, plot: BasicChartData, missing: boolean) {
   const container = document.createElement('div'); document.body.append(container);
   const names = missing ? ['DagentMissingLatin', 'DagentMissingAnsi', 'DagentMissingEA', 'DagentMissingComplex'] : ['Liberation Serif', 'Liberation Sans', 'Noto Serif CJK SC', 'DejaVu Sans'];
@@ -355,7 +386,7 @@ export async function measureWorkbookChartTitleContents(snapshot: WorkbookSnapsh
 
 export async function measureWorkbookComposedChart(snapshot: WorkbookSnapshot, bindings: readonly WorkbookChartBinding[]) {
   const container = document.createElement('div'); document.body.append(container);
-  const css = '.axis-top{--office-axis-position:t}.axis-right{--office-axis-position:r}svg,text,div{font-size:99pt!important}';
+  const css = '.axis-top{--office-axis-position:t;--office-axis-crosses:max}.axis-right{--office-axis-position:r;--office-axis-crosses:max}svg,text,div{font-size:99pt!important}';
   const surface = await createWorkbookSurface(container, { ...snapshot, styles: [...snapshot.styles, { path: 'chart-layout-probe.css', css }] }, { widthPt: 600, heightPt: 300 });
   const sources = new WorkbookContentSources(surface.document, snapshot), formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
   try {

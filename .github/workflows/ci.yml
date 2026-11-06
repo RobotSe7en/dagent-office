@@ -112,6 +112,7 @@ jobs:
       - run: python3 scripts/check-xlsx-chart-markers.py
       - run: python3 scripts/check-xlsx-chart-auto-markers.py
       - run: python3 scripts/check-xlsx-chart-grid.py
+      - run: python3 scripts/check-xlsx-chart-axes.py
       - run: pnpm check:docx-export
       - run: node scripts/playwright.mjs install --with-deps chromium --only-shell
       - run: pnpm check:word-closure

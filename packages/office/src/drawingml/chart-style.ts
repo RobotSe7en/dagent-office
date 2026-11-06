@@ -5,6 +5,7 @@ import type { Css } from "../ooxml/styles.js";
 import { bool, value } from "./values.js";
 import { effects, fill, outline } from "./styles.js";
 import { paragraphProperties, runProperties } from "./text.js";
+import { chartAxisCrossing } from "./chart-axis.js";
 
 export interface ChartStyleContext {
   id(prefix: string): string;
@@ -62,7 +63,7 @@ export function labelStyle(context: ChartStyleContext, source: XmlNode | undefin
   return style(context, source, "chart-label-style", css);
 }
 export function axisStyle(context: ChartStyleContext, source: XmlNode, prefix: string): string {
-  const css: Css = {};
-  for (const [name, key, fallback] of [["axPos", "position", source.name === "catAx" ? "b" : "l"], ["majorTickMark", "major-tick", "cross"], ["minorTickMark", "minor-tick", "cross"], ["tickLblPos", "label-position", "nextTo"], ["crosses", "crosses", "autoZero"], ["lblAlgn", "label-align", "ctr"], ["lblOffset", "label-offset", "100"], ["tickLblSkip", "label-skip", "1"], ["tickMarkSkip", "tick-skip", "1"], ["crossBetween", "cross-between", "between"], ["minorUnit", "minor-unit", "auto"]]) if (child(source, name!, C)) css["--office-axis-" + key] = val(source, name!, fallback!)!;
+  const css: Css = chartAxisCrossing(source);
+  for (const [name, key, fallback] of [["axPos", "position", source.name === "catAx" ? "b" : "l"], ["majorTickMark", "major-tick", "cross"], ["minorTickMark", "minor-tick", "cross"], ["tickLblPos", "label-position", "nextTo"], ["lblAlgn", "label-align", "ctr"], ["lblOffset", "label-offset", "100"], ["tickLblSkip", "label-skip", "1"], ["tickMarkSkip", "tick-skip", "1"], ["crossBetween", "cross-between", "between"], ["minorUnit", "minor-unit", "auto"]]) if (child(source, name!, C)) css["--office-axis-" + key] = val(source, name!, fallback!)!;
   return style(context, source, prefix, css);
 }

@@ -5,7 +5,7 @@ import { cssStringValue, numeric, property, resolvedColor, strokeAttributes, svg
 import { svgElement as createSvgElement } from "./presentation/svg.js";
 import type { DrawingGradientBounds } from "./drawing-gradient.js";
 import { appendChartMarker } from "./chart-marker.js";
-import { chartAxisTicks, chartCategoryAxis } from "./chart-axis.js";
+import { chartAxisTicks, chartCategoryAxis, chartAxisPlacement, chartValueScale } from "./chart-axis.js";
 import { officeFontSegments } from "./font-scripts.js";
 import type { OfficeFontRole } from "./font-scripts.js";
 
@@ -102,7 +102,9 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     svg.append(label); return label;
   };
   const catStyle = style(chart.categoryAxisCssClass), valStyle = style(chart.valueAxisCssClass), gridStyle = style(chart.gridCssClass);
-  const categoryTop = property(catStyle, "--office-axis-position", "b") === "t", valueRight = property(valStyle, "--office-axis-position", "l") === "r";
+  const scale = data.series.length ? chartValueScale(chart, data.series) : { minimum: 0, maximum: 1, unit: 1 };
+  const axes = chart.kind === "pie" ? undefined : chartAxisPlacement(chart, catStyle, valStyle, scale.minimum, scale.maximum, Math.max(1, data.categories.length));
+  const categoryTop = axes?.categoryTop ?? false, valueRight = axes?.valueRight ?? false;
   const plotStyle = style(chart.plotCssClass);
   const title = options.title;
   const titleHeight = title && chart.titleVisible !== false ? Math.min(54, height * 0.2) : 12;
@@ -185,22 +187,18 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
       label(series, index, value, cx + radius * 0.65 * Math.cos(middle), cy + radius * 0.65 * Math.sin(middle), fraction); angle = end;
     });
   } else {
-    let low = 0, high = 0;
-    for (const series of data.series) for (const value of series.values) if (value !== null) { low = Math.min(low, value); high = Math.max(high, value); }
-    if (low === 0 && high === 0) high = 1;
-    const minimum = chart.minimum ?? low, largest = chart.maximum ?? high;
-    const rough = (largest - minimum) / 8 || 1, power = 10 ** Math.floor(Math.log10(rough)), factor = rough / power, unit = chart.majorUnit ?? (factor <= 1 ? 1 : factor <= 2 ? 2 : factor <= 5 ? 5 : 10) * power;
-    const maximum = chart.maximum ?? (Math.floor(largest / unit) + 1) * unit;
+    const { minimum, maximum, unit } = scale;
     const majorTicks = chartAxisTicks(minimum, maximum, unit, 1024, 0.001);
     const y = (v: number): number => {
       const position = top + (chart.reverseValues ? (v - minimum) : (maximum - v)) / (maximum - minimum) * h;
       if (!Number.isFinite(position)) throw new DocumentError("ResourceLimitExceeded", "Chart values exceed the finite preview coordinate scale.");
       return position;
     };
-    const axisX = valueRight ? right : left;
+    const axisX = left + axes!.x * w;
     const tick = (x: number, y: number, vertical: boolean, s: CSSStyleDeclaration, minor = false): void => {
       const kind = property(s, "--office-axis-" + (minor ? "minor" : "major") + "-tick", "cross"); if (kind === "none") return;
-      const length = minor ? 2 : 4, start = kind === "in" ? 0 : -length, end = kind === "out" ? 0 : length;
+      const length = minor ? 2 : 4, outside = vertical ? axes!.categoryOutside : axes!.valueOutside;
+      const start = (kind === "out" ? 0 : -length) * outside, end = (kind === "in" ? 0 : length) * outside;
       svg.append(svgElement(document, "line", { x1: x + (vertical ? 0 : start), x2: x + (vertical ? 0 : end), y1: y + (vertical ? start : 0), y2: y + (vertical ? end : 0), ...strokeAttributes(document, s, "--office-line", "#898989") }));
     };
     for (const value of majorTicks) {
@@ -208,16 +206,16 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
       if (chart.gridCssClass) svg.append(svgElement(document, "line", { x1: left, y1: position, x2: right, y2: position, "data-sdk-chart-grid": "value", ...strokeAttributes(document, gridStyle, "--office-line", "#d9d9d9") }));
       if (chart.showValueAxis !== false) {
         tick(axisX, position, false, valStyle);
-        if (property(valStyle, "--office-axis-label-position") !== "none") text(formatNumber(value, chart.numberFormat, { kind: "value-axis", style: valStyle }), axisX + (valueRight ? 7 : -7), position, valStyle, valueRight ? "start" : "end").dataset.sdkChartLabel = "value-axis";
+        if (property(valStyle, "--office-axis-label-position") !== "none") text(formatNumber(value, chart.numberFormat, { kind: "value-axis", style: valStyle }), left + axes!.valueLabel * w + (valueRight ? 7 : -7), position, valStyle, valueRight ? "start" : "end").dataset.sdkChartLabel = "value-axis";
       }
     }
     const minorUnit = numeric(valStyle, "--office-axis-minor-unit", unit / 5);
     if (minorUnit > 0 && chart.showValueAxis !== false) {
       for (const value of chartAxisTicks(minimum, maximum, minorUnit, 4096)) if (Math.abs((value - minimum) / unit - Math.round((value - minimum) / unit)) > 0.001) tick(axisX, y(value), false, valStyle, true);
     }
-    const baseline = y(Math.max(minimum, Math.min(maximum, 0))), axisY = categoryTop ? top : baseline;
-    if (chart.showCategoryAxis !== false) svg.append(svgElement(document, "line", { x1: left, y1: axisY, x2: right, y2: axisY, ...strokeAttributes(document, catStyle, "--office-line", "#b7b7b7") }));
-    if (chart.showValueAxis !== false) svg.append(svgElement(document, "line", { x1: axisX, y1: top, x2: axisX, y2: bottom, ...strokeAttributes(document, valStyle, "--office-line", "#b7b7b7") }));
+    const baseline = y(Math.max(minimum, Math.min(maximum, 0))), axisY = top + axes!.y * h;
+    if (chart.showCategoryAxis !== false) svg.append(svgElement(document, "line", { x1: left, y1: axisY, x2: right, y2: axisY, "data-sdk-chart-axis": "category", ...strokeAttributes(document, catStyle, "--office-line", "#b7b7b7") }));
+    if (chart.showValueAxis !== false) svg.append(svgElement(document, "line", { x1: axisX, y1: top, x2: axisX, y2: bottom, "data-sdk-chart-axis": "value", ...strokeAttributes(document, valStyle, "--office-line", "#b7b7b7") }));
     const count = Math.max(1, data.categories.length), category = chartCategoryAxis(count, left, w, property(valStyle, "--office-axis-cross-between", "between") === "between", chart.reverseCategories ?? false);
     const group = category.interval, x = category.position;
     if (chart.categoryGridCssClass) {
@@ -227,7 +225,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     if (chart.showCategoryAxis !== false) {
       const skip = Math.max(1, numeric(catStyle, "--office-axis-label-skip", 1)), tickSkip = Math.max(1, numeric(catStyle, "--office-axis-tick-skip", 1));
       const offset = 6 + 10 * numeric(catStyle, "--office-axis-label-offset", 100) / 100;
-      data.categories.forEach((category, index) => { if (index % skip === 0 && property(catStyle, "--office-axis-label-position") !== "none") text(options.formatCategory?.(index, catStyle) ?? category, x(index), categoryTop ? top - offset : bottom + offset, catStyle).dataset.sdkChartLabel = "category-axis"; });
+      data.categories.forEach((category, index) => { if (index % skip === 0 && property(catStyle, "--office-axis-label-position") !== "none") text(options.formatCategory?.(index, catStyle) ?? category, x(index), top + axes!.categoryLabel * h + (categoryTop ? -offset : offset), catStyle).dataset.sdkChartLabel = "category-axis"; });
       for (let index = 0; index < category.tickCount; index++) {
         const position = category.tick(index);
         if (index % tickSkip === 0) tick(position, axisY, true, catStyle);

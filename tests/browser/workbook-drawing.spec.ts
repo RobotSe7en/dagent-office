@@ -17,12 +17,12 @@ import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
 import type { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback, measureDrawingTextOverflow, measureDrawingOverflowEdges } from './fixtures/workbook-drawing-text.js';
 import type { measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } from './fixtures/workbook-surface.js';
 import type { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } from './fixtures/workbook-shadow.js';
-import type { measureWorkbookCharts, measureWorkbookChartTextFonts, measureWorkbookChartMarkers, measureWorkbookChartGrid, measureWorkbookChartColors, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } from './fixtures/workbook-chart.js';
+import type { measureWorkbookCharts, measureWorkbookChartAxes, measureWorkbookChartTextFonts, measureWorkbookChartMarkers, measureWorkbookChartGrid, measureWorkbookChartColors, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } from './fixtures/workbook-chart.js';
 import { bindWorkbookChartData } from "../../packages/render/src/workbook/chart-values.js";
 import type { BasicChartData } from '../../packages/render/src/chart.js';
 import { modelChartSource, DEFAULT_CHART_READ_LIMITS } from '../../packages/render/src/workbook/chart-source.js';
 
-declare global { interface Window { workbookChartHost: { measureWorkbookChartTextFonts: typeof measureWorkbookChartTextFonts; measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartGrid: typeof measureWorkbookChartGrid; measureWorkbookChartMarkers: typeof measureWorkbookChartMarkers; measureWorkbookChartColors: typeof measureWorkbookChartColors; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
+declare global { interface Window { workbookChartHost: { measureWorkbookChartAxes: typeof measureWorkbookChartAxes; measureWorkbookChartTextFonts: typeof measureWorkbookChartTextFonts; measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartGrid: typeof measureWorkbookChartGrid; measureWorkbookChartMarkers: typeof measureWorkbookChartMarkers; measureWorkbookChartColors: typeof measureWorkbookChartColors; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
 
 declare global { interface Window { workbookShadowHost: { measureWorkbookShadows: typeof measureWorkbookShadows; mountWorkbookShadowPixels: typeof mountWorkbookShadowPixels; disposeWorkbookShadowPixels: typeof disposeWorkbookShadowPixels } } }
 
@@ -32,6 +32,7 @@ const chartPlots = new Map<string, BasicChartData[]>();
 let referenceTitles: { snapshot: WorkbookSnapshot; bindings: ReturnType<typeof bindWorkbookChartData> };
 let formatCharts: typeof referenceTitles;
 let code = '';
+const axisCharts: { snapshot: WorkbookSnapshot; plots: BasicChartData[] }[] = [];
 const gridCharts: { snapshot: WorkbookSnapshot; plots: BasicChartData[] }[] = [];
 const markerCharts: { producer: boolean; snapshot: WorkbookSnapshot; plots: BasicChartData[] }[] = [];
 const automaticMarkerCharts: { producer: boolean; snapshot: WorkbookSnapshot; plots: BasicChartData[] }[] = [];
@@ -45,6 +46,14 @@ const textEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-drawing-text-se
 const shadowEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-drawing-shadow-semantics.json', 'utf8')) as { sourceSha256: string; cases: { rotation: number; flipH: boolean; flipV: boolean; rotateWithShape: boolean; direction: number; distancePt: number; observed: { offsetPt: number[] } }[] };
 const blurEvidence = JSON.parse(readFileSync('docs/evidence/xlsx-shadow-blur-semantics.json', 'utf8')) as { sourceSha256: string; cases: { blurPt: number; observed: { sharpEdgeOffsetPt?: number; samples: { offsetPt: number; rgb: number[] }[] } }[] };
 test.beforeAll(async () => {
+  for (const suffix of ['', '-producer']) {
+    const model = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-axes' + suffix + '.xlsx'), { documentId: 'axes' + suffix }), { kind: 'workbook' }), snapshot = model.snapshot();
+    const response = await modelChartSource(model).read({ ...DEFAULT_CHART_READ_LIMITS, documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, chartIds: snapshot.metadata.workbook.charts!.map(chart => chart.chartId) }, new AbortController().signal);
+    const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
+    const plots = bindWorkbookChartData(snapshot, response, formatter).map(binding => { if (binding.kind !== 'available') throw Error('Axis data unavailable'); return binding.data; });
+    formatter.dispose(); axisCharts.push({ snapshot, plots });
+  }
+
   for (const producer of [false, true]) {
     const model = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-auto-markers' + (producer ? '-producer' : '') + '.xlsx'), { documentId: 'auto-markers-' + producer }), { kind: 'workbook' }), snapshot = model.snapshot();
     const response = await modelChartSource(model).read({ ...DEFAULT_CHART_READ_LIMITS, documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, chartIds: snapshot.metadata.workbook.charts!.map(chart => chart.chartId) }, new AbortController().signal);
@@ -727,5 +736,31 @@ test('category chart grids share current data intervals and remain visible with 
     }
     expect(result.paints).toHaveLength(2);
     for (const paint of result.paints) { expect(paint.clipped).toBe(true); expect(paint.painted).toBeGreaterThan(20); expect(paint.escaped).toBe(0); }
+  }
+});
+
+
+test('Office chart axes ignore axPos and preserve perpendicular crossings with current hidden categories', async ({ page }) => {
+  const cases = JSON.parse(readFileSync('docs/evidence/xlsx-chart-axes.json', 'utf8')).cases as { kind: string; between: string; valueAt?: number; pdfAxes: { category: number[][]; value: number[][] } }[];
+  for (const input of axisCharts) {
+    const result = await page.evaluate(({ snapshot, plots }) => window.workbookChartHost.measureWorkbookChartAxes(snapshot, plots), input);
+    expect(result.unchanged).toBe(true); expect(result.ignored).toEqual(result.normal);
+    for (const [index, actual] of result.normal.entries()) {
+      const reference = cases[index]!;
+      expect(actual.nodes).toBe(actual.declared); expect(result.composed[index]!.nodes).toBe(result.composed[index]!.declared);
+      expect(actual.y).toBeCloseTo(reference.pdfAxes.category[0]![1]!, 3);
+      if (reference.kind === 'column' && reference.between === 'midCat') expect(actual.x).toBe(.5);
+      else expect(actual.x).toBeCloseTo(reference.pdfAxes.value[0]![0]!, 3);
+      expect(result.composed[index]!.x).toBeCloseTo(actual.x, 6); expect(result.composed[index]!.y).toBeCloseTo(actual.y, 6);
+    }
+    for (const group of result.labels) for (const { position, value } of group.results) {
+      expect(value.categoryLabels.length).toBeGreaterThan(0); expect(value.valueLabels.length).toBeGreaterThan(0);
+      const categoryAt = position === 'nextTo' ? value.y : (position === 'high') !== !!group.reverse ? 0 : 1;
+      const valueAt = position === 'nextTo' ? value.x : (position === 'high') !== !!group.reverse ? 1 : 0;
+      const top = categoryAt === (group.reverse ? 1 : 0) ? !group.reverse : !!group.reverse;
+      const right = valueAt === (group.reverse ? 0 : 1) ? !group.reverse : !!group.reverse;
+      for (const label of value.categoryLabels) expect(label.y).toBeCloseTo(categoryAt + (top ? -16 : 16) / value.plot[3]!, 5);
+      for (const label of value.valueLabels) { expect(label.x).toBeCloseTo(valueAt + (right ? 7 : -7) / value.plot[2]!, 5); expect(label.anchor).toBe(right ? 'start' : 'end'); }
+    }
   }
 });

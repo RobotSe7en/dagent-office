@@ -6,10 +6,21 @@ import { effectXml, fillXml, lineXml } from "./appearance.js";
 import { relativePart } from "./context.js";
 import type { NativeSurface, PresentationExportContext } from "./context.js";
 import { PresentationTextWriter, runProperties } from "./text.js";
-import { cssString, integer } from "./values.js";
+import { cssString, integer, unsupported } from "./values.js";
 import { exportConstantWorkbook } from "./workbook.js";
 import type { ExportedConstantWorkbook } from "./workbook.js";
 const cv = (name: string, value: string | number | boolean | undefined): string => value === undefined ? "" : empty("c:" + name, { val: typeof value === "boolean" ? value ? 1 : 0 : value });
+function crossingXml(css: Css, category: boolean): string {
+    const raw = css["--office-axis-crosses-at"];
+    if (raw !== undefined) {
+        const at = raw.trim(), number = Number(at);
+        if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][+-]?\d+)?$/.test(at) || !Number.isFinite(number) || !category && !Number.isInteger(number)) unsupported("Chart crossing values exceed the selected Office axis profile.");
+        return cv("crossesAt", number);
+    }
+    const kind = css["--office-axis-crosses"] ?? "autoZero";
+    if (!["autoZero", "min", "max"].includes(kind)) unsupported("A chart axis crossing enum is invalid.");
+    return cv("crosses", kind);
+}
 export class PresentationChartWriter {
     private readonly books = new Map<string, {
         part: string;
@@ -129,7 +140,7 @@ export class PresentationChartWriter {
                     out.add(empty("c:numFmt", { formatCode: chart.numberFormat ?? "General", sourceLinked: 0 }));
                 for (const [native, key, fallback] of [["majorTickMark", "major-tick", "cross"], ["minorTickMark", "minor-tick", "cross"], ["tickLblPos", "label-position", "nextTo"]])
                     out.add(cv(native!, css["--office-axis-" + key] ?? fallback));
-                out.add(this.appearance(style) + this.textStyle(style) + cv("crossAx", category ? 2 : 1) + cv("crosses", css["--office-axis-crosses"] ?? "autoZero"));
+                out.add(this.appearance(style) + this.textStyle(style) + cv("crossAx", category ? 2 : 1) + crossingXml(css, category));
                 if (category) {
                     out.add(cv("auto", true) + cv("lblAlgn", css["--office-axis-label-align"] ?? "ctr") + cv("lblOffset", css["--office-axis-label-offset"] ?? 100));
                     for (const [native, key] of [["tickLblSkip", "label-skip"], ["tickMarkSkip", "tick-skip"]])

@@ -3,6 +3,7 @@ import type { DeepReadonly, WorkbookChart, WorkbookDisplayFormat, WorkbookNumber
 import type { BasicChartLayout, BasicChartRect } from "../chart.js";
 import type { FontResolution } from "../contracts.js";
 import { cssStringValue, property } from "../presentation/appearance.js";
+import { chartAxisPlacement, chartValueScale } from "../chart-axis.js";
 import { createWorkbookChartView } from "./chart-view.js";
 import type { WorkbookChartBinding, WorkbookChartDataDiagnostic } from "./chart-values.js";
 import type { WorkbookChartViewDiagnostic } from "./chart-view.js";
@@ -32,14 +33,18 @@ export function layoutWorkbookChart(scope: HTMLElement, source: HTMLElement, cha
     || ![maxNodes, maxUnits, limits.maxPoints ?? 50_000].every(value => Number.isSafeInteger(value) && value > 0)
     || ![widthPt, heightPt].every(value => Number.isFinite(value) && value > 0 && value <= 1_000_000))
     throw new DocumentError("InvalidOperation", "Chart composition requires its own current binding, connected surface and finite budgets.");
-  const position = (classes: string | undefined, fallback: string): string => {
-    if (maxNodes < 2) throw new DocumentError("ResourceLimitExceeded", "Chart composition exceeds its temporary node budget.");
-    const probe = document.createElement("span"); probe.className = classes ?? ""; probe.style.cssText = "position:absolute;visibility:hidden"; source.append(probe);
-    try { return property(view.getComputedStyle(probe), "--office-axis-position", fallback); } finally { probe.remove(); }
+  const pie = chart.kind === "pie";
+  const placement = () => {
+    if (maxNodes < 4) throw new DocumentError("ResourceLimitExceeded", "Chart composition exceeds its temporary node budget.");
+    const scope = document.createElement("span"), category = document.createElement("span"), value = document.createElement("span");
+    scope.className = chart.textCssClass ?? ""; scope.style.cssText = "position:absolute;display:none";
+    category.className = chart.categoryAxisCssClass ?? ""; value.className = chart.valueAxisCssClass ?? ""; scope.append(category, value); source.append(scope);
+    try {
+      const scale = binding.data.series.some(series => !series.hidden) ? chartValueScale(chart, binding.data.series) : { minimum: 0, maximum: 1, unit: 1 };
+      return chartAxisPlacement(chart, view.getComputedStyle(category), view.getComputedStyle(value), scale.minimum, scale.maximum, Math.max(1, binding.data.categories.length));
+    } finally { scope.remove(); }
   };
-  const categoryPosition = position(chart.categoryAxisCssClass, "b"), valuePosition = position(chart.valueAxisCssClass, "l");
-  if (!["b", "t"].includes(categoryPosition) || !["l", "r"].includes(valuePosition)) throw new DocumentError("InvalidDocument", "Basic chart axis positions are invalid.");
-  const categoryTop = categoryPosition === "t", valueRight = valuePosition === "r", pie = chart.kind === "pie";
+  const axes = pie ? undefined : placement(), categoryTop = axes?.categoryTop ?? false, valueRight = axes?.valueRight ?? false;
   const hasTitle = chart.titleVisible !== false && !!(chart.titleNodeId || chart.titleReference);
   const categoryTitle = !pie && chart.showCategoryAxis !== false && !!chart.categoryAxisTitle, valueTitle = !pie && chart.showValueAxis !== false && !!chart.valueAxisTitle;
   const titleHeight = hasTitle ? Math.min(54, heightPt * .2) : 12, axisBand = 24;
