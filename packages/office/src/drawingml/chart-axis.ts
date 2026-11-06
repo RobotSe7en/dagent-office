@@ -1,4 +1,4 @@
-import { C, check, elements, fail, unsupported } from "../ooxml/xml.js";
+import { C, check, checkAttributes, elements, fail, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import type { Css } from "../ooxml/styles.js";
 
@@ -9,7 +9,7 @@ export function chartAxisCrossing(source: XmlNode): Css {
   if (choices.length > 1) fail(source, "A chart axis has multiple crossing choices.");
   const choice = choices[0];
   if (!choice) return {};
-  if ([...choice.attrs.keys()].some(key => key !== " val")) unsupported(choice, "A chart axis crossing has unknown attributes.");
+  checkAttributes(choice, ["val"]);
   check(choice, [], C);
   if (choice.content.some(item => typeof item === "string" && item.length)) fail(choice, "A chart axis crossing has unexpected text.");
   const raw = choice.attrs.get(" val")?.replace(/^[\x20\t\r\n]+|[\x20\t\r\n]+$/g, "");

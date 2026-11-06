@@ -34,7 +34,7 @@ import { readWorkbookProperties } from "./properties.js";
 type RowDimension = WorkbookSheet["rowDimensions"][number];
 /** Join identical adjacent explicit runs without expanding implicit rows. */
 function appendRow(rows: RowDimension[], row: RowDimension): void {
-  const previous = rows.at(-1), keys = ["heightPt", "hidden", "cssClass", "numberFormatId"] as const;
+  const previous = rows.at(-1), keys = ["heightPt", "hidden", "cssClass", "numberFormatId", "autoHeight"] as const;
   if (previous && previous.to + 1 === row.from && keys.every(key => previous[key] === row[key])) previous.to = row.to;
   else rows.push(row);
 }

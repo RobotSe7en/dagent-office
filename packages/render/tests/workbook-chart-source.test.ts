@@ -139,6 +139,24 @@ describe("bounded current-source workbook chart reads", () => {
     expect(points.map(point => point.columnHidden)).toEqual([false, true, false, true, false, true]);
     expect(points[1]!.numberFormatId).toBe("column-format"); expect(points[3]!.numberFormatId).toBe("row-format");
   });
+  it('accumulates formula dependency text while charging a cached execution only once', async () => {
+    function longDependencies(expression: string) {
+      const files = new Map(seeded(chart => { delete chart.categories; chart.series[0]!.values = reference(expression); }).serialize());
+      const manifest = JSON.parse(decode(files.get('manifest.json')!)) as WorkbookManifest, part = manifest.chunks[0]!;
+      let html = decode(files.get(part.path)!);
+      for (const [row, expression] of [[1, '=20+3'], [2, '=30+4']] as const) {
+        html = html.replace(`data-formula="${expression}"`, `data-formula="=LEN(C${row + 1})"`);
+        html = html.replace(new RegExp('<tr data-row="' + row + '">.*?</tr>', 's'), source => source.replace('</tr>', `<td data-column="2" data-value-type="text">${'x'.repeat(60)}</td></tr>`));
+      }
+      const bytes = encode(html); files.set(part.path, bytes); part.sha256 = createHash('sha256').update(bytes).digest('hex');
+      files.set('manifest.json', encode(JSON.stringify(manifest))); return openDocument(files, { kind: 'workbook' });
+    }
+    const distinct = longDependencies('=B2:B3'), before = distinct.serialize();
+    await expect(read(distinct, { maxCodeUnits: 150 })).rejects.toMatchObject({ code: 'ResourceLimitExceeded' });
+    expect(cells(await read(distinct, { maxCodeUnits: 1024 })).map(cell => cell.value)).toEqual([{ type: 'number', value: 60 }, { type: 'number', value: 60 }]);
+    expect(cells(await read(longDependencies('=(B2,B2)'), { maxCodeUnits: 150 }))).toHaveLength(2);
+    expect(distinct.serialize()).toEqual(before);
+  });
   it("admits all references before reading any cells and rejects invalid identity or duplicate requests", async () => {
     let reads = 0;
     const source = seeded(chart => { chart.series[0]!.values = reference("=B:B"); }), model = { ...source, readWindow: (window: Parameters<WorkbookModel["readWindow"]>[0]) => { reads++; return source.readWindow(window); } };

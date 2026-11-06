@@ -11,6 +11,7 @@ declare global { interface Window { workbookPreview: typeof fixture } }
 let code = '';
 const inputs: { name: string; files: [string, number[]][] }[] = [];
 let readAheadFiles: [string, number[]][] = [];
+let sparseRowFiles: [string, number[]][] = [];
 test.beforeAll(async () => {
   const bundle = await build({ configFile: false, build: { write: false, minify: false, lib: { entry: fileURLToPath(new URL('./fixtures/workbook-preview.ts', import.meta.url)), formats: ['iife'], name: 'WorkbookPreview' } } });
   if (!Array.isArray(bundle) && !('output' in bundle)) throw Error('Unexpected preview bundle');
@@ -19,6 +20,8 @@ test.beforeAll(async () => {
     const sheet = metadata.workbook.sheets[0]!; sheet.frozen = { rows: 1, columns: 1 }; sheet.defaultRowHeightCustom = true; sheet.rightToLeft = true;
     sheet.rowDimensions = [{ from: 4, to: 6, hidden: true }];
   });
+  const sparseRows = scalarWorkbook([0, 128].map(row => ({ row, column: 0, value: { type: 'number' as const, value: row + 1 } })));
+  sparseRowFiles = [...sparseRows.serialize()].map(([path, bytes]) => [path, [...bytes]]);
   readAheadFiles = [...dense.serialize()].map(([path, bytes]) => [path, [...bytes]]);
   for (const name of ['09-classic-notes', '10-modern-threads', '08-images-shapes']) {
     const files = await importXlsx(readFileSync(`examples/xlsx/${name}.xlsx`), { documentId: 'public-preview' });
@@ -122,7 +125,7 @@ test('prepared rolling candidates require fresh valid values and share the compl
   }
 });
 
-test('passive grid wheels retain host scrolling boundaries and shift-wheel navigation', async ({ page }) => {
+test('grid wheels retain host scrolling boundaries and shift-wheel navigation', async ({ page }) => {
   await page.evaluate(() => {
     document.documentElement.style.overflow = 'auto'; document.body.style.overflow = 'visible'; document.body.style.height = '4000px'; window.scrollTo(0, 200);
   });
@@ -143,6 +146,25 @@ test('passive grid wheels retain host scrolling boundaries and shift-wheel navig
   await expect.poll(async () => (await page.evaluate(() => window.workbookPreview.previewInspect()) as { report: { viewport: { scrollLeftPt: number } } }).report.viewport.scrollLeftPt).toBeGreaterThan(0);
   expect(await page.evaluate(() => window.scrollY)).toBe(200);
   await page.evaluate(() => window.workbookPreview.previewAction('dispose'));
+});
+
+test('cancelled automatic rows release prototypes before an uncooperative reply arrives', async ({ page }) => {
+  for (const mode of ['late-cancel', 'sequential-late-cancel'] as const) {
+    const result = await page.evaluate(({ entries, mode }) => window.workbookPreview.autoRowReadPipeline(entries, mode), { entries: sparseRowFiles, mode });
+    expect(result, mode).toMatchObject({ reads: 2, waitingObserved: true, aborted: true, error: 'OperationCancelled', cleanBeforeRelease: true, clean: true, unhandled: [] });
+  }
+});
+
+for (const escaped of [false, true]) test(`viewport-relative workbook typography resizes through an atomic independent candidate (escaped ${escaped})`, async ({ page }) => {
+  const result = await page.evaluate(({ entries, escaped }) => window.workbookPreview.responsiveViewportLifecycle(entries, escaped), { entries: readAheadFiles, escaped });
+  expect(result.resized).toEqual(result.fresh); expect(result.scrolled).toEqual(result.fresh);
+  expect(result.initial.left).not.toBe(result.fresh.left);
+  expect(result).toMatchObject({ failure: 'RevisionConflict', retained: true, frames: 1, serializations: 0, unchanged: true, clean: true, superseded: true, errors: ['RevisionConflict'] });
+});
+
+test('inline HTML viewport fonts measure at the final resized viewport', async ({ page }) => {
+  const result = await page.evaluate(entries => window.workbookPreview.responsiveInlineViewport(entries), inputs.find(input => input.name === '08-images-shapes')!.files);
+  expect(result.initial).toBeGreaterThan(0); expect(result.resized).toBeCloseTo(result.fresh, 6); expect(result.resized).toBeGreaterThan(result.initial * 1.5);
 });
 
 const matrixCases=JSON.parse(readFileSync('examples/xlsx/expected.json','utf8')) as {cases:{file:string;sheets:string[];values?:Record<string,number|boolean|string>}[]};

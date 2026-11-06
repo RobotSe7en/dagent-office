@@ -1,5 +1,5 @@
 import type { ChartAppearance } from "@dagent-office/core";
-import { C, check, child, elements, fail, unsupported } from "../ooxml/xml.js";
+import { C, check, checkAttributes, child, elements, fail, unsupported } from "../ooxml/xml.js";
 import type { XmlNode } from "../ooxml/xml.js";
 import type { Css } from "../ooxml/styles.js";
 import { appearance, decimal, val } from "./chart-style.js";
@@ -8,7 +8,7 @@ import { appearance, decimal, val } from "./chart-style.js";
  * synthesize series markers. A present CT_Boolean without val means true. */
 export function chartMarkerFlag(source: XmlNode | undefined): boolean | undefined {
   if (!source) return undefined;
-  if ([...source.attrs.keys()].some(key => key !== " val")) unsupported(source, "A chart marker flag has unknown attributes.");
+  checkAttributes(source, ["val"]);
   check(source, [], C);
   if (source.content.some(item => typeof item === "string" && item.length)) fail(source, "A chart marker flag has unexpected text.");
   const raw = source.attrs.get(" val")?.replace(/^[\x20\t\r\n]+|[\x20\t\r\n]+$/g, "");
@@ -23,12 +23,12 @@ export function chartMarker(source: XmlNode | undefined): {
   markerSize?: number; css: Css;
 } {
   if (!source) return { css: {} };
-  if (source.attrs.size) unsupported(source, "A chart marker has unknown attributes.");
+  checkAttributes(source, []);
   check(source, ["symbol", "size", "spPr"], C);
   for (const name of ["symbol", "size", "spPr"]) if (elements(source, name, C).length > 1) fail(source, "A chart marker property is repeated.");
   for (const name of ["symbol", "size"]) {
     const leaf = child(source, name, C); if (!leaf) continue;
-    if ([...leaf.attrs.keys()].some(key => key !== " val")) unsupported(leaf, "A chart marker property has unknown attributes.");
+    checkAttributes(leaf, ["val"]);
     check(leaf, [], C);
   }
   const marker = val(source, "symbol"), size = child(source, "size", C);

@@ -55,7 +55,7 @@ export function createWorkbookSurface(container: HTMLElement, snapshot: Workbook
         // These boxes belong to the viewport, not to an Office content node.
         // Keep typography/custom properties for source inheritance while
         // preventing source page-box rules from resizing/offsetting the view.
-        for (const root of [document.documentElement, document.body]) for (const [name, value] of Object.entries({ margin: "0", padding: "0", border: "0", width: "100%", height: "100%", "min-width": "0", "min-height": "0", "max-width": "none", "max-height": "none", "box-sizing": "border-box", overflow: "hidden" })) root.style.setProperty(name, value, "important");
+        for (const root of [document.documentElement, document.body]) for (const [name, value] of Object.entries({ margin: "0", padding: "0", border: "0", width: "100%", height: "100%", "min-width": "0", "min-height": "0", "max-width": "none", "max-height": "none", "box-sizing": "border-box", overflow: "hidden", "overscroll-behavior": "none" })) root.style.setProperty(name, value, "important");
         const styles = document.createElement("style"); styles.dataset.officeSourceStyles = "true";
         styles.textContent = styleText!; styleText = undefined; document.head.append(styles);
         const source = document.createElement("office-workbook-source-surface"), host = document.createElement("office-workbook-view-surface"), view = document.createElement("div");

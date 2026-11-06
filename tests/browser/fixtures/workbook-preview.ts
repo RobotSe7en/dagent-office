@@ -259,7 +259,7 @@ export function matrixFinish(){
 Object.assign(window.workbookPreview,{matrixStart,matrixWindow,matrixFinish});
 
 
-export async function autoRowReadPipeline(entries: Entries, mode: 'sequential' | 'ahead' | 'cancel' | 'invalid' | 'preference') {
+export async function autoRowReadPipeline(entries: Entries, mode: 'sequential' | 'ahead' | 'cancel' | 'invalid' | 'preference' | 'late-cancel' | 'sequential-late-cancel') {
   const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)]));
   const metadata = JSON.parse(new TextDecoder().decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata;
   metadata.workbook.sheets[0]!.defaultRowHeightCustom = false;
@@ -281,10 +281,10 @@ export async function autoRowReadPipeline(entries: Entries, mode: 'sequential' |
     }
     return computed.call(this, element, pseudo);
   };
-  const source = { snapshot, get allowReadAhead() { if (mode === 'preference') throw Error('Optional preference'); return mode !== 'sequential'; },
+  const source = { snapshot, get allowReadAhead() { if (mode === 'preference') throw Error('Optional preference'); return mode !== 'sequential' && mode !== 'sequential-late-cancel'; },
     async read(request: Parameters<typeof provider.read>[0], signal: AbortSignal) {
       const index = ++reads;
-      if (index === 2 && (mode === 'cancel' || mode === 'invalid')) {
+      if (index === 2 && (mode === 'cancel' || mode === 'invalid' || mode.includes('late-cancel'))) {
         held = signal; await new Promise<void>(resolve => { release = resolve; });
       }
       const response = await provider.read(request, held === signal ? new AbortController().signal : signal);
@@ -292,11 +292,20 @@ export async function autoRowReadPipeline(entries: Entries, mode: 'sequential' |
       return response;
     } };
   try {
-    let error: string | undefined, cells = 0;
-    try { cells = (await measureWorkbookAutoRows(surface, source, 'sheet-1', normal, formatter, abort.signal)).measuredCells; }
+    let error: string | undefined, cells = 0, waitingObserved = false;
+    const measuring = measureWorkbookAutoRows(surface, source, 'sheet-1', normal, formatter, abort.signal); void measuring.catch(() => {});
+    if (mode.includes('late-cancel')) {
+      await new Promise<void>(resolve => setTimeout(resolve, 100));
+      waitingObserved = !!held && !!surface.source.querySelector('[data-office-view="workbook-source-measurement"]') && !surface.view.childNodes.length;
+      abort.abort();
+    }
+    let deadline: ReturnType<typeof setTimeout> | undefined;
+    try { cells = (await Promise.race([measuring, new Promise<never>((_resolve, reject) => { deadline = setTimeout(() => reject(Error('Cancelled AutoFit still waits for its provider')), 1000); })])).measuredCells; }
     catch (value) { error = (value as { code: string }).code; }
+    finally { clearTimeout(deadline); }
+    const cleanBeforeRelease = !surface.source.querySelector('[data-office-view$="measurement"]') && !surface.view.childNodes.length;
     const aborted = held?.aborted ?? false; release(); await new Promise<void>(resolve => setTimeout(resolve, 30));
-    return { error, cells, reads, overlap, aborted, unhandled, clean: !surface.source.querySelector('[data-office-view$="measurement"]') && !surface.view.childNodes.length };
+    return { error, cells, reads, overlap, aborted, unhandled, waitingObserved, cleanBeforeRelease, clean: !surface.source.querySelector('[data-office-view$="measurement"]') && !surface.view.childNodes.length };
   } finally { release(); view.getComputedStyle = computed; window.removeEventListener('unhandledrejection', reject); formatter.dispose(); surface.dispose(); container.remove(); }
 }
 (window as unknown as { workbookPreview: Record<string, unknown> }).workbookPreview.autoRowReadPipeline = autoRowReadPipeline;
@@ -341,3 +350,79 @@ export async function rollingCandidateLifecycle(entries: Entries, mode: 'same' |
   } finally { observer.disconnect(); controller.dispose(); formatter.dispose(); surface.dispose(); container.remove(); }
 }
 (window as unknown as { workbookPreview: Record<string, unknown> }).workbookPreview.rollingCandidateLifecycle = rollingCandidateLifecycle;
+
+export async function responsiveViewportLifecycle(entries: Entries, escaped = false) {
+  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)]));
+  const metadata = JSON.parse(new TextDecoder().decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata;
+  metadata.workbook.sheets[0]!.defaultRowHeightCustom = false;
+  files.set('metadata.json', new TextEncoder().encode(JSON.stringify(metadata)));
+  const size = escaped ? String.raw`calc(2px + 5v\77)` : '5vw';
+  files.set('styles.css', new TextEncoder().encode(new TextDecoder().decode(files.get('styles.css')!) + `\n.${metadata.workbook.sheets[0]!.defaultCssClass}{font-size:${size}}`));
+  const model = openDocument(files, { kind: 'workbook' }), before = model.serialize(), aHost = host(), bHost = host();
+  let serializations = 0, bad = false, holdNext = false, heldSignal: AbortSignal | undefined;
+  let began = () => {}, release = () => {};
+  const direct = { ...model, serialize() { serializations++; throw Error('Resize serialized the whole workbook'); } }, source = modelWindowSource(direct);
+  const providers = { kind: 'workbook' as const, cells: { ...source, async read(request: Parameters<typeof source.read>[0], signal: AbortSignal) {
+    if (holdNext) { holdNext = false; heldSignal = signal; await new Promise<void>(resolve => { release = resolve; began(); }); }
+    const response = await source.read(request, heldSignal === signal ? new AbortController().signal : signal); return bad ? { ...response, revision: response.revision + 1 } : response;
+  } }, assets: modelAssetSource(direct), charts: modelChartSource(direct) };
+  const errors: string[] = [], a = mount(aHost, providers, { widthPt: 240, heightPt: 120, onError: error => errors.push(error.code) });
+  let b: ReturnType<typeof mount> | undefined;
+  try {
+    await a.preview.ready; const initial = a.preview.layout();
+    const resized = await a.preview.setViewport({ ...initial.viewport, widthPt: 480 });
+    b = mount(bHost, direct, { widthPt: 480, heightPt: 120 }); await b.preview.ready; const fresh = b.preview.layout();
+    const scrolled = await a.preview.setViewport({ ...resized.viewport, scrollTopPt: 20 }), accepted = a.preview.layout();
+    bad = true; let failure: string | undefined;
+    try { await a.preview.setViewport({ ...accepted.viewport, widthPt: 720 }); } catch (error) { failure = (error as { code: string }).code; }
+    const retained = JSON.stringify(a.preview.layout()) === JSON.stringify(accepted);
+    bad = false; holdNext = true; const started = new Promise<void>(resolve => { began = resolve; });
+    const older = a.preview.setViewport({ ...accepted.viewport, widthPt: 600 }); await started;
+    const recovered = await a.preview.setViewport({ ...accepted.viewport, widthPt: 720 });
+    const aborted = heldSignal!.aborted; release(); const olderResult = await older;
+    const superseded = aborted && recovered.viewport.widthPt === 720 && olderResult.viewport.widthPt === 720 && a.preview.layout().viewport.widthPt === 720;
+    const frames = a.chrome.querySelectorAll('iframe').length;
+    a.preview.dispose(); b.preview.dispose(); const after = model.serialize();
+    return { initial: { left: initial.maxScrollLeftPt, top: initial.maxScrollTopPt }, resized: { left: resized.maxScrollLeftPt, top: resized.maxScrollTopPt },
+      fresh: { left: fresh.maxScrollLeftPt, top: fresh.maxScrollTopPt }, scrolled: { left: scrolled.maxScrollLeftPt, top: scrolled.maxScrollTopPt },
+      retained, failure, frames, errors, serializations, superseded, unchanged: [...before].every(([path, bytes]) => bytes.every((value, index) => value === after.get(path)![index])),
+      clean: !a.chrome.querySelector('iframe') && !b.chrome.querySelector('iframe') };
+  } finally { release(); a.preview.dispose(); b?.preview.dispose(); aHost.remove(); bHost.remove(); }
+}
+(window as unknown as { workbookPreview: Record<string, unknown> }).workbookPreview.responsiveViewportLifecycle = responsiveViewportLifecycle;
+
+export async function responsiveInlineViewport(entries: Entries) {
+  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)]));
+  const manifest = JSON.parse(new TextDecoder().decode(files.get('manifest.json')!)) as { content: string };
+  const parsed = new DOMParser().parseFromString(new TextDecoder().decode(files.get(manifest.content)!), 'text/html');
+  for (const node of parsed.body.querySelectorAll<HTMLElement>('p,span')) node.style.fontSize = '5vw';
+  files.set(manifest.content, new TextEncoder().encode('<!doctype html>' + parsed.documentElement.outerHTML.replaceAll('5vw', '5&#118;w')));
+  const model = openDocument(files, { kind: 'workbook' }), aHost = host(), bHost = host();
+  const samples = new WeakMap<HTMLIFrameElement, number[]>(), seen = new Set<HTMLIFrameElement>(), restore: (() => void)[] = [], observers: MutationObserver[] = [];
+  const watch = (chrome: ShadowRoot) => {
+    const connect = (frame: HTMLIFrameElement) => {
+      if (seen.has(frame)) return; seen.add(frame);
+      frame.addEventListener('load', () => {
+        const view = frame.contentWindow!, computed = view.getComputedStyle, values: number[] = []; samples.set(frame, values);
+        view.getComputedStyle = function(element, pseudo) {
+          const style = computed.call(this, element, pseudo);
+          if ((element as HTMLElement).style?.fontSize === '5vw') values.push(parseFloat(style.fontSize));
+          return style;
+        };
+        restore.push(() => { try { view.getComputedStyle = computed; } catch { /* disposed frame */ } });
+      }, { capture: true, once: true });
+    };
+    const collect = () => { for (const frame of chrome.querySelectorAll<HTMLIFrameElement>('iframe')) connect(frame); };
+    const observer = new MutationObserver(collect); observer.observe(chrome, { childList: true, subtree: true }); observers.push(observer); collect();
+  };
+  const size = (chrome: ShadowRoot) => Math.max(0, ...samples.get(chrome.querySelector<HTMLIFrameElement>('iframe')!) ?? []);
+  const a = mount(aHost, model, { widthPt: 240, heightPt: 400 }); watch(a.chrome);
+  let b: ReturnType<typeof mount> | undefined;
+  try {
+    await a.preview.ready; const initial = size(a.chrome);
+    await a.preview.setViewport({ ...a.preview.layout().viewport, widthPt: 480 }); const resized = size(a.chrome);
+    b = mount(bHost, model, { widthPt: 480, heightPt: 400 }); watch(b.chrome); await b.preview.ready;
+    return { initial, resized, fresh: size(b.chrome) };
+  } finally { for (const observer of observers) observer.disconnect(); for (const reset of restore) reset(); a.preview.dispose(); b?.preview.dispose(); aHost.remove(); bHost.remove(); }
+}
+(window as unknown as { workbookPreview: Record<string, unknown> }).workbookPreview.responsiveInlineViewport = responsiveInlineViewport;

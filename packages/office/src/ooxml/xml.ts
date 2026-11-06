@@ -63,6 +63,13 @@ export function attr(
 ): string | undefined {
   return node?.attrs.get(uri + " " + name);
 }
+/** Namespace bindings are syntax, not unsupported feature attributes. */
+export function checkAttributes(node: XmlNode, names: readonly string[], uri = ""): void {
+  for (const key of node.attrs.keys()) {
+    if (key.startsWith("http://www.w3.org/2000/xmlns/ ")) continue;
+    if (!names.some(name => key === uri + " " + name)) unsupported(node, "This OOXML attribute is not supported.");
+  }
+}
 export function elements(
   node: XmlNode | undefined,
   name?: string,

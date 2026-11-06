@@ -118,19 +118,21 @@ export async function readWorkbookRules(model: WorkbookModel, input: WorkbookRul
   const currentValues = new Map<string, WorkbookRuleValue>(), samples = new Map<string, Samples>();
   const location = (coordinate: WorkbookCoordinate): WorkbookReferenceLocation => ({ sheetId, row: coordinate.row, column: coordinate.column });
   function accept(result: WorkbookScalarResult): WorkbookRuleValue {
+    account(result.codeUnits);
     steps += result.steps; readCells += result.readCells; checkLimit(steps, limits.maxSteps); checkLimit(readCells, limits.maxValues);
     if (result.kind === "value") { if (result.value.type === "text") account(result.value.value.length); return { kind: "value", value: result.value }; }
     account(result.functionName?.length ?? 0); return { kind: "unavailable", reason: result.reason, ...(result.functionName ? { functionName: result.functionName } : {}) };
   }
+  const remainingUnits = (): number => { checkLimit(units, limits.maxCodeUnits); return limits.maxCodeUnits - units; };
   const remainingSteps = (): number => { checkLimit(steps + 1, limits.maxSteps); return limits.maxSteps - steps; };
   function current(coordinate: WorkbookCoordinate, owner = sheetId): WorkbookRuleValue {
     step(); const key = JSON.stringify([owner, coordinateKey(coordinate)]), known = currentValues.get(key); if (known) return known;
     checkLimit(currentValues.size + 1, limits.maxValues);
-    const value = accept(evaluator.cell({ ...location(coordinate), sheetId: owner }, { ...(signal ? { signal } : {}), maxSteps: remainingSteps() })); currentValues.set(key, value); return value;
+    const value = accept(evaluator.cell({ ...location(coordinate), sheetId: owner }, { ...(signal ? { signal } : {}), maxSteps: remainingSteps(), maxCodeUnits: remainingUnits() })); currentValues.set(key, value); return value;
   }
   function evaluate(expression: string, rule: Rule, coordinate: WorkbookCoordinate = rule.origin): WorkbookRuleValue {
-    step(); account(expression.length);
-    return accept(evaluator.evaluate(expression, location(rule.origin), { at: location(coordinate), ...(signal ? { signal } : {}), maxSteps: remainingSteps() }));
+    step();
+    return accept(evaluator.evaluate(expression, location(rule.origin), { at: location(coordinate), ...(signal ? { signal } : {}), maxSteps: remainingSteps(), maxCodeUnits: remainingUnits() }));
   }
   async function* stored(ranges: readonly (Range & { readonly sheetId?: string })[]): AsyncGenerator<WorkbookCoordinate & { readonly sheetId: string }> {
     const seen = new Set<string>();

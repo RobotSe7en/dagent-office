@@ -15,6 +15,8 @@ import type { WorkbookViewport } from "./viewport.js";
 interface PreviewWindow { readonly controls: WorkbookPreviewDecoration; commitChrome(): void }
 interface PreviewContext {
   readonly snapshot: WorkbookSnapshot;
+  readonly providers: ReturnType<typeof workbookPreviewSource>;
+  readonly viewportDependentStyles: boolean;
   readonly surface: WorkbookSurface;
   readonly controller: WorkbookWindowController;
   readonly windows: WeakMap<HTMLElement, PreviewWindow>;
@@ -24,6 +26,13 @@ interface PreviewContext {
 function viewportOf(window: WorkbookRenderedWindow): WorkbookViewport {
   const { widthPt, heightPt, scrollLeftPt, scrollTopPt } = window.frame.layout;
   return Object.freeze({ widthPt, heightPt, scrollLeftPt, scrollTopPt });
+}
+function usesViewportStyles(snapshot: WorkbookSnapshot): boolean {
+  // Inline HTML attributes may encode units with character references. Any
+  // inline style or escaped CSS conservatively takes the independent path.
+  if (/\bstyle\s*=/i.test(snapshot.content?.html ?? "")) return true;
+  return snapshot.styles.some(({ css }) => css.includes("\\")
+    || /[.\d](?:[sld]?v(?:w|h|i|b|min|max)|cq(?:w|h|i|b|min|max))\b|@(?:media|container)\b|\benv\s*\(/i.test(css));
 }
 function reportOf(window: WorkbookRenderedWindow): WorkbookRenderReport {
   const counts = { imported: 0, valid: 0, stale: 0, unavailable: 0 }, seen = new Set<number>();
@@ -51,7 +60,7 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
   const config = { ...options, limits: { ...options.limits, read: { ...options.limits?.read }, cells: { ...options.limits?.cells },
     annotations: { ...options.limits?.annotations }, rules: { ...options.limits?.rules }, autoRows: { ...options.limits?.autoRows }, drawings: { ...options.limits?.drawings, assets: { ...options.limits?.drawings?.assets } } } };
   let desired: WorkbookViewport = Object.freeze({ widthPt: config.widthPt ?? 600, heightPt: config.heightPt ?? 360, scrollLeftPt: 0, scrollTopPt: 0 });
-  let active: PreviewContext | undefined, pending: { cancel(): void } | undefined, disposed = false, generation = 0;
+  let active: PreviewContext | undefined, pending: { readonly kind: "update" | "resize"; cancel(): void } | undefined, disposed = false, generation = 0;
   let selection: DocumentSelection | undefined, latest: Promise<void> = Promise.resolve();
   let resolveReady!: () => void, rejectReady!: (error: unknown) => void;
   const ready = new Promise<void>((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
@@ -114,15 +123,20 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
   }
   function setViewport(viewport: WorkbookViewport): Promise<WorkbookRenderReport> {
     check();
-    if (pending) return Promise.reject(new DocumentError("InvalidOperation", "A replacement workbook is still loading."));
+    if (pending?.kind === "update") return Promise.reject(new DocumentError("InvalidOperation", "A replacement workbook is still loading."));
     const { context, window } = current(); return render(context, window.frame.sheetId, viewport);
   }
   function showSheet(sheetId: string): Promise<WorkbookRenderReport> {
     check();
-    if (pending) return Promise.reject(new DocumentError("InvalidOperation", "A replacement workbook is still loading."));
+    if (pending?.kind === "update") return Promise.reject(new DocumentError("InvalidOperation", "A replacement workbook is still loading."));
     return render(current().context, sheetId, { ...desired, scrollLeftPt: 0, scrollTopPt: 0 });
   }
   function render(context: PreviewContext, sheetId: string, viewport: WorkbookViewport): Promise<WorkbookRenderReport> {
+    if (pending?.kind === "resize") { pending.cancel(); pending = undefined; chrome.busy(false); }
+    const before = context.controller.current!.frame.layout;
+    if (context.viewportDependentStyles && (before.widthPt !== viewport.widthPt || before.heightPt !== viewport.heightPt)) {
+      prepare(context.providers, viewport, sheetId, "resize"); return settled();
+    }
     context.controller.cancelPending();
     const ticket = ++generation;
     desired = Object.freeze({ widthPt: viewport.widthPt, heightPt: viewport.heightPt, scrollLeftPt: viewport.scrollLeftPt, scrollTopPt: viewport.scrollTopPt });
@@ -132,10 +146,13 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
   function update(next: WorkbookPreviewInput): void {
     check();
     const providers = workbookPreviewSource(next), snapshot = providers.cells.snapshot;
-    const viewport = { ...desired }, sheetId = config.sheetId ?? snapshot.metadata.workbook.activeSheetId;
+    prepare(providers, desired, config.sheetId ?? snapshot.metadata.workbook.activeSheetId, "update");
+  }
+  function prepare(providers: ReturnType<typeof workbookPreviewSource>, inputViewport: WorkbookViewport, sheetId: string, kind: "update" | "resize"): void {
+    const snapshot = providers.cells.snapshot, viewport = Object.freeze({ ...inputViewport }); desired = viewport;
     pending?.cancel(); active?.controller.cancelPending(); const ticket = ++generation, abort = new AbortController();
     let candidate: PreviewContext | undefined;
-    const request = { cancel() { abort.abort(); candidate?.dispose(); } }; pending = request; chrome.busy(true);
+    const request = { kind, cancel() { abort.abort(); candidate?.dispose(); } }; pending = request; chrome.busy(true);
     const work = (async () => {
       const slot = container.ownerDocument.createElement("div");
       slot.style.cssText = "position:absolute;inset:0;opacity:0;pointer-events:none;overflow:hidden";
@@ -155,10 +172,11 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
           windows.set(window.element, { controls, commitChrome });
           window.element.addEventListener("wheel", event => {
             if (event.ctrlKey || pending || active?.controller.current?.element !== window.element || (event.target as Element).closest('[data-office-view="workbook-preview-comments"]')) return;
+            event.preventDefault();
             const factor = event.deltaMode === 1 ? 12 : event.deltaMode === 2 ? window.frame.layout.heightPt : .75;
             const x = event.shiftKey && !event.deltaX ? event.deltaY : event.deltaX, y = event.shiftKey && !event.deltaX ? 0 : event.deltaY;
             void setViewport({ ...desired, scrollLeftPt: desired.scrollLeftPt + x * factor, scrollTopPt: desired.scrollTopPt + y * factor }).catch(() => {});
-          }, { passive: true, signal: events.signal });
+          }, { passive: false, signal: events.signal });
           window.element.addEventListener("click", event => attempt(() => {
             if (active?.controller.current?.element !== window.element || (event.target as Element).closest('button,[data-office-view="workbook-preview-comments"],[data-office-view="workbook-drawings"]')) return;
             const rect = ownedSurface.view.getBoundingClientRect(), x = (event.clientX - rect.left) * .75, y = (event.clientY - rect.top) * .75;
@@ -183,7 +201,11 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
           return { get nodes() { return controls.nodes; }, get fonts() { return controls.fonts; }, dispose() { events.abort(); controls.dispose(); } };
         });
         let released = false;
-        candidate = { snapshot, surface, controller, windows, slot, dispose() {
+        // Native point-based styles retain their stable indexes on resize.
+        // Viewport/container units and conditional CSS need a fresh surface
+        // to measure typography at the final size before atomic publication.
+        const viewportDependentStyles = usesViewportStyles(snapshot);
+        candidate = { snapshot, providers, viewportDependentStyles, surface, controller, windows, slot, dispose() {
           if (released) return; released = true; controller.dispose(); ownedFormatter.dispose(); ownedSurface.dispose(); slot.remove();
         } };
         if (!await controller.render(sheetId, viewport) || abort.signal.aborted || disposed || ticket !== generation) return;

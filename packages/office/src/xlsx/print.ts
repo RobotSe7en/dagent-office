@@ -60,7 +60,7 @@ function pageBreaks(root: XmlNode, name: "rowBreaks" | "colBreaks"): WorkbookPri
   for (const item of breaks) {
     check(item, [], S); attributes(item, ["id", "min", "max", "man", "pt"]);
     if (boolean(item, "pt")) unsupported(item, "Pivot table page breaks are not supported.");
-    const before = integer(item, "id", 1, row ? 1_048_575 : 16383), from = integer(item, "min", 0, row ? 16383 : 1_048_575, 0), to = integer(item, "max", 0, row ? 16383 : 1_048_575);
+    const before = integer(item, "id", 1, row ? 1_048_575 : 16383), from = integer(item, "min", 0, row ? 16383 : 1_048_575, 0), to = integer(item, "max", 0, row ? 16383 : 1_048_575, 0);
     if (from > to) fail(item, "A page break span is reversed.");
     if (boolean(item, "man")) { result.push({ before, from, to }); manual++; }
   }

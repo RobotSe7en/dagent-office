@@ -134,7 +134,8 @@ export function modelChartSource(model: WorkbookModel): WorkbookChartSource {
       if (steps >= budget.maxFormulaSteps) throw new DocumentError("ResourceLimitExceeded", "Chart formulas exceed their cumulative step budget.");
       evaluator ??= createWorkbookScalarEvaluator(model, { maxSteps: budget.maxFormulaSteps, maxCells: budget.maxFormulaCells,
         maxCodeUnits: budget.maxCodeUnits, maxWindowCells: 256 });
-      const result = evaluator.cell({ sheetId, row, column }, { signal, maxSteps: budget.maxFormulaSteps - steps });
+      const result = evaluator.cell({ sheetId, row, column }, { signal, maxSteps: budget.maxFormulaSteps - steps, maxCodeUnits: budget.maxCodeUnits - units });
+      account(result.codeUnits);
       steps += result.steps; readCells += result.readCells;
       if (readCells > budget.maxFormulaCells) throw new DocumentError("ResourceLimitExceeded", "Chart formulas exceed their cumulative dependency-cell budget.");
       evaluated.set(key, result); return result;

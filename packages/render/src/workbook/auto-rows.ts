@@ -37,8 +37,15 @@ export interface WorkbookAutoRows {
 async function* autoRowReads(source: WorkbookWindowSource, windows: readonly WorkbookWindow[], maxCodeUnits: number, signal: AbortSignal):
   AsyncGenerator<readonly [WorkbookWindow, WorkbookWindowResponse]> {
   if (!windows.length) return;
+  checkWindowCancellation(signal);
   const identity = { documentId: source.snapshot.manifest.documentId, revision: source.snapshot.manifest.revision };
-  const abort = new AbortController(), cancel = (): void => abort.abort();
+  const abort = new AbortController();
+  let rejectCancellation!: (error: unknown) => void;
+  const cancellation = new Promise<never>((_resolve, reject) => { rejectCancellation = reject; });
+  void cancellation.catch(() => {});
+  const cancel = (): void => {
+    abort.abort(); rejectCancellation(new DocumentError("OperationCancelled", "Automatic row reading was cancelled."));
+  };
   signal.addEventListener("abort", cancel, { once: true });
   let ahead = false;
   try { ahead = source.allowReadAhead === true; } catch { /* Optional preference cannot fail a foreground read. */ }
@@ -51,14 +58,14 @@ async function* autoRowReads(source: WorkbookWindowSource, windows: readonly Wor
   try {
     let pending = read(windows[0]!);
     for (const [index, window] of windows.entries()) {
-      const result = await pending; checkWindowCancellation(signal);
+      const result = await Promise.race([pending, cancellation]); checkWindowCancellation(signal);
       if ("error" in result) throw result.error;
       const next = windows[index + 1];
       if (ahead && next) pending = read(next);
       yield [window, result.response] as const;
       if (!ahead && next) pending = read(next);
     }
-  } finally { cancel(); signal.removeEventListener("abort", cancel); }
+  } finally { abort.abort(); signal.removeEventListener("abort", cancel); }
 }
 
 /** Source height overrides remain sparse, and a hidden row is never expanded. */

@@ -12,7 +12,7 @@ import { evaluateScalarFunction } from "./scalar-functions.js";
 
 export type WorkbookScalarUnavailable = { readonly kind: "unavailable"; readonly reason: "unsupported-function" | "circular-reference" | "circular-name" | "ambiguous-name-scope" | "calculation-required"; readonly functionName?: string };
 export type WorkbookScalarResult = ({ readonly kind: "value"; readonly value: ScalarValue } | WorkbookScalarUnavailable) & {
-  readonly documentId: string; readonly revision: number; readonly steps: number; readonly readCells: number;
+  readonly documentId: string; readonly revision: number; readonly steps: number; readonly readCells: number; readonly codeUnits: number;
 };
 export interface WorkbookScalarLimits {
   readonly maxSteps: number; readonly maxCells: number; readonly maxDepth: number; readonly maxCodeUnits: number; readonly maxWindowCells: number;
@@ -23,10 +23,12 @@ export interface WorkbookScalarQueryOptions {
   readonly signal?: { readonly aborted: boolean };
   /** A batch reader may lower the instance's step cap for this query. */
   readonly maxSteps?: number;
+  /** A batch may lower the remaining text allowance, including zero. */
+  readonly maxCodeUnits?: number;
 }
 export interface WorkbookScalarEvaluator {
   evaluate(expression: string, origin: WorkbookReferenceLocation, options?: WorkbookScalarQueryOptions): WorkbookScalarResult;
-  cell(location: WorkbookReferenceLocation, options?: Pick<WorkbookScalarQueryOptions, "signal" | "maxSteps">): WorkbookScalarResult;
+  cell(location: WorkbookReferenceLocation, options?: Pick<WorkbookScalarQueryOptions, "signal" | "maxSteps" | "maxCodeUnits">): WorkbookScalarResult;
   dispose(): void;
 }
 export type ScalarEvaluation = ScalarValue | WorkbookScalarUnavailable | { readonly kind: "references"; readonly areas: readonly DeepReadonly<WorkbookReferenceArea>[] };
@@ -76,16 +78,18 @@ export function createWorkbookScalarEvaluator(model: WorkbookModel, input: Parti
   function query(start: (visit: (node: FormulaExpression, location: WorkbookReferenceLocation, depth: number, nameContext?: Name) => ScalarEvaluation,
     readCell: (location: WorkbookReferenceLocation, depth: number) => ScalarResolved) => ScalarEvaluation, location: WorkbookReferenceLocation, options: WorkbookScalarQueryOptions, initialUnits = 0, preserveBlank = false): WorkbookScalarResult {
     checkLocation(location);
-    if (Object.keys(options).some(key => !["at", "signal", "maxSteps"].includes(key)) || options.maxSteps !== undefined
+    if (Object.keys(options).some(key => !["at", "signal", "maxSteps", "maxCodeUnits"].includes(key)) || options.maxSteps !== undefined
       && (!Number.isSafeInteger(options.maxSteps) || options.maxSteps <= 0 || options.maxSteps > limits.maxSteps)) throw new DocumentError("InvalidOperation", "Scalar query received unsupported options or step limits.");
-    const maxSteps = options.maxSteps ?? limits.maxSteps;
+    if (options.maxCodeUnits !== undefined && (!Number.isSafeInteger(options.maxCodeUnits) || options.maxCodeUnits < 0 || options.maxCodeUnits > limits.maxCodeUnits))
+      throw new DocumentError("InvalidOperation", "Scalar query requires a supported remaining text budget.");
+    const maxSteps = options.maxSteps ?? limits.maxSteps, maxCodeUnits = options.maxCodeUnits ?? limits.maxCodeUnits;
     const memo = new Map<number, ScalarResolved>(), sources = new Map<number, SourceCell | undefined>(), path = new Set<number>(), namePath = new Map<string, Set<number>>();
-    let steps = 0, units = initialUnits, readCells = 0; checkLimit(units, limits.maxCodeUnits);
+    let steps = 0, units = initialUnits, readCells = 0; checkLimit(units, maxCodeUnits);
     const step = (depth = 0): void => {
       if (options.signal?.aborted) throw new DocumentError("OperationCancelled", "Scalar evaluation was cancelled.");
       checkLimit(++steps, maxSteps); checkLimit(depth, limits.maxDepth);
     };
-    const account = (amount: number): void => { units += amount; checkLimit(units, limits.maxCodeUnits); };
+    const account = (amount: number): void => { units += amount; checkLimit(units, maxCodeUnits); };
     const key = (at: WorkbookReferenceLocation): number => sheets.get(at.sheetId)!.index * 17_179_869_184 + at.row * 16_384 + at.column;
     function remember(at: WorkbookReferenceLocation, cell: SourceCell | undefined): void {
       const id = key(at); if (sources.has(id)) return;
@@ -138,7 +142,15 @@ export function createWorkbookScalarEvaluator(model: WorkbookModel, input: Parti
         if (missing) yield { value: scalarBlank, count: missing, reference: true, hasContent: false };
       }
     }
-    function reference(node: FormulaExpression, at: WorkbookReferenceLocation): ScalarEvaluation {
+    function reference(node: FormulaExpression, at: WorkbookReferenceLocation, nameContext?: Name): ScalarEvaluation {
+      if (nameContext && nameContext.sheetId === undefined) {
+        const pending = [node];
+        while (pending.length) {
+          step(); const part = pending.pop()!;
+          if (part.kind === "name" && part.sheet === undefined && localNames.has(part.name.toUpperCase())) return unavailable("ambiguous-name-scope");
+          if (part.kind === "binary" && [",", " ", ":"].includes(part.operator)) pending.push(part.right, part.left);
+        }
+      }
       const result = sourceModel!.resolveReference(printFormula(node, at), at);
       return result.kind === "ranges" ? { kind: "references", areas: result.areas } : result.kind === "error" ? scalarError(result.code) : unavailable(result.reason);
     }
@@ -153,7 +165,7 @@ export function createWorkbookScalarEvaluator(model: WorkbookModel, input: Parti
         const explicit = node.sheet === undefined ? undefined : sheetNames.get(node.sheet.toUpperCase()); if (node.sheet !== undefined && !explicit) return scalarError("#REF!");
         const scope = explicit ?? nameContext?.sheetId ?? at.sheetId;
         const definition = names.get(JSON.stringify([scope, node.name.toUpperCase()])) ?? (explicit ? undefined : names.get(JSON.stringify([null, node.name.toUpperCase()])));
-        if (!definition) return reference(node, at);
+        if (!definition) return reference(node, at, nameContext);
         const id = key(at), active = namePath.get(definition.nameId) ?? new Set<number>();
         if (active.has(id)) return unavailable("circular-name");
         active.add(id); namePath.set(definition.nameId, active);
@@ -161,7 +173,7 @@ export function createWorkbookScalarEvaluator(model: WorkbookModel, input: Parti
         finally { active.delete(id); }
       }
       if (node.kind === "cell" || node.kind === "range" || node.kind === "axisRange" || node.kind === "structured"
-        || node.kind === "binary" && [",", " ", ":"].includes(node.operator)) return reference(node, at);
+        || node.kind === "binary" && [",", " ", ":"].includes(node.operator)) return reference(node, at, nameContext);
       if (node.kind === "unary") {
         const value = scalar(visit(node.operand, at, depth + 1, nameContext), at, depth + 1); if (!("type" in value)) return value;
         const number = scalarToNumber(value); return typeof number === "number" ? scalarNumber(node.operator === "-" ? -number : node.operator === "%" ? number / 100 : number) : number;
@@ -174,7 +186,7 @@ export function createWorkbookScalarEvaluator(model: WorkbookModel, input: Parti
       return evaluateScalarFunction(node, { origin: at, step: () => step(depth + 1), visit: argument => argument ? visit(argument, at, depth + 1, nameContext) : scalarNumber(0),
         scalar: value => scalar(value, at, depth + 1), entries: (value, presenceOnly) => entries(value, depth + 1, presenceOnly) });
     }
-    step(); const result = scalar(start(visit, readCell), location, 0), identity = { documentId, revision, steps, readCells };
+    step(); const result = scalar(start(visit, readCell), location, 0), identity = { documentId, revision, steps, readCells, codeUnits: units };
     return freeze("type" in result ? { ...identity, kind: "value", value: result.type === "blank" && !preserveBlank ? scalarNumber(0) : result } : { ...identity, ...result });
   }
   return Object.freeze({
@@ -183,8 +195,8 @@ export function createWorkbookScalarEvaluator(model: WorkbookModel, input: Parti
       checkLocation(origin); const location = options.at ?? origin; checkLocation(location);
       return query(visit => visit(parse(expression, origin), location, 0), location, options, expression.length);
     },
-    cell(location: WorkbookReferenceLocation, options: Pick<WorkbookScalarQueryOptions, "signal" | "maxSteps"> = {}) {
-      if (!options || typeof options !== "object" || Object.keys(options).some(key => key !== "signal" && key !== "maxSteps")) throw new DocumentError("InvalidOperation", "Scalar cell query received unsupported options.");
+    cell(location: WorkbookReferenceLocation, options: Pick<WorkbookScalarQueryOptions, "signal" | "maxSteps" | "maxCodeUnits"> = {}) {
+      if (!options || typeof options !== "object" || Object.keys(options).some(key => key !== "signal" && key !== "maxSteps" && key !== "maxCodeUnits")) throw new DocumentError("InvalidOperation", "Scalar cell query received unsupported options.");
       return query((_visit, readCell) => readCell(location, 0), location, options, 0, true);
     },
     dispose() { disposed = true; sourceModel = undefined; parsed.clear(); parseUnits = 0; sheets.clear(); sheetNames.clear(); names.clear(); localNames.clear(); chunks.clear(); },
