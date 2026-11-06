@@ -27,7 +27,7 @@ Playground 通过公开入口打开 DOCX/文档包、选择文字／对象／区
 | `pnpm check:boundaries` | 检查允许的依赖方向、公开入口及浏览器模块边界 |
 | `pnpm check` | 包边界、一次库构建、其余类型检查、工程测试及生产 Playground 构建 |
 
-库的 TypeScript 项目引用需要声明输出，所以 `typecheck` 会先构建库；Playground 和工具类型检查使用 `noEmit`。生成物进入各包 `dist`，增量元数据进入根 `.cache`，均不提交。GitHub Actions 在 PR 和主分支推送时，以锁定的 Node/pnpm 和依赖构建一次；`CI / check` 下载本次构建产物并执行边界、`typecheck:built` 和 `test:built`。本地 `pnpm check` 默认执行完整模式；日常 CI 与阶段容量分流见 [CI 执行](ci-performance.md)。
+库的 TypeScript 项目引用需要声明输出，所以 `typecheck` 会先构建库；Playground 和工具类型检查使用 `noEmit`。生成物进入各包 `dist`，增量元数据进入根 `.cache`，均不提交。PR 和主分支普通推送自动运行 `Quick checks`；整套 CI 在显式发起验收时，以锁定的 Node/pnpm 和依赖构建一次，`CI / check` 下载本次构建产物并执行边界、`typecheck:built` 和 `test:built`。本地 `pnpm check` 默认执行完整模式；触发方式和阶段容量分流见 [CI 执行](ci-performance.md)。
 
 库使用 NodeNext ESM 解析；相对 TypeScript 源码导入写对应的 `.js` 扩展名。跨包使用 workspace 包名和公开 `exports`，不配置指向其他包源码的路径别名。
 

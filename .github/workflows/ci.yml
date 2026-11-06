@@ -2,9 +2,7 @@ name: CI
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
-  push:
-    branches: [main]
+    types: [ready_for_review, labeled]
   workflow_dispatch:
     inputs:
       stage_acceptance:
@@ -25,6 +23,7 @@ env:
 
 jobs:
   build:
+    if: github.event_name == 'workflow_dispatch' || github.event.action == 'ready_for_review' || github.event.label.name == 'run-ci' || github.event.label.name == 'stage-acceptance'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -106,7 +105,7 @@ jobs:
 
   browser-interaction:
     needs: browser-engine
-    if: always()
+    if: always() && needs.browser-engine.result != 'skipped'
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
@@ -183,7 +182,7 @@ jobs:
 
   office-reopen:
     needs: office-suite
-    if: always()
+    if: always() && needs.office-suite.result != 'skipped'
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:

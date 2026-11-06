@@ -2,6 +2,8 @@
 
 本轮优化保留一万行支持目标。用户已选择：真实容量用例移出日常 CI，阶段合并前单独全量验收。其余功能、安全、失败、取消、像素及外部 Office 检查保持；约 5 分钟为日常 CI 关键路径优化目标，实际结果须用 GitHub runner 验证。
 
+[PR #26 最终工作流](https://github.com/RobotSe7en/dagent-office/actions/runs/42246509253)的 21 个作业已全部成功：从首个构建作业开始到日常汇总完成为 320 秒（5 分 20 秒），容量专项单独通过。该轮包含已授权的容量分流，不能将其当作原全量范围的同负载耗时。
+
 ## 原始记录和诊断
 
 [PR #25 最终 CI](https://github.com/RobotSe7en/dagent-office/actions/runs/42223783754) 的浏览器作业共 2732 秒：Word/PPT 707 秒，现代工作簿 1299 秒，旧 Word/PPT 179 秒，旧工作簿 431 秒。工程检查 190 秒、Office 352 秒、Safari 112 秒。逐步骤记录见[基线](evidence/ci-performance-baseline.json)。
@@ -15,6 +17,17 @@ PLAYWRIGHT_BROWSERS_PATH="$PWD/.playwright" node scripts/probe-browser-test-over
 ```
 
 ## 日常模式
+
+普通提交／推送和 PR 创建只自动执行 `Quick checks`：差异空白检查、包边界和固定摘要的 actionlint 工作流校验。它不构建 SDK，不启动浏览器或 Office，也不取消正在运行的完整验收。
+
+actionlint 1.7.7 仅用于 Linux CI，采用 MIT 许可；官方 Linux amd64 归档 SHA-256 为 `023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757`。缓存命中后仍核验归档，再解包工具与许可，不进入 SDK 发布包。
+
+完整 `CI` 在 PR 从草稿转为待审、显式添加 `run-ci`／`stage-acceptance` 标签，或手动触发时运行。普通推送、无关标签和合并到 main 不重复执行整套。已存在的触发标签需要移除后重新添加才能再次请求；修改标签以外的推送不会自动重跑。验收后若修改了阶段 PR，须主动对最终 HEAD 再次发起验收，旧提交绿灯不能代替。
+
+```sh
+gh pr edit <PR> --add-label run-ci
+gh workflow run ci.yml --ref <branch>
+```
 
 - SDK 与 Playground 只构建一次，同一 workflow 的后续 job 下载该次不可变产物；类型、边界及测试照常检查。本地 `pnpm check` 也只构建一次。
 - 浏览器按四个引擎和 Word／PPT／工作簿分为独立 job，每个仍 `workers:1`。文件集合保留原矩阵；固定资源验收继续独占顺序执行。
@@ -31,7 +44,7 @@ PLAYWRIGHT_BROWSERS_PATH="$PWD/.playwright" node scripts/probe-browser-test-over
 
 ## 阶段合并前
 
-阶段 PR 加上 `stage-acceptance` 标签，或手动运行 CI 并开启 `stage_acceptance`。最终 HEAD 必须同时通过全部日常检查和 `workbook-scale`。标签保留期间的新提交会重新验收，旧 HEAD 的结果不能代替。
+阶段 PR 显式加上 `stage-acceptance` 标签，或手动运行 CI 并开启 `stage_acceptance`。最终 HEAD 必须同时通过全部日常检查和 `workbook-scale`，各分片必须实际成功。标签保留期间的新提交不自动重跑；集中修复完成后重新发起一次，旧 HEAD 的结果不能代替。
 
 专项运行完整原生 XLSX 参考、六项真实容量单元检查、四引擎 128 份公开来源／生产者矩阵及其余实际大数据集成用例，然后依次执行四逻辑 CPU／8GiB／无交换资源验收。20 万实际单元格、2 万公式、40 块、首屏、交互、DOM、内存和取消门槛保持。[阶段脚本](../scripts/workbook-scale-acceptance.mjs)核对实际执行、当前包摘要及全部资源条件后才写成功记录。
 
