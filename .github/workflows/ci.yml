@@ -66,11 +66,23 @@ jobs:
         with:
           restore-build: 'true'
       - uses: ./.github/actions/ubuntu-downloads
+      - name: Select UI and managed export engines
+        id: browser-tools
+        env:
+          BROWSER: ${{ matrix.browser }}
+          SUITE: ${{ matrix.suite }}
+        run: |
+          project="${BROWSER/legacy-chromium/chromium}"
+          browsers="$project"
+          if [[ "$SUITE" != workbook && "$project" != chromium ]]; then
+            browsers="$browsers chromium"
+          fi
+          printf 'browsers=%s\ncache-key=%s\n' "$browsers" "${browsers// /-}" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
         with:
           path: .playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}-${{ matrix.browser }}
-      - run: node scripts/playwright.mjs install --with-deps ${{ matrix.browser == 'legacy-chromium' && 'chromium' || matrix.browser }} --only-shell
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}-${{ steps.browser-tools.outputs.cache-key }}
+      - run: node scripts/playwright.mjs install --with-deps ${{ steps.browser-tools.outputs.browsers }} --only-shell
         timeout-minutes: 10
         env:
           PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT: '60000'
