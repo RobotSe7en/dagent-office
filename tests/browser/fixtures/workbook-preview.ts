@@ -1,3 +1,4 @@
+import { decodeTestPackage, type TestPackage } from './package-transport.js';
 import { createWorkbookNumberFormatter, DocumentError, openDocument } from '@dagent-office/core';
 import type { DocumentSelection, WorkbookDocumentMetadata, WorkbookModel } from '@dagent-office/core';
 import { mountDocumentPreview } from '@dagent-office/render';
@@ -11,9 +12,9 @@ import { WorkbookWindowController } from '../../../packages/render/src/workbook/
 import { decorateWorkbookPreview } from '../../../packages/render/src/workbook/preview-decoration.js';
 import type { WorkbookPreviewDecoration } from '../../../packages/render/src/workbook/preview-decoration.js';
 
-type Entries = readonly [string, number[]][];
+type Entries = TestPackage;
 function modelOf(entries: Entries, rtl = false): WorkbookModel {
-  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)]));
+  const files = decodeTestPackage(entries);
   const metadata = JSON.parse(new TextDecoder().decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata;
   metadata.workbook.sheets[0]!.rightToLeft = rtl;
   metadata.workbook.sheets.push({ sheetId: 'preview-empty', name: 'Empty', visibility: 'visible', defaultRowHeightPt: 20, defaultColumnWidth: 8.43,
@@ -260,7 +261,7 @@ Object.assign(window.workbookPreview,{matrixStart,matrixWindow,matrixFinish});
 
 
 export async function autoRowReadPipeline(entries: Entries, mode: 'sequential' | 'ahead' | 'cancel' | 'invalid' | 'preference' | 'late-cancel' | 'sequential-late-cancel') {
-  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)]));
+  const files = decodeTestPackage(entries);
   const metadata = JSON.parse(new TextDecoder().decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata;
   metadata.workbook.sheets[0]!.defaultRowHeightCustom = false;
   const styles = metadata.workbook.sheets[0]!.rowDimensions; styles.splice(0);
@@ -352,7 +353,7 @@ export async function rollingCandidateLifecycle(entries: Entries, mode: 'same' |
 (window as unknown as { workbookPreview: Record<string, unknown> }).workbookPreview.rollingCandidateLifecycle = rollingCandidateLifecycle;
 
 export async function responsiveViewportLifecycle(entries: Entries, escaped = false) {
-  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)]));
+  const files = decodeTestPackage(entries);
   const metadata = JSON.parse(new TextDecoder().decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata;
   metadata.workbook.sheets[0]!.defaultRowHeightCustom = false;
   files.set('metadata.json', new TextEncoder().encode(JSON.stringify(metadata)));
@@ -392,7 +393,7 @@ export async function responsiveViewportLifecycle(entries: Entries, escaped = fa
 (window as unknown as { workbookPreview: Record<string, unknown> }).workbookPreview.responsiveViewportLifecycle = responsiveViewportLifecycle;
 
 export async function responsiveInlineViewport(entries: Entries) {
-  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)]));
+  const files = decodeTestPackage(entries);
   const manifest = JSON.parse(new TextDecoder().decode(files.get('manifest.json')!)) as { content: string };
   const parsed = new DOMParser().parseFromString(new TextDecoder().decode(files.get(manifest.content)!), 'text/html');
   for (const node of parsed.body.querySelectorAll<HTMLElement>('p,span')) node.style.fontSize = '5vw';
@@ -428,7 +429,7 @@ export async function responsiveInlineViewport(entries: Entries) {
 (window as unknown as { workbookPreview: Record<string, unknown> }).workbookPreview.responsiveInlineViewport = responsiveInlineViewport;
 
 export async function autoRowRulesCancellation(entries: Entries) {
-  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)]));
+  const files = decodeTestPackage(entries);
   const metadata = JSON.parse(new TextDecoder().decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata;
   metadata.workbook.sheets[0]!.defaultRowHeightCustom = false;
   metadata.workbook.sheets[0]!.dataValidations = [{ ruleId: 'range', kind: 'whole', operator: 'between', origin: { row: 0, column: 0 },

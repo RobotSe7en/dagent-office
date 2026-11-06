@@ -1,8 +1,9 @@
+import { decodeTestBytes } from './package-transport.js';
 import { connectWorkbookReads, mountDocumentPreview } from '@dagent-office/render';
 import type { WorkbookPreview, WorkbookReadConnection } from '@dagent-office/render';
 import { DEFAULT_WORKBOOK_RULE_LIMITS } from '@dagent-office/core';
 
-export async function nativeWorkerRead(code: string, input: number[], documentId: string, audit: boolean) {
+export async function nativeWorkerRead(code: string, input: string | readonly number[], documentId: string, audit: boolean) {
   const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' })), worker = new Worker(url), channel = new MessageChannel();
   const container = document.createElement('div'); document.body.append(container);
   let client: WorkbookReadConnection | undefined, preview: WorkbookPreview | undefined, previous = performance.now(), ticks = 0, replies = 0, largestReplyUnits = 0, progress = 0;
@@ -21,7 +22,7 @@ export async function nativeWorkerRead(code: string, input: number[], documentId
     waiters.set(kind, value => { clearTimeout(timeout); waiters.delete(kind); resolve(value); });
   });
   try {
-    const bytes = new Uint8Array(input); worker.postMessage({ kind: 'open', documentId, bytes, port: channel.port1 }, [bytes.buffer, channel.port1]);
+    const bytes = decodeTestBytes(input); worker.postMessage({ kind: 'open', documentId, bytes, port: channel.port1 }, [bytes.buffer, channel.port1]);
     client = await connectWorkbookReads(channel.port2, {}, abort.signal);
     const openedMs = performance.now() - started, importDelays = [...delays].sort((a, b) => a - b), snapshot = client.cells.snapshot;
     preview = mountDocumentPreview(container, client, { widthPt: 420, heightPt: 300 }); await preview.ready;
@@ -44,12 +45,12 @@ export async function nativeWorkerRead(code: string, input: number[], documentId
   } finally { clearInterval(timer); preview?.dispose(); client?.dispose(); channel.port2.close(); worker.terminate(); URL.revokeObjectURL(url); container.remove(); }
 }
 
-export async function cancelNativeWorker(code: string, input: number[]) {
+export async function cancelNativeWorker(code: string, input: string | readonly number[]) {
   const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' })), worker = new Worker(url), ports = new MessageChannel(), abort = new AbortController();
   let progress = 0;
   worker.onmessage = event => { if (event.data.kind === 'progress') { progress++; abort.abort(); worker.terminate(); } };
   try {
-    const bytes = new Uint8Array(input); worker.postMessage({ kind: 'open', documentId: 'cancel-native', bytes, port: ports.port1 }, [bytes.buffer, ports.port1]);
+    const bytes = decodeTestBytes(input); worker.postMessage({ kind: 'open', documentId: 'cancel-native', bytes, port: ports.port1 }, [bytes.buffer, ports.port1]);
     let error = ''; try { const connection = await connectWorkbookReads(ports.port2, {}, abort.signal); connection.dispose(); error = 'accepted'; } catch (reason) { error = (reason as { code: string }).code; }
     return { error, progress };
   } finally { abort.abort(); worker.terminate(); ports.port2.close(); URL.revokeObjectURL(url); }

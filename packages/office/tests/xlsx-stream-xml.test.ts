@@ -1,3 +1,4 @@
+import { dailyCi } from '../../../tests/ci-mode.js';
 import { readFileSync } from "node:fs";
 import { DEFAULT_DOCUMENT_READ_LIMITS } from "@dagent-office/core";
 import { expect, it } from "vitest";
@@ -10,7 +11,7 @@ import type { XmlNode } from "../src/ooxml/xml.js";
 const limits = { ...DEFAULT_DOCUMENT_READ_LIMITS, maxFileBytes: 32 * 1024 * 1024, maxNodes: 2_000_000 };
 const progress = (completed: number, total: number) => ({ phase: "worksheet" as const, completed, total });
 const encode = (source: string) => new TextEncoder().encode(source);
-it("releases 200,000 cell subtrees while retaining only bounded worksheet headers", async () => {
+it.skipIf(dailyCi)("releases 200,000 cell subtrees while retaining only bounded worksheet headers @scale", async () => {
   const source = readFileSync(new URL("../../../examples/xlsx/15-ten-thousand-rows.xlsx", import.meta.url));
   const bytes = encode(new TextDecoder().decode(readDocumentZip(source, { limits }).get("xl/worksheets/sheet1.xml")!).replaceAll("><", ">\n<"));
   let cells = 0, rows = 0, formulas = 0, last: string | undefined;

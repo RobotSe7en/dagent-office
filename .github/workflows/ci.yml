@@ -2,8 +2,15 @@ name: CI
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      stage_acceptance:
+        description: Run full workbook scale acceptance before a stage merge
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -12,83 +19,111 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-jobs:
-  check:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .node-version
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm check
+env:
+  DAGENT_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+  DAGENT_OFFICE_CI_MODE: daily
 
-  browser-interaction:
+jobs:
+  build:
     runs-on: ubuntu-24.04
-    # Includes Word/PPT closure, the complete XLSX matrix and the legacy run.
-    # Individual test deadlines and the explicit performance gates stay fixed.
-    timeout-minutes: 60
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-project
+      - run: pnpm build
+      - run: mkdir -p .cache && tar -czf .cache/ci-build.tar.gz packages/*/dist apps/playground/dist
+      - uses: actions/upload-artifact@v4
         with:
-          node-version-file: .node-version
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Bound Ubuntu dependency downloads
+          name: sdk-build
+          path: .cache/ci-build.tar.gz
+          retention-days: 3
+
+  check:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-project
+        with:
+          restore-build: 'true'
+      - run: pnpm check:boundaries
+      - run: pnpm typecheck:built
+      - run: pnpm test:built
+
+  browser-engine:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit, legacy-chromium]
+        suite: [word, presentation, workbook]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-project
+        with:
+          restore-build: 'true'
+      - uses: ./.github/actions/ubuntu-downloads
+      - name: Select UI and managed export engines
+        id: browser-tools
+        env:
+          BROWSER: ${{ matrix.browser }}
+          SUITE: ${{ matrix.suite }}
         run: |
-          printf '%s\n' 'Acquire::Retries "3";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/80-dagent-downloads >/dev/null
-          if test -f /etc/apt/apt-mirrors.txt; then
-            printf '%s\n' 'https://archive.ubuntu.com/ubuntu/' 'https://security.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+          project="${BROWSER/legacy-chromium/chromium}"
+          browsers="$project"
+          if [[ "$SUITE" != workbook && "$project" != chromium ]]; then
+            browsers="$browsers chromium"
           fi
-      - run: node scripts/playwright.mjs install --with-deps chromium firefox webkit --only-shell
+          printf 'browsers=%s\ncache-key=%s\n' "$browsers" "${browsers// /-}" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: .playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}-${{ steps.browser-tools.outputs.cache-key }}
+      - run: node scripts/playwright.mjs install --with-deps ${{ steps.browser-tools.outputs.browsers }} --only-shell
         timeout-minutes: 10
         env:
           PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT: '60000'
       - run: sudo apt-get install -y poppler-utils fonts-noto-cjk fonts-liberation2 python3-pil
-      - run: pnpm build
-      - run: node scripts/playwright.mjs test workspace.spec.ts interaction.spec.ts workbench.spec.ts text-editor.spec.ts pagination.spec.ts rendering.spec.ts remote-access.spec.ts word-closure.spec.ts presentation.spec.ts presentation-editor.spec.ts presentation-workbench.spec.ts presentation-closure.spec.ts
-      - run: node scripts/playwright.mjs test workbook-storage.spec.ts workbook-grid.spec.ts workbook-drawing.spec.ts workbook-drawing-window.spec.ts workbook-preview.spec.ts workbook-read-worker.spec.ts workbook-playground.spec.ts --output=.cache/workbook-browser/modern
-      - run: /usr/bin/python3 scripts/check-presentation-reference.py && /usr/bin/python3 scripts/check-presentation-reference.py --browser firefox && /usr/bin/python3 scripts/check-presentation-reference.py --browser webkit
+      - uses: actions/cache@v4
+        if: matrix.browser == 'legacy-chromium'
+        with:
+          path: .cache/legacy-browser
+          key: ${{ runner.os }}-legacy-browser-${{ hashFiles('scripts/install-legacy-chromium.mjs') }}
       - run: node scripts/install-legacy-chromium.mjs
-      - run: node scripts/playwright.mjs test workspace.spec.ts pagination.spec.ts presentation.spec.ts presentation-editor.spec.ts presentation-workbench.spec.ts presentation-closure.spec.ts --project=chromium
-        env:
-          DAGENT_OFFICE_BROWSER_EXECUTABLE: ${{ github.workspace }}/.cache/legacy-browser/chromium-1041/chrome-linux/chrome
-      - run: node scripts/playwright.mjs test workbook-storage.spec.ts workbook-grid.spec.ts workbook-drawing.spec.ts workbook-drawing-window.spec.ts workbook-preview.spec.ts workbook-read-worker.spec.ts workbook-playground.spec.ts --project=chromium --output=.cache/workbook-browser/legacy
-        env:
-          DAGENT_OFFICE_BROWSER_EXECUTABLE: ${{ github.workspace }}/.cache/legacy-browser/chromium-1041/chrome-linux/chrome
+        if: matrix.browser == 'legacy-chromium'
+      - run: node scripts/ci-browser.mjs --browser ${{ matrix.browser }} --suite ${{ matrix.suite }} --mode daily
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: presentation-preview-acceptance
-          path: .cache/presentation-preview/
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: workbook-reading-checks
-          path: .cache/workbook-browser/
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: browser-interaction-results
-          path: test-results/
+          name: browser-${{ matrix.browser }}-${{ matrix.suite }}
+          path: |
+            .cache/ci-browser/${{ matrix.browser }}/${{ matrix.suite }}/
+            .cache/presentation-preview/
+          retention-days: 7
+
+  browser-interaction:
+    needs: browser-engine
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require every browser and suite
+        env:
+          RESULT: ${{ needs.browser-engine.result }}
+        run: test "$RESULT" = success
 
   safari:
+    needs: build
     runs-on: macos-15
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-project
         with:
-          node-version-file: .node-version
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+          restore-build: 'true'
       - run: sudo safaridriver --enable
       - run: node scripts/safari-smoke.mjs
       - uses: actions/upload-artifact@v4
@@ -99,90 +134,99 @@ jobs:
             .cache/safari-result.json
             .cache/safari-failure.png
 
-  office-reopen:
+  office-suite:
+    needs: build
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [word, presentation, workbook]
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-project
         with:
-          node-version-file: .node-version
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Bound Ubuntu dependency downloads
-        run: |
-          printf '%s\n' 'Acquire::Retries "3";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/80-dagent-downloads >/dev/null
-          if test -f /etc/apt/apt-mirrors.txt; then
-            printf '%s\n' 'https://archive.ubuntu.com/ubuntu/' 'https://security.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
-          fi
+          restore-build: 'true'
+      - uses: ./.github/actions/ubuntu-downloads
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-writer libreoffice-impress libreoffice-calc python3-uno python3-lxml poppler-utils fonts-noto-cjk fonts-liberation2
+      - uses: actions/cache@v4
+        with:
+          path: .cache/LibreOffice_25.8.1.1_Linux_x86-64_deb.tar.gz
+          key: office-archive-f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c
       - run: node scripts/install-acceptance-office.mjs
       - run: node scripts/install-acceptance-fonts.mjs
-      - run: pnpm check:pptx-fixtures && pnpm check:pptx-reference
-      - run: pnpm check:xlsx-fixtures && pnpm check:xlsx-reference
-      - run: python3 scripts/check-xlsx-chart-formulas.py
-      - run: python3 scripts/check-xlsx-row-appearance.py
-      - run: python3 scripts/check-xlsx-hidden-row-heights.py
-      - run: python3 scripts/check-xlsx-accounting-underlines.py
-      - run: python3 scripts/check-xlsx-picture-rotation.py
-      - run: python3 scripts/check-xlsx-gradient-rotation.py
-      - run: python3 scripts/check-xlsx-comment-mentions.py
-      - run: python3 scripts/check-xlsx-comment-uids.py
-      - run: python3 scripts/check-xlsx-dual-note-boxes.py
-      - run: python3 scripts/check-xlsx-text-overflow.py
-      - run: python3 scripts/check-xlsx-chart-colors.py
-      - run: python3 scripts/check-xlsx-chart-markers.py
-      - run: python3 scripts/check-xlsx-chart-auto-markers.py
-      - run: python3 scripts/check-xlsx-chart-grid.py
-      - run: python3 scripts/check-xlsx-chart-axes.py
-      - run: python3 scripts/check-xlsx-chart-finite-scales.py
-      - run: python3 scripts/check-xlsx-chart-labels.py
-      - run: pnpm check:docx-export
+      - uses: actions/cache@v4
+        if: matrix.suite != 'workbook'
+        with:
+          path: .playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}-chromium
       - run: node scripts/playwright.mjs install --with-deps chromium --only-shell
-      - run: pnpm check:word-closure
-      - run: pnpm check:pptx-export
-      - run: pnpm check:presentation-closure
+        if: matrix.suite != 'workbook'
+      - run: pnpm ci:office ${{ matrix.suite }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: native-docx-acceptance
-          path: .cache/docx-export-acceptance/
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: packed-word-closure
-          path: .cache/word-closure-acceptance/
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: independent-pptx-reference
-          path: .cache/pptx-reference/result.json
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: independent-xlsx-reference
-          path: .cache/xlsx-reference/result.json
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: native-pptx-acceptance
-          path: .cache/pptx-export-acceptance/
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: packed-presentation-closure
-          path: .cache/presentation-closure-acceptance/
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: acceptance-office-environment
-          path: .cache/acceptance-office/environment.json
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: acceptance-font-environment
+          name: office-${{ matrix.suite }}
           path: |
+            .cache/ci-office/${{ matrix.suite }}/
+            .cache/docx-export-acceptance/
+            .cache/word-closure-acceptance/
+            .cache/pptx-reference/result.json
+            .cache/xlsx-reference/result.json
+            .cache/pptx-export-acceptance/
+            .cache/presentation-closure-acceptance/
+            .cache/acceptance-office/environment.json
             .cache/acceptance-fonts/environment.json
             .cache/acceptance-fonts/fonts.conf
             .cache/acceptance-fonts/licenses/
+          retention-days: 7
+
+  office-reopen:
+    needs: office-suite
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require every Office suite
+        env:
+          RESULT: ${{ needs.office-suite.result }}
+        run: test "$RESULT" = success
+
+  workbook-scale:
+    needs: build
+    if: contains(github.event.pull_request.labels.*.name, 'stage-acceptance') || inputs.stage_acceptance == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      DAGENT_OFFICE_CI_MODE: full
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-project
+        with:
+          restore-build: 'true'
+      - uses: ./.github/actions/ubuntu-downloads
+      - run: node scripts/playwright.mjs install --with-deps chromium firefox webkit --only-shell
+      - run: sudo apt-get install -y --no-install-recommends libreoffice-writer libreoffice-impress libreoffice-calc python3-uno python3-lxml poppler-utils fonts-noto-cjk fonts-liberation2
+      - uses: actions/cache@v4
+        with:
+          path: .cache/LibreOffice_25.8.1.1_Linux_x86-64_deb.tar.gz
+          key: office-archive-f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c
+      - run: node scripts/install-acceptance-office.mjs
+      - run: node scripts/install-acceptance-fonts.mjs
+      - run: node scripts/install-legacy-chromium.mjs
+      - run: pnpm check:workbook-scale
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workbook-scale-acceptance
+          path: |
+            .cache/workbook-scale-acceptance/
+            .cache/workbook-reading-matrix-modern/
+            .cache/workbook-reading-matrix-legacy/
+            .cache/workbook-reading-budget/
+            .cache/xlsx-reference/result.json
+            .cache/acceptance-office/environment.json
+            .cache/acceptance-fonts/environment.json
+            .cache/acceptance-fonts/fonts.conf
+            .cache/acceptance-fonts/licenses/
+          retention-days: 14

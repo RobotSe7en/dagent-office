@@ -67,13 +67,15 @@ def main():
     if dependency_record.exists(): current["isolatedDependencies"] = json.loads(dependency_record.read_text())
     expected = json.loads((SAMPLES / "expected.json").read_text())
     baseline = None if args.record else json.loads((SAMPLES / "reference.json").read_text())
+    daily = os.environ.get("DAGENT_OFFICE_CI_MODE") == "daily" and not args.record
+    selected = [case for case in expected["cases"] if not daily or not case["file"].startswith("15-")]
     if baseline: verify_saved(baseline)
     CACHE.mkdir(parents=True, exist_ok=True); records = []
     with TemporaryDirectory(prefix="run-", dir=CACHE) as temporary:
         work = Path(temporary)
         for name in ["producer", "reopened"]: (work / name).mkdir()
         profile = "-env:UserInstallation=" + (work / "profile").as_uri()
-        for case in expected["cases"]:
+        for case in selected:
             source = SAMPLES / case["file"]; assert digest(source) == case["sha256"]
             pdf = work / (source.stem + ".pdf"); producer = work / "producer" / source.name
             run(["libreoffice", profile, "--headless", "--convert-to", "pdf:calc_pdf_Export", "--outdir", str(work), str(source)])
@@ -106,8 +108,9 @@ def main():
     if args.record:
         (SAMPLES / "reference.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n"); status = "recorded"
     else:
-        assert len(records) == len(baseline["fixtures"])
-        for actual, saved in zip(records, baseline["fixtures"]):
+        saved_cases = [case for case in baseline["fixtures"] if not daily or not case["file"].startswith("15-")]
+        assert len(records) == len(saved_cases)
+        for actual, saved in zip(records, saved_cases):
             # Native structure must remain stable even when fallback fonts or
             # PDF tools differ. Only pixel/pagination comparisons need the
             # complete recorded rendering environment.
@@ -116,7 +119,7 @@ def main():
             if current == baseline["environment"]:
                 for key in ["pages", "images"]: assert actual[key] == saved[key], (actual["file"], key)
         status = "pixels-equal" if current == baseline["environment"] else "environment-differs-pixels-not-compared"
-    (CACHE / "result.json").write_text(json.dumps({"status": status, **result}, ensure_ascii=False, indent=2) + "\n")
+    (CACHE / "result.json").write_text(json.dumps({"status": status, "mode": "daily" if daily else "full", "deferredFixtures": [case["file"] for case in expected["cases"] if case not in selected], **result}, ensure_ascii=False, indent=2) + "\n")
     print(len(records), "XLSX sources opened, resaved and reopened;", status)
 
 

@@ -1,0 +1,391 @@
+{
+  "scope": "Actual pre-optimization GitHub CI; durations are seconds, not local extrapolation.",
+  "run": "https://github.com/RobotSe7en/dagent-office/actions/runs/42223783754",
+  "head": "d4f250ed8beb807e17df855ded0403324788f3b7",
+  "jobs": [
+    {
+      "name": "check",
+      "seconds": 190.0,
+      "steps": [
+        {
+          "name": "Set up job",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "seconds": 3.0
+        },
+        {
+          "name": "Run pnpm/action-setup@v4",
+          "seconds": 2.0
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "seconds": 7.0
+        },
+        {
+          "name": "Run pnpm install --frozen-lockfile",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run pnpm check",
+          "seconds": 170.0
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "seconds": 0.0
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v4",
+          "seconds": 1.0
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "seconds": 0.0
+        },
+        {
+          "name": "Complete job",
+          "seconds": 0.0
+        }
+      ]
+    },
+    {
+      "name": "office-reopen",
+      "seconds": 352.0,
+      "steps": [
+        {
+          "name": "Set up job",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run pnpm/action-setup@v4",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "seconds": 6.0
+        },
+        {
+          "name": "Run pnpm install --frozen-lockfile",
+          "seconds": 0.0
+        },
+        {
+          "name": "Bound Ubuntu dependency downloads",
+          "seconds": 0.0
+        },
+        {
+          "name": "Run sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-writer libreoffice-impress libreoffice-calc python3-uno python3-lxml poppler-utils fonts-noto-cjk fonts-liberation2",
+          "seconds": 26.0
+        },
+        {
+          "name": "Run node scripts/install-acceptance-office.mjs",
+          "seconds": 92.0
+        },
+        {
+          "name": "Run node scripts/install-acceptance-fonts.mjs",
+          "seconds": 5.0
+        },
+        {
+          "name": "Run pnpm check:pptx-fixtures && pnpm check:pptx-reference",
+          "seconds": 12.0
+        },
+        {
+          "name": "Run pnpm check:xlsx-fixtures && pnpm check:xlsx-reference",
+          "seconds": 38.0
+        },
+        {
+          "name": "Run python3 scripts/check-xlsx-chart-formulas.py",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run python3 scripts/check-xlsx-row-appearance.py",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run python3 scripts/check-xlsx-hidden-row-heights.py",
+          "seconds": 2.0
+        },
+        {
+          "name": "Run python3 scripts/check-xlsx-accounting-underlines.py",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run python3 scripts/check-xlsx-picture-rotation.py",
+          "seconds": 4.0
+        },
+        {
+          "name": "Run python3 scripts/check-xlsx-gradient-rotation.py",
+          "seconds": 4.0
+        },
+        {
+          "name": "Run python3 scripts/check-xlsx-comment-mentions.py",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run python3 scripts/check-xlsx-comment-uids.py",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run python3 scripts/check-xlsx-dual-note-boxes.py",
+          "seconds": 5.0
+        },
+        {
+          "name": "Run python3 scripts/check-xlsx-text-overflow.py",
+          "seconds": 2.0
+        },
+        {
+          "name": "Run python3 scripts/check-xlsx-chart-colors.py",
+          "seconds": 4.0
+        },
+        {
+          "name": "Run python3 scripts/check-xlsx-chart-markers.py",
+          "seconds": 4.0
+        },
+        {
+          "name": "Run python3 scripts/check-xlsx-chart-auto-markers.py",
+          "seconds": 2.0
+        },
+        {
+          "name": "Run python3 scripts/check-xlsx-chart-grid.py",
+          "seconds": 2.0
+        },
+        {
+          "name": "Run python3 scripts/check-xlsx-chart-axes.py",
+          "seconds": 3.0
+        },
+        {
+          "name": "Run python3 scripts/check-xlsx-chart-finite-scales.py",
+          "seconds": 2.0
+        },
+        {
+          "name": "Run python3 scripts/check-xlsx-chart-labels.py",
+          "seconds": 4.0
+        },
+        {
+          "name": "Run pnpm check:docx-export",
+          "seconds": 27.0
+        },
+        {
+          "name": "Run node scripts/playwright.mjs install --with-deps chromium --only-shell",
+          "seconds": 11.0
+        },
+        {
+          "name": "Run pnpm check:word-closure",
+          "seconds": 13.0
+        },
+        {
+          "name": "Run pnpm check:pptx-export",
+          "seconds": 31.0
+        },
+        {
+          "name": "Run pnpm check:presentation-closure",
+          "seconds": 31.0
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "seconds": 2.0
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "seconds": 2.0
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "seconds": 1.0
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "seconds": 0.0
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v4",
+          "seconds": 0.0
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "seconds": 1.0
+        },
+        {
+          "name": "Complete job",
+          "seconds": 0.0
+        }
+      ]
+    },
+    {
+      "name": "safari",
+      "seconds": 112.0,
+      "steps": [
+        {
+          "name": "Set up job",
+          "seconds": 2.0
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "seconds": 4.0
+        },
+        {
+          "name": "Run pnpm/action-setup@v4",
+          "seconds": 2.0
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "seconds": 12.0
+        },
+        {
+          "name": "Run pnpm install --frozen-lockfile",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run pnpm build",
+          "seconds": 48.0
+        },
+        {
+          "name": "Run sudo safaridriver --enable",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run node scripts/safari-smoke.mjs",
+          "seconds": 26.0
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "seconds": 4.0
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "seconds": 0.0
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v4",
+          "seconds": 0.0
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "seconds": 2.0
+        },
+        {
+          "name": "Complete job",
+          "seconds": 6.0
+        }
+      ]
+    },
+    {
+      "name": "browser-interaction",
+      "seconds": 2732.0,
+      "steps": [
+        {
+          "name": "Set up job",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run pnpm/action-setup@v4",
+          "seconds": 1.0
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "seconds": 6.0
+        },
+        {
+          "name": "Run pnpm install --frozen-lockfile",
+          "seconds": 0.0
+        },
+        {
+          "name": "Bound Ubuntu dependency downloads",
+          "seconds": 0.0
+        },
+        {
+          "name": "Run node scripts/playwright.mjs install --with-deps chromium firefox webkit --only-shell",
+          "seconds": 43.0
+        },
+        {
+          "name": "Run sudo apt-get install -y poppler-utils fonts-noto-cjk fonts-liberation2 python3-pil",
+          "seconds": 6.0
+        },
+        {
+          "name": "Run pnpm build",
+          "seconds": 37.0
+        },
+        {
+          "name": "Run node scripts/playwright.mjs test workspace.spec.ts interaction.spec.ts workbench.spec.ts text-editor.spec.ts pagination.spec.ts rendering.spec.ts remote-access.spec.ts word-closure.spec.ts presentation.spec.ts presentation-editor.spec.ts presentation-workbench.spec.ts presentation-closure.spec.ts",
+          "seconds": 707.0
+        },
+        {
+          "name": "Run node scripts/playwright.mjs test workbook-storage.spec.ts workbook-grid.spec.ts workbook-drawing.spec.ts workbook-drawing-window.spec.ts workbook-preview.spec.ts workbook-read-worker.spec.ts workbook-playground.spec.ts --output=.cache/workbook-browser/modern",
+          "seconds": 1299.0
+        },
+        {
+          "name": "Run /usr/bin/python3 scripts/check-presentation-reference.py && /usr/bin/python3 scripts/check-presentation-reference.py --browser firefox && /usr/bin/python3 scripts/check-presentation-reference.py --browser webkit",
+          "seconds": 7.0
+        },
+        {
+          "name": "Run node scripts/install-legacy-chromium.mjs",
+          "seconds": 7.0
+        },
+        {
+          "name": "Run node scripts/playwright.mjs test workspace.spec.ts pagination.spec.ts presentation.spec.ts presentation-editor.spec.ts presentation-workbench.spec.ts presentation-closure.spec.ts --project=chromium",
+          "seconds": 179.0
+        },
+        {
+          "name": "Run node scripts/playwright.mjs test workbook-storage.spec.ts workbook-grid.spec.ts workbook-drawing.spec.ts workbook-drawing-window.spec.ts workbook-preview.spec.ts workbook-read-worker.spec.ts workbook-playground.spec.ts --project=chromium --output=.cache/workbook-browser/legacy",
+          "seconds": 431.0
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "seconds": 2.0
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "seconds": 2.0
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "seconds": 0.0
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "seconds": 0.0
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v4",
+          "seconds": 0.0
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "seconds": 0.0
+        },
+        {
+          "name": "Complete job",
+          "seconds": 0.0
+        }
+      ]
+    }
+  ]
+}

@@ -1,5 +1,8 @@
+// Measurements must retain the first failure, never overwrite it with a retry.
 import { expect, test } from '@playwright/test';
 import { build } from 'vite';
+
+test.describe.configure({ retries: 0 });
 import { createHash } from 'node:crypto';
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

@@ -1,3 +1,4 @@
+import { decodeTestPackage, type TestPackage } from './package-transport.js';
 import { createDocumentSession,openDocument } from "@dagent-office/core";
 import type { AssetDescriptor,DeepReadonly,DocumentSession,PresentationEditProposal,PresentationInteractionRequest } from "@dagent-office/core";
 import { mountDocumentWorkbench } from "@dagent-office/editor";
@@ -12,7 +13,7 @@ export interface PresentationWorkbenchHost {
   errors:string[];
   submission:"fixed"|"deferred";
   complete:(()=>void)|undefined;
-  mount(files:[string,number[]][],mode:"js"|"react",resources?:{descriptor:AssetDescriptor;bytes:number[]}[]):Promise<void>;
+  mount(files:TestPackage,mode:"js"|"react",resources?:{descriptor:AssetDescriptor;bytes:number[]}[]):Promise<void>;
   dispose():void;
 }
 declare global{interface Window{presentationWorkbenchHost:PresentationWorkbenchHost}}
@@ -21,7 +22,7 @@ function fixed(request:DeepReadonly<PresentationInteractionRequest>):Presentatio
 window.presentationWorkbenchHost={session:undefined,view:undefined,errors:[],submission:"fixed",complete:undefined,
   dispose(){root?.unmount();root=undefined;this.view?.dispose();this.view=undefined;this.session?.dispose();this.session=undefined;},
   async mount(files,mode,resources=[]){
-    this.dispose();this.errors=[];this.submission="fixed";this.complete=undefined;this.session=createDocumentSession(openDocument(new Map(files.map(([path,bytes])=>[path,new Uint8Array(bytes)]))));
+    this.dispose();this.errors=[];this.submission="fixed";this.complete=undefined;this.session=createDocumentSession(openDocument(decodeTestPackage(files)));
     const onError=(error:Error):void=>{this.errors.push(error.message);},onSubmitAnnotations=async(request:DeepReadonly<PresentationInteractionRequest>):Promise<PresentationEditProposal>=>this.submission==="fixed"?fixed(request):new Promise(resolve=>{this.complete=()=>resolve(fixed(request));});
     const options={onError,onSubmitAnnotations,...(resources.length?{proposalResources:{assets:resources.map(r=>({descriptor:r.descriptor,bytes:new Uint8Array(r.bytes)}))}}:{})};
     if(mode==="js")this.view=mountDocumentWorkbench(container,this.session,{...options,format:"presentation"});

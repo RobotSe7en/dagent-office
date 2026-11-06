@@ -44,12 +44,14 @@ async function workbookState(page: Page) {
   });
 }
 
-test('Playground opens the real ten-thousand-row workbook and switches between isolated Word, PPT and workbook views', async ({ page }, info) => {
+for (const large of [false, true]) test(`Playground opens a ${large ? 'ten-thousand-row' : 'small'} workbook and switches between isolated Word, PPT and workbook views`, { tag: large ? '@scale' : [] }, async ({ page }, info) => {
   test.setTimeout(120_000);
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
-  await page.getByRole('button', { name: '打开一万行 XLSX 样例', exact: true }).click();
+  const filename = large ? '一万行工作簿.xlsx' : '09-classic-notes.xlsx';
+  const reopen = page.getByRole('button', { name: large ? '打开一万行 XLSX 样例' : '打开 09-classic-notes.xlsx', exact: true });
+  if (large) await reopen.click(); else await upload(page).setInputFiles('examples/xlsx/09-classic-notes.xlsx');
   await expect(status(page)).toContainText('工作表 1', { timeout: 60_000 });
-  await expect(page.getByRole('heading', { name: '一万行工作簿.xlsx', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: filename, exact: true })).toBeVisible();
   await expect(page.getByLabel('Excel 只读预览', { exact: true })).toBeVisible();
   const first = await workbookState(page);
   expect(first.grids).toBe(1); expect(first.readonly).toBe(true); expect(first.cells).toBeGreaterThan(0); expect(first.cells).toBeLessThan(2000);
@@ -66,10 +68,10 @@ test('Playground opens the real ten-thousand-row workbook and switches between i
   await expect(apply).toBeVisible(); await apply.click();
   await page.getByRole('button', { name: '打开 PPT 协作样例', exact: true }).click();
   await expect(page.locator('iframe[title="幻灯片只读预览"]')).toBeVisible();
-  await page.getByRole('button', { name: '打开一万行 XLSX 样例', exact: true }).click();
+  await reopen.click();
   await expect(status(page)).toContainText('工作表 1');
   expect(await workbookState(page)).toEqual(first);
-  await page.getByRole('button', { name: '打开一万行 XLSX 样例', exact: true }).click();
+  await reopen.click();
   await expect(page.getByRole('button', { name: '取消读取' })).toHaveCount(0);
   expect(await page.evaluate(() => ({ created: window.workbookHostProbe.created, terminated: window.workbookHostProbe.terminated }))).toEqual({ created: 1, terminated: 0 });
   await page.getByRole('button', { name: '打开报告协作样例', exact: true }).click();
@@ -77,7 +79,7 @@ test('Playground opens the real ten-thousand-row workbook and switches between i
   expect(errors).toEqual([]);
 });
 
-test('cancelling an actual import terminates its Worker, preserves the active document and allows retry', async ({ page }) => {
+test('cancelling an actual import terminates its Worker, preserves the active document and allows retry', { tag: '@scale' }, async ({ page }) => {
   test.setTimeout(120_000);
   await page.getByRole('button', { name: '打开报告协作样例', exact: true }).click();
   await expect(page.getByLabel('会话状态', { exact: true })).toContainText('修订 0');

@@ -1,3 +1,4 @@
+import { decodeTestPackage, type TestPackage } from './package-transport.js';
 import { createWorkbookNumberFormatter, openDocument } from '@dagent-office/core';
 import type { WorkbookDocumentMetadata } from '@dagent-office/core';
 import { createWorkbookSurface } from '../../../packages/render/src/workbook/surface.js';
@@ -19,8 +20,8 @@ import { commentPanelMeasurement, mentionPanelMeasurement } from './workbook-com
 import { annotationControlsAction, mountAnnotationControls } from './workbook-annotation-controls.js';
 import { nativeNoteMeasurement } from './workbook-native-notes.js';
 
-export async function gradientWindowMeasurement(entries: readonly [string, number[]][]) {
-  const model = openDocument(new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
+export async function gradientWindowMeasurement(entries: TestPackage) {
+  const model = openDocument(decodeTestPackage(entries), { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
   const container = document.createElement('div'); document.body.append(container);
   const surface = await createWorkbookSurface(container, snapshot, { widthPt: 420, heightPt: 300 }), formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
   const controller = new WorkbookWindowController(surface, { cells: modelWindowSource(model), assets: modelAssetSource(model), charts: modelChartSource(model) }, formatter);
@@ -50,8 +51,8 @@ export async function gradientWindowMeasurement(entries: readonly [string, numbe
   } finally { controller.dispose(); formatter.dispose(); surface.dispose(); container.remove(); }
 }
 
-export async function currentChartWindowMeasurement(entries: readonly [string, number[]][]) {
-  const model = openDocument(new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
+export async function currentChartWindowMeasurement(entries: TestPackage) {
+  const model = openDocument(decodeTestPackage(entries), { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
   const container = document.createElement('div'); document.body.append(container);
   const surface = await createWorkbookSurface(container, snapshot, { widthPt: 620, heightPt: 420 }), formatter = createWorkbookNumberFormatter({ dateSystem: '1900' });
   const controller = new WorkbookWindowController(surface, { cells: modelWindowSource(model), assets: modelAssetSource(model), charts: modelChartSource(model) }, formatter);
@@ -65,8 +66,8 @@ export async function currentChartWindowMeasurement(entries: readonly [string, n
   } finally { controller.dispose(); formatter.dispose(); surface.dispose(); container.remove(); }
 }
 
-export async function drawingWindowMeasurement(entries: readonly [string, number[]][], rtl: boolean, overflow = false, pageOrientedPictures = false, fixedGradients = false) {
-  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), decoder = new TextDecoder(), encoder = new TextEncoder();
+export async function drawingWindowMeasurement(entries: TestPackage, rtl: boolean, overflow = false, pageOrientedPictures = false, fixedGradients = false) {
+  const files = decodeTestPackage(entries), decoder = new TextDecoder(), encoder = new TextEncoder();
   const metadata = JSON.parse(decoder.decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata;
   const sheet = metadata.workbook.sheets[0]!; sheet.frozen = { rows: 2, columns: 1 }; sheet.rightToLeft = rtl;
   for (const object of metadata.workbook.objects ?? []) object.anchor = { kind: 'absolute', xPt: 12, yPt: 12, widthPt: object.kind === 'chart' ? 360 : 220, heightPt: object.kind === 'chart' ? 220 : 150 };

@@ -1,0 +1,11 @@
+name: Bound Ubuntu downloads
+description: Use the official mirrors with bounded retries and timeouts.
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        printf '%s\n' 'Acquire::Retries "3";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/80-dagent-downloads >/dev/null
+        if test -f /etc/apt/apt-mirrors.txt; then
+          printf '%s\n' 'https://archive.ubuntu.com/ubuntu/' 'https://security.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+        fi

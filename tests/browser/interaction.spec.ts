@@ -1,3 +1,5 @@
+import { encodeTestPackage } from './package-transport.js';
+import { openSdkHost } from './sdk-host.js';
 import { openContentFixture as openDocument } from "../content-fixture.js";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
@@ -21,9 +23,9 @@ function fixture(html?: string, rootTag = "article"): DocumentPackage {
     '<' + rootTag + ' data-node-id="root" data-office-kind="document">' + html + '</' + rootTag + '>')));
   return files;
 }
-const entries = (files: DocumentPackage): [string, number[]][] => [...files].map(([path, bytes]) => [path, [...bytes]]);
+const entries = encodeTestPackage;
 async function mount(page: Page, files = fixture(), readOnly = false): Promise<void> {
-  await page.goto("/");
+  await openSdkHost(page);
   await page.addScriptTag({ type: "module", content: hostCode });
   await page.waitForFunction(() => !!window.interactionHost);
   await page.evaluate(({ input, readOnly }) => window.interactionHost.mount(input, readOnly), { input: entries(files), readOnly });

@@ -1,0 +1,233 @@
+{
+  "scope": "Diagnostic only. Same six grid renders/assertions per fresh context. Local production preview, same browser; no acceptance thresholds changed.",
+  "cases": [
+    {
+      "host": "playground",
+      "trace": "full",
+      "round": 0,
+      "navigationMs": 318.780397,
+      "initializationMs": 300.9468670000001,
+      "actionsMs": 1287.7309179999997,
+      "traceFinishMs": 98.835466,
+      "totalMs": 2006.2936479999998,
+      "fragments": 6036
+    },
+    {
+      "host": "blank",
+      "trace": "full",
+      "round": 0,
+      "navigationMs": 23.522599999999784,
+      "initializationMs": 297.31961100000035,
+      "actionsMs": 1245.6319280000002,
+      "traceFinishMs": 84.32027599999947,
+      "totalMs": 1650.7944149999998,
+      "fragments": 6036
+    },
+    {
+      "host": "playground",
+      "trace": "api",
+      "round": 0,
+      "navigationMs": 194.67579099999966,
+      "initializationMs": 290.31290199999967,
+      "actionsMs": 614.7664770000001,
+      "traceFinishMs": 37.76766500000031,
+      "totalMs": 1137.5228349999998,
+      "fragments": 6036
+    },
+    {
+      "host": "blank",
+      "trace": "api",
+      "round": 0,
+      "navigationMs": 13.303826999999728,
+      "initializationMs": 286.2971010000001,
+      "actionsMs": 616.5069539999995,
+      "traceFinishMs": 38.8417900000004,
+      "totalMs": 954.9496719999997,
+      "fragments": 6036
+    },
+    {
+      "host": "blank",
+      "trace": "full",
+      "round": 1,
+      "navigationMs": 18.26004600000033,
+      "initializationMs": 308.7541739999997,
+      "actionsMs": 1275.9582629999995,
+      "traceFinishMs": 93.9110440000004,
+      "totalMs": 1696.883527,
+      "fragments": 6036
+    },
+    {
+      "host": "playground",
+      "trace": "api",
+      "round": 1,
+      "navigationMs": 258.353916,
+      "initializationMs": 332.5213449999992,
+      "actionsMs": 659.3064809999996,
+      "traceFinishMs": 40.53447000000051,
+      "totalMs": 1290.7162119999994,
+      "fragments": 6036
+    },
+    {
+      "host": "blank",
+      "trace": "api",
+      "round": 1,
+      "navigationMs": 14.094004000000496,
+      "initializationMs": 306.63650400000006,
+      "actionsMs": 660.4586369999997,
+      "traceFinishMs": 45.187244000000646,
+      "totalMs": 1026.376389000001,
+      "fragments": 6036
+    },
+    {
+      "host": "playground",
+      "trace": "full",
+      "round": 1,
+      "navigationMs": 303.79657399999996,
+      "initializationMs": 312.4027819999992,
+      "actionsMs": 1329.5892790000016,
+      "traceFinishMs": 73.91036600000007,
+      "totalMs": 2019.6990010000009,
+      "fragments": 6036
+    },
+    {
+      "host": "playground",
+      "trace": "api",
+      "round": 2,
+      "navigationMs": 190.8575669999991,
+      "initializationMs": 289.17486800000006,
+      "actionsMs": 658.931238000001,
+      "traceFinishMs": 39.97702599999866,
+      "totalMs": 1178.9406989999989,
+      "fragments": 6036
+    },
+    {
+      "host": "blank",
+      "trace": "api",
+      "round": 2,
+      "navigationMs": 14.233587000000625,
+      "initializationMs": 285.662515,
+      "actionsMs": 640.3775879999994,
+      "traceFinishMs": 37.68339300000116,
+      "totalMs": 977.9570830000011,
+      "fragments": 6036
+    },
+    {
+      "host": "playground",
+      "trace": "full",
+      "round": 2,
+      "navigationMs": 281.9850719999995,
+      "initializationMs": 294.5535480000017,
+      "actionsMs": 1224.0031119999985,
+      "traceFinishMs": 81.50849000000017,
+      "totalMs": 1882.0502219999998,
+      "fragments": 6036
+    },
+    {
+      "host": "blank",
+      "trace": "full",
+      "round": 2,
+      "navigationMs": 19.96055400000114,
+      "initializationMs": 287.4293609999986,
+      "actionsMs": 1229.4179440000007,
+      "traceFinishMs": 78.13729899999817,
+      "totalMs": 1614.9451579999986,
+      "fragments": 6036
+    },
+    {
+      "host": "blank",
+      "trace": "api",
+      "round": 3,
+      "navigationMs": 13.233852999997907,
+      "initializationMs": 285.8361530000002,
+      "actionsMs": 648.0162040000032,
+      "traceFinishMs": 37.17180599999847,
+      "totalMs": 984.2580159999998,
+      "fragments": 6036
+    },
+    {
+      "host": "playground",
+      "trace": "full",
+      "round": 3,
+      "navigationMs": 275.25039599999945,
+      "initializationMs": 295.15155400000003,
+      "actionsMs": 1218.8199370000002,
+      "traceFinishMs": 82.19861200000014,
+      "totalMs": 1871.4204989999998,
+      "fragments": 6036
+    },
+    {
+      "host": "blank",
+      "trace": "full",
+      "round": 3,
+      "navigationMs": 19.968598999999813,
+      "initializationMs": 292.3339829999968,
+      "actionsMs": 1247.6704970000028,
+      "traceFinishMs": 80.59257699999944,
+      "totalMs": 1640.5656559999989,
+      "fragments": 6036
+    },
+    {
+      "host": "playground",
+      "trace": "api",
+      "round": 3,
+      "navigationMs": 191.2047910000001,
+      "initializationMs": 300.84084200000143,
+      "actionsMs": 622.6399469999997,
+      "traceFinishMs": 38.71245199999976,
+      "totalMs": 1153.398032000001,
+      "fragments": 6036
+    }
+  ],
+  "transfer": [
+    {
+      "round": 0,
+      "encoding": "array",
+      "ms": 3730.049379,
+      "bytes": 840104
+    },
+    {
+      "round": 0,
+      "encoding": "base64",
+      "ms": 55.70416000000114,
+      "bytes": 840104
+    },
+    {
+      "round": 1,
+      "encoding": "base64",
+      "ms": 27.53712500000256,
+      "bytes": 840104
+    },
+    {
+      "round": 1,
+      "encoding": "array",
+      "ms": 3552.3825030000007,
+      "bytes": 840104
+    },
+    {
+      "round": 2,
+      "encoding": "array",
+      "ms": 3616.6705540000003,
+      "bytes": 840104
+    },
+    {
+      "round": 2,
+      "encoding": "base64",
+      "ms": 54.3243300000031,
+      "bytes": 840104
+    },
+    {
+      "round": 3,
+      "encoding": "base64",
+      "ms": 27.711945000002743,
+      "bytes": 840104
+    },
+    {
+      "round": 3,
+      "encoding": "array",
+      "ms": 3407.474983,
+      "bytes": 840104
+    }
+  ],
+  "sourceHead": "d4f250ed8beb807e17df855ded0403324788f3b7",
+  "method": "scripts/probe-browser-test-overhead.mjs"
+}

@@ -1,3 +1,4 @@
+import { dailyCi } from '../../../tests/ci-mode.js';
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_DOCUMENT_READ_LIMITS, createWorkbook, openDocument } from "@dagent-office/core";
@@ -33,9 +34,11 @@ describe("streaming native sheet geometry", () => {
     expect(sheet.merges).toContainEqual({ from: { row: 255, column: 0 }, to: { row: 257, column: 0 } });
     expect(openDocument(model.serialize(), { kind: "workbook" }).snapshot()).toEqual(model.snapshot());
   });
-  it("keeps hyperlink targets as inert metadata and streams the full real-data worksheet", async () => {
+  it("keeps hyperlink targets as inert metadata", async () => {
     const small = await read("examples/xlsx/01-values-text.xlsx"), sheet = small.model.snapshot().metadata.workbook.sheets[0]!;
     expect(sheet.hyperlinks?.[0]).toEqual({ range: { from: { row: 1, column: 0 }, to: { row: 1, column: 0 } }, url: "https://example.com/authorized-link", display: "文档链接", tooltip: "外部链接，不自动访问" });
+  });
+  it.skipIf(dailyCi)("streams the full real-data worksheet @scale", async () => {
     const large = await read("examples/xlsx/15-ten-thousand-rows.xlsx"); expect(large.cells).toBe(200000);
     expect(large.model.snapshot().metadata.workbook.sheets[0]!.rowDimensions).toEqual([]);
   });

@@ -149,6 +149,7 @@ test("workspace unmount releases views and floating controls while the host reta
   const output = Array.isArray(built) ? built.flatMap(item => item.output) : built.output;
   await page.goto("/");
   await page.addScriptTag({ type: "module", content: output.flatMap(item => item.type === "chunk" ? [item.code] : []).join("\n") });
+  await page.waitForFunction(() => Boolean(window.interactionHost));
   const files = ["manifest.json", "content.html", "styles.css", "metadata.json", "annotations.json"].map(path => [path, [...readFileSync(new URL("../../examples/report/" + path, import.meta.url))]] as [string, number[]]);
   for (let iteration = 0; iteration < 3; iteration++) {
     await page.evaluate(files => window.interactionHost.mount(files, false, "workspace"), files);

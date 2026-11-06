@@ -1,3 +1,4 @@
+import { openSdkHost } from './sdk-host.js';
 import { expect, test } from "@playwright/test";
 import { build } from "vite";
 import { fileURLToPath } from "node:url";
@@ -12,9 +13,9 @@ test.beforeAll(async () => {
   workerCode = output.filter(part => part.type === "chunk").map(part => part.code).join("\n");
 });
 
-test("10,000 actual rows stay in a Worker; windows and cancellation have bounded replies", async ({ page }, info) => {
+test("10,000 actual rows stay in a Worker; windows and cancellation have bounded replies", { tag: "@scale" }, async ({ page }, info) => {
   test.setTimeout(90_000);
-  await page.goto("/");
+  await openSdkHost(page);
   const report = await page.evaluate(async code => {
     const url = URL.createObjectURL(new Blob([code], { type: "text/javascript" })), worker = new Worker(url);
     const messages: Record<string, unknown>[] = [], delays: number[] = [];

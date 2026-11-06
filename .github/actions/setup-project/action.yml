@@ -1,0 +1,24 @@
+name: Set up project
+description: Install locked tools and optionally restore this run's verified build.
+inputs:
+  restore-build:
+    description: Restore the SDK and Playground produced by the build job.
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: .node-version
+        cache: pnpm
+    - shell: bash
+      run: pnpm install --frozen-lockfile
+    - uses: actions/download-artifact@v4
+      if: inputs.restore-build == 'true'
+      with:
+        name: sdk-build
+        path: .cache
+    - shell: bash
+      if: inputs.restore-build == 'true'
+      run: tar -xzf .cache/ci-build.tar.gz

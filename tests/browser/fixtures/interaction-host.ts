@@ -1,3 +1,4 @@
+import { decodeTestPackage, type TestPackage } from './package-transport.js';
 import { createDocumentSession, openDocument } from "@dagent-office/core";
 import type { DocumentEditingSession, DocumentSelection } from "@dagent-office/core";
 import { mountDocumentInteraction, mountDocumentPreview } from "@dagent-office/editor";
@@ -11,7 +12,7 @@ export interface InteractionHost {
   selections: (DocumentSelection | undefined)[];
   errors: string[];
   nodeReads: string[];
-  mount(files: [string, number[]][], readOnly?: boolean, appearance?: "default" | "workspace"): Promise<void>;
+  mount(files: TestPackage, readOnly?: boolean, appearance?: "default" | "workspace"): Promise<void>;
   settle(): Promise<void>;
 }
 declare global { interface Window { interactionHost: InteractionHost } }
@@ -26,7 +27,7 @@ window.interactionHost = {
     this.preview?.dispose();
     this.preview = undefined;
     this.session?.dispose();
-    const session = createDocumentSession(openDocument(new Map(files.map(([path, bytes]) => [path, new Uint8Array(bytes)]))));
+    const session = createDocumentSession(openDocument(decodeTestPackage(files)));
     this.session = { ...session, getNode: (id) => { this.nodeReads.push(id); return session.getNode(id); } };
     if (readOnly) this.preview = mountDocumentPreview(container, this.session);
     else this.view = mountDocumentInteraction(container, this.session, {

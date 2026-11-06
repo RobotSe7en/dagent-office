@@ -1,3 +1,4 @@
+import { openSdkHost } from './sdk-host.js';
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
@@ -18,7 +19,7 @@ function fixture(html = '<p data-node-id="a">甲甲甲</p><p data-node-id="b">�
     '<article data-node-id="root" data-office-kind="document">' + html + "</article>"))); return files;
 }
 async function mount(page: Page, files = fixture(), beforeReadyText?: string): Promise<void> {
-  await page.goto("/"); await page.addScriptTag({ type: "module", content: code });
+  await openSdkHost(page); await page.addScriptTag({ type: "module", content: code });
   await page.waitForFunction(() => !!window.textEditorHost);
   await page.evaluate(({ entries, text }) => window.textEditorHost.mount(entries, text), {
     entries: [...files].map(([path, value]) => [path, [...value]] as [string, number[]]), text: beforeReadyText,

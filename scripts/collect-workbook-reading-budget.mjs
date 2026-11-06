@@ -1,10 +1,13 @@
+import { parseArgs } from 'node:util';
+import { resolve as outputResolve } from 'node:path';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
-if (process.argv.length !== 3 || process.argv[2] !== '--record') throw Error('Use --record explicitly to save the verified latest four-engine evidence.');
+const { values: outputOptions } = parseArgs({ options: { record: { type: 'boolean' }, output: { type: 'string' } } });
+if (Boolean(outputOptions.record) === Boolean(outputOptions.output)) throw Error('Use exactly one of --record or --output <file> to save verified evidence.');
 const root = fileURLToPath(new URL('../', import.meta.url));
 const sha = value => createHash('sha256').update(value).digest('hex');
 const digest = path => sha(readFileSync(join(root, path)));
@@ -53,5 +56,5 @@ const report = { scope: 'R3-08 fixed-resource reading performance subset; not th
   method: 'docs/workbook-reading-budget.md', source: { path: sourcePath, sha256: digest(sourcePath), generator: 'scripts/generate-xlsx-fixtures.py', generatorSha256: digest('scripts/generate-xlsx-fixtures.py') },
   scripts: Object.fromEntries(['scripts/workbook-reading-budget.mjs', 'scripts/collect-workbook-reading-budget.mjs', 'tests/browser/workbook-reading-performance.spec.ts'].map(path => [path, digest(path)])),
   fontFiles: fonts, runs: runs.map(({ browser, measurement, resources: { fontFiles: _fonts, ...resources } }) => ({ browser, measurement, resources })) };
-writeFileSync(join(root, 'docs/evidence/workbook-reading-budget.json'), JSON.stringify(report, null, 2) + '\n');
+writeFileSync(outputOptions.output ? outputResolve(outputOptions.output) : join(root, 'docs/evidence/workbook-reading-budget.json'), JSON.stringify(report, null, 2) + '\n');
 process.stdout.write('Recorded four consistent, fully passing fixed-resource reading runs.\n');

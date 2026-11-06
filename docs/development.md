@@ -25,9 +25,9 @@ Playground 通过公开入口打开 DOCX/文档包、选择文字／对象／区
 | `pnpm typecheck` | 检查库、Playground、工具配置和测试类型 |
 | `pnpm build` | 构建库和生产 Playground |
 | `pnpm check:boundaries` | 检查允许的依赖方向、公开入口及浏览器模块边界 |
-| `pnpm check` | 依次执行包边界、类型、工程测试和生产构建 |
+| `pnpm check` | 包边界、一次库构建、其余类型检查、工程测试及生产 Playground 构建 |
 
-库的 TypeScript 项目引用需要声明输出，所以 `typecheck` 会先构建库；Playground 和工具类型检查使用 `noEmit`。生成物进入各包 `dist`，增量元数据进入根 `.cache`，均不提交。GitHub Actions 的 `CI / check` 在 PR 和主分支推送时，以锁定的 Node/pnpm 和依赖运行 `pnpm check`；固定字体浏览器视觉验收仍按下文单独执行。
+库的 TypeScript 项目引用需要声明输出，所以 `typecheck` 会先构建库；Playground 和工具类型检查使用 `noEmit`。生成物进入各包 `dist`，增量元数据进入根 `.cache`，均不提交。GitHub Actions 在 PR 和主分支推送时，以锁定的 Node/pnpm 和依赖构建一次；`CI / check` 下载本次构建产物并执行边界、`typecheck:built` 和 `test:built`。本地 `pnpm check` 默认执行完整模式；日常 CI 与阶段容量分流见 [CI 执行](ci-performance.md)。
 
 库使用 NodeNext ESM 解析；相对 TypeScript 源码导入写对应的 `.js` 扩展名。跨包使用 workspace 包名和公开 `exports`，不配置指向其他包源码的路径别名。
 
@@ -67,11 +67,11 @@ DAGENT_OFFICE_BROWSER_CHANNEL=chrome pnpm test:browser
 
 未设置渠道时使用对应 Playwright 版本的 Chromium，不进行自动渠道回退。当前截图基线使用锁定的 Chromium 与 Noto 中文字体；补充的仿宋/楷体浏览器用例还需要[固定开源字体环境](fonts.md)。环境和字体摘要见[参考记录](../examples/docx/reference.json)。使用 Chrome 渠道只能作额外验证，不能静默刷新固定基线。独立参考检查使用 `pnpm check:docx-reference`，更新方法见[DOCX 读取](docx-import.md#独立样例与验收)。
 
-仅运行 R1-08 交互验收使用 `node scripts/playwright.mjs test interaction.spec.ts workbench.spec.ts text-editor.spec.ts pagination.spec.ts rendering.spec.ts remote-access.spec.ts word-closure.spec.ts`；它包含普通 JavaScript 宿主及 React Playground。CI 分别执行 `pnpm check` 和浏览器交互／工作台检查，失败时上传 Playwright 结果。文档视觉夹具截图时展开滚动容器，继续核对原完整文档基线；交互滚动与缩放另有坐标验收。
+仅运行 R1-08 交互验收使用 `node scripts/playwright.mjs test interaction.spec.ts workbench.spec.ts text-editor.spec.ts pagination.spec.ts rendering.spec.ts remote-access.spec.ts word-closure.spec.ts`；它包含普通 JavaScript 宿主及 React Playground。CI 将工程检查与浏览器交互／工作台分开，上传逐用例 JSON 和失败诊断。文档视觉夹具截图时展开滚动容器，继续核对原完整文档基线；交互滚动与缩放另有坐标验收。
 
-第三轮工作簿的当前内部检查使用 `node scripts/playwright.mjs test workbook-storage.spec.ts workbook-grid.spec.ts workbook-drawing.spec.ts`。CI 在 Chromium、Firefox、WebKit 和固定旧 Chromium 上执行，现代与旧引擎的结果分别保存在 `.cache/workbook-browser/modern`、`.cache/workbook-browser/legacy`，并上传 `workbook-reading-checks`。其中一万行 Worker 用例保留 20 万实际单元格、2 万公式、取消后旧窗口及传输大小报告；它仍是存储原型检查，不代表完整 XLSX 首屏或固定 4 vCPU／8 GiB 性能验收已经通过。
+第三轮工作簿日常检查在 Chromium、Firefox、WebKit 和固定旧 Chromium 上执行网格、绘图、公共预览、Worker 与 Playground；可用 `node scripts/ci-browser.mjs --browser chromium --suite workbook --mode daily` 运行单片，结果保存在 `.cache/ci-browser/<browser>/workbook/`，上传为 `browser-<browser>-workbook`。一万行用例保留 20 万实际单元格、2 万公式、取消后旧窗口及传输大小报告，改在阶段专项运行。已完成的读取范围和固定资源证据见[读取验收](workbook-reading-acceptance.md)。
 
-浏览器 CI 任务包含 Word／PPT、工作簿的三引擎与旧 Chromium，以及固定原生页面比较，任务时限为 45 分钟。CI #70 的 Word／PPT 438 项已耗时 11.2 分钟，随后工作簿 276 项及后续比较尚未完成时触及原 20 分钟上限；该取消不是产品性能验收结果。产品的 4 vCPU／8 GiB、首屏 30 秒、交互 p95 100 ms 和内存目标仍按第三轮单独验收。
+浏览器按四引擎及 Word／PPT／工作簿拆分，每片 `workers:1`，保留固定原生页面比较。日常约 5 分钟为优化目标，实际耗时以工作流记录为准。阶段专项独占执行 4 vCPU／8 GiB／无交换验收；首屏 30 秒、选择 p95 100 ms、读取滚轮 p95 120 ms 及内存目标保持，不能用增加日常作业并发代替这些资源条件。
 
 ## 本地打包
 
@@ -93,7 +93,7 @@ R1-12 的浏览器 CI 使用 Ubuntu 24.04、固定 Playwright 引擎、Poppler �
 
 PPT 的独立 ZIP/XML 样例与参考环境见 [PPTX 样例](../examples/pptx/README.md)。`pnpm check:pptx-fixtures` 不需要 Office；`pnpm check:pptx-reference` 需要 Impress、Calc、Poppler 和上述字体，会实际打开、重存并重开。环境不同只运行内容检查并明确记录未比较像素，不自动刷新基线。
 
-Office CI 也执行 `pnpm check:xlsx-fixtures` 与 `pnpm check:xlsx-reference`，核对 [XLSX 独立来源](../examples/xlsx/README.md)的可重现字节、官方结构、负例和固定 Calc 重开。源及重存后的结构差异始终对照已记录预期；只有渲染环境完全相同时才比较页数与像素摘要。结果上传为 `independent-xlsx-reference`，环境不同会明确标为未比较像素，不更新参考文件。
+Office CI 也执行 `pnpm check:xlsx-fixtures` 与 `pnpm check:xlsx-reference`，核对 [XLSX 独立来源](../examples/xlsx/README.md)的可重现字节、官方结构、负例和固定 Calc 重开。源及重存后的结构差异始终对照已记录预期；只有渲染环境完全相同时才比较页数与像素摘要。日常省略一万行重开，专项运行完整来源；结果分别上传为 `office-workbook` 和 `workbook-scale-acceptance`，环境不同会明确标为未比较像素，不更新参考文件。
 
 PPT 导出与独立闭环使用 `pnpm check:pptx-export` 和 `pnpm check:presentation-closure`，需要 `python3-uno`、`python3-lxml`、Impress/Calc、Poppler 和既定字体。普通 JS／React／Node 在工作区外安装 tarball；输出及环境见 `.cache/pptx-export-acceptance/` 和 `.cache/presentation-closure-acceptance/`。完整范围、现代批注限制及 PowerPoint/WPS 未验证项见 [PPTX 导出](pptx-export.md)。
 
@@ -102,3 +102,8 @@ Office CI 固定使用官方 LibreOffice 25.8.1.1 归档，`node scripts/install
 Office CI 另显式运行 `node scripts/install-acceptance-fonts.mjs`，从固定 Debian 归档解出与参考相同的 Noto Sans／Serif CJK Regular/Bold 和 Color Emoji，仅保存到 `.cache/acceptance-fonts/`。归档及逐字体 SHA-256 都要通过，来源、版本与许可见[验收字体清单](../scripts/fixtures/acceptance-fonts.json)。生成的 Fontconfig 配置在当前作业内替换这些字体的解析，系统文件不变；本地使用时显式设置脚本输出的 `FONTCONFIG_FILE`。CI 会通过 `GITHUB_ENV` 传给后续步骤，日志／配置／许可保留在该缓存目录。此为开发验收设置，SDK 不下载字体。
 
 LibreOffice 24.2 在含未使用自定义布局的新建文稿重存中会生成重复原生对象 ID；此结果在隔离 Ubuntu 24.04 中复现，SDK 继续明确拒绝，不放宽重复身份校验。本轮外部打开、实际编辑和重存验收以固定的 25.8.1.1 为准，其他 Office 版本需单独验证。
+
+
+## CI 运行方式
+
+整体检查、日常容量分流、阶段合并前完整验收、失败追踪和耗时报告见 [CI 执行](ci-performance.md)。

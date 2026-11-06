@@ -1,3 +1,4 @@
+import { decodeTestPackage, type TestPackage } from './package-transport.js';
 import { openContentFixture as openDocument } from "../../content-fixture.js";
 import { createDocumentSession } from "@dagent-office/core";
 import type { ContentDocumentModel as DocumentModel, DocumentOperation, DocumentSession } from "@dagent-office/core";
@@ -8,8 +9,8 @@ import { mountDocumentInteraction, mountDocumentTextEditor, mountDocumentWorkben
 export interface PresentationHost {
   model: DocumentModel | undefined;
   view: ReturnType<typeof mountPreview> | undefined;
-  mount(files: [string, number[]][], options?: DocumentPreviewOptions): Promise<void>;
-  update(files: [string, number[]][]): void;
+  mount(files: TestPackage, options?: DocumentPreviewOptions): Promise<void>;
+  update(files: TestPackage): void;
   projected(): string;
   session?: DocumentSession;
   edit(operations: DocumentOperation[]): Promise<void>;
@@ -22,10 +23,10 @@ window.presentationHost = {
   model: undefined, view: undefined,
   async mount(files, options = {}) {
     this.session?.dispose(); delete this.session;
-    this.view?.dispose(); this.model = openDocument(new Map(files.map(([path, data]) => [path, new Uint8Array(data)])));
+    this.view?.dispose(); this.model = openDocument(decodeTestPackage(files));
     this.view = mountPreview(container, this.model, options); await this.view.ready; await this.view.settled();
   },
-  update(files) { const model = openDocument(new Map(files.map(([path, data]) => [path, new Uint8Array(data)]))); this.view!.update(model); this.model = model; },
+  update(files) { const model = openDocument(decodeTestPackage(files)); this.view!.update(model); this.model = model; },
   async edit(operations) {
     this.session ??= createDocumentSession(this.model!); const { documentId, revision } = this.session.snapshot().manifest;
     this.session.commit(this.session.prepare({ protocolVersion: 1, documentId, baseRevision: revision, operations }));

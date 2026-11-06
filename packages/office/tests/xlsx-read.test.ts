@@ -1,3 +1,4 @@
+import { dailyCi } from '../../../tests/ci-mode.js';
 import { projectXlsxRecords } from "./helpers/xlsx-record-model.js";
 import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -24,10 +25,10 @@ describe("asynchronous native workbook record pipeline", () => {
       expect(book.getCell(sheet.sheetId, row, 6)).toMatchObject({ cssClass: "xlsx-cell-0", formatId: "num-165", value: { type: "blank" } });
     }
   });
-  it("maps all 32 independent and producer cell streams while retaining unconsumed feature headers", async () => {
+  for (const scale of [false, true]) it.skipIf(dailyCi && scale)("maps all 32 independent and producer cell streams while retaining unconsumed feature headers" + (scale ? " @scale" : " (small corpus)"), async () => {
     const expected = JSON.parse(readFileSync("examples/xlsx/expected.json", "utf8")).cases as { file: string; cellCount: number; formulaCount: number }[];
     let checked = 0;
-    for (const directory of ["examples/xlsx", "examples/xlsx/producer"]) for (const name of readdirSync(directory).filter(name => name.endsWith(".xlsx"))) {
+    for (const directory of ["examples/xlsx", "examples/xlsx/producer"]) for (const name of readdirSync(directory).filter(name => name.endsWith(".xlsx") && name.startsWith("15-") === scale)) {
       const records = await readXlsxRecords(readFileSync(`${directory}/${name}`));
       if (directory === "examples/xlsx") {
         const fixture = expected.find(item => item.file === name)!;
@@ -42,7 +43,7 @@ describe("asynchronous native workbook record pipeline", () => {
       if (name.startsWith("05-") && directory === "examples/xlsx") expect(records.sheets[0]!.root.content).toContainEqual(expect.objectContaining({ name: "tableParts" }));
       checked++;
     }
-    expect(checked).toBe(32);
+    expect(checked).toBe(scale ? 2 : 30);
   });
   it("checks options, global cell/formula/XML budgets and retained metadata limits before returning records", async () => {
     const bytes = source("04-formulas-names");
