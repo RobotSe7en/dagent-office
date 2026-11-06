@@ -166,3 +166,23 @@ for (const rtl of [false, true]) test(`annotation entries open read-only comment
   expect(await page.evaluate(() => window.workbookDrawingWindow.annotationControlsAction('inspect'))).toMatchObject({ calls: [['first', 'same'], ['first', 'same'], ['first', 'same']], panel: clicked.panel });
   expect(await page.evaluate(() => window.workbookDrawingWindow.annotationControlsAction('dispose'))).toEqual({ eventsReleased: true, removed: true, sourceClean: true });
 });
+
+
+test('classic dual-box notes use VML while preserving alternate properties and reporting differences without changing body offsets', async ({ page }) => {
+  for (const name of ['conflict', 'same-anchor', 'visible', 'commentPr-only']) {
+    const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-dual-note-boxes-' + name + '.xlsx'), { documentId: 'dual-box-panel-' + name });
+    const result = await page.evaluate(entries => window.workbookDrawingWindow.mentionPanelMeasurement(entries, true), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    expect(result).toMatchObject({ unchanged: true, released: true }); expect(result.results).toHaveLength(1);
+    const item = result.results[0]!; expect(item.exact).toBe(true); expect(item.interactive).toBe(0); expect(item.nodes).toBe(item.actualNodes);
+    expect(item.errors).toEqual(['ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded']);
+    expect(item.text).toContain('请确认：预算😀禰󠄀');
+    expect(item.box!.source).toBe(name === 'commentPr-only' ? 'commentPr' : 'vml');
+    if (name === 'commentPr-only') expect(item.boxWarning).toBeUndefined();
+    else {
+      expect(item.box!.selected!.anchor).toMatchObject({ kind: 'two-cell', from: { row: 1, column: 2, offsetXPt: 7.5, offsetYPt: 1.5 } });
+      expect(item.box!.alternate).toMatchObject({ printable: false, altText: '备用备注框😀' });
+      expect(item.boxWarning).toContain('已采用 VML'); expect(item.boxWarning).toContain('打印'); expect(item.boxWarning).toContain('另一份信息已保留');
+      expect(item.box!.differences!.includes('anchor')).toBe(name !== 'same-anchor');
+    }
+  }
+});

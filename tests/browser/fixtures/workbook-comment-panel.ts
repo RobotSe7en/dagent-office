@@ -5,7 +5,7 @@ import { createWorkbookSurface } from '../../../packages/render/src/workbook/sur
 import { openDocument } from '@dagent-office/core';
 import type { Annotation, WorkbookDocumentMetadata } from '@dagent-office/core';
 
-export async function mentionPanelMeasurement(entries: readonly [string, number[]][]) {
+export async function mentionPanelMeasurement(entries: readonly [string, number[]][], checkBoxes = false) {
   const model = openDocument(new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
   const container = document.createElement('div'); document.body.append(container);
   const surface = await createWorkbookSurface(container, snapshot, { widthPt: 420, heightPt: 300 }), sources = new WorkbookContentSources(surface.document, snapshot);
@@ -15,7 +15,17 @@ export async function mentionPanelMeasurement(entries: readonly [string, number[
       const view = createWorkbookCommentView(surface, snapshot, sources, annotation.annotationId);
       try {
         surface.view.append(view.element);
-        results.push({ status: annotation.status, text: view.element.textContent, labels: [...view.element.querySelectorAll('[data-office-view="workbook-comment-mention"]')].map(node => node.textContent),
+        const native = snapshot.metadata.workbook.comments?.find(comment => comment.annotationId === annotation.annotationId);
+        const walker = surface.document.createTreeWalker(view.element, 0xffff_ffff); let actualNodes = 1; while (walker.nextNode()) actualNodes++;
+        const errors = [], active = surface.view.innerHTML;
+        if (checkBoxes) for (const limits of [{ maxNodes: view.nodes - 1 }, { maxSourceNodes: 1 }, { maxCodeUnits: 1 }]) {
+          try { createWorkbookCommentView(surface, snapshot, sources, annotation.annotationId, limits).dispose(); errors.push('accepted'); }
+          catch (error) { errors.push((error as { code: string }).code); }
+          if (surface.view.innerHTML !== active) throw Error('A failed note box candidate changed the active panel');
+        }
+        results.push({ status: annotation.status, text: view.element.textContent, nodes: view.nodes, actualNodes, errors,
+          box: native?.format === 'classic' ? { source: native.boxSource, selected: native.box, alternate: native.commentPrBox, differences: native.boxDifferences } : undefined,
+          boxWarning: view.element.querySelector('[data-office-view="workbook-comment-box-differences"]')?.textContent, labels: [...view.element.querySelectorAll('[data-office-view="workbook-comment-mention"]')].map(node => node.textContent),
           interactive: view.element.querySelectorAll('a,button,input').length,
           exact: view.bodies.every(({ body }) => body.projections.every(part => view.element.contains(part.node) && part.node.data === model.getNode(part.sourceNodeId)!.text.slice(part.from, part.to))) });
       } finally { view.dispose(); }

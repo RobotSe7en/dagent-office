@@ -1,5 +1,5 @@
 import { createSharedWorkbookFormulas, DocumentError } from "@dagent-office/core";
-import type { WorkbookSheet, WorkbookNoteBox } from "@dagent-office/core";
+import type { WorkbookSheet } from "@dagent-office/core";
 import { readDocumentZipAsync } from "../document-zip.js";
 import { ImportControl } from "../import-control.js";
 import { openOpcFiles } from "../ooxml/package.js";
@@ -22,6 +22,7 @@ import { auditXlsxPackage } from "./package.js";
 import { readTables, readTableStyles } from "./tables.js";
 import type { NativeTableStyles } from "./tables.js";
 import { readNoteBoxes } from "./note-boxes.js";
+import type { NativeNoteBoxSources } from "./note-boxes.js";
 import { readClassicComments } from "./classic-comments.js";
 import type { NativeClassicNotes } from "./classic-comments.js";
 import { readThreadedComments } from "./threaded-comments.js";
@@ -54,7 +55,7 @@ export interface XlsxRecords {
   readonly sheets: readonly NativeSheetRecords[];
   readonly threads: NativeThreads;
   readonly notes: NativeClassicNotes;
-  readonly noteBoxes: ReadonlyMap<string, WorkbookNoteBox>;
+  readonly noteBoxes: ReadonlyMap<string, NativeNoteBoxSources>;
   readonly counts: { readonly cells: number; readonly formulas: number };
 }
 

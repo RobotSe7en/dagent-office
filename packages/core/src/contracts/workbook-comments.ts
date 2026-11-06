@@ -15,6 +15,8 @@ export const WorkbookNoteBoxSchema = z.strictObject({
   autoScale: z.boolean(), justifyLastLine: z.boolean(), altText: z.string().max(32767).optional(),
 });
 export type WorkbookNoteBox = z.infer<typeof WorkbookNoteBoxSchema>;
+export const WorkbookNoteBoxDifferenceSchema = z.enum(["anchor", "appearance", "visible", "printable", "locked", "lockText", "defaultSize", "disabled", "autoFill", "autoLine", "autoScale", "justifyLastLine", "altText"]);
+export type WorkbookNoteBoxDifference = z.infer<typeof WorkbookNoteBoxDifferenceSchema>;
 /** Non-notifying provenance. Offsets count UTF-16 units in the comment body. */
 export const WorkbookCommentMentionSchema = z.strictObject({
   mentionId: IdentifierSchema, authorId: IdentifierSchema,
@@ -29,6 +31,10 @@ const identity = {
 };
 export const WorkbookCommentSchema = z.discriminatedUnion("format", [
   z.strictObject({ ...identity, format: z.literal("classic"), box: WorkbookNoteBoxSchema.optional(), nativeShapeId: z.number().int().min(0).max(4294967295).optional(),
+    /** The selected box is the display source. commentPrBox is unselected
+     * native provenance when both sources exist; it never overrides box. */
+    boxSource: z.enum(["vml", "commentPr"]).optional(), commentPrBox: WorkbookNoteBoxSchema.optional(),
+    boxDifferences: z.array(WorkbookNoteBoxDifferenceSchema).min(1).max(13).optional(),
     compatibilityThreadId: IdentifierSchema.optional(), nativeUid: IdentifierSchema.optional() }),
   z.strictObject({ ...identity, format: z.literal("modern"),
     compatibilityUids: z.array(IdentifierSchema).optional(),

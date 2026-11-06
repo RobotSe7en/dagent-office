@@ -23,6 +23,8 @@ const statuses = { open: "待处理", resolved: "已处理", closed: "已关闭"
 const recoveryReasons = { "missing-location": "缺少原始单元格位置", "missing-placeholder": "缺少兼容位置记录", "mismatched-placeholder": "位置记录不一致",
   "duplicate-placeholder": "存在重复位置记录", "orphan-placeholder": "兼容记录对应的线程已缺失", "mismatched-reply-location": "回复与主评论的位置不一致",
   "duplicate-thread-location": "多个线程记录了同一位置", "invalid-mention-range": "提及的文字范围需要重新定位", "mismatched-placeholder-identity": "兼容记录的身份不一致" };
+const noteBoxProperties = { anchor: "位置", appearance: "外观", visible: "可见性", printable: "打印", locked: "对象锁定", lockText: "文字锁定",
+  defaultSize: "默认尺寸", disabled: "禁用状态", autoFill: "自动填充", autoLine: "自动线条", autoScale: "自动缩放", justifyLastLine: "末行对齐", altText: "替代文字" };
 
 /** One detached, read-only thread candidate. Only its requested body/reply
  * stories enter the source surface. The owner supplies panel width, placement,
@@ -76,6 +78,10 @@ export function createWorkbookCommentView(surface: Pick<WorkbookSurface, "source
   try {
     label(element, (native?.format === "classic" ? "经典批注" : native?.format === "modern" ? "现代批注" : "批注") + " · " + statuses[annotation.status], "h3");
     label(element, (annotation.author?.name ?? "未署名") + (annotation.date ? " · " + annotation.date : ""));
+    if (native?.format === "classic" && native.boxDifferences?.length) {
+      const warning = label(element, "原生备注框信息不一致：" + native.boxDifferences.map(name => noteBoxProperties[name]).join("、") + "。已采用 VML，另一份信息已保留。");
+      warning.dataset.officeView = "workbook-comment-box-differences"; warning.style.color = "#8a4600";
+    }
     if (annotation.status === "needs_reanchor") {
       const reasons = native?.recoveryReasons?.map(reason => recoveryReasons[reason]).join("；");
       const warning = label(element, "当前定位不可用" + (reasons ? "：" + reasons : "") + (native?.recoveryStatus ? "。原状态：" + statuses[native.recoveryStatus] : ""));

@@ -1,5 +1,6 @@
 import { DocumentError, resolveWorkbookCommentMention } from "@dagent-office/core";
-import type { Annotation, AnnotationReply, WorkbookComment, WorkbookCommentAuthor, WorkbookCommentMention, WorkbookNoteBox } from "@dagent-office/core";
+import type { Annotation, AnnotationReply, WorkbookComment, WorkbookCommentAuthor, WorkbookCommentMention } from "@dagent-office/core";
+import type { NativeNoteBoxSources } from "./note-boxes.js";
 import { fail } from "../ooxml/xml.js";
 import type { NativeCommentThread, NativeThreads } from "./threaded-comments.js";
 import type { NativeClassicNotes } from "./classic-comments.js";
@@ -76,17 +77,19 @@ class CommentMapper {
       this.account({ ...identity, mentions: undefined }, true); comments.push({ ...identity, replies: bindings });
     }
   }
-  classic(native: NativeClassicNotes, boxes: ReadonlyMap<string, WorkbookNoteBox>, orphans: ReadonlyMap<string, string>): void {
+  classic(native: NativeClassicNotes, boxes: ReadonlyMap<string, NativeNoteBoxSources>, orphans: ReadonlyMap<string, string>): void {
     const people = new Map(native.authors.map(author => [author.authorId, author]));
     for (const author of native.authors) { this.account(author, true); this.records.authors.push({ ...author }); }
     for (const note of native.notes) {
       if (note.placeholderId !== undefined) fail(note.source, "A legacy thread placeholder must be reconciled before annotation mapping.");
       const author = people.get(note.authorId)!;
-      const key = `${note.sheetId}:${note.cell.row}:${note.cell.column}`, annotationId = `xlsx-note-${key}`, box = boxes.get(key);
+      const key = `${note.sheetId}:${note.cell.row}:${note.cell.column}`, annotationId = `xlsx-note-${key}`, sources = boxes.get(key);
       const compatibilityThreadId = orphans.get(key);
       const annotation: Annotation = { annotationId, documentId: this.documentId, baseRevision: 0, status: compatibilityThreadId ? "needs_reanchor" : "open", author: { name: author.name },
         sourceId: note.guid ?? key, bodyNodeId: this.content.comment(note.sheetId, note.html), anchor: { kind: "cells", sheetId: note.sheetId, ranges: [{ from: { ...note.cell }, to: { ...note.cell } }] } };
-      const comment: WorkbookComment = { annotationId, format: "classic", authorId: author.authorId, ...(box === undefined ? {} : { box }), ...(note.shapeId === undefined ? {} : { nativeShapeId: note.shapeId }),
+      const comment: WorkbookComment = { annotationId, format: "classic", authorId: author.authorId,
+        ...(sources === undefined ? {} : { box: sources.box, boxSource: sources.source, ...(sources.commentPrBox ? { commentPrBox: sources.commentPrBox } : {}), ...(sources.differences ? { boxDifferences: [...sources.differences] } : {}) }),
+        ...(note.shapeId === undefined ? {} : { nativeShapeId: note.shapeId }),
         ...(note.uid === undefined ? {} : { nativeUid: note.uid }),
         ...(compatibilityThreadId ? { compatibilityThreadId, recoveryStatus: "open", recoveryReasons: ["orphan-placeholder"] } : {}) };
       this.account(annotation, false); this.account(comment, true); this.records.annotations.push(annotation); this.records.comments.push(comment);
@@ -96,7 +99,7 @@ class CommentMapper {
 export function mapThreadedComments(native: NativeThreads, threads: readonly NativeCommentThread[], content: WorkbookContent, documentId: string): WorkbookCommentRecords {
   const mapper = new CommentMapper(content, documentId); mapper.modern(native, threads); return mapper.records;
 }
-export function mapWorkbookComments(native: NativeThreads, threads: readonly NativeCommentThread[], notes: NativeClassicNotes, boxes: ReadonlyMap<string, WorkbookNoteBox>, content: WorkbookContent, documentId: string): WorkbookCommentRecords {
+export function mapWorkbookComments(native: NativeThreads, threads: readonly NativeCommentThread[], notes: NativeClassicNotes, boxes: ReadonlyMap<string, NativeNoteBoxSources>, content: WorkbookContent, documentId: string): WorkbookCommentRecords {
   const roots = new Map(threads.map(thread => [thread.root.id, thread])), matched = new Set<string>();
   const recovery = new Map<string, RecoveryReason[]>(), orphans = new Map<string, string>(), legacyUids = new Map<string, string[]>(), classic: NativeClassicNotes["notes"][number][] = [];
   const issue = (id: string, reason: RecoveryReason): void => {

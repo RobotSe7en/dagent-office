@@ -108,6 +108,7 @@ jobs:
       - run: python3 scripts/check-xlsx-hidden-row-heights.py
       - run: python3 scripts/check-xlsx-comment-mentions.py
       - run: python3 scripts/check-xlsx-comment-uids.py
+      - run: python3 scripts/check-xlsx-dual-note-boxes.py
       - run: python3 scripts/check-xlsx-text-overflow.py
       - run: python3 scripts/check-xlsx-chart-colors.py
       - run: python3 scripts/check-xlsx-chart-markers.py

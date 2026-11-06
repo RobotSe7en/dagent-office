@@ -60,7 +60,7 @@ describe("classic note VML geometry records", () => {
     const anchor = '<anchor moveWithCells="1" sizeWithCells="0" xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"><xdr:from><xdr:col>2</xdr:col><xdr:colOff>95250</xdr:colOff><xdr:row>1</xdr:row><xdr:rowOff>19050</xdr:rowOff></xdr:from><xdr:to><xdr:col>5</xdr:col><xdr:colOff>190500</xdr:colOff><xdr:row>5</xdr:row><xdr:rowOff>38100</xdr:rowOff></xdr:to></anchor>';
     files.set(commentsPart, encoder.encode(decoder.decode(files.get(commentsPart)!).replace('</comment>', `<commentPr altText="预算说明" print="0" textHAlign="center">${anchor}</commentPr></comment>`)));
     const mapped = mapBoxes(openOpcFiles(files, {}));
-    expect([...mapped.boxes.values()][0]).toMatchObject({ altText: "预算说明", printable: false, visible: false, anchor: { kind: "two-cell", moveWithCells: true, sizeWithCells: false } });
+    expect([...mapped.boxes.values()][0]).toMatchObject({ source: "commentPr", box: { altText: "预算说明", printable: false, visible: false, anchor: { kind: "two-cell", moveWithCells: true, sizeWithCells: false } } });
   });
   it("preserves source and Calc cell anchors, visibility and independent row/column response flags", () => {
     for (const producer of [false, true]) {

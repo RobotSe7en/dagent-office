@@ -55,8 +55,14 @@ export function validateWorkbookComments(workbook: WorkbookMetadata, annotations
       if (comment.nativeUid !== undefined) revisionUid(comment.nativeUid);
       if (comment.compatibilityThreadId !== undefined && (!/^\{[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}\}$/i.test(comment.compatibilityThreadId) || !comment.recoveryReasons?.includes("orphan-placeholder"))) invalid("An orphan compatibility note must retain its missing thread identity and recovery reason.");
       if (comment.recoveryReasons && (comment.recoveryReasons.length !== 1 || comment.recoveryReasons[0] !== "orphan-placeholder" || comment.compatibilityThreadId === undefined)) invalid("Classic comment recovery reasons describe an orphaned compatibility placeholder.");
-      if (comment.box?.cssClass !== undefined && (!classes.has(comment.box.cssClass) || /\s/.test(comment.box.cssClass))) invalid("A classic note box has an undefined appearance class.");
-      if (comment.box) items++;
+      for (const box of [comment.box, comment.commentPrBox]) if (box) {
+        if (box.cssClass !== undefined && (!classes.has(box.cssClass) || /\s/.test(box.cssClass))) invalid("A classic note box has an undefined appearance class.");
+        items++;
+      }
+      if (comment.boxSource !== undefined && !comment.box) invalid("A native note box source requires its selected box.");
+      if (comment.commentPrBox && (!comment.box || comment.boxSource !== "vml")) invalid("An alternate commentPr box requires the selected VML source.");
+      if (comment.boxDifferences && (!comment.commentPrBox || new Set(comment.boxDifferences).size !== comment.boxDifferences.length)) invalid("Native note box differences require two sources and unique property names.");
+      items += comment.boxDifferences?.length ?? 0;
       if (annotation.replies?.length) invalid("Classic notes cannot contain modern replies.");
       continue;
     }

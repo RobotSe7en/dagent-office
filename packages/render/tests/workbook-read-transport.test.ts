@@ -15,6 +15,18 @@ const request = (model: WorkbookModel, maxCells = 20) => ({ documentId: model.sn
 const signal = () => new AbortController().signal;
 
 describe('host-owned immutable workbook read transport', () => {
+  it('retains the selected VML box, alternate commentPr box and differences in one frozen authorized snapshot', async () => {
+    const model = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-dual-note-boxes-conflict.xlsx'), { documentId: 'dual-box-transport' }), { kind: 'workbook' });
+    const ports = new MessageChannel(), server = serveWorkbookReads(ports.port1, { ...model, serialize() { throw Error('No full source transfer'); } }), client = await connectWorkbookReads(ports.port2);
+    try {
+      expect(client.cells.snapshot.metadata.workbook.comments).toEqual(model.snapshot().metadata.workbook.comments);
+      const comment = client.cells.snapshot.metadata.workbook.comments![0]!;
+      expect(comment.format).toBe('classic'); if (comment.format !== 'classic') throw Error('Classic source expected');
+      expect(comment.boxSource).toBe('vml'); expect(comment.boxDifferences).toContain('anchor');
+      expect(Object.isFrozen(comment.boxDifferences)).toBe(true); expect(Object.isFrozen(comment.commentPrBox!.anchor)).toBe(true);
+      expect(comment.commentPrBox!.altText).toBe('备用备注框😀');
+    } finally { client.dispose(); server.dispose(); }
+  });
   it('retains native legacy marker flags in the frozen authorized snapshot without transferring source chunks', async () => {
     const model = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-auto-markers-producer.xlsx'), { documentId: 'marker-flags' }), { kind: 'workbook' });
     const ports = new MessageChannel(), server = serveWorkbookReads(ports.port1, { ...model, serialize() { throw Error('No full source transfer'); } }), client = await connectWorkbookReads(ports.port2);
