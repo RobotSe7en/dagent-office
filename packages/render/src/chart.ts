@@ -6,6 +6,8 @@ import { svgElement as createSvgElement } from "./presentation/svg.js";
 import type { DrawingGradientBounds } from "./drawing-gradient.js";
 import { appendChartMarker } from "./chart-marker.js";
 import { chartAxisTicks, chartCategoryAxis } from "./chart-axis.js";
+import { officeFontSegments } from "./font-scripts.js";
+import type { OfficeFontRole } from "./font-scripts.js";
 
 /** Derived plot values. The owning format adapter supplies its authoritative
  * source binding, visibility, coercion and explicit number-display policy. */
@@ -21,6 +23,9 @@ export interface BasicChartData {
   }[];
 }
 export interface BasicChartOptions {
+  /** The adapter may resolve local fonts on private connected probes after
+   * rendering. These runs are derived labels, without canonical text offsets. */
+  readonly onTextRun?: (run: BasicChartTextRun) => void;
   /** Resolve styles against the source ancestry, which may be outside the view.
    * The adapter owns any temporary probes and releases them even on failure. */
   readonly style: (classes?: string) => CSSStyleDeclaration;
@@ -36,6 +41,10 @@ export interface BasicChartOptions {
   readonly pieValues?: "nonnegative" | "magnitude";
   /** The owning adapter applies native single-series/default semantics. */
   readonly varyColors?: boolean;
+}
+export interface BasicChartTextRun {
+  readonly node: SVGTextElement | SVGTSpanElement; readonly text: string;
+  readonly role: OfficeFontRole; readonly family: string; readonly style: CSSStyleDeclaration;
 }
 export type BasicChartNumberContext = { readonly kind: "value-axis"; readonly style: CSSStyleDeclaration }
   | { readonly kind: "data-label"; readonly content: "value" | "percent"; readonly seriesId: string; readonly index: number; readonly style: CSSStyleDeclaration };
@@ -66,20 +75,30 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
   const svg = markViewNode(svgElement(document, "svg", { width: "100%", height: "100%", viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": chart.kind + " chart", "data-sdk-chart": chart.kind }));
   svg.style.cssText = "position:absolute;inset:0;overflow:visible;pointer-events:none";
   node.prepend(svg); plotLayer = svg;
-  const base = style(chart.textCssClass), legendStyle = style([chart.textCssClass, chart.legendCssClass].filter(Boolean).join(" "));
+  const base = style(chart.textCssClass), legendStyle = style(chart.legendCssClass);
   const palette = defaultPalette.map((fallback, index) => {
     const name = "--office-theme-accent" + (index + 1);
     return resolvedColor(document, base, name, property(base, name, fallback));
   });
   const varyColors = options.varyColors ?? chart.kind === "pie";
-  const font = (s: CSSStyleDeclaration): Record<string, string> => ({ "font-family": s.fontFamily, "font-size": String(parseFloat(s.fontSize) * 0.75), "font-weight": s.fontWeight, "font-style": s.fontStyle, fill: property(s, "--office-text-color") ? resolvedColor(document, s, "--office-text") : s.color });
+  const font = (s: CSSStyleDeclaration): Record<string, string> => ({ "font-size": String(parseFloat(s.fontSize) * 0.75), "font-weight": s.fontWeight, "font-style": s.fontStyle, fill: property(s, "--office-text-color") ? resolvedColor(document, s, "--office-text") : s.color });
   const text = (value: string, x: number, y: number, s = base, anchor = "middle"): SVGTextElement => {
     options.accountText?.(value.length);
     const label = svgElement(document, "text", { x, y, "text-anchor": anchor, "dominant-baseline": "middle", ...font(s) });
-    if (/\p{Script=Han}/u.test(value)) { label.dataset.officeScript = "east-asia"; label.setAttribute("font-family", property(s, "--office-font-east-asia", property(s, "--office-minor-east-asia", s.fontFamily))); }
+    const run = (target: SVGTextElement | SVGTSpanElement, value: string, role: OfficeFontRole): void => {
+      const family = property(s, "--office-font-" + role, property(s, "--office-minor-" + role, s.fontFamily));
+      if (!document.defaultView!.CSS.supports("font-family", family)) throw new DocumentError("InvalidDocument", "Chart text has an invalid source font family.");
+      target.dataset.officeScript = role; target.setAttribute("font-family", family);
+      if (value) { account(1); target.textContent = value; options.onTextRun?.({ node: target, text: value, role, family, style: s }); }
+    };
+    const line = (target: SVGTextElement | SVGTSpanElement, value: string): void => {
+      const segments = officeFontSegments(value);
+      if (segments.length <= 1) run(target, value, segments[0]?.role ?? "ascii");
+      else for (const segment of segments) { const span = svgElement(document, "tspan", {}); target.append(span); run(span, segment.text, segment.role); }
+    };
     const lines = value.split("\n");
-    if (lines.length === 1) { if (value) account(1); label.textContent = value; }
-    else lines.forEach((line, index) => { const span = svgElement(document, "tspan", { x, dy: index ? "1.2em" : String(-(lines.length - 1) * parseFloat(s.fontSize) * 0.75 * 0.6) }); if (line) account(1); span.textContent = line; label.append(span); });
+    if (lines.length === 1) line(label, value);
+    else lines.forEach((value, index) => { const span = svgElement(document, "tspan", { x, dy: index ? "1.2em" : String(-(lines.length - 1) * parseFloat(s.fontSize) * 0.75 * 0.6) }); label.append(span); line(span, value); });
     svg.append(label); return label;
   };
   const catStyle = style(chart.categoryAxisCssClass), valStyle = style(chart.valueAxisCssClass), gridStyle = style(chart.gridCssClass);
@@ -125,7 +144,7 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
   const label = (series: BasicChartData["series"][number], index: number, value: number, x: number, y: number, percent?: number, baseline?: number): void => {
     if (!chart.showLabels) return;
     const seriesDefinition = seriesDefinitions.get(series.seriesId), point = pointDefinitions.get(pointKey(series.seriesId, sourceIndex(index)));
-    const s = style([chart.textCssClass, chart.labelCssClass, seriesDefinition?.labelCssClass, point?.labelCssClass].filter(Boolean).join(" "));
+    const s = style([chart.labelCssClass, seriesDefinition?.labelCssClass, point?.labelCssClass].filter(Boolean).join(" "));
     const contents = chart.labelContents ?? ["value"], separator = cssStringValue(property(s, "--office-label-separator", ", "));
     const values = contents.map(kind => kind === "category" ? data.categories[index]! : kind === "series" ? series.name : kind === "percent" ? formatNumber(percent ?? 0, "0%", { kind: "data-label", content: "percent", seriesId: series.seriesId, index, style: s })
       : formatNumber(value, cssStringValue(property(s, "--office-label-number-format", chart.numberFormat ?? "General")), { kind: "data-label", content: "value", seriesId: series.seriesId, index, style: s }));

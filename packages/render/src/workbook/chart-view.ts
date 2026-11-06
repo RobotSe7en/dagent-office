@@ -2,7 +2,10 @@ import { DocumentError } from "@dagent-office/core";
 import type { DeepReadonly, WorkbookChart } from "@dagent-office/core";
 import { renderBasicChart } from "../chart.js";
 import type { BasicChartData, BasicChartLayout, BasicChartOptions } from "../chart.js";
+import type { BasicChartTextRun } from "../chart.js";
 import { markViewNode } from "../view-nodes.js";
+import { resolvePreviewFontsInScope } from "../fonts.js";
+import type { FontResolution } from "../contracts.js";
 
 export interface WorkbookChartViewOptions {
   /** Required: the workbook compositor owns number formats, locale and dates.
@@ -19,6 +22,7 @@ export interface WorkbookChartViewDiagnostic {
 }
 export interface WorkbookChartView {
   readonly element: HTMLElement; readonly nodes: number; readonly peakNodes: number;
+  readonly fonts: readonly FontResolution[];
   readonly diagnostics: readonly WorkbookChartViewDiagnostic[];
 }
 
@@ -51,6 +55,7 @@ export function createWorkbookChartView(source: HTMLElement, chart: DeepReadonly
   const diagnostics: readonly WorkbookChartViewDiagnostic[] = Object.freeze(negativePoints
     ? [Object.freeze({ code: "negative-pie-magnitude" as const, chartId: chart.chartId, negativePoints })] : []);
   const element = markViewNode(document.createElement("div")), probes: HTMLElement[] = [];
+  const textRuns: BasicChartTextRun[] = []; let fontScope: HTMLElement | undefined, fontNodes = 0;
   element.dataset.officeView = "workbook-chart"; element.dataset.sourceNodeId = chart.nodeId;
   element.style.cssText = `position:absolute;width:${widthPt}pt;height:${heightPt}pt`;
   let nodes = 1, peakNodes = 1;
@@ -59,6 +64,11 @@ export function createWorkbookChartView(source: HTMLElement, chart: DeepReadonly
     if (peakNodes > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Chart graphics exceed their node budget.");
   };
   try {
+    let styleScope = source;
+    if (chart.textCssClass) {
+      account(1); styleScope = markViewNode(document.createElement("span")); styleScope.className = chart.textCssClass;
+      styleScope.style.cssText = "position:absolute;visibility:hidden"; source.append(styleScope); probes.push(styleScope);
+    }
     if (title) {
       const walker = document.createTreeWalker(title, 0xffff_ffff);
       do { account(1); if (walker.currentNode.nodeType === 3) accountText(walker.currentNode.textContent!.length); } while (walker.nextNode());
@@ -67,12 +77,27 @@ export function createWorkbookChartView(source: HTMLElement, chart: DeepReadonly
     renderBasicChart(element, chart, data, widthPt, heightPt, id, account, { formatNumber: options.formatNumber, ...(options.formatCategory ? { formatCategory: options.formatCategory } : {}), pieValues: "magnitude",
       // MS-OI29500 §2.1.1571: specified multiple series disable by-point
       // variation, even when visibility later leaves only one rendered series.
-      varyColors: (chart.varyColors ?? chart.kind === "pie") && chart.series.length === 1, accountText, ...(options.layout ? { layout: options.layout } : {}), ...(title ? { title } : {}), style(classes) {
+      varyColors: (chart.varyColors ?? chart.kind === "pie") && chart.series.length === 1, accountText, onTextRun: run => { textRuns.push(run); }, ...(options.layout ? { layout: options.layout } : {}), ...(title ? { title } : {}), style(classes) {
       account(1);
       const probe = markViewNode(document.createElement("span")); probe.className = classes ?? "";
-      probe.style.cssText = "position:absolute;visibility:hidden"; source.append(probe); probes.push(probe); return view.getComputedStyle(probe);
+      probe.style.cssText = "position:absolute;visibility:hidden"; styleScope.append(probe); probes.push(probe); return view.getComputedStyle(probe);
     } });
-    return Object.freeze({ element, nodes: nodes - probes.length, peakNodes, diagnostics });
+    let fonts: readonly FontResolution[] = Object.freeze([]);
+    if (textRuns.length) {
+      account(1); fontNodes++; fontScope = document.createElement("span");
+      fontScope.dataset.officeView = "workbook-chart-font-measurement"; fontScope.style.cssText = "position:absolute;display:none";
+      const pairs = textRuns.map(run => {
+        account(2); fontNodes += 2; accountText(run.text.length);
+        const probe = document.createElement("span"); probe.dataset.officeScript = run.role; probe.textContent = run.text;
+        probe.style.fontFamily = run.family;
+        for (const name of ["font-size", "font-weight", "font-style", "font-variant"]) probe.style.setProperty(name, run.style.getPropertyValue(name));
+        fontScope!.append(probe); return { run, probe };
+      });
+      source.append(fontScope);
+      fonts = resolvePreviewFontsInScope(document, fontScope, "[data-office-script]");
+      for (const { run, probe } of pairs) run.node.setAttribute("font-family", view.getComputedStyle(probe).fontFamily);
+    }
+    return Object.freeze({ element, nodes: nodes - probes.length - fontNodes, peakNodes, diagnostics, fonts });
   } catch (error) { element.replaceChildren(); throw error; }
-  finally { for (const probe of probes) probe.remove(); }
+  finally { fontScope?.remove(); for (const probe of probes) probe.remove(); }
 }

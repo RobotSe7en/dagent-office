@@ -21,12 +21,17 @@ export function renderChart(node: HTMLElement, chart: DeepReadonly<PresentationC
   const document = node.ownerDocument, view = document.defaultView!, probes: HTMLElement[] = [];
   const title = chart.titleNodeId ? node.querySelector<HTMLElement>('[data-node-id="' + CSS.escape(chart.titleNodeId) + '"]') : undefined;
   try {
+    let styleScope = node;
+    if (chart.textCssClass) {
+      account(1); styleScope = markViewNode(document.createElement("span")); styleScope.className = chart.textCssClass;
+      styleScope.style.cssText = "position:absolute;visibility:hidden"; node.append(styleScope); probes.push(styleScope);
+    }
     renderBasicChart(node, chart, data, width, height, serial, account, { formatNumber: formatChartNumber,
       ...(title ? { title } : {}), style(classes) {
         account(1);
         const probe = markViewNode(document.createElement("span")); probe.className = classes ?? "";
         probe.style.cssText = "position:absolute;visibility:hidden";
-        node.append(probe); probes.push(probe); return view.getComputedStyle(probe);
+        styleScope.append(probe); probes.push(probe); return view.getComputedStyle(probe);
       },
     });
   } finally { for (const probe of probes) probe.remove(); }

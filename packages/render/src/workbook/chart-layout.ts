@@ -108,7 +108,7 @@ export function layoutWorkbookChart(scope: HTMLElement, source: HTMLElement, cha
     Object.assign(object.element.style, { position: "absolute", left: box.rect.x + "pt", top: box.rect.y + "pt", transformOrigin: "0 0", transform: `rotate(${box.rotation}deg)` });
     graphics.element.append(object.element);
   }
-  return Object.freeze({ element: graphics.element, nodes: graphics.nodes + axisNodes, layout, texts: texts.objects, fonts: texts.fonts,
+  return Object.freeze({ element: graphics.element, nodes: graphics.nodes + axisNodes, layout, texts: texts.objects, fonts: Object.freeze([...texts.fonts, ...graphics.fonts]),
     usedFallbackLineMetrics: texts.usedFallbackLineMetrics, diagnostics: Object.freeze([...binding.diagnostics, ...graphics.diagnostics]),
     overflowingTitles: Object.freeze(boxes.filter((_, index) => texts.objects[index]!.overflow).map(box => box.role)) });
 }

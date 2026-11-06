@@ -7,6 +7,48 @@ import { WorkbookContentSources } from '../../../packages/render/src/workbook/co
 import { createWorkbookChartText } from '../../../packages/render/src/workbook/drawing-text.js';
 import type { WorkbookChartTextRole } from '../../../packages/render/src/workbook/drawing-text.js';
 
+export async function measureWorkbookChartTextFonts(snapshot: WorkbookSnapshot, plot: BasicChartData, missing: boolean) {
+  const container = document.createElement('div'); document.body.append(container);
+  const names = missing ? ['DagentMissingLatin', 'DagentMissingAnsi', 'DagentMissingEA', 'DagentMissingComplex'] : ['Liberation Serif', 'Liberation Sans', 'Noto Serif CJK SC', 'DejaVu Sans'];
+  const css = `.chart-local-font{font-size:9pt}.chart-font-roles{font-family:"DagentUnusedBase";font-size:18pt;--office-font-ascii:"${names[0]}";--office-font-h-ansi:"${names[1]}";--office-font-east-asia:"${names[2]}";--office-font-complex-script:"${names[3]}"}`;
+  const surface = await createWorkbookSurface(container, { ...snapshot, styles: [...snapshot.styles, { path: 'chart-font-roles.css', css }] }, { widthPt: 520, heightPt: 340 });
+  const sources = new WorkbookContentSources(surface.document, snapshot), original = snapshot.metadata.workbook.charts![0]!;
+  const chart = { ...original, showLabels: true, labelContents: ['category', 'series', 'value'] as const, textCssClass: 'chart-font-roles', labelCssClass: 'chart-font-roles', categoryAxisCssClass: 'chart-font-roles', valueAxisCssClass: 'chart-font-roles', legendCssClass: 'chart-font-roles' };
+  const source = sources.project(surface.source, [chart.nodeId]).get(chart.nodeId)!, before = surface.source.innerHTML;
+  const mixed = 'A中禰\u{e0100}Béא', data = { ...plot, categories: [mixed, mixed, mixed], series: plot.series.map(series => ({ ...series, name: mixed })) };
+  const options = { formatNumber: (value: number) => value === 2 ? mixed + '\nC汉' : String(value) };
+  try {
+    const result = createWorkbookChartView(source, chart, data, 480, 300, 'chart-font-runs', options); surface.view.append(result.element);
+    const runs = [...result.element.querySelectorAll<SVGTextElement | SVGTSpanElement>('[data-office-script]')].map(node => ({ role: node.dataset.officeScript, text: node.textContent, family: node.getAttribute('font-family'), canonical: node.hasAttribute('data-node-id') || node.hasAttribute('data-source-node-id') }));
+    const category = result.element.querySelector<SVGTextElement>('[data-sdk-chart-label=category-axis]')!, value = result.element.querySelector<SVGTextElement>('[data-sdk-chart-label=data-label]')!;
+    const walker = surface.document.createTreeWalker(result.element, 0xffff_ffff); let nodes = 1; while (walker.nextNode()) nodes++;
+    const scalar = { category: category.textContent, value: value.textContent, size: parseFloat(surface.document.defaultView!.getComputedStyle(category).fontSize), scale: category.getScreenCTM()!.a };
+    result.element.remove();
+    const inherited = { ...original, textCssClass: 'chart-font-roles' };
+    delete inherited.categoryAxisCssClass; delete inherited.valueAxisCssClass; delete inherited.legendCssClass; delete inherited.labelCssClass;
+    const inheritedView = createWorkbookChartView(source, inherited, data, 480, 300, 'inherited-fonts', options); surface.view.append(inheritedView.element);
+    const inheritedLabel = inheritedView.element.querySelector<SVGTextElement>('[data-sdk-chart-label=category-axis]')!;
+    const inheritedSize = parseFloat(surface.document.defaultView!.getComputedStyle(inheritedLabel).fontSize) * inheritedLabel.getScreenCTM()!.a;
+    inheritedView.element.remove();
+    const localView = createWorkbookChartView(source, { ...chart, categoryAxisCssClass: 'chart-local-font', valueAxisCssClass: 'chart-local-font', legendCssClass: 'chart-local-font', labelCssClass: 'chart-local-font' }, data, 480, 300, 'local-fonts', options);
+    surface.view.append(localView.element);
+    const localSizes = [...localView.element.querySelectorAll<SVGTextElement>('[data-sdk-chart-label]')].map(node => parseFloat(surface.document.defaultView!.getComputedStyle(node).fontSize) * node.getScreenCTM()!.a);
+    localView.element.remove();
+    const exact = createWorkbookChartView(source, chart, data, 480, 300, 'font-exact', { ...options, maxNodes: result.peakNodes }); exact.element.replaceChildren();
+    let budget = '';
+    try { createWorkbookChartView(source, chart, data, 480, 300, 'font-limit', { ...options, maxNodes: result.peakNodes - 1 }); } catch (error) { budget = (error as { code: string }).code; }
+    const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
+    let composedFonts;
+    try {
+      const composed = layoutWorkbookChart(surface.view, source, chart, { kind: 'available', chartId: chart.chartId, data, titles: {}, diagnostics: [],
+        valueFormats: data.series.map(series => series.values.map(() => undefined)), categoryNumbers: data.categories.map(() => null) }, 480, 300, 'composed-fonts', formatter);
+      composedFonts = composed.fonts; composed.element.replaceChildren();
+    } finally { formatter.dispose(); }
+    return { names, mixed, runs, scalar, localSizes, inheritedSize, inheritedFonts: inheritedView.fonts, fonts: result.fonts, composedFonts, nodes, declared: result.nodes, peak: result.peakNodes, budget,
+      unchanged: surface.source.innerHTML === before, cleaned: !surface.source.querySelector('[data-office-view=workbook-chart-font-measurement]') };
+  } finally { sources.dispose(); surface.dispose(); container.remove(); }
+}
+
 export async function measureWorkbookChartGrid(snapshot: WorkbookSnapshot, plots: readonly BasicChartData[]) {
   const container = document.createElement('div'); document.body.append(container);
   const css = '.grid-data-magenta{--office-fill-kind:solid;--office-fill-color:#ff00ff;--office-line-kind:solid;--office-line-color:#ff00ff;--office-marker-fill-kind:solid;--office-marker-fill-color:#ff00ff;--office-marker-line-kind:none}';
@@ -125,7 +167,11 @@ export async function measureWorkbookCharts(snapshot: WorkbookSnapshot, plots: r
   try {
     const definitions = snapshot.metadata.workbook.charts!, projection = sources.project(surface.source, definitions.map(chart => chart.nodeId));
     for (const [index, definition] of definitions.entries()) {
-      const chart = { ...definition, textCssClass: 'chart-text-probe', categoryAxisCssClass: 'chart-text-probe', valueAxisCssClass: 'chart-text-probe' };
+      // This isolation probe deliberately controls every local text slot.
+      // Native local styles must otherwise override the global text default.
+      const chart = { ...definition, textCssClass: 'chart-text-probe', categoryAxisCssClass: 'chart-text-probe', valueAxisCssClass: 'chart-text-probe', legendCssClass: 'chart-text-probe', labelCssClass: 'chart-text-probe',
+        seriesStyles: definition.seriesStyles?.map(style => ({ ...style, labelCssClass: 'chart-text-probe' })),
+        pointStyles: definition.pointStyles?.map(style => ({ ...style, labelCssClass: 'chart-text-probe' })) };
       const source = projection.get(chart.nodeId)!, before = source.outerHTML, data = plots[index]!;
       const title = () => createWorkbookChartText(source, chart, 'title').element;
       // The test supplies an explicit numeric-only format policy. Workbook

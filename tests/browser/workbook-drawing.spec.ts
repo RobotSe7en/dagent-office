@@ -17,12 +17,12 @@ import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
 import type { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback, measureDrawingTextOverflow, measureDrawingOverflowEdges } from './fixtures/workbook-drawing-text.js';
 import type { measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } from './fixtures/workbook-surface.js';
 import type { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } from './fixtures/workbook-shadow.js';
-import type { measureWorkbookCharts, measureWorkbookChartMarkers, measureWorkbookChartGrid, measureWorkbookChartColors, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } from './fixtures/workbook-chart.js';
+import type { measureWorkbookCharts, measureWorkbookChartTextFonts, measureWorkbookChartMarkers, measureWorkbookChartGrid, measureWorkbookChartColors, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } from './fixtures/workbook-chart.js';
 import { bindWorkbookChartData } from "../../packages/render/src/workbook/chart-values.js";
 import type { BasicChartData } from '../../packages/render/src/chart.js';
 import { modelChartSource, DEFAULT_CHART_READ_LIMITS } from '../../packages/render/src/workbook/chart-source.js';
 
-declare global { interface Window { workbookChartHost: { measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartGrid: typeof measureWorkbookChartGrid; measureWorkbookChartMarkers: typeof measureWorkbookChartMarkers; measureWorkbookChartColors: typeof measureWorkbookChartColors; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
+declare global { interface Window { workbookChartHost: { measureWorkbookChartTextFonts: typeof measureWorkbookChartTextFonts; measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartGrid: typeof measureWorkbookChartGrid; measureWorkbookChartMarkers: typeof measureWorkbookChartMarkers; measureWorkbookChartColors: typeof measureWorkbookChartColors; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
 
 declare global { interface Window { workbookShadowHost: { measureWorkbookShadows: typeof measureWorkbookShadows; mountWorkbookShadowPixels: typeof mountWorkbookShadowPixels; disposeWorkbookShadowPixels: typeof disposeWorkbookShadowPixels } } }
 
@@ -668,6 +668,28 @@ test('explicit automatic markers retain native source and choose stable series s
         expect(hidden.markers.filter(marker => marker.role === 'point')).toHaveLength(3);
       }
     }
+  }
+});
+
+test('derived chart labels keep mixed font roles and variation sequences with local diagnostics and bounded probes', async ({ page }) => {
+  const input = automaticMarkerCharts[0]!;
+  for (const missing of [false, true]) {
+    const result = await page.evaluate(({ snapshot, plots, missing }) => window.workbookChartHost.measureWorkbookChartTextFonts(snapshot, plots[0]!, missing), { ...input, missing });
+    expect(result).toMatchObject({ unchanged: true, cleaned: true, budget: 'ResourceLimitExceeded', scalar: { category: result.mixed } });
+    expect(result.nodes).toBe(result.declared); expect(result.peak).toBeGreaterThan(result.nodes);
+    expect(result.runs.some(run => run.role === 'east-asia' && run.text?.includes('禰\u{e0100}'))).toBe(true);
+    expect(result.runs.every(run => !run.canonical)).toBe(true);
+    expect([...new Set(result.runs.map(run => run.role))].sort()).toEqual(['ascii', 'complex-script', 'east-asia', 'h-ansi']);
+    for (const [index, role] of ['ascii', 'h-ansi', 'east-asia', 'complex-script'].entries()) {
+      const resolution = result.fonts.find(font => font.requestedFamily === result.names[index])!;
+      expect(resolution).toBeTruthy(); expect(resolution.substituted).toBe(missing);
+      expect(result.composedFonts).toContainEqual(resolution);
+      expect(result.inheritedFonts).toContainEqual(resolution);
+      expect(result.runs.filter(run => run.role === role).every(run => run.family?.includes(resolution.selectedFamily))).toBe(true);
+    }
+    expect(result.scalar.size * result.scalar.scale).toBeCloseTo(24, 3);
+    expect(result.inheritedSize).toBeCloseTo(24, 3);
+    expect(result.localSizes.length).toBeGreaterThan(3); for (const size of result.localSizes) expect(size).toBeCloseTo(12, 3);
   }
 });
 
