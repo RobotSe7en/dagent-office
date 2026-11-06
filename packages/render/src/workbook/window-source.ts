@@ -12,6 +12,9 @@ export interface WorkbookWindowResponse {
  * transport these queries, but IDs/revisions never confer access to a model. */
 export interface WorkbookWindowSource {
   readonly snapshot: WorkbookSnapshot;
+  /** Opt in to bounded neighboring queries while idle. This is a traffic
+   * preference; the provider must still authorize and validate every read. */
+  readonly allowReadAhead?: boolean;
   read(request: WorkbookWindowRequest, signal: AbortSignal): Promise<WorkbookWindowResponse>;
 }
 export const DEFAULT_WINDOW_LIMITS: WorkbookWindowLimits = Object.freeze({ maxCells: 5000, maxCodeUnits: 8 * 1024 * 1024 });
@@ -56,7 +59,7 @@ function validateRequest(request: WorkbookWindowRequest, snapshot: WorkbookSnaps
  * Worker without transferring the complete package or allocating implicit cells. */
 export function modelWindowSource(model: WorkbookModel): WorkbookWindowSource {
   const snapshot = model.snapshot();
-  return Object.freeze({ snapshot, async read(input: WorkbookWindowRequest, signal: AbortSignal): Promise<WorkbookWindowResponse> {
+  return Object.freeze({ snapshot, allowReadAhead: true, async read(input: WorkbookWindowRequest, signal: AbortSignal): Promise<WorkbookWindowResponse> {
     checkWindowCancellation(signal);
     const limits = windowLimits({ maxCells: input.maxCells, maxCodeUnits: input.maxCodeUnits });
     if (input.windows.length > limits.maxCells) throw new DocumentError("ResourceLimitExceeded", "Too many workbook window queries.");

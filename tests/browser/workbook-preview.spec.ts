@@ -2,15 +2,22 @@ import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
+import { scalarWorkbook } from '../../packages/core/tests/workbook-scalar-fixture.js';
 import { importXlsx } from '../../packages/office/src/xlsx-import.js';
 import type * as fixture from './fixtures/workbook-preview.js';
 declare global { interface Window { workbookPreview: typeof fixture } }
 let code = '';
 const inputs: { name: string; files: [string, number[]][] }[] = [];
+let readAheadFiles: [string, number[]][] = [];
 test.beforeAll(async () => {
   const bundle = await build({ configFile: false, build: { write: false, minify: false, lib: { entry: fileURLToPath(new URL('./fixtures/workbook-preview.ts', import.meta.url)), formats: ['iife'], name: 'WorkbookPreview' } } });
   if (!Array.isArray(bundle) && !('output' in bundle)) throw Error('Unexpected preview bundle');
   const output = Array.isArray(bundle) ? bundle.flatMap(part => part.output) : bundle.output; code = output.filter(part => part.type === 'chunk').map(part => part.code).join('\n');
+  const dense = scalarWorkbook(Array.from({ length: 80 * 8 }, (_, index) => ({ row: Math.floor(index / 8), column: index % 8, value: { type: 'number' as const, value: index + 1 } })), metadata => {
+    const sheet = metadata.workbook.sheets[0]!; sheet.frozen = { rows: 1, columns: 1 }; sheet.defaultRowHeightCustom = true; sheet.rightToLeft = true;
+    sheet.rowDimensions = [{ from: 4, to: 6, hidden: true }];
+  });
+  readAheadFiles = [...dense.serialize()].map(([path, bytes]) => [path, [...bytes]]);
   for (const name of ['09-classic-notes', '10-modern-threads', '08-images-shapes']) {
     const files = await importXlsx(readFileSync(`examples/xlsx/${name}.xlsx`), { documentId: 'public-preview' });
     inputs.push({ name, files: [...files].map(([path, bytes]) => [path, [...bytes]]) });
@@ -81,4 +88,14 @@ test('worksheet-wide prompt suppression retains current validation status and so
   expect(await page.evaluate(() => window.workbookPreview.previewInspect())).toMatchObject({ validation: '当前值不符合验证规则。', value: '99', unchanged: true,
     report: { diagnostics: [expect.objectContaining({ code: 'validation-invalid', row: 2, column: 4 })] } });
   await page.evaluate(() => window.workbookPreview.previewAction('dispose'));
+});
+
+
+test('idle neighbor reading is opt-in, bounded, cancellable and never publishes a background candidate', async ({ page }) => {
+  for (const [allow, rows, mode] of [[false, 8, 'normal'], [true, 0, 'normal'], [true, 8, 'normal'], [true, 8, 'hold'], [true, 8, 'failure'], [true, 8, 'revision'], [true, 8, 'active'], [true, 8, 'preference']] as const) {
+    const result = await page.evaluate(({ entries, allow, rows, mode }) => window.workbookPreview.publicReadAhead(entries, allow, rows, mode), { entries: readAheadFiles, allow, rows, mode });
+    expect(result, JSON.stringify({ allow, rows, mode, result })).toMatchObject({ invalid: ['InvalidOperation', 'InvalidOperation', 'InvalidOperation'], unhandled: [], firstRetained: true, foreground: true, stopped: true, clean: true, activeContent: false, unchanged: true });
+    if (!allow || !rows) expect(result.reads).toBe(0); else { expect(result.reads).toBeGreaterThan(0); expect(result.reads).toBeLessThanOrEqual(mode === 'hold' ? 9 : 8); expect(result.largestSlots).toBeLessThanOrEqual(256); }
+    if (mode === 'hold') { expect(result.aborted).toBe(true); expect(result.whileHeld).toBe(1); }
+  }
 });

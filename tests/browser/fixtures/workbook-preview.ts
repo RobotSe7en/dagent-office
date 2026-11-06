@@ -172,4 +172,53 @@ export async function ruleWindowLifecycle(entries: Entries) {
     return { failures, cancelled, aborted, retainedLatest: controller.current!.frame.sheetId === 'preview-empty' };
   } finally { controller.dispose(); surface.dispose(); formatter.dispose(); container.remove(); }
 }
-(window as unknown as { workbookPreview: unknown }).workbookPreview = { mountPublicPreview, previewInspect, previewAction, publicPreviewLifecycle, previewDecorationMeasurement, initialPreviewFailure, ruleWindowLifecycle };
+(window as unknown as { workbookPreview: unknown }).workbookPreview = { mountPublicPreview, previewInspect, previewAction, publicPreviewLifecycle, previewDecorationMeasurement, initialPreviewFailure, ruleWindowLifecycle, publicReadAhead };
+
+export async function publicReadAhead(entries: Entries, allow: boolean, rows: number, mode: 'normal' | 'hold' | 'failure' | 'revision' | 'active' | 'preference' = 'normal') {
+  const model = modelOf(entries), before = model.serialize(), snapshot = model.snapshot(), source = modelWindowSource(model), container = host();
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 240, heightPt: 60 }), formatter = createWorkbookNumberFormatter({ dateSystem: '1900' });
+  let observing = false, foreground = false, reads = 0, largestSlots = 0, held: { signal: AbortSignal; release(): void } | undefined;
+  let began!: () => void; const started = new Promise<void>(resolve => { began = resolve; });
+  const unhandled: string[] = [], onUnhandled = (event: PromiseRejectionEvent) => { unhandled.push(String(event.reason)); event.preventDefault(); };
+  window.addEventListener('unhandledrejection', onUnhandled);
+  const cells = { ...source, get allowReadAhead() { if (mode === 'preference' && foreground) throw Error('Optional preference failed'); return allow; }, async read(request: Parameters<typeof source.read>[0], signal: AbortSignal) {
+    const background = observing && !foreground;
+    if (background) {
+      reads++; largestSlots = Math.max(largestSlots, request.windows.reduce((sum, item) => sum + item.rows * item.columns, 0)); began();
+      if (mode === 'hold' && !held) await new Promise<void>(resolve => { held = { signal, release: resolve }; });
+      if (mode === 'failure') throw Error('Private optional read failure');
+    }
+    const response = await source.read(request, held?.signal === signal ? new AbortController().signal : signal);
+    if (background && mode === 'revision') return { ...response, revision: response.revision + 1 };
+    if (background && mode === 'active' && response.cells.length) return { ...response, cells: response.cells.map((cell, index) => index ? cell : { ...cell, html: cell.html.replace('<td', '<td onclick="window.readAheadExecuted=true"') }) };
+    return response;
+  } };
+  const providers = { cells, assets: modelAssetSource(model), charts: modelChartSource(model) }, invalid: string[] = [];
+  for (const readAheadRows of [-1, 1.5, 65]) try { new WorkbookWindowController(surface, providers, formatter, { readAheadRows }); invalid.push('accepted'); } catch (error) { invalid.push((error as { code: string }).code); }
+  const controller = new WorkbookWindowController(surface, providers, formatter, { readAheadRows: rows });
+  const pause = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+  try {
+    const viewport = { widthPt: 240, heightPt: 60, scrollLeftPt: 0, scrollTopPt: 0 };
+    await controller.render('sheet-1', viewport); observing = true;
+    const first = controller.current!, original = first.element.innerHTML;
+    let aborted = false, whileHeld = 0;
+    if (allow && rows && mode === 'hold') {
+      await Promise.race([started, pause(2000).then(() => { throw Error('Read ahead did not start'); })]);
+      surface.document.dispatchEvent(new surface.document.defaultView!.PointerEvent('pointerdown', { bubbles: true }));
+      foreground = true; await controller.render('sheet-1', { ...viewport, scrollTopPt: 30 }); foreground = false;
+      aborted = held!.signal.aborted; await pause(80); whileHeld = reads;
+      held!.release();
+    }
+    await pause(300);
+    const accepted = controller.current!, html = accepted.element.innerHTML, optionalReads = reads;
+    foreground = true; await controller.render('sheet-1', { ...viewport, scrollTopPt: 60 }); foreground = false;
+    const last = controller.current!; controller.dispose(); await pause(80);
+    const stopped = reads; await pause(100);
+    return { invalid, reads: optionalReads, largestSlots, aborted, whileHeld, unhandled,
+      firstRetained: mode === 'hold' ? accepted !== first : accepted === first && html === original,
+      foreground: last.frame.layout.scrollTopPt === 60, stopped: stopped === reads,
+      clean: !surface.view.childNodes.length && !surface.source.childNodes.length,
+      activeContent: Boolean((surface.document.defaultView as unknown as { readAheadExecuted?: boolean }).readAheadExecuted),
+      unchanged: [...before].every(([path, bytes]) => { const after = model.serialize().get(path)!; return bytes.length === after.length && bytes.every((byte, index) => byte === after[index]); }) };
+  } finally { held?.release(); controller.dispose(); formatter.dispose(); surface.dispose(); container.remove(); window.removeEventListener('unhandledrejection', onUnhandled); }
+}

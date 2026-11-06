@@ -67,7 +67,7 @@ export async function connectWorkbookReads(port: MessagePort, options: WorkbookR
       checkWindowIdentity(result as { documentId: string; revision: number }, snapshot);
       return result as T;
     };
-    return Object.freeze({ kind: "workbook", cells: Object.freeze({ snapshot,
+    return Object.freeze({ kind: "workbook", cells: Object.freeze({ snapshot, allowReadAhead: true,
       read: (input: WorkbookWindowRequest, signal: AbortSignal) => read<WorkbookWindowResponse>("cells", input, signal) }),
     assets: Object.freeze({ snapshot, readAsset: (input: WorkbookAssetRequest, signal: AbortSignal) => read<WorkbookAssetResponse>("asset", input, signal) }),
     charts: Object.freeze({ snapshot, read: (input: WorkbookChartReadRequest, signal: AbortSignal) => read<WorkbookChartReadResponse>("charts", input, signal) }),

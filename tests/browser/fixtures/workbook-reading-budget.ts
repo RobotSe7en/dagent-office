@@ -57,7 +57,7 @@ export async function openBudget(code: string, input: number[]) {
     worker.postMessage({ kind: 'open', documentId: 'reading-budget', bytes, port: ports.port1 }, [bytes.buffer, ports.port1]);
     connection = await connectWorkbookReads(ports.port2, {}, abort.signal); const openedMs = performance.now() - started;
     const owned = connection;
-    preview = mountDocumentPreview(container, { ...owned, cells: { snapshot: owned.cells.snapshot, async read(request, signal) {
+    preview = mountDocumentPreview(container, { ...owned, cells: { ...owned.cells, async read(request, signal) {
       const start = performance.now(), result = await owned.cells.read(request, signal);
       reads.push({ milliseconds: performance.now() - start, slots: request.windows.reduce((sum, window) => sum + window.rows * window.columns, 0), cells: result.cells.length }); return result;
     } } }, { widthPt: 880, heightPt: 450,

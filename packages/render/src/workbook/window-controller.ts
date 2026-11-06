@@ -26,6 +26,7 @@ import { maximumWorkbookSkew } from "./skew-sources.js";
 import { measureWorkbookAutoRows } from "./auto-rows.js";
 import type { WorkbookAutoRowLimits, WorkbookAutoRows } from "./auto-rows.js";
 import { WorkbookCellTextCache } from "./cell-text-cache.js";
+import { WorkbookReadAhead, workbookIdle } from "./read-ahead.js";
 
 export interface WorkbookWindowProviders {
   readonly cells: WorkbookWindowSource;
@@ -34,6 +35,8 @@ export interface WorkbookWindowProviders {
   readonly rules?: WorkbookRuleSource;
 }
 export interface WorkbookWindowControllerOptions {
+  /** Optional idle warming for sources that opt in. Zero disables it. */
+  readonly readAheadRows?: number;
   /** Combined final cell/object nodes, independently of each phase's budget. */
   readonly maxNodes?: number;
   readonly read?: Partial<WorkbookViewportReadLimits>;
@@ -77,6 +80,9 @@ export class WorkbookWindowController {
   private readonly skewCoefficient: number;
   private readonly classStyles: boolean;
   private readonly textCache: WorkbookCellTextCache;
+  private readonly readAhead: WorkbookReadAhead;
+  private readonly chunkRows = new Map<string, Set<number>>();
+  private readonly interruptReadAhead = (): void => { this.readAhead.interrupt(); };
   private readonly sheets = new Map<string, WorkbookAutoRows & { readonly normal: WorkbookColumnFont }>();
   private pending: { cancel(): void } | undefined;
   private active: { readonly state: WorkbookRenderedWindow; readonly drawings: WorkbookDrawingLayout; readonly decoration?: WorkbookWindowDecoration } | undefined;
@@ -88,7 +94,9 @@ export class WorkbookWindowController {
     this.ruleLimits = Object.freeze({ ...DEFAULT_WORKBOOK_RULE_LIMITS, ...input.rules });
     if (Object.keys(this.ruleLimits).some(key => !Object.hasOwn(DEFAULT_WORKBOOK_RULE_LIMITS, key)) || !Object.values(this.ruleLimits).every(value => Number.isSafeInteger(value) && value > 0))
       throw new DocumentError("InvalidOperation", "Workbook rules require supported positive safe-integer budgets.");
-    if (!Number.isSafeInteger(this.maxNodes) || this.maxNodes < 1 || Object.keys(input).some(key => !["maxNodes", "read", "cells", "drawings", "annotations", "rules", "autoRows"].includes(key))
+    if (!Number.isSafeInteger(this.maxNodes) || this.maxNodes < 1 || !Number.isSafeInteger(input.readAheadRows ?? 8) || (input.readAheadRows ?? 8) < 0 || (input.readAheadRows ?? 8) > 64
+      || providers.cells.allowReadAhead !== undefined && typeof providers.cells.allowReadAhead !== "boolean"
+      || Object.keys(input).some(key => !["maxNodes", "read", "cells", "drawings", "annotations", "rules", "autoRows", "readAheadRows"].includes(key))
       || !surface.source.isConnected || !surface.view.isConnected || surface.source.ownerDocument !== surface.document || surface.view.ownerDocument !== surface.document
       || surface.view.childNodes.length) throw new DocumentError("InvalidOperation", "A workbook controller requires its own empty connected surface and supported node budget.");
     this.snapshot = providers.cells.snapshot;
@@ -102,12 +110,17 @@ export class WorkbookWindowController {
     // Validate read limits before retaining auxiliary content or starting work.
     const probe = new WorkbookWindowLoader(providers.cells, this.options.read, true); probe.dispose();
     this.content = new WorkbookContentSources(surface.document, this.snapshot);
+    this.readAhead = new WorkbookReadAhead(surface.document.defaultView!);
+    for (const chunk of this.snapshot.manifest.chunks) {
+      let rows = this.chunkRows.get(chunk.sheetId); if (!rows) { rows = new Set(); this.chunkRows.set(chunk.sheetId, rows); } rows.add(chunk.row);
+    }
+    for (const name of ["pointerdown", "keydown", "wheel"]) surface.document.addEventListener(name, this.interruptReadAhead, { capture: true, passive: true });
   }
 
   get current(): WorkbookRenderedWindow | undefined { return this.active?.state; }
 
   /** Cancel only unfinished work while retaining the accepted window. */
-  cancelPending(): void { this.pending?.cancel(); this.pending = undefined; }
+  cancelPending(): void { this.readAhead.stop(); this.pending?.cancel(); this.pending = undefined; }
 
   /** False means superseded/disposed; genuine failures reject. A newer request
    * also settles an older request whose provider ignores its AbortSignal. */
@@ -119,7 +132,7 @@ export class WorkbookWindowController {
       throw new DocumentError("InvalidOperation", "A workbook window requires finite positive viewport extents.");
     const sheet = this.snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === sheetId);
     if (!sheet) throw new DocumentError("InvalidOperation", "The requested worksheet is not part of this workbook.");
-    this.pending?.cancel();
+    this.readAhead.stop(); this.pending?.cancel();
     const abort = new AbortController(), loader = new WorkbookWindowLoader(this.providers.cells, this.options.read, true, this.skewCoefficient);
     let cancel!: () => void;
     const cancelled = new Promise<false>(resolve => { cancel = () => { abort.abort(); loader.dispose(); resolve(false); }; });
@@ -177,6 +190,7 @@ export class WorkbookWindowController {
       this.surface.frame.style.setProperty("visibility", "visible", "important");
       this.active = { state, drawings, ...(decoration ? { decoration } : {}) }; drawings = undefined; decoration = undefined;
       previous?.decoration?.dispose(); previous?.drawings.dispose(); previous?.state.element.replaceChildren();
+      this.warm(state, previous?.state);
       return true;
     } catch (error) {
       if (!current()) return false;
@@ -187,10 +201,57 @@ export class WorkbookWindowController {
     }
   }
 
+  private warm(state: WorkbookRenderedWindow, previous: WorkbookRenderedWindow | undefined): void {
+    try {
+      const sheetId = state.frame.sheetId, sheet = this.snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === sheetId)!;
+      if (!this.providers.cells.allowReadAhead || !this.classStyles || !(this.options.readAheadRows ?? 8)
+        || sheet.tables?.length || sheet.conditionalRules?.length || sheet.dataValidations?.length) return;
+      const dimensions = state.dimensions, metrics = this.sheets.get(sheetId)!, layout = state.frame.layout;
+      const direction = previous?.frame.sheetId === sheetId && layout.scrollTopPt < previous.frame.layout.scrollTopPt ? -1 : 1;
+      let first = Infinity, last = -1;
+      for (const pane of layout.panes) if (pane.kind === "body" || pane.kind === "frozenColumns") {
+        if (pane.rows.length > 128) return;
+        for (const row of pane.rows) { first = Math.min(first, row.index); last = Math.max(last, row.index); }
+      }
+      if (last < 0) return;
+      const rows: number[] = []; let edge = direction === 1 ? last : first;
+      for (let index = 0; index < (this.options.readAheadRows ?? 8); index++) {
+        const next = dimensions.rows.neighbor(edge, direction); if (next === undefined || next < sheet.frozen.rows) break;
+        if (!this.chunkRows.get(sheetId)?.has(Math.floor(next / 256) * 256)) break;
+        rows.push(next); edge = next;
+      }
+      const frozen = dimensions.rows.position(sheet.frozen.rows); let index = 0;
+      if (!rows.length) return;
+      this.readAhead.set(async signal => {
+        if (signal.aborted || this.active?.state !== state) return true;
+        const end = Math.min(index + 4, rows.length), row = Math.min(rows[index]!, rows[end - 1]!), lastRow = Math.max(rows[index]!, rows[end - 1]!);
+        const loader = new WorkbookWindowLoader(this.providers.cells, {
+          maxCells: Math.min(this.options.read?.maxCells ?? 5000, 128), maxSourceCells: Math.min(this.options.read?.maxSourceCells ?? 25000, 256),
+          maxRowReadCells: Math.min(this.options.read?.maxRowReadCells ?? 250000, 4096), maxCodeUnits: Math.min(this.options.read?.maxCodeUnits ?? 8 * 1024 * 1024, 32768),
+        }, true, this.skewCoefficient);
+        const cancel = (): void => loader.dispose(); signal.addEventListener("abort", cancel, { once: true });
+        try {
+          if (!await loader.load(sheetId, dimensions, { widthPt: layout.widthPt, heightPt: frozen + dimensions.rows.position(lastRow + 1) - dimensions.rows.position(row),
+            scrollLeftPt: layout.scrollLeftPt, scrollTopPt: dimensions.rows.position(row) - frozen }) || signal.aborted) return true;
+          if (!await workbookIdle(this.surface.document.defaultView!, signal) || signal.aborted || this.active?.state !== state) return true;
+          const started = performance.now();
+          const cells = layoutWorkbookWindow(this.surface, this.snapshot, loader.frame!, dimensions, this.formatter, {
+            normalSpaceWidthPx: metrics.normal.spaceWidthPx, maxNodes: Math.min(this.maxNodes, this.options.cells?.maxNodes ?? 50000, 2048),
+            maxSourceNodes: Math.min(this.options.cells?.maxSourceNodes ?? 50000, 2048), maxTextCodeUnits: Math.min(this.options.cells?.maxTextCodeUnits ?? 8 * 1024 * 1024, 32768),
+            maxCellFragments: Math.min(this.options.cells?.maxCellFragments ?? 5000, 128),
+          }, undefined, this.textCache, this.textCache.probes);
+          cells.element.replaceChildren(); index = end;
+          return index < rows.length && performance.now() - started <= 8;
+        } finally { signal.removeEventListener("abort", cancel); loader.dispose(); }
+      });
+    } catch { this.readAhead.stop(); }
+  }
+
   dispose(): void {
     if (this.disposed) return;
-    this.disposed = true; this.pending?.cancel(); this.pending = undefined;
+    this.disposed = true; this.readAhead.dispose(); this.pending?.cancel(); this.pending = undefined;
+    for (const name of ["pointerdown", "keydown", "wheel"]) this.surface.document.removeEventListener(name, this.interruptReadAhead, true);
     this.active?.decoration?.dispose(); this.active?.drawings.dispose(); this.active?.state.element.remove(); this.active?.state.element.replaceChildren(); this.active = undefined;
-    this.content.dispose(); this.sheets.clear(); this.textCache.clear();
+    this.content.dispose(); this.sheets.clear(); this.chunkRows.clear(); this.textCache.clear();
   }
 }
