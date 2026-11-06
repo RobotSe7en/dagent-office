@@ -110,6 +110,8 @@ export class PresentationChartWriter {
             out.add("<c:cat>" + vector(data.categories, false, embedded.book.categoryFormula) + "</c:cat><c:val>" + vector(series.values, true, ranges.valueFormula) + "</c:val>" + (chart.kind === "line" ? cv("smooth", false) : "") + "</c:ser>");
         }
         out.add(this.labels(chart, chart.labelCssClass, node, surface));
+        if (chart.kind === "line" && chart.nativeShowMarkers !== undefined)
+            out.add(cv("marker", chart.nativeShowMarkers));
         if (chart.kind === "column")
             out.add(cv("gapWidth", chart.gapWidth) + cv("overlap", chart.overlap));
         if (chart.kind === "pie")

@@ -7,6 +7,8 @@ export const ChartAppearanceSchema = z.strictObject({
   kind: z.enum(["column", "line", "pie"]),
   titleNodeId: IdentifierSchema.optional(), titleVisible: z.boolean().optional(), legend: z.enum(["none", "left", "right", "top", "bottom"]),
   showLabels: z.boolean(), numberFormat: z.string().optional(),
+  /** Retained native lineChart/marker Boolean. Office ignores it for display. */
+  nativeShowMarkers: z.boolean().optional(),
   minimum: z.number().optional(), maximum: z.number().optional(), majorUnit: z.number().positive().optional(),
   plotCssClass: IdentifierSchema.optional(), legendCssClass: IdentifierSchema.optional(), textCssClass: IdentifierSchema.optional(), labelCssClass: IdentifierSchema.optional(),
   categoryAxisCssClass: IdentifierSchema.optional(), valueAxisCssClass: IdentifierSchema.optional(), gridCssClass: IdentifierSchema.optional(), categoryGridCssClass: IdentifierSchema.optional(),

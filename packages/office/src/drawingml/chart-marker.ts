@@ -4,6 +4,18 @@ import type { XmlNode } from "../ooxml/xml.js";
 import type { Css } from "../ooxml/styles.js";
 import { appearance, decimal, val } from "./chart-style.js";
 
+/** MS-OI29500 §2.1.1495: preserve this legacy flag without using it to
+ * synthesize series markers. A present CT_Boolean without val means true. */
+export function chartMarkerFlag(source: XmlNode | undefined): boolean | undefined {
+  if (!source) return undefined;
+  if ([...source.attrs.keys()].some(key => key !== " val")) unsupported(source, "A chart marker flag has unknown attributes.");
+  check(source, [], C);
+  if (source.content.some(item => typeof item === "string" && item.length)) fail(source, "A chart marker flag has unexpected text.");
+  const raw = source.attrs.get(" val")?.replace(/^[\x20\t\r\n]+|[\x20\t\r\n]+$/g, "");
+  if (raw !== undefined && !["1", "0", "true", "false"].includes(raw)) fail(source, "A chart marker flag is not a native Boolean.");
+  return raw === undefined || raw === "1" || raw === "true";
+}
+
 /** Missing point properties inherit the series; never invent a source size or
  * symbol on a partial override. Native CT_MarkerSize is integral, 2–72 pt. */
 export function chartMarker(source: XmlNode | undefined): {

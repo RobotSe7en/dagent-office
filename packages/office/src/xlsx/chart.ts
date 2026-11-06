@@ -10,7 +10,7 @@ import { attributes, boolean, integer, one, spreadsheetText, value } from "./val
 import { readChartLabel, readChartReference, readChartVector } from "./chart-data.js";
 import type { ChartDataBudget } from "./chart-data.js";
 import { drawingTextStyle, readDrawingText } from "./drawing-text.js";
-import { chartMarker } from "../drawingml/chart-marker.js";
+import { chartMarker, chartMarkerFlag } from "../drawingml/chart-marker.js";
 import { chartLabelLeaderLines, validateWorksheetChart } from "./chart-validation.js";
 import type { XlsxStyles } from "./styles.js";
 import type { WorkbookContent } from "./content.js";
@@ -59,6 +59,8 @@ export class WorkbookCharts {
     const highLow = one(native, "hiLowLines", C);
     if (highLow && !one(one(one(highLow, "spPr", C), "ln", A), "noFill", A)) unsupported(highLow, "High/low chart lines are not supported.");
     const definition: WorkbookChart = { chartId: this.id("chart"), nodeId: frame.attrs["data-node-id"]!, kind, legend: "none", showLabels: false, series: [], seriesStyles: [], pointStyles: [] };
+    const markerFlag = kind === "line" ? chartMarkerFlag(one(native, "marker", C)) : undefined;
+    if (markerFlag !== undefined) definition.nativeShowMarkers = markerFlag;
     // An omitted element is distinct from a present CT_Boolean with omitted
     // val (true). Preserve that distinction instead of inventing source flags.
     if (one(chart, "plotVisOnly", C)) definition.visibleCellsOnly = flag(chart, "plotVisOnly");
@@ -88,7 +90,6 @@ export class WorkbookCharts {
       const seriesId = `series-${position}`;
       definition.series.push({ seriesId, nativeIndex: index, values: readChartVector(values, this.budget, true), ...(name ? { name: readChartLabel(name, this.budget) } : {}) });
       const markerSource = one(s, "marker", C), { css: markerCss, ...marker } = chartMarker(markerSource);
-      if (!markerSource && kind === "line" && flag(native, "marker")) unsupported(native, "Implicit automatic marker shapes are not supported.");
       const seriesCss = style(this, s, "series-style", { ...markerCss, "--office-invert-negative": String(flag(s, "invertIfNegative")) });
       const seriesLabels = one(s, "dLbls", C), seriesLabelStyle = this.labelStyle(seriesLabels);
       definition.seriesStyles!.push({ seriesId, cssClass: seriesCss, marker: marker.marker ?? "none", markerSize: marker.markerSize ?? 5, ...(seriesLabelStyle ? { labelCssClass: seriesLabelStyle } : {}) });

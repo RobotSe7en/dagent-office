@@ -96,8 +96,9 @@ export async function measureWorkbookChartMarkers(snapshot: WorkbookSnapshot, pl
   const container = document.createElement('div'); document.body.append(container);
   const surface = await createWorkbookSurface(container, snapshot, { widthPt: 520, heightPt: 340 }), sources = new WorkbookContentSources(surface.document, snapshot);
   const charts = snapshot.metadata.workbook.charts!, projected = sources.project(surface.source, charts.map(chart => chart.nodeId)), before = surface.source.innerHTML;
-  const read = (index: number, compact = false, hideFirst = false) => {
-    const chart = charts[index]!, source = projected.get(chart.nodeId)!, original = plots[index]!;
+  const read = (index: number, compact = false, hideFirst = false, toggleFlag = false) => {
+    const definition = charts[index]!, chart = toggleFlag ? { ...definition, nativeShowMarkers: !definition.nativeShowMarkers } : definition;
+    const source = projected.get(chart.nodeId)!, original = plots[index]!;
     const data = compact ? { ...original, categories: original.categories.slice(1), sourceIndexes: [1, 2], series: original.series.map(series => ({ ...series, values: series.values.slice(1), ...(series.missing ? { missing: series.missing.slice(1) } : {}) })) } : original;
     const visibleData = hideFirst ? { ...data, series: data.series.map((series, index) => ({ ...series, hidden: index === 0 })) } : data;
     const result = createWorkbookChartView(source, chart, visibleData, 480, 300, 'chart-markers-' + index, { formatNumber: value => String(value) });
@@ -119,7 +120,8 @@ export async function measureWorkbookChartMarkers(snapshot: WorkbookSnapshot, pl
     try { createWorkbookChartView(projected.get(charts[0]!.nodeId)!, charts[0]!, plots[0]!, 480, 300, 'marker-budget', { formatNumber: String, maxNodes: 2 }); }
     catch (error) { budget = (error as { code: string }).code; }
     const hidden = charts.map((_, index) => plots[index]!.series.length > 1 ? read(index, false, true) : undefined);
-    return { normal, compacted, hidden, budget, unchanged: surface.source.innerHTML === before };
+    const toggled = charts.map((_, index) => read(index, false, false, true));
+    return { normal, compacted, hidden, budget, flagsIgnored: JSON.stringify(toggled) === JSON.stringify(normal), unchanged: surface.source.innerHTML === before };
   } finally { sources.dispose(); surface.dispose(); container.remove(); }
 }
 

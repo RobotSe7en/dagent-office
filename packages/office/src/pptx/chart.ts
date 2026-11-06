@@ -5,7 +5,7 @@ import { Context, integer, value } from "./context.js";
 import type { Html } from "./context.js";
 import { importText } from "./text.js";
 import { val, flag, decimal, textStyle, style, noLayout, labels, labelStyle, axisStyle } from "../drawingml/chart-style.js";
-import { chartMarker } from "../drawingml/chart-marker.js";
+import { chartMarker, chartMarkerFlag } from "../drawingml/chart-marker.js";
 import { cachedVector, constants } from "./workbook.js";
 
 export function importChart(context: Context, reference: XmlNode, frame: Html): string {
@@ -36,6 +36,10 @@ export function importChart(context: Context, reference: XmlNode, frame: Html): 
   const highLow = child(native, "hiLowLines", C);
   if (highLow && !child(child(child(highLow, "spPr", C), "ln", A), "noFill", A)) unsupported(highLow, "High/low chart lines are not supported.");
   const id = context.id("chart"), definition: PresentationChart = { chartId: id, nodeId: frame.attrs["data-node-id"]!, dataSetId: "", kind, legend: "none", showLabels: false };
+  const markerFlags = kind === "line" ? elements(native, "marker", C) : [];
+  if (markerFlags.length > 1) fail(native, "A chart marker flag is repeated.");
+  const markerFlag = chartMarkerFlag(markerFlags[0]);
+  if (markerFlag !== undefined) definition.nativeShowMarkers = markerFlag;
   const series = elements(native, "ser", C);
   if (!series.length || kind === "pie" && series.length !== 1) unsupported(native, "This chart series arrangement is not supported.");
   context.count(series.length);

@@ -3,6 +3,7 @@ import type { XmlNode } from "../ooxml/xml.js";
 import { attributes, boolean, finite, integer, one, spreadsheetText, value } from "./values.js";
 import { validateDrawingEffects, validateDrawingFill, validateDrawingLine } from "./drawing-style.js";
 import { drawingTextStyle } from "./drawing-text.js";
+import { chartMarkerFlag } from "../drawingml/chart-marker.js";
 
 const children: Readonly<Record<string, readonly string[]>> = {
   chartSpace: ["date1904", "lang", "roundedCorners", "chart", "spPr", "txPr"],
@@ -84,9 +85,10 @@ export function validateWorksheetChart(source: XmlNode): XmlNode {
       spreadsheetText(value(node, "formatCode")!, node, 2048); boolean(node, "sourceLinked"); return node;
     }
     if (node.name === "lang") { attributes(node, ["val"]); check(node, [], C); const language = value(node, "val"); if (!language || !/^[A-Za-z]{1,8}(?:-[A-Za-z0-9]{1,8})*$/.test(language)) fail(node, "A chart editing language is invalid."); return node; }
-    if (booleans.has(node.name) || numeric.has(node.name) || enums[node.name] || node.name === "marker" && parent?.name === "lineChart") {
+    if (node.name === "marker" && parent?.name === "lineChart") return withValue(node, chartMarkerFlag(node) ? "1" : "0");
+    if (booleans.has(node.name) || numeric.has(node.name) || enums[node.name]) {
       attributes(node, ["val"]); check(node, [], C);
-      if (booleans.has(node.name) || node.name === "marker") boolean(node, "val", true);
+      if (booleans.has(node.name)) boolean(node, "val", true);
       else if (enums[node.name]) {
         const selected = value(node, "val") ?? (node.name === "grouping" ? parent?.name === "barChart" ? "clustered" : "standard" : enumDefaults[node.name]);
         if (!selected || !enums[node.name]!.includes(selected)) fail(node, "A chart option has an invalid enum value.");

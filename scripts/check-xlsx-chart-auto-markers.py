@@ -1,7 +1,8 @@
 """Independent native explicit auto markers and producer observations.
 
 The official Transitional schema permits auto; MS-OI29500 2.1.1588 leaves its
-shape to the application. This does not decide lineChart/marker's old Boolean.
+shape to the application. The user selected Office semantics for the separate
+legacy lineChart/marker Boolean: retain its value, ignore it for display.
 """
 from hashlib import sha256
 from io import BytesIO
@@ -75,8 +76,8 @@ def main():
                   'limits': ['Auto shape selection is application-owned, not a claim of matching Excel, WPS or Calc.',
                              'SDK source retains auto rather than replacing it with the preview shape.',
                              'Calc drops explicit auto series and point markers, including size and appearance in these probes; this is recorded as loss, not source fidelity.',
-                             'Calc writes lineChart/marker=true after removing explicit auto. The SDK currently rejects that implicit case pending the separate product decision; producer reopen is not passed.',
-                             'The older lineChart/marker Boolean remains an independent product decision.',
+                             'Calc writes lineChart/marker=true after removing explicit auto. The SDK retains it without restoring discarded marker settings; public source and producer package reopen are checked separately.',
+                             'The older lineChart/marker Boolean follows the selected Office semantics: it neither synthesizes nor suppresses explicit series or point markers.',
                              'No whole-chart layout, font geometry or pixel equivalence is claimed.']}
         if args.record:
             (FIXTURES / 'xlsx-chart-auto-markers.xlsx').write_bytes(data)

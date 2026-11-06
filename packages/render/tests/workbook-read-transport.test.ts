@@ -15,6 +15,16 @@ const request = (model: WorkbookModel, maxCells = 20) => ({ documentId: model.sn
 const signal = () => new AbortController().signal;
 
 describe('host-owned immutable workbook read transport', () => {
+  it('retains native legacy marker flags in the frozen authorized snapshot without transferring source chunks', async () => {
+    const model = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-auto-markers-producer.xlsx'), { documentId: 'marker-flags' }), { kind: 'workbook' });
+    const ports = new MessageChannel(), server = serveWorkbookReads(ports.port1, { ...model, serialize() { throw Error('No full source transfer'); } }), client = await connectWorkbookReads(ports.port2);
+    try {
+      const charts = client.cells.snapshot.metadata.workbook.charts!;
+      expect(charts).toHaveLength(8); expect(charts.every(chart => chart.nativeShowMarkers === true && Object.isFrozen(chart))).toBe(true);
+      expect(charts[0]!.seriesStyles!.every(series => series.marker === 'none')).toBe(true);
+      expect(client.cells.snapshot).toEqual(model.snapshot());
+    } finally { client.dispose(); server.dispose(); }
+  });
   it('transports current chart formulas and enforces both formula budgets before querying the model', async () => {
     const model = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-formulas.xlsx'), { documentId: 'chart-transport' }), { kind: 'workbook' });
     let reads = 0;
