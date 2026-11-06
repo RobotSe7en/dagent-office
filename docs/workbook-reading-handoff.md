@@ -1,6 +1,6 @@
 # 第三轮工作簿读取交接
 
-R3-01～08 已完成并通过 [PR #25](https://github.com/RobotSe7en/dagent-office/pull/25) 合并，提交 `c1d8dea`。三位子智能体审查、8 项修复复核、最终 HEAD `d4f250e` 的四项 CI 全部成功；main 合并树与该 HEAD 相同。当前分支 `perf/browser-ci` 优先处理用户要求的整体 CI 优化，随后继续 R3-09～16 编辑计算和 R3-17～20 输出验收，任务编号不变。
+R3-01～08 已完成并通过 [PR #25](https://github.com/RobotSe7en/dagent-office/pull/25) 合并，提交 `c1d8dea`。三位子智能体审查、8 项修复复核、最终 HEAD `d4f250e` 的四项 CI 全部成功；该合并提交的树与其最终 HEAD 相同。整体 CI 优化交付见 [PR #26](https://github.com/RobotSe7en/dagent-office/pull/26)，分支 `perf/browser-ci`。确认其最终 CI、专项验收与合并状态后，从最新 main 继续 R3-09～16 编辑计算和 R3-17～20 输出验收，任务编号不变。
 
 用户已选择容量用例移出日常 CI，保留阶段合并前完整验收和一万行目标，具体规则见[CI 执行](ci-performance.md)。
 
@@ -56,7 +56,7 @@ Playground 服务监听 `0.0.0.0:5174`，地址 `http://192.168.31.221:5174/`。
 
 ## 交付及下一阶段
 
-核对 PR 最新 HEAD 的 `check`、`browser-interaction`、`office-reopen`、`safari` 均成功，再以该 SHA 守卫 squash merge；不凭旧提交 CI 合并。合并后从最新 main 创建阶段分支，继续 R3-09～16 编辑计算，再做 R3-17～20 输出验收。不直接向 main 提交，也不把当前读取通过记为后续阶段完成。
+每个阶段核对 PR 最新 HEAD 的构建、`check`、`browser-interaction`、`office-reopen`、`safari` 和 `workbook-scale` 均成功，再以该 SHA 守卫 squash merge；不凭旧提交 CI 合并。合并后从最新 main 创建阶段分支，继续 R3-09～16 编辑计算，再做 R3-17～20 输出验收。不直接向 main 提交，也不把当前读取通过记为后续阶段完成。
 
 后续第一项是 R3-09：复用共享会话事务、隔离分块候选、原子验证、历史和精确范围映射；随后完成 R3-10 依赖计算，再开放输入与各类编辑。排序区域外公式仍引用原地址；剪切引用精确跟随移动数据。保持唯一 HTML 包来源、当前源图表／规则和共同历史边界。
 

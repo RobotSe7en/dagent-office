@@ -224,4 +224,9 @@ jobs:
             .cache/workbook-reading-matrix-modern/
             .cache/workbook-reading-matrix-legacy/
             .cache/workbook-reading-budget/
+            .cache/xlsx-reference/result.json
+            .cache/acceptance-office/environment.json
+            .cache/acceptance-fonts/environment.json
+            .cache/acceptance-fonts/fonts.conf
+            .cache/acceptance-fonts/licenses/
           retention-days: 14
