@@ -37,7 +37,7 @@ export class WorkbookContent {
   }
   comment(sheetId: string, richHtml: string): string {
     const rootNodeId = this.id(), paragraph = this.id();
-    const html = `<section data-node-id="${rootNodeId}" data-office-kind="comment" data-office-story="comment"><p data-node-id="${paragraph}" style="white-space:pre-wrap">${richHtml}</p></section>`;
+    const html = `<section data-node-id="${rootNodeId}" data-office-kind="comment" data-office-story="comment"><p data-node-id="${paragraph}" style="margin:0;white-space:pre-wrap">${richHtml}</p></section>`;
     this.append(html); this.stories.push({ storyId: `story-${rootNodeId}`, rootNodeId, kind: "comment", sheetId }); return rootNodeId;
   }
   html(): string | undefined { return this.bodies.length ? this.prefix + this.bodies.join("") + this.suffix : undefined; }

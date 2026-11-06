@@ -53,6 +53,7 @@ export interface WorkbookRenderedWindow {
   readonly dimensions: ReturnType<typeof worksheetDimensions>;
   readonly cells: WorkbookWindowLayout["cells"];
   readonly objects: WorkbookDrawingLayout["objects"];
+  readonly notes: WorkbookDrawingLayout["notes"];
   readonly annotations: WorkbookAnnotationWindow;
   readonly fonts: readonly FontResolution[];
   readonly diagnostics: readonly (WorkbookDrawingLayout["diagnostics"][number] | WorkbookRuleDiagnostic)[];
@@ -173,7 +174,7 @@ export class WorkbookWindowController {
         this.formatter, abort.signal, { ...this.options.drawings, maxNodes: Math.min(this.maxNodes - nodes, this.options.drawings?.maxNodes ?? this.maxNodes) });
       if (!current()) return false;
       nodes += drawings.nodes; cells.element.append(drawings.element);
-      const base: WorkbookRenderedWindow = Object.freeze({ frame, element: cells.element, nodes, dimensions, cells: cells.cells, objects: drawings.objects, annotations,
+      const base: WorkbookRenderedWindow = Object.freeze({ frame, element: cells.element, nodes, dimensions, cells: cells.cells, objects: drawings.objects, notes: drawings.notes, annotations,
         fonts: Object.freeze([...normal.fonts, ...metrics.fonts, ...cells.fonts, ...drawings.fonts]), diagnostics: Object.freeze([...drawings.diagnostics, ...rules ? workbookRuleDiagnostics(rules) : []]), ...(rules ? { rules } : {}),
         usedFallbackLineMetrics: metrics.usedFallbackLineMetrics || cells.usedFallbackLineMetrics || drawings.usedFallbackLineMetrics });
       decoration = this.decorate?.(base, this.content, this.maxNodes - nodes);

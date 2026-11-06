@@ -17,6 +17,7 @@ import type { WorkbookDrawingLayout } from '../../../packages/render/src/workboo
 import { annotationWindowMeasurement, commentTextMeasurement, windowControllerMeasurement } from './workbook-window-controller.js';
 import { commentPanelMeasurement, mentionPanelMeasurement } from './workbook-comment-panel.js';
 import { annotationControlsAction, mountAnnotationControls } from './workbook-annotation-controls.js';
+import { nativeNoteMeasurement } from './workbook-native-notes.js';
 
 export async function gradientWindowMeasurement(entries: readonly [string, number[]][]) {
   const model = openDocument(new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), { kind: 'workbook' }), snapshot = model.snapshot(), before = model.serialize();
@@ -198,4 +199,4 @@ export async function drawingWindowMeasurement(entries: readonly [string, number
     URL.createObjectURL = originalCreate; URL.revokeObjectURL = originalRevoke; window.removeEventListener('unhandledrejection', rejection);
   }
 }
-Object.assign(window, { workbookDrawingWindow: { drawingWindowMeasurement, gradientWindowMeasurement, currentChartWindowMeasurement, windowControllerMeasurement, annotationWindowMeasurement, commentTextMeasurement, commentPanelMeasurement, mentionPanelMeasurement, annotationControlsAction, mountAnnotationControls } });
+Object.assign(window, { workbookDrawingWindow: { nativeNoteMeasurement, drawingWindowMeasurement, gradientWindowMeasurement, currentChartWindowMeasurement, windowControllerMeasurement, annotationWindowMeasurement, commentTextMeasurement, commentPanelMeasurement, mentionPanelMeasurement, annotationControlsAction, mountAnnotationControls } });

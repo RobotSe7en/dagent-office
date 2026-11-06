@@ -7,8 +7,9 @@ import type { currentChartWindowMeasurement, drawingWindowMeasurement, gradientW
 import type { annotationWindowMeasurement, commentTextMeasurement, windowControllerMeasurement } from './fixtures/workbook-window-controller.js';
 import type { commentPanelMeasurement, mentionPanelMeasurement } from './fixtures/workbook-comment-panel.js';
 import type { annotationControlsAction, mountAnnotationControls } from './fixtures/workbook-annotation-controls.js';
+import type { nativeNoteMeasurement } from './fixtures/workbook-native-notes.js';
 
-declare global { interface Window { workbookDrawingWindow: { drawingWindowMeasurement: typeof drawingWindowMeasurement; gradientWindowMeasurement: typeof gradientWindowMeasurement; currentChartWindowMeasurement: typeof currentChartWindowMeasurement; windowControllerMeasurement: typeof windowControllerMeasurement; annotationWindowMeasurement: typeof annotationWindowMeasurement; commentTextMeasurement: typeof commentTextMeasurement; commentPanelMeasurement: typeof commentPanelMeasurement; mentionPanelMeasurement: typeof mentionPanelMeasurement; annotationControlsAction: typeof annotationControlsAction; mountAnnotationControls: typeof mountAnnotationControls } } }
+declare global { interface Window { workbookDrawingWindow: { nativeNoteMeasurement: typeof nativeNoteMeasurement; drawingWindowMeasurement: typeof drawingWindowMeasurement; gradientWindowMeasurement: typeof gradientWindowMeasurement; currentChartWindowMeasurement: typeof currentChartWindowMeasurement; windowControllerMeasurement: typeof windowControllerMeasurement; annotationWindowMeasurement: typeof annotationWindowMeasurement; commentTextMeasurement: typeof commentTextMeasurement; commentPanelMeasurement: typeof commentPanelMeasurement; mentionPanelMeasurement: typeof mentionPanelMeasurement; annotationControlsAction: typeof annotationControlsAction; mountAnnotationControls: typeof mountAnnotationControls } } }
 let code = '';
 const inputs: { name: string; files: [string, number[]][] }[] = [];
 const comments: typeof inputs = [];
@@ -26,6 +27,35 @@ test.beforeAll(async () => {
   }
 });
 test.beforeEach(async ({ page }) => { await page.goto('/'); await page.addScriptTag({ content: code }); });
+test('visible native note boxes preserve selected VML appearance and exact source text in all frozen panes', async ({ page }) => {
+  const files = comments.find(input => input.name === '09-classic-notes')!.files;
+  for (const rtl of [false, true]) for (const vertical of ['top', 'center', 'bottom', 'justify', 'distributed']) {
+    const result = await page.evaluate(({files,control}) => window.workbookDrawingWindow.nativeNoteMeasurement(files,control), {files,control:{rtl,vertical}});
+    expect(result).toMatchObject({unchanged:true,preserved:true,released:true,canonical:0,errors:['ResourceLimitExceeded','ResourceLimitExceeded','ResourceLimitExceeded','ResourceLimitExceeded','OperationCancelled']});
+    expect(result.actual).toBe(result.nodes); expect(result.fonts).toBeGreaterThan(0); expect(result.notes.map(note=>note.pane)).toEqual(['corner','frozenRows','frozenColumns','body']);
+    for (const note of result.notes) {
+      expect(note.exact).toBe(true); expect(note.text).toBe('Note A😀\nNote B禰\u{e0100}\nNote C');
+      const first=note.projections[0]!,last=note.projections.at(-1)!;
+      if(vertical==='top') expect(first.y).toBeLessThan(8);
+      if(vertical==='bottom') expect(last.y+last.height).toBeGreaterThan(note.areaHeight-8);
+      if(vertical==='justify'||vertical==='distributed') expect(last.y-first.y).toBeGreaterThan(100);
+    }
+    expect(result.markers).toBe(vertical === 'distributed' ? 2 : 0);
+    expect(result.paint).toEqual([{fill:'#0000ff',opacity:'0.75',stroke:'#0000ff',dash:null},{fill:'#ff0000',opacity:'0.5',stroke:'#008000',dash:'8 6'}]);
+    expect(result.pixels[1]![0]).toBeGreaterThan(100); expect(result.pixels[1]![2]).toBeGreaterThan(80);
+  }
+});
+test('hidden notes stay in the panel and native visible VML sources open without fabricated text',async({page})=>{
+  for(const input of comments.filter(input=>input.name.endsWith('09-classic-notes'))) {
+    const result=await page.evaluate(files=>window.workbookDrawingWindow.nativeNoteMeasurement(files),input.files);
+    expect(result).toMatchObject({notes:[],unchanged:true,preserved:true,released:true});expect(result.actual).toBe(result.nodes);
+  }
+  for(const suffix of ['', '-producer']) {
+    const files=await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-dual-note-boxes-visible'+suffix+'.xlsx'),{documentId:'visible-native'});
+    const result=await page.evaluate(entries=>window.workbookDrawingWindow.nativeNoteMeasurement(entries),[...files].map(([path,bytes])=>[path,[...bytes]] as [string,number[]]));
+    expect(result).toMatchObject({unchanged:true,preserved:true,released:true});expect(result.actual).toBe(result.nodes);expect(result.notes.length).toBeGreaterThan(0);expect(result.notes.every(note=>note.exact)).toBe(true);
+  }
+});
 test('native chart labels and points use current formulas while wrong cell and chart caches remain unchanged', async ({ page }) => {
   const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-formulas.xlsx'), { documentId: 'current-chart-window' });
   const result = await page.evaluate(entries => window.workbookDrawingWindow.currentChartWindowMeasurement(entries), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));

@@ -28,6 +28,8 @@ import type { WorkbookRect } from "./projection.js";
 import type { WorkbookSurface } from "./surface.js";
 import type { WorkbookWindowFrame } from "./window-loader.js";
 import { checkWindowCancellation, checkWindowIdentity } from "./window-source.js";
+import { layoutWorkbookNoteBoxes } from "./note-boxes.js";
+import type { WorkbookNoteProjection } from "./note-boxes.js";
 
 export interface WorkbookDrawingLayoutLimits {
   readonly maxObjects?: number; readonly maxNodes?: number; readonly maxSourceNodes?: number;
@@ -42,6 +44,7 @@ export interface WorkbookDrawingLayout {
   readonly fonts: readonly FontResolution[]; readonly usedFallbackLineMetrics: boolean;
   readonly diagnostics: readonly WorkbookDrawingDiagnostic[];
   readonly objects: readonly { readonly nodeId: string; readonly projection: WorkbookDrawingProjection; readonly text?: WorkbookDrawingTextLayout }[];
+  readonly notes: readonly WorkbookNoteProjection[];
   readonly assets: Readonly<{ count: number; byteLength: number; pixels: number }>;
   /** Release this candidate only. The caller owns replacement of an active window. */
   dispose(): void;
@@ -188,9 +191,13 @@ export async function layoutWorkbookDrawings(surface: Pick<WorkbookSurface, "sou
         element.append(fragment); displayed.push(Object.freeze({ nodeId: object.nodeId, projection: part, ...(text ? { text } : {}) }));
       }
     }
+    const nativeNotes = snapshot.metadata.workbook.comments?.some(comment => comment.format === "classic" && comment.box?.visible) ? await layoutWorkbookNoteBoxes(surface, snapshot, frame, dimensions, sources, signal, {
+      maxNodes: remaining(), maxSourceNodes: limits.maxSourceNodes, maxCodeUnits: Math.max(1, limits.maxCodeUnits - units), maxExtentPt: limits.maxExtentPt, maxObjects: Math.max(0, limits.maxObjects - prepared.length),
+    }) : undefined;
+    if (nativeNotes) { account(nativeNotes.nodes); units += nativeNotes.codeUnits; fonts.push(...nativeNotes.fonts); element.append(nativeNotes.element); }
     await decodeWorkbookImages(images, signal); checkWindowCancellation(signal);
     return Object.freeze({ element, nodes, shadowPixels, fonts: Object.freeze(fonts), usedFallbackLineMetrics,
-      diagnostics: Object.freeze(diagnostics.map(diagnostic => Object.freeze(diagnostic))), objects: Object.freeze(displayed),
+      diagnostics: Object.freeze(diagnostics.map(diagnostic => Object.freeze(diagnostic))), objects: Object.freeze(displayed), notes: nativeNotes?.notes ?? Object.freeze([]),
       assets: Object.freeze({ count: lease.count, byteLength: lease.byteLength, pixels: lease.pixels }), dispose });
   } catch (error) { dispose(); throw error; }
   finally { signal.removeEventListener("abort", abort); projection.dispose(); }

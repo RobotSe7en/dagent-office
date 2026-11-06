@@ -1,10 +1,10 @@
 import { DocumentError } from "@dagent-office/core";
-import type { WorkbookTextProjection, WorkbookTextView } from "./text-view.js";
+import type { WorkbookTextProjection } from "./text-view.js";
 
 /** Split already shaped lines without flattening rich spans or inventing source
  * offsets. Browser line boxes decide wrapping; this layer only positions the
  * resulting lines. All glyph probes and materialized ancestors are bounded. */
-export function distributeWorkbookTextLines(text: WorkbookTextView, availableHeight: number, maxNodes: number): { readonly text: WorkbookTextView; readonly naturalHeight: number } {
+export function distributeWorkbookTextLines<P extends WorkbookTextProjection>(text: { readonly element: HTMLElement; readonly nodes: number; readonly projections: readonly P[] }, availableHeight: number, maxNodes: number): { readonly text: { readonly element: HTMLElement; readonly nodes: number; readonly projections: readonly P[] }; readonly naturalHeight: number } {
   const root = text.element, document = root.ownerDocument, view = document.defaultView!, naturalHeight = root.getBoundingClientRect().height;
   if (!Number.isFinite(availableHeight) || availableHeight < 0 || !Number.isFinite(naturalHeight)) throw new DocumentError("InvalidOperation", "Vertical text distribution requires finite line geometry.");
   const walker = document.createTreeWalker(root, view.NodeFilter.SHOW_TEXT | view.NodeFilter.SHOW_ELEMENT), source: (Text | HTMLElement)[] = [], rectangles: { top: number; bottom: number }[] = [];
@@ -38,7 +38,7 @@ export function distributeWorkbookTextLines(text: WorkbookTextView, availableHei
   };
   let nodes = 1;
   const account = (): void => { if (++nodes > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Distributed rich text exceeds its node budget."); };
-  const result = root.cloneNode(false) as HTMLElement, projections: WorkbookTextProjection[] = [];
+  const result = root.cloneNode(false) as HTMLElement, projections: P[] = [];
   const rows = lines.map(line => {
     account(); const element = root.cloneNode(false) as HTMLElement;
     Object.assign(element.style, { position: "relative", display: "block", left: "auto", top: "auto", width: "100%", height: "auto", transform: "none", whiteSpace: "pre", flex: "none" });
@@ -73,7 +73,7 @@ export function distributeWorkbookTextLines(text: WorkbookTextView, availableHei
           // Keep native newline units without generating a second line break.
           account(); const span = document.createElement("span"); span.style.whiteSpace = "normal"; span.append(clone); parent.append(span);
         } else parent.append(clone);
-        if (mapping) projections.push(Object.freeze({ node: clone, from: mapping.from + offset, to: mapping.from + offset + segment.length }));
+        if (mapping) projections.push(Object.freeze({ ...mapping, node: clone, from: mapping.from + offset, to: mapping.from + offset + segment.length }));
         offset += segment.length;
       }
       from = to;
