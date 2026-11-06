@@ -39,7 +39,7 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Bound browser dependency downloads
+      - name: Bound Ubuntu dependency downloads
         run: |
           printf '%s\n' 'Acquire::Retries "3";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/80-dagent-downloads >/dev/null
           if test -f /etc/apt/apt-mirrors.txt; then
@@ -110,6 +110,12 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Bound Ubuntu dependency downloads
+        run: |
+          printf '%s\n' 'Acquire::Retries "3";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/80-dagent-downloads >/dev/null
+          if test -f /etc/apt/apt-mirrors.txt; then
+            printf '%s\n' 'https://archive.ubuntu.com/ubuntu/' 'https://security.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+          fi
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-writer libreoffice-impress libreoffice-calc python3-uno python3-lxml poppler-utils fonts-noto-cjk fonts-liberation2
       - run: node scripts/install-acceptance-office.mjs
       - run: node scripts/install-acceptance-fonts.mjs
