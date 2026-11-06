@@ -10,7 +10,7 @@ describe('independent finite chart intervals', () => {
     const bytes = readFileSync('packages/office/tests/fixtures/xlsx-chart-finite-scales' + suffix + '.xlsx');
     if (!suffix) expect(execFileSync('python3', ['-c', "import importlib.util,sys;s=importlib.util.spec_from_file_location('finite','scripts/check-xlsx-chart-finite-scales.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);sys.stdout.buffer.write(m.generate(m.inputs()))"])).toEqual(bytes);
     const model = openDocument(await importXlsx(bytes, { documentId: 'finite-charts' }), { kind: 'workbook' }), snapshot = model.snapshot();
-    expect(snapshot.metadata.workbook.charts).toHaveLength(10);
+    expect(snapshot.metadata.workbook.charts).toHaveLength(14);
     for (const [index, chart] of snapshot.metadata.workbook.charts!.entries()) {
       const expected = evidence.cases[index]![suffix ? 'producer' : 'source'];
       expect(chart.minimum).toBe(expected.axis.min === undefined ? undefined : Number(expected.axis.min));

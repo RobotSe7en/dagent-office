@@ -1,3 +1,4 @@
+import type { measureChartClipping } from './fixtures/workbook-chart-clipping.js';
 import type { measureNativeChartLabels, measureControlledChartLabels } from './fixtures/workbook-chart-labels.js';
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
@@ -23,7 +24,7 @@ import { bindWorkbookChartData } from "../../packages/render/src/workbook/chart-
 import type { BasicChartData } from '../../packages/render/src/chart.js';
 import { modelChartSource, DEFAULT_CHART_READ_LIMITS } from '../../packages/render/src/workbook/chart-source.js';
 
-declare global { interface Window { workbookChartHost: { measureControlledChartLabels: typeof measureControlledChartLabels; measureNativeChartLabels: typeof measureNativeChartLabels; measureWorkbookChartAxes: typeof measureWorkbookChartAxes; measureWorkbookChartFiniteScales: typeof measureWorkbookChartFiniteScales; measureNativeFiniteCharts: typeof measureNativeFiniteCharts; measureWorkbookChartTextFonts: typeof measureWorkbookChartTextFonts; measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartGrid: typeof measureWorkbookChartGrid; measureWorkbookChartMarkers: typeof measureWorkbookChartMarkers; measureWorkbookChartColors: typeof measureWorkbookChartColors; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
+declare global { interface Window { workbookChartHost: { measureChartClipping: typeof measureChartClipping; measureControlledChartLabels: typeof measureControlledChartLabels; measureNativeChartLabels: typeof measureNativeChartLabels; measureWorkbookChartAxes: typeof measureWorkbookChartAxes; measureWorkbookChartFiniteScales: typeof measureWorkbookChartFiniteScales; measureNativeFiniteCharts: typeof measureNativeFiniteCharts; measureWorkbookChartTextFonts: typeof measureWorkbookChartTextFonts; measureWorkbookCharts: typeof measureWorkbookCharts; measureWorkbookChartGrid: typeof measureWorkbookChartGrid; measureWorkbookChartMarkers: typeof measureWorkbookChartMarkers; measureWorkbookChartColors: typeof measureWorkbookChartColors; measureWorkbookChartTitles: typeof measureWorkbookChartTitles; measureWorkbookChartTitleContents: typeof measureWorkbookChartTitleContents; measureWorkbookComposedChart: typeof measureWorkbookComposedChart; measureWorkbookChartFormats: typeof measureWorkbookChartFormats; measureWorkbookChartPositions: typeof measureWorkbookChartPositions } } }
 
 declare global { interface Window { workbookShadowHost: { measureWorkbookShadows: typeof measureWorkbookShadows; mountWorkbookShadowPixels: typeof mountWorkbookShadowPixels; disposeWorkbookShadowPixels: typeof disposeWorkbookShadowPixels } } }
 
@@ -155,7 +156,7 @@ test('workbook chart graphics use current values and isolated source styles with
       expect(result.reported).toBe(result.nodes); expect(result.peak).toBeGreaterThan(result.nodes); expect(result.exact).toBe(true); expect(result.unchanged).toBe(true); expect(result.sourceClasses).toBe(0);
       expect(result.svgSize).toEqual([480, 293]); expect(result.fonts.every(value => Math.abs(parseFloat(value) - 13) < .02), JSON.stringify(result.fonts)).toBe(true);
       expect(result.colors.every(value => value.replace(/\s/g, '') === 'rgb(12,34,56)'), JSON.stringify(result.colors)).toBe(true);
-      expect(result.errors).toEqual(['ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'format rejected', 'InvalidOperation', 'InvalidOperation', 'InvalidOperation', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded']);
+      expect(result.errors).toEqual(['ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'format rejected', 'InvalidOperation', 'InvalidOperation', 'InvalidOperation', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'accepted']);
       expect(result.negativePies).toHaveLength(result.kind === 'pie' ? 6 : 0);
       for (const pie of result.negativePies) {
         expect(pie.geometry).toEqual(pie.absolute); expect(pie.labels).toEqual(pie.values.filter(value => value !== null && value !== 0));
@@ -245,6 +246,21 @@ for (const rtl of [false, true]) test(`native picture fills keep page orientatio
 });
 test.beforeEach(async ({ page }) => { await page.goto('/'); await page.addScriptTag({ content: code }); });
 
+test('finite out-of-axis segments retain intersections, blank gaps and clipped marker ink without unbounded coordinates',async({page})=>{
+  const snapshot=inputs.find(input=>input.name==='07-three-charts')!.snapshot,result=await page.evaluate(snapshot=>window.workbookChartHost.measureChartClipping(snapshot),snapshot);
+  expect(result).toMatchObject({unchanged:true,cleaned:true});expect(result.results).toHaveLength(11);
+  for(const item of result.results){
+    expect(item.nodes).toBe(item.actual);expect(item.invalid).toBe(false);expect(item.escaped).toBe(0);expect(item.preserved).toBe(true);
+    if(item.index===0||item.index===8)expect(item.errors).toEqual(['ResourceLimitExceeded','ResourceLimitExceeded']);
+    if([2,4].includes(item.index)){expect(item.path).toBe('');expect(item.painted).toBe(0);}else if(item.index<8||item.index===10)expect(item.painted).toBeGreaterThan(50);
+    if(item.index<2){expect(item.coordinates.length).toBeGreaterThan(1);for(const point of item.coordinates){expect(point.x).toBeCloseTo(item.plot.x+item.plot.width/2,4);expect(point.y).toBeGreaterThanOrEqual(item.plot.y-3);expect(point.y).toBeLessThanOrEqual(item.plot.y+item.plot.height+3);}}
+    if(item.index===10)expect(item.markers).toBe(3);
+    if(item.gradientPixels.length)for(const [index,pixel]of item.gradientPixels.entries()){
+      const red=(item.index===8?index===0:index===1)?191:64;expect(Math.abs(pixel[0]!-red)).toBeLessThan(6);expect(pixel[1]).toBe(0);expect(Math.abs(pixel[2]!-(255-red))).toBeLessThan(6);expect(pixel[3]).toBe(255);
+    }
+  }
+});
+
 test('native label limits, signed white negative columns and pie leader lines use measured current-source geometry',async({page})=>{
   for(const suffix of ['', '-producer']){
     const model=openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-chart-labels'+suffix+'.xlsx'),{documentId:'native-labels'}),{kind:'workbook'}),snapshot=model.snapshot();
@@ -257,6 +273,7 @@ test('native label limits, signed white negative columns and pie leader lines us
       expect(item.nodes).toBe(item.actual);expect(item.invalid).toBe(false);
       for(const label of item.labels){expect(label.x).toBeGreaterThanOrEqual(-.01);expect(label.y).toBeGreaterThanOrEqual(-.01);expect(label.x+label.width).toBeLessThanOrEqual(480.01);expect(label.y+label.height).toBeLessThanOrEqual(300.01);}
       if(!suffix&&index<6)expect(item.labels.map(label=>label.text)).toEqual(index%3===2?['-2','1','6']:['1']);
+      if(!suffix&&index===5){expect(item.labels[0]!.y+item.labels[0]!.height/2).toBeGreaterThan(item.plot.y+item.plot.height);expect(item.labels[2]!.y+item.labels[2]!.height/2).toBeLessThan(item.plot.y);}
       if(index===8||index===9){
         expect(item.values[0]).toBe(-2);expect(item.bars[0]!.fill).toBe(suffix ? 'rgba(68,114,196,1)' : '#ffffff');
         expect(item.negativePixel).toEqual(suffix?[68,114,196,255]:[255,255,255,255]);
@@ -276,6 +293,7 @@ test('chart text spacing, explicit axis alignment and wrapped legends use final 
   expect(result).toMatchObject({unchanged:true,cleaned:true,overrideFill:'rgba(68,114,196,1)'});
   for(const item of result.results){expect(item.size).toBe('9');expect(Number(item.spacing)).toBeCloseTo(1,5);expect(item.lineOffsets).toEqual([-7.5,15]);expect(item.anchors).toEqual(Array(3).fill(item.alignment==='left'?'start':'end'));if(item.alignment==='left')expect(item.skipped).toBeGreaterThan(0);else expect(item.skipped).toBe(0);}
   expect(result.legend.rect.height).toBeGreaterThan(28);
+  expect(result.largeMarker.height).toBe(72);expect(result.largeMarker.rect.height).toBeGreaterThanOrEqual(72);expect(result.largeMarker.nodes).toBe(result.largeMarker.actual);
   for(const box of result.legend.groups){expect(box.x).toBeGreaterThanOrEqual(result.legend.rect.x);expect(box.y).toBeGreaterThanOrEqual(result.legend.rect.y);expect(box.x+box.width).toBeLessThanOrEqual(result.legend.rect.x+result.legend.rect.width+.01);expect(box.y+box.height).toBeLessThanOrEqual(result.legend.rect.y+result.legend.rect.height+.01);}
 });
 
@@ -300,10 +318,10 @@ test('independent native and Calc finite chart intervals compose current values 
     const formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem });
     try {
       const bindings = bindWorkbookChartData(snapshot, response, formatter), result = await page.evaluate(({ snapshot, bindings }) => window.workbookChartHost.measureNativeFiniteCharts(snapshot, bindings), { snapshot, bindings });
-      expect(result.unchanged).toBe(true); expect(result.results).toHaveLength(10);
+      expect(result.unchanged).toBe(true); expect(result.results).toHaveLength(14);
       for (const [index, item] of result.results.entries()) {
-        expect(item.nodes).toBe(item.actual); expect(item.invalid).toBe(false); expect(item.points).toBe(3);
-        expect(item.values).toEqual(index < 8 ? [-9e307, 0, 9e307] : [0, Number.MIN_VALUE, Number.MIN_VALUE * 2]);
+        expect(item.nodes).toBe(item.actual); expect(item.invalid).toBe(false); expect(item.points).toBe(index===10||index===11?1:3);
+        expect(item.values).toEqual(index < 8 ? [-9e307, 0, 9e307] : index<10 ? [0, Number.MIN_VALUE, Number.MIN_VALUE * 2] : [-9e307,.5,9e307]);
       }
     } finally { formatter.dispose(); }
   }

@@ -32,7 +32,9 @@ export function drawingGradientLine(bounds: DrawingGradientBounds, angleDegrees:
     if (!Object.values(result).every(Number.isFinite)) throw new DocumentError("ResourceLimitExceeded", "A fixed gradient exceeds finite coordinate geometry.");
     return Object.freeze(result);
   }
-  const angle = (angleDegrees % 360) * Math.PI / 180, cosine = Math.cos(angle), sine = Math.sin(angle), scale = Math.max(width, height, 1);
+  const degrees = angleDegrees % 360, angle = degrees * Math.PI / 180;
+  const cosine = degrees % 90 === 0 ? degrees % 180 === 0 ? Math.sign(Math.cos(angle)) : 0 : Math.cos(angle);
+  const sine = degrees % 90 === 0 ? degrees % 180 === 0 ? 0 : Math.sign(Math.sin(angle)) : Math.sin(angle), scale = Math.max(width, height, 1);
   let nx = cosine * (scaled ? width / scale : 1), ny = sine * (scaled ? height / scale : 1);
   let length = Math.hypot(nx, ny);
   if (!length) { nx = cosine; ny = sine; length = 1; }

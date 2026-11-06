@@ -387,7 +387,7 @@ export async function measureWorkbookChartPositions(snapshot: WorkbookSnapshot) 
     const second = { ...series, seriesId: 'second-series' };
     const masked = createWorkbookChartView(source, { ...chart, series: [series, second], legend: 'right', seriesStyles: [], showLabels: false },
       { ...compact, series: [{ ...compact.series[0]!, hidden: true }, { ...compact.series[0]!, seriesId: second.seriesId }] }, 360, 220, 'masked-series', options);
-    const maskedColors = [...masked.element.querySelectorAll('[data-sdk-chart-line],svg > line')].filter(node => node.localName === 'path' || node.getAttribute('x2') !== node.getAttribute('x1') && Number(node.getAttribute('x2')) - Number(node.getAttribute('x1')) === 22).map(node => node.getAttribute('stroke'));
+    const maskedColors = [...masked.element.querySelectorAll('[data-sdk-chart-line],[data-sdk-chart-legend-entry] > line')].map(node => node.getAttribute('stroke'));
     const errors: string[] = [];
     for (const data of [{ ...compact, sourceIndexes: [2, 2] }, { ...compact, sourceIndexes: [0] }, { ...compact, series: [{ ...compact.series[0]!, missing: ['gap' as const, undefined] }] }]) {
       try { createWorkbookChartView(source, chart, data, 360, 220, 'invalid', options); errors.push('accepted'); } catch (error) { errors.push((error as { code: string }).code); }

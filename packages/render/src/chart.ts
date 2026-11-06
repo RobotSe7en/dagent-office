@@ -8,6 +8,7 @@ import { appendChartMarker } from "./chart-marker.js";
 import { chartAxisTicks, chartCategoryAxis, chartAxisPlacement, chartValueScale, chartValueFraction } from "./chart-axis.js";
 import { officeFontSegments } from "./font-scripts.js";
 import type { OfficeFontRole } from "./font-scripts.js";
+import { chartStrokeOutset, clipChartValueSegment, MAX_CHART_PAINT_EXTENT } from "./chart-clipping.js";
 
 /** Derived plot values. The owning format adapter supplies its authoritative
  * source binding, visibility, coercion and explicit number-display policy. */
@@ -155,18 +156,21 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     if (negativeColumn && options.negativeColumns === "white" && invert === "true" && property(s, "--office-fill-kind") !== "none") return "#ffffff";
     return svgFill(document, s, svg, serial + "-paint-" + ++paintSerial, bounds, "--office-fill", palette[(varyColors ? sourceIndex(index) : seriesIndexes.get(seriesId)!) % palette.length]!, account, options.orientation);
   };
-  const marker = (seriesId: string, index: number, x: number, y: number, role: "point" | "legend"): void => {
+  const marker = (seriesId: string, index: number, x: number, y: number | undefined, role: "point" | "legend"): void => {
     const definition = seriesDefinitions.get(seriesId), override = index < 0 ? undefined : pointDefinitions.get(pointKey(seriesId, sourceIndex(index)));
     const requested = override?.marker ?? definition?.marker ?? "none", size = override?.markerSize ?? definition?.markerSize ?? 5;
     const symbol = requested === "auto" ? automaticMarkers[seriesIndexes.get(seriesId)! % automaticMarkers.length]! : requested;
     if (symbol === "none") return;
+    if (!Number.isFinite(size) || size <= 0 || size > MAX_CHART_PAINT_EXTENT) throw new DocumentError("ResourceLimitExceeded", "A chart marker exceeds its finite coordinate budget.");
     const point = index < 0 ? seriesStyle.get(seriesId)! : pointStyle(seriesId, index), position = Math.max(0, index);
-    const bounds = { x: x - size / 2, y: y - size / 2, width: size, height: size };
     const automatic = palette[(varyColors ? sourceIndex(position) : seriesIndexes.get(seriesId)!) % palette.length]!;
+    const stroke = strokeAttributes(document, point, "--office-marker-line", automatic), outset = chartStrokeOutset(stroke);
+    if (y === undefined || role === "point" && (y + size / 2 + outset < top || y - size / 2 - outset > bottom)) return;
+    const bounds = { x: x - size / 2, y: y - size / 2, width: size, height: size };
     const color = property(point, "--office-marker-fill-kind") || property(point, "--office-marker-fill-color")
       ? svgFill(document, point, svg, serial + "-marker-" + ++paintSerial, bounds, "--office-marker-fill", automatic, account, options.orientation)
       : fill(seriesId, position, point, bounds);
-    const group = appendChartMarker(role === "point" ? plotLayer : svg, symbol, size, x, y, color, strokeAttributes(document, point, "--office-marker-line", automatic), svgElement)!;
+    const group = appendChartMarker(role === "point" ? plotLayer : svg, symbol, size, x, y, color, stroke, svgElement)!;
     group.dataset.sdkChartMarkerRole = role; group.dataset.seriesId = seriesId;
     if (requested === "auto") group.dataset.sdkChartMarkerAuto = "true";
     if (index >= 0) group.dataset.sdkChartSourceIndex = String(sourceIndex(index));
@@ -184,7 +188,8 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     const position = property(s, "--office-label-position", chart.kind === "pie" ? "ctr" : "outEnd");
     let anchor = "middle";
     if (chart.kind === "column" && baseline !== undefined) {
-      const direction = Math.sign(baseline - y) || 1;
+      const origin = Math.max(scale.minimum, Math.min(scale.maximum, 0));
+      const direction = (value < origin ? -1 : 1) * (chart.reverseValues ? -1 : 1);
       y = position === "ctr" ? (y + baseline) / 2 : position === "inBase" ? baseline - direction * 8 : position === "inEnd" ? y + direction * 8 : y - direction * 8;
     } else if (chart.kind === "line") {
       if (position === "l" || position === "r") { x += position === "l" ? -8 : 8; anchor = position === "l" ? "end" : "start"; }
@@ -276,35 +281,55 @@ export function renderBasicChart(node: HTMLElement, chart: DeepReadonly<ChartApp
     plotLayer = svgElement(document, "g", { "clip-path": `url(#${serial}-plot-clip)`, "data-sdk-chart-plot": "" }); svg.append(plotLayer);
     data.series.forEach((series, seriesIndex) => {
       const s = seriesStyle.get(series.seriesId)!, segments: string[] = [];
+      const lineStroke = strokeAttributes(document, s, "--office-line", chart.kind === "line" ? palette[seriesIndexes.get(series.seriesId)! % palette.length]! : "none"), lineOutset = chart.kind === "line" ? chartStrokeOutset(lineStroke) + 1 : 0;
       const overlap = (chart.overlap ?? 0) / 100, slots = data.series.length - (data.series.length - 1) * overlap, bar = group / (slots + (chart.gapWidth ?? 150) / 100), total = slots * bar;
       const beforeSeries = plotLayer.lastChild;
-      let connected = false;
+      let previous: { x: number; value: number; y: number | undefined } | undefined, pen: { x: number; y: number } | undefined;
       series.values.forEach((raw, index) => {
-        if (raw === null && series.missing?.[index]) { if (series.missing[index] === "gap") connected = false; return; }
+        if (raw === null && series.missing?.[index]) { if (series.missing[index] === "gap") { previous = undefined; pen = undefined; } return; }
         const value = raw ?? (chart.blankAs === "zero" ? 0 : null);
-        if (value === null) { if (chart.blankAs !== "span") connected = false; return; }
-        const px = x(index), py = y(value), point = pointStyle(series.seriesId, index);
+        if (value === null) { if (chart.blankAs !== "span") { previous = undefined; pen = undefined; } return; }
+        const px = x(index), fraction = chartValueFraction(value, minimum, maximum), position = top + (chart.reverseValues ? fraction : 1 - fraction) * h;
+        const py = Number.isFinite(position) && position >= top - MAX_CHART_PAINT_EXTENT && position <= bottom + MAX_CHART_PAINT_EXTENT ? position : undefined, point = pointStyle(series.seriesId, index);
         if (chart.kind === "column") {
-          const bounds = { x: px - total / 2 + seriesIndex * bar * (1 - overlap), y: Math.min(py, baseline), width: bar, height: Math.abs(py - baseline) };
-          plotLayer.append(svgElement(document, "rect", { ...bounds, "data-sdk-chart-point": "column", fill: fill(series.seriesId, index, point, bounds, value < 0), ...strokeAttributes(document, point) }));
+          const stroke = strokeAttributes(document, point), outset = chartStrokeOutset(stroke) + 1;
+          if (py === undefined && property(point, "--office-fill-kind") === "linear" && !(value < 0 && options.negativeColumns === "white" && property(point, "--office-invert-negative", "false") === "true")) {
+            const angle = numeric(point, "--office-fill-angle", 0), fixed = property(point, "--office-fill-rotate-with-shape", "true") === "false";
+            if (angle % 180 !== 0 || fixed && (options.orientation?.rotationDegrees ?? 0) % 180 !== 0) throw new DocumentError("ResourceLimitExceeded", "A chart gradient exceeds its finite original fill-coordinate budget.");
+          }
+          const outsideBelow = (fraction < 0) !== Boolean(chart.reverseValues), bounded = py ?? (outsideBelow ? bottom + outset : top - outset);
+          const bounds = { x: px - total / 2 + seriesIndex * bar * (1 - overlap), y: Math.min(bounded, baseline), width: bar, height: Math.abs(bounded - baseline) };
+          plotLayer.append(svgElement(document, "rect", { ...bounds, "data-sdk-chart-point": "column", fill: fill(series.seriesId, index, point, bounds, value < 0), ...stroke }));
         }
         else {
-          segments.push((connected ? "L" : "M") + px + " " + py); connected = true;
-          marker(series.seriesId, index, px, py, "point");
+          if (previous) {
+            const segment = previous.y === undefined || py === undefined ? clipChartValueSegment(previous, { x: px, value }, minimum, maximum, -lineOutset / h, 1 + lineOutset / h) : undefined;
+            const first = segment ? { x: segment[0].x, y: top + (chart.reverseValues ? segment[0].fraction : 1 - segment[0].fraction) * h } : previous.y === undefined || py === undefined ? undefined : { x: previous.x, y: previous.y };
+            const last = segment ? { x: segment[1].x, y: top + (chart.reverseValues ? segment[1].fraction : 1 - segment[1].fraction) * h } : previous.y === undefined || py === undefined ? undefined : { x: px, y: py };
+            if (first && last) { if (!pen || pen.x !== first.x || pen.y !== first.y) segments.push(`M${first.x} ${first.y}`); segments.push(`L${last.x} ${last.y}`); pen = last; } else pen = undefined;
+          } else if (py !== undefined) { segments.push(`M${px} ${py}`); pen = { x: px, y: py }; }
+          previous = { x: px, value, y: py };
+          marker(series.seriesId, index, px, Number.isFinite(position) ? position : undefined, "point");
         }
-        label(series, index, value, chart.kind === "column" ? px - total / 2 + seriesIndex * bar * (1 - overlap) + bar / 2 : px, py, undefined, baseline);
+        if (py !== undefined || options.showLabelsOverMaximum === true) label(series, index, value, chart.kind === "column" ? px - total / 2 + seriesIndex * bar * (1 - overlap) + bar / 2 : px, py ?? y(Math.max(minimum, Math.min(maximum, value))), undefined, baseline);
       });
-      if (chart.kind === "line") plotLayer.insertBefore(svgElement(document, "path", { d: segments.join(" "), "data-sdk-chart-line": "", fill: "none", ...strokeAttributes(document, s, "--office-line", palette[seriesIndexes.get(series.seriesId)! % palette.length]!) }), beforeSeries ? beforeSeries.nextSibling : plotLayer.firstChild);
+      if (chart.kind === "line") plotLayer.insertBefore(svgElement(document, "path", { d: segments.join(" "), "data-sdk-chart-line": "", fill: "none", ...lineStroke }), beforeSeries ? beforeSeries.nextSibling : plotLayer.firstChild);
     });
   }
   if (chart.legend !== "none") {
     const horizontal = chart.legend === "top" || chart.legend === "bottom", slot = 18;
     const context = document.createElement("canvas").getContext("2d")!; context.font = legendStyle.font || legendStyle.fontSize + " " + legendStyle.fontFamily;
-    const keyWidth = chart.kind === "line" ? 22 : 7, widths = entries.map(entry => context.measureText(entry.name).width * 0.75 + keyWidth + 8), total = widths.reduce((sum, n) => sum + n, 0);
+    const keys = entries.map(entry => {
+      if (chart.kind !== "line") return 7;
+      const series = seriesDefinitions.get(entry.series.seriesId), point = entry.index < 0 ? undefined : pointDefinitions.get(pointKey(entry.series.seriesId, sourceIndex(entry.index)));
+      return Math.max(22, (point?.marker ?? series?.marker ?? "none") === "none" ? 0 : point?.markerSize ?? series?.markerSize ?? 5);
+    });
+    const widths = entries.map((entry, index) => context.measureText(entry.name).width * 0.75 + keys[index]! + 8), total = widths.reduce((sum, n) => sum + n, 0);
     const legend = options.layout?.legend;
     let cursor = legend ? legend.x + (legend.width - total) / 2 : left + (w - total) / 2;
     entries.forEach((entry, index) => {
       const previous = svg.lastChild;
+      const keyWidth = keys[index]!;
       const x = horizontal ? cursor : legend ? legend.x + 8 : chart.legend === "left" ? 12 : right + 12; cursor += widths[index]!;
       const y = horizontal ? legend ? legend.y + legend.height / 2 : chart.legend === "top" ? top - 14 : height - 14
         : (legend ? legend.y + legend.height / 2 : top + h / 2) + (index - (entries.length - 1) / 2) * slot;

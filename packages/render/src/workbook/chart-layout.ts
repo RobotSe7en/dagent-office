@@ -58,8 +58,14 @@ export function layoutWorkbookChart(scope: HTMLElement, source: HTMLElement, cha
         return textSize(numeric === null || numeric === undefined || linked(categoryStyle, "axis") ? name : format(numeric, explicit(categoryStyle, "axis"), categoryStyle, widthPt / Math.max(1, binding.data.categories.length)), categoryStyle);
       });
       const visible = binding.data.series.filter(series => !series.hidden), vary = (chart.varyColors ?? pie) && chart.series.length === 1;
-      const names = pie || vary && visible.length === 1 ? binding.data.categories : visible.map(series => series.name);
-      const legendEntries = chart.legend === "none" ? [] : names.map(name => { const text = textSize(name, legendStyle); return { width: text.width + (chart.kind === "line" ? 22 : 7) + 11, height: Math.max(7, text.height) }; });
+      const items = pie || vary && visible.length === 1 ? binding.data.categories.map((name, index) => ({ name, series: visible[0], index })) : visible.map(series => ({ name: series.name, series, index: -1 }));
+      const definitions = new Map(chart.seriesStyles?.map(series => [series.seriesId, series])), points = new Map(chart.pointStyles?.map(point => [JSON.stringify([point.seriesId, point.index]), point]));
+      const legendEntries = chart.legend === "none" ? [] : items.map(item => {
+        const text = textSize(item.name, legendStyle), series = item.series ? definitions.get(item.series.seriesId) : undefined;
+        const point = item.series && item.index >= 0 ? points.get(JSON.stringify([item.series.seriesId, binding.data.sourceIndexes?.[item.index] ?? item.index])) : undefined;
+        const marker = chart.kind === "line" && (point?.marker ?? series?.marker ?? "none") !== "none" ? point?.markerSize ?? series?.markerSize ?? 5 : 0;
+        return { width: text.width + (chart.kind === "line" ? Math.max(22, marker) : 7) + 11, height: Math.max(7, marker, text.height) };
+      });
       return { ...(pie ? { categoryTop: false, valueRight: false } : chartAxisPlacement(chart, categoryStyle, valueStyle, scale.minimum, scale.maximum, Math.max(1, binding.data.categories.length))),
         valueBand: Math.min(widthPt * .3, Math.max(28, ...valueLabels.map(label => label.width + 12))), categoryBand: Math.max(26, ...categoryLabels.map(label => label.height / 2 + 10 + 10 * Number(property(categoryStyle, "--office-axis-label-offset", "100")) / 100)), legendEntries };
 

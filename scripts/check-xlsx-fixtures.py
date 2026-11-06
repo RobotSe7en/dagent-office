@@ -68,6 +68,17 @@ with check.schemas() as standards:
     # sources too. Audit them with the same unmodified official schemas and OPC
     # relationship checks instead of limiting CI to the example catalogue.
     for path in sorted((ROOT / "packages/office/tests/fixtures").glob("*.xlsx")):
+        if path.name == "xlsx-chart-labels-producer.xlsx":
+            # The unchanged producer has four recorded XSD child-order errors.
+            # Assert those exact failures and audit the remaining schema/OPC
+            # structure with the focused observer; never count it as conformant.
+            labels = module("check-xlsx-chart-labels")
+            with TemporaryDirectory(prefix="dagent-xlsx-invalid-order-") as directory:
+                report = labels.audit(path.read_bytes(), Path(directory) / path.name, standards, True)
+            recorded = json.loads((ROOT / "docs/evidence/xlsx-chart-labels.json").read_text())["schemas"]["producer"]
+            assert report == recorded and len(report["invalidChartParts"]) == 4, (path.name, report)
+            print(path.name, "four expected original XSD errors; remaining structure/OPC passed")
+            continue
         roots, relations = check.audit(path, standards)
         print(path.name, len(roots), "XML parts; focused native structure passed")
 

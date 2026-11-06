@@ -55,6 +55,10 @@ export async function measureControlledChartLabels(snapshot: WorkbookSnapshot, b
     const names=['Northern region quarterly\nActual delivery','Southern region quarterly\nActual delivery','Eastern region quarterly\nActual delivery'];
     const legend=layoutWorkbookChart(surface.view,projection.get(pie.nodeId)!,{...pie,showLabels:false,legend:'bottom',legendCssClass:'measured-label'},{...old,data:{...old.data,categories:names}},360,260,'wrapped-legend',formatter);surface.view.append(legend.element);
     const groups=[...legend.element.querySelectorAll<SVGGElement>('[data-sdk-chart-legend-entry]')].map(node=>{const b=node.getBBox(),m=node.transform.baseVal.consolidate()!.matrix;return{x:b.x+m.e,y:b.y+m.f,width:b.width,height:b.height};});
-    const result={results,overrideFill,legend:{rect:legend.layout.legend!,groups},unchanged:surface.source.innerHTML===before,cleaned:!surface.source.querySelector('[data-office-view=workbook-chart-label-measurement]')};legend.element.remove();return result;
+    legend.element.remove();
+    const line=charts[0]!,lineBinding=bindings.find(binding=>binding.chartId===line.chartId)!;if(lineBinding.kind!=='available')throw Error('No line source');
+    const large=layoutWorkbookChart(surface.view,projection.get(line.nodeId)!,{...line,showLabels:false,legend:'right',seriesStyles:line.series.map(series=>({seriesId:series.seriesId,cssClass:line.seriesStyles![0]!.cssClass,marker:'circle',markerSize:72}))},lineBinding,480,300,'large-marker',formatter);surface.view.append(large.element);
+    const marker=large.element.querySelector<SVGGElement>('[data-sdk-chart-marker-role=legend]')!.getBBox(),walker=surface.document.createTreeWalker(large.element,0xffff_ffff);let actual=1;while(walker.nextNode())actual++;
+    const result={results,overrideFill,largeMarker:{height:marker.height,rect:large.layout.legend!,nodes:large.nodes,actual},legend:{rect:legend.layout.legend!,groups},unchanged:surface.source.innerHTML===before,cleaned:!surface.source.querySelector('[data-office-view=workbook-chart-label-measurement]')};large.element.remove();return result;
   }finally{projection.dispose();sources.dispose();formatter.dispose();surface.dispose();container.remove();}
 }

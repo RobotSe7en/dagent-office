@@ -26,6 +26,7 @@ describe('DrawingML physical linear-gradient geometry', () => {
     }
   });
   it('handles degenerate regions without creating nonfinite SVG coordinates and rejects invalid extents', () => {
+    expect(drawingGradientLine({ x: 0, y: 0, width: 1, height: 1e300 }, 180, true)).toEqual({ x1: 1, y1: 5e299, x2: 0, y2: 5e299 });
     expect(drawingGradientLine({ x: 2, y: 3, width: 0, height: 0 }, 0, true)).toEqual({ x1: 2, y1: 3, x2: 2, y2: 3 });
     for (const width of [-1, NaN, Infinity]) expect(() => drawingGradientLine({ x: 0, y: 0, width, height: 1 }, 0, true)).toThrowError(expect.objectContaining({ code: 'InvalidOperation' }));
     expect(() => drawingGradientLine({ x: Number.MAX_VALUE, y: 0, width: Number.MAX_VALUE, height: 1 }, 0, true)).toThrowError(expect.objectContaining({ code: 'ResourceLimitExceeded' }));

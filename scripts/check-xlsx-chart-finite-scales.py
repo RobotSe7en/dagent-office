@@ -24,7 +24,8 @@ FIXTURES = ROOT / 'packages/office/tests/fixtures'
 
 def inputs():
     return ([dict(kind=kind, reverse=reverse, automatic=automatic, values=[-9e307, 0, 9e307]) for kind in ['line', 'column'] for reverse in [False, True] for automatic in [False, True]]
-            + [dict(kind=kind, reverse=False, automatic=True, values=[0, 5e-324, 1e-323]) for kind in ['line', 'column']])
+            + [dict(kind=kind, reverse=False, automatic=True, values=[0, 5e-324, 1e-323]) for kind in ['line', 'column']]
+            + [dict(kind=kind, reverse=reverse, automatic=False, outside=True, values=[-9e307, .5, 9e307]) for kind in ['line', 'column'] for reverse in [False, True]])
 
 
 def generate(cases):
@@ -38,7 +39,7 @@ def generate(cases):
         for tag in ['majorUnit', 'minorUnit']:
             for old in axis.findall(C + tag): axis.remove(old)
         if not case['automatic']:
-            ET.SubElement(scaling, C + 'max', {'val': '9e307'}); ET.SubElement(scaling, C + 'min', {'val': '-9e307'}); ET.SubElement(axis, C + 'majorUnit', {'val': '3e307'})
+            ET.SubElement(scaling, C + 'max', {'val': '1' if case.get('outside') else '9e307'}); ET.SubElement(scaling, C + 'min', {'val': '0' if case.get('outside') else '-9e307'}); ET.SubElement(axis, C + 'majorUnit', {'val': '.25' if case.get('outside') else '3e307'})
         for cache in chart.findall('.//' + C + 'val/' + C + 'numRef/' + C + 'numCache'):
             for point, value in zip(cache.findall(C + 'pt'), case['values']): point.find(C + 'v').text = str(value)
         parts[path] = ET.tostring(chart, encoding='unicode')
