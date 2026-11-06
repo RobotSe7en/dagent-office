@@ -101,6 +101,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-writer libreoffice-impress libreoffice-calc python3-uno python3-lxml poppler-utils fonts-noto-cjk fonts-liberation2
       - run: node scripts/install-acceptance-office.mjs
+      - run: node scripts/install-acceptance-fonts.mjs
       - run: pnpm check:pptx-fixtures && pnpm check:pptx-reference
       - run: pnpm check:xlsx-fixtures && pnpm check:xlsx-reference
       - run: python3 scripts/check-xlsx-chart-formulas.py
@@ -156,3 +157,11 @@ jobs:
         with:
           name: acceptance-office-environment
           path: .cache/acceptance-office/environment.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: acceptance-font-environment
+          path: |
+            .cache/acceptance-fonts/environment.json
+            .cache/acceptance-fonts/fonts.conf
+            .cache/acceptance-fonts/licenses/

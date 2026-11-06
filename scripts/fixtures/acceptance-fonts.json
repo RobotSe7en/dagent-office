@@ -1,0 +1,55 @@
+{
+  "scope": "Explicit Linux development/CI acceptance setup only. No SDK package imports this manifest or downloads fonts.",
+  "packages": [
+    {
+      "name": "fonts-noto-cjk",
+      "version": "1:20240730+repack1-1",
+      "archive": "fonts-noto-cjk_20240730+repack1-1_all.deb",
+      "url": "https://deb.debian.org/debian/pool/main/f/fonts-noto-cjk/fonts-noto-cjk_20240730+repack1-1_all.deb",
+      "sha256": "f5dc28a754e17327d99f0a612134d92c8dd6187314ae967cb77f25df60860139",
+      "checksumSource": "https://packages.debian.org/trixie/all/fonts-noto-cjk/download",
+      "license": "SIL Open Font License 1.1",
+      "copyright": "usr/share/doc/fonts-noto-cjk/copyright",
+      "fonts": [
+        {
+          "path": "usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+          "pattern": "Noto Sans CJK SC:style=Regular",
+          "sha256": "b76b0433203017ca80401b2ee0dd69350349871c4b19d504c34dbdd80541690a"
+        },
+        {
+          "path": "usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+          "pattern": "Noto Sans CJK SC:style=Bold",
+          "sha256": "faa5f3656a78b2e2d450d27fe8382c778bc2b6bb5ea29c986664a6a435056ceb"
+        },
+        {
+          "path": "usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc",
+          "pattern": "Noto Serif CJK SC:style=Regular",
+          "sha256": "5d9c31a059600193c9d7968a998bde886ccdc77e934006ad243b41794c496a7d"
+        },
+        {
+          "path": "usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc",
+          "pattern": "Noto Serif CJK SC:style=Bold",
+          "sha256": "1505ee3b9c0890fae6302ee0e9c6fd74d690f4a55a6ace1d9944f3f6352d622d"
+        }
+      ]
+    },
+    {
+      "name": "fonts-noto-color-emoji",
+      "version": "2.048-1",
+      "archive": "fonts-noto-color-emoji_2.048-1_all.deb",
+      "url": "https://snapshot.debian.org/file/b116d0db16e7bd8321e41e84d09528d7152e2a12",
+      "sha256": "160e7a748bab8e732b87b2b921afd2aea6f2431c6613f031914d8d5453bf71fd",
+      "sha1": "b116d0db16e7bd8321e41e84d09528d7152e2a12",
+      "checksumSource": "https://snapshot.debian.org/mr/binary/fonts-noto-color-emoji/2.048-1/binfiles",
+      "license": "SIL Open Font License 1.1 (font), Apache 2.0 (non-font source)",
+      "copyright": "usr/share/doc/fonts-noto-color-emoji/copyright",
+      "fonts": [
+        {
+          "path": "usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",
+          "pattern": "Noto Color Emoji",
+          "sha256": "ede3ac600162ca750e2aba610285f06f30d8c0dd198bcec1d53cb6efe660306c"
+        }
+      ]
+    }
+  ]
+}

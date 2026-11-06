@@ -99,4 +99,6 @@ PPT 导出与独立闭环使用 `pnpm check:pptx-export` 和 `pnpm check:present
 
 Office CI 固定使用官方 LibreOffice 25.8.1.1 归档，`node scripts/install-acceptance-office.mjs` 校验官方 SHA-256 后仅解包到 `.cache/acceptance-office/`，不替换系统 Office。CI 将其 `bin` 加入当前任务 PATH，并保留版本、来源和摘要；本地 Ubuntu 24.04 x64 在装齐上述原生依赖后可用同一命令，再把该 `bin` 加入 PATH；其他系统可使用已验证的本机版本。归档随附的许可保留在解包目录，工具不会进入 SDK 发布包。
 
+Office CI 另显式运行 `node scripts/install-acceptance-fonts.mjs`，从固定 Debian 归档解出与参考相同的 Noto Sans／Serif CJK Regular/Bold 和 Color Emoji，仅保存到 `.cache/acceptance-fonts/`。归档及逐字体 SHA-256 都要通过，来源、版本与许可见[验收字体清单](../scripts/fixtures/acceptance-fonts.json)。生成的 Fontconfig 配置在当前作业内替换这些字体的解析，系统文件不变；本地使用时显式设置脚本输出的 `FONTCONFIG_FILE`。CI 会通过 `GITHUB_ENV` 传给后续步骤，日志／配置／许可保留在该缓存目录。此为开发验收设置，SDK 不下载字体。
+
 LibreOffice 24.2 在含未使用自定义布局的新建文稿重存中会生成重复原生对象 ID；此结果在隔离 Ubuntu 24.04 中复现，SDK 继续明确拒绝，不放宽重复身份校验。本轮外部打开、实际编辑和重存验收以固定的 25.8.1.1 为准，其他 Office 版本需单独验证。
