@@ -11,12 +11,15 @@ export function copyWorkbookTextStyle(original: HTMLElement, target: HTMLElement
   return computed;
 }
 
-export function decorateWorkbookText(computed: CSSStyleDeclaration, target: HTMLElement, account: (nodes: number) => void): HTMLElement {
+export function decorateWorkbookText(computed: CSSStyleDeclaration, target: HTMLElement, account: (nodes: number) => void, cellWideAccounting = true): HTMLElement {
   const underline = computed.getPropertyValue("--office-font-underline").trim() || "none", strike = computed.getPropertyValue("--office-font-strike").trim() || "false";
   if (!["none", "single", "double", "singleAccounting", "doubleAccounting"].includes(underline) || !["true", "false"].includes(strike)) throw new DocumentError("InvalidDocument", "A worksheet text decoration is invalid.");
-  if (underline.endsWith("Accounting")) throw new DocumentError("UnsupportedFeature", "Accounting underlines require worksheet line geometry.");
-  target.style.textDecorationLine = underline !== "none" ? "underline" : "none";
-  target.style.textDecorationStyle = underline === "double" ? "double" : "solid";
+  if (underline !== "none") target.dataset.officeNativeUnderline = underline;
+  // Comment stories have ordinary inline flow, without a worksheet cell box.
+  const accounting = cellWideAccounting && underline.endsWith("Accounting");
+  if (accounting) target.dataset.officeAccountingUnderline = underline;
+  target.style.textDecorationLine = underline !== "none" && !accounting ? "underline" : "none";
+  target.style.textDecorationStyle = underline.startsWith("double") ? "double" : "solid";
   target.style.textDecorationColor = "currentColor";
   if (strike === "true") {
     account(1); const inner = target.ownerDocument.createElement("span"); inner.style.textDecoration = "line-through solid currentColor"; target.append(inner); return inner;

@@ -253,13 +253,14 @@ async function main() {
         const failures: string[] = [];
         try { createWorkbookTextView(cell, 2); } catch (error) { failures.push((error as { code: string }).code); }
         copy.style.setProperty('--office-font-underline', 'doubleAccounting');
-        try { createWorkbookTextView({ ...cell, element: copy }); } catch (error) { failures.push((error as { code: string }).code); }
+        const accounting = createWorkbookTextView({ ...cell, element: copy });
+        const accountingTypes = [...accounting.element.querySelectorAll<HTMLElement>('[data-office-accounting-underline]')].map(node => node.dataset.officeAccountingUnderline!);
         copy.style.setProperty('--office-font-underline', 'unknown');
         try { createWorkbookTextView({ ...cell, element: copy }); } catch (error) { failures.push((error as { code: string }).code); }
         const a = decorated.projections[0]!.node.parentElement!, b = decorated.projections[2]!.node.parentElement!;
         return { rich: describe(rich), mixed: describe(mixed), decorated: describe(decorated), decoration: { strike: getComputedStyle(a).textDecorationLine, strikeStyle: getComputedStyle(a).textDecorationStyle,
           underline: getComputedStyle(a.parentElement!).textDecorationLine, underlineStyle: getComputedStyle(a.parentElement!).textDecorationStyle, plain: getComputedStyle(b).textDecorationLine },
-          text: decorated.element.textContent, failures, unchanged: original === cell.element.outerHTML,
+          text: decorated.element.textContent, accountingTypes, failures, unchanged: original === cell.element.outerHTML,
           frozen: Object.isFrozen(rich) && Object.isFrozen(rich.projections) && Object.isFrozen(rich.projections[0]) };
       } finally { copy.remove(); sources.dispose(); }
     },

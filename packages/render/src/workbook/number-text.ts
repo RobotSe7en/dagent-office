@@ -30,6 +30,9 @@ export function createWorkbookNumberText(source: WorkbookSourceCell, parts: read
   if (!view || !source.element.isConnected || !Number.isSafeInteger(maxNodes) || maxNodes < 1) throw new DocumentError("InvalidOperation", "Numeric text requires a connected source and a positive node budget.");
   const root = markViewNode(document.createElement("span")), style = copyWorkbookTextStyle(source.element, root);
   root.style.whiteSpace = "pre"; if (color) root.style.color = numberColor(document, style, color);
+  const underline = style.getPropertyValue("--office-font-underline").trim();
+  if (underline && underline !== "none") root.dataset.officeUnderlinedText = "true";
+  if (underline.endsWith("Accounting")) root.dataset.officeAccountingText = "true";
   let nodes = 1, units = 0;
   const account = (amount: number): void => { nodes += amount; if (nodes > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Numeric text exceeds its node budget."); };
   for (const part of parts) {

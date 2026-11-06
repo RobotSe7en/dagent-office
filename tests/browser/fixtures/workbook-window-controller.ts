@@ -134,7 +134,7 @@ export async function annotationWindowMeasurement(entries: readonly [string, num
   } finally { controller.dispose(); formatter.dispose(); surface.dispose(); container.remove(); }
 }
 
-export async function commentTextMeasurement(entries: readonly [string, number[]][], rich = false) {
+export async function commentTextMeasurement(entries: readonly [string, number[]][], rich: boolean | 'singleAccounting' | 'doubleAccounting' = false) {
   const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), encoder = new TextEncoder(), decoder = new TextDecoder();
   if (rich) {
     const manifest = JSON.parse(decoder.decode(files.get('manifest.json')!)) as { content: string; styles: string[] };
@@ -143,7 +143,7 @@ export async function commentTextMeasurement(entries: readonly [string, number[]
     story.append(document.createTextNode(' \n'));
     const paragraph = document.createElement('p'); paragraph.dataset.nodeId = 'review-comment-paragraph'; paragraph.style.whiteSpace = 'pre-wrap';
     const span = document.createElement('span'); span.dataset.nodeId = 'review-comment-run';
-    span.style.cssText = '--office-font-underline:double;--office-font-strike:true;--office-cell-foreground-color:#ff0000;--office-cell-foreground-tint:0;font-size:14pt';
+    span.style.cssText = '--office-font-underline:' + (typeof rich === 'string' ? rich : 'double') + ';--office-font-strike:true;--office-cell-foreground-color:#ff0000;--office-cell-foreground-tint:0;font-size:14pt';
     span.textContent = '混排😀禰󠄀';
     const line = document.createElement('br'); line.dataset.nodeId = 'review-comment-break';
     const tail = document.createElement('span'); tail.dataset.nodeId = 'review-comment-tail'; tail.style.cssText = '--office-font-underline:none;--office-font-strike:false'; tail.textContent = 'No underline';

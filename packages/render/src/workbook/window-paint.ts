@@ -72,7 +72,7 @@ export function paintWorkbookWindow(document: Document, frame: WorkbookWindowFra
       // still need their independent outer clip and complete local geometry.
       const sharedBox = !!text && !shape.topOffsetPt && !text.element.style.clipPath && textBounds.x === contentX && textBounds.y === contentRect.y
         && textBounds.width === contentRect.width && textBounds.height === contentRect.height;
-      account(1 + (text ? (sharedBox ? 0 : 1) + text.text.nodes : 0));
+      account(text ? text.nodes + (sharedBox ? 0 : 1) : 1);
       const clip = sharedBox ? text!.element : document.createElement("div"), key = projection.row * 16_384 + projection.column;
       clip.dataset.officeView = "workbook-cell"; clip.dataset.row = String(projection.row); clip.dataset.column = String(projection.column); clip.dataset.pane = projection.pane;
       if (accessible.has(key)) clip.setAttribute("aria-hidden", "true");
@@ -102,7 +102,7 @@ export function paintWorkbookWindow(document: Document, frame: WorkbookWindowFra
         }
       }
       if (!cell.text || !cell.textClip || !cell.textRect) continue;
-      account(2 + cell.text.text.nodes);
+      account(1 + cell.text.nodes);
       const clip = document.createElement("div"), bounds = cell.textClip, contentRect = cell.textRect;
       const clipX = rightToLeft ? frame.layout.widthPt - bounds.x - bounds.width : bounds.x, bodyX = rightToLeft ? frame.layout.widthPt - contentRect.x - contentRect.width : contentRect.x;
       clip.dataset.officeView = "workbook-text-overflow"; clip.dataset.row = String(cell.projection.row); clip.dataset.column = String(cell.projection.column); clip.dataset.pane = cell.projection.pane;

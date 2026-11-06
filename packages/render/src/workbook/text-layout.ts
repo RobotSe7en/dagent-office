@@ -15,6 +15,7 @@ import { workbookCellShape, workbookCellShapeOffset } from "./cell-shape.js";
 import type { WorkbookCellShape } from "./cell-shape.js";
 import { repeatWorkbookText } from "./text-repeat.js";
 import { distributeWorkbookTextLines } from "./text-lines.js";
+import { appendWorkbookAccountingUnderlines, workbookUnderlineGutter } from "./text-underline.js";
 
 export interface WorkbookTextLayoutInput {
   readonly source: WorkbookSourceCell;
@@ -28,6 +29,8 @@ export interface WorkbookTextLayoutInput {
 export interface WorkbookTextLayout {
   readonly element: HTMLElement;
   readonly text: WorkbookTextView;
+  /** Complete display, including cell-wide decoration nodes outside text. */
+  readonly nodes: number; readonly codeUnits: number;
   /** Unclipped height, including the vertical cell gutter, for row measurement. */
   readonly requiredHeightPt: number;
   readonly scale: number;
@@ -92,7 +95,7 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
         textAlign: alignment.stacked ? "center" : alignment.flow === "justify" || alignment.flow === "distributed" ? "justify" : alignment.horizontal,
         textAlignLast: alignment.justifyLastLine ? "justify" : "auto", textJustify: "inter-word",
         width: wrapped && !alignment.stacked ? `${available}px` : "max-content", height: "auto", transformOrigin: "0 0" });
-      element.append(text); root.append(element); return { input, textView, alignment, element, available, left, shape, naturalHeightPx: undefined as number | undefined };
+      element.append(text); root.append(element); return { input, textView, alignment, element, available, left, shape, textUnits: 0, accountingGutter: 0, naturalHeightPx: undefined as number | undefined };
     });
     scope.append(root);
     const fonts = resolvePreviewFontsInScope(document, root, "[data-office-text-style],[data-office-script]", probes);
@@ -113,22 +116,24 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
     }
     let units = 0;
     for (const item of prepared) {
+      item.accountingGutter = workbookUnderlineGutter(item.textView.element);
       if (item.alignment.flow === "fill" && (!item.alignment.wrap || item.input.valueType !== "text")) {
         const repeated = repeatWorkbookText(item.textView, item.available, maxNodes - nodes + item.textView.nodes);
         nodes += repeated.nodes - item.textView.nodes; item.textView = repeated;
       }
       if (item.alignment.verticalFlow) {
-        const spaced = distributeWorkbookTextLines(item.textView, Math.max(0, item.input.heightPt / .75 - 2), maxNodes - nodes + item.textView.nodes);
+        const spaced = distributeWorkbookTextLines(item.textView, Math.max(0, item.input.heightPt / .75 - 2 - item.accountingGutter), maxNodes - nodes + item.textView.nodes);
         nodes += spaced.text.nodes - item.textView.nodes; item.textView = spaced.text; item.naturalHeightPx = spaced.naturalHeight;
       }
-      units += item.textView.element.textContent?.length ?? 0;
+      item.textUnits = item.textView.element.textContent?.length ?? 0; units += item.textUnits;
       if (units > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Worksheet text exceeds its cumulative display-text budget.");
     }
     const dimensions = prepared.map(({ textView }) => {
       const measured = view.getComputedStyle(textView.element);
       return { width: Number.parseFloat(measured.width), height: Number.parseFloat(measured.height) };
     });
-    const cells = prepared.map(({ input, textView, alignment, element, available, left, shape, naturalHeightPx }, index): WorkbookTextLayout => {
+    let accountingProbes = 0, accountingKeyUnits = 0;
+    const cells = prepared.map(({ input, textView, alignment, element, available, left, shape, textUnits, accountingGutter, naturalHeightPx }, index): WorkbookTextLayout => {
       const text = textView.element, { width, height } = dimensions[index]!;
       if (![width, height].every(value => Number.isFinite(value) && value >= 0)) throw new DocumentError("UnsupportedFeature", "This browser cannot measure worksheet text geometry.");
       // This immutable display already has its measured line box. Leaving
@@ -139,8 +144,9 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
       if (text.style.width === "max-content") text.style.width = `${width}px`;
       text.style.height = `${height}px`;
       const angle = alignment.rotationDegrees * Math.PI / 180, cosine = Math.cos(angle), sine = Math.sin(angle);
-      const rotatedWidth = Math.abs(width * cosine) + Math.abs(height * sine), rotatedHeight = Math.abs(width * sine) + Math.abs(height * cosine);
-      const minimumX = Math.min(0, width * cosine, -height * sine, width * cosine - height * sine), minimumY = Math.min(0, width * sine, height * cosine, width * sine + height * cosine);
+      const decoratedHeight = height + accountingGutter;
+      const rotatedWidth = Math.abs(width * cosine) + Math.abs(decoratedHeight * sine), rotatedHeight = Math.abs(width * sine) + Math.abs(decoratedHeight * cosine);
+      const minimumX = Math.min(0, width * cosine, -decoratedHeight * sine, width * cosine - decoratedHeight * sine), minimumY = Math.min(0, width * sine, decoratedHeight * cosine, width * sine + decoratedHeight * cosine);
       const scale = alignment.shrink && !alignment.wrap && !alignment.stacked && !/[\r\n]/.test(text.textContent ?? "") && rotatedWidth > 0 ? Math.min(1, available / rotatedWidth) : 1;
       const extra = available - rotatedWidth * scale, x = left + (alignment.horizontal === "center" ? extra / 2 : alignment.horizontal === "right" ? extra : 0) - minimumX * scale;
       const remaining = input.heightPt / .75 - 2 - rotatedHeight * scale;
@@ -148,6 +154,9 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
       // Keep the one-pixel vertical text gutter on the slanted side of the
       // alignment center as well. It belongs to content, not to fill geometry.
       const offset = workbookCellShapeOffset(shape, (y + rotatedHeight * scale / 2 + Math.sign(shape.topOffsetPt)) * .75) / .75;
+      const decorations = appendWorkbookAccountingUnderlines(element, text, input.widthPt / .75, input.heightPt / .75, x + offset, y - minimumY * scale, angle, scale,
+        amount => { nodes += amount; if (nodes > maxNodes) throw new DocumentError("ResourceLimitExceeded", "Accounting underlines exceed the worksheet node budget."); },
+        keyUnits => { accountingKeyUnits += keyUnits; if (++accountingProbes > Math.min(100_000, maxNodes * 8) || accountingKeyUnits > 4 * 1024 * 1024) throw new DocumentError("ResourceLimitExceeded", "Accounting underline inspection exceeds its geometry budget."); });
       text.style.left = `${x + offset}px`; text.style.top = `${y - minimumY * scale}px`;
       if (shape.topOffsetPt) {
         // Slanted text may extend sideways, but stays inside the source row's
@@ -156,9 +165,12 @@ export function layoutWorkbookTexts(scope: HTMLElement, inputs: readonly Workboo
         element.style.clipPath = `inset(0 ${-Math.max(0, end - input.widthPt / .75)}px 0 ${Math.min(0, start)}px)`;
       }
       text.style.transform = alignment.rotationDegrees ? `rotate(${alignment.rotationDegrees}deg) scale(${scale})` : scale === 1 ? "none" : `scale(${scale})`;
-      const naturalRotatedHeight = Math.abs(width * sine) + Math.abs((naturalHeightPx ?? height) * cosine);
-      const ink = Object.freeze({ xPt: (x + offset + minimumX * scale) * .75, yPt: y * .75, widthPt: rotatedWidth * scale * .75, heightPt: rotatedHeight * scale * .75 });
-      return Object.freeze({ element, text: textView, requiredHeightPt: (naturalRotatedHeight * scale + 2) * .75, scale, shape, ink });
+      const naturalRotatedHeight = Math.abs(width * sine) + Math.abs(((naturalHeightPx ?? height) + accountingGutter) * cosine);
+      const inkX = Math.min(0, width * cosine, -height * sine, width * cosine - height * sine), inkY = Math.min(0, width * sine, height * cosine, width * sine + height * cosine);
+      const ink = Object.freeze({ xPt: (x + offset + inkX * scale) * .75, yPt: (y + (inkY - minimumY) * scale) * .75,
+        widthPt: (Math.abs(width * cosine) + Math.abs(height * sine)) * scale * .75, heightPt: (Math.abs(width * sine) + Math.abs(height * cosine)) * scale * .75 });
+      return Object.freeze({ element, text: textView, nodes: textView.nodes + 1 + decorations.nodes, codeUnits: textUnits + decorations.codeUnits,
+        requiredHeightPt: (naturalRotatedHeight * scale + 2) * .75, scale, shape, ink });
     });
     for (const cell of cells) cell.element.remove();
     complete = true;

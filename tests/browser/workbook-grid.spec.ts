@@ -55,7 +55,7 @@ interface GridHost {
   colorMeasurement(): { values: (string | undefined)[]; errors: string[]; fills: string[]; fillErrors: string[]; unchanged: boolean };
   sourceStyleMeasurement(): Promise<{ text: string | null; font: string; size: string; italic: string; background: string; bold: string; foreground: string; plain: string; blockRow?: string; row?: string; bound: boolean; before: string; disposed: boolean; noPartial: boolean; retained: number; rejected: string[] }>;
   textFontMeasurement(): Promise<{ runs: readonly WorkbookTextFontRun[]; rich: readonly WorkbookTextFontRun[]; withBreak: readonly WorkbookTextFontRun[]; limited: boolean; unchanged: boolean; frozen: boolean }>;
-  textViewMeasurement(): Promise<{ rich: TextRunView[]; mixed: TextRunView[]; decorated: TextRunView[]; decoration: { strike: string; strikeStyle: string; underline: string; underlineStyle: string; plain: string }; text: string | null; failures: string[]; unchanged: boolean; frozen: boolean }>;
+  textViewMeasurement(): Promise<{ rich: TextRunView[]; mixed: TextRunView[]; decorated: TextRunView[]; decoration: { strike: string; strikeStyle: string; underline: string; underlineStyle: string; plain: string }; text: string | null; accountingTypes: string[]; failures: string[]; unchanged: boolean; frozen: boolean }>;
   borderViewMeasurement(edges: readonly WorkbookBorderEdge[]): Promise<{ strokes: { from: number[]; to: number[]; width: number; dash: number[]; cap: string | null }[]; difference: number; maskDifference: number; splitDifference: number; splitMaskDifference: number; painted: number; doubleRows: number[]; failures: string[]; rasterImages: string[]; rasterSizes: number[][] }>;
   textDirectionMeasurement(): { values: string[]; explicit: string[]; wholeStringDirection: string; retainedText: string | null; failures: string[]; remaining: number; ownerDirection: string };
 }
@@ -341,7 +341,7 @@ test('rich text display preserves source offsets, local style and independent na
   const result = await page.evaluate(() => window.workbookGridHost.textViewMeasurement());
   expect(result).toMatchObject({ text: 'A\nB', unchanged: true, frozen: true,
     decoration: { strike: 'line-through', strikeStyle: 'solid', underline: 'underline', underlineStyle: 'double', plain: 'none' },
-    failures: ['ResourceLimitExceeded', 'UnsupportedFeature', 'InvalidDocument'] });
+    accountingTypes: ['doubleAccounting'], failures: ['ResourceLimitExceeded', 'InvalidDocument'] });
   expect(result.rich.map(run => [run.text, run.from, run.to, run.weight, run.color])).toEqual([['一万', 0, 2, '700', 'rgb(153, 51, 85)'], ['行', 2, 3, '400', 'rgb(0, 0, 0)']]);
   expect(result.rich[0]!.x + result.rich[0]!.width).toBeCloseTo(result.rich[1]!.x, 0);
   expect(result.mixed.map(run => [run.text, run.from, run.to])).toEqual([['合并', 0, 2], ['😀', 2, 4], ['禰', 4, 5], ['󠄀', 5, 7]]);
@@ -1030,4 +1030,85 @@ test('hidden columns use their stored widths for automatic row height while disp
   expect(report.largest).toBeLessThanOrEqual(4096); expect(report.errors).toEqual(['ResourceLimitExceeded', 'ResourceLimitExceeded', 'ResourceLimitExceeded', 'OperationCancelled']);
   const safety = await page.evaluate(entries => window.workbookGridHost.autoRowSourceSafety(entries, true), entries);
   expect(safety).toEqual({ errors: ['InvalidDocument', 'InvalidDocument', 'InvalidDocument', 'InvalidDocument', 'OperationCancelled'], retained: [0, 0, 0, 0, 0], executed: false, unchanged: true });
+});
+
+
+test('accounting underlines fill the cell while preserving font metrics, source text and complete decoration budgets', async ({ page }) => {
+  const base: TextLayoutCase = { text: 'Ab', type: 'text', family: 'Liberation Sans', sizePt: 11, widthPt: 120, heightPt: 60, horizontal: 'left', vertical: 'bottom', readingOrder: 'context', indent: 0, rightToLeft: false, inkOnly: true };
+  const variants: Partial<TextLayoutCase>[] = [{}, { horizontal: 'right' }, { horizontal: 'center' }, { horizontal: 'general', rightToLeft: true },
+    { wrap: true, widthPt: 50, text: 'Alpha beta gamma delta' }, { text: 'First\nSecond', vertical: 'top' },
+    { shrink: true, widthPt: 22, text: 'Long accounting text' }, { rotation: 45, heightPt: 100 }, { rotation: 135, heightPt: 100 },
+    { rotation: 90, heightPt: 130 }, { rotation: 255, heightPt: 130, text: 'ABC' }, { horizontal: 'fill', text: 'A' },
+    { vertical: 'distributed', text: 'First\nSecond', heightPt: 100 }, { text: 'A中禰󠄀', splitOffsets: [1, 2] }, { text: '😀', family: 'Noto Color Emoji' }, { text: '󠄀' }];
+  const cases: TextLayoutCase[] = ['singleAccounting', 'doubleAccounting'].flatMap(underline => variants.map(variant => ({ ...base, ...variant, underline: underline as 'singleAccounting' | 'doubleAccounting' })));
+  const report = await page.evaluate(cases => window.workbookGridHost.textLayoutMeasurement(cases), cases);
+  expect(report.unchanged).toBe(true); expect(report.retained).toBe(0); expect(report.atomic).toBe(true);
+  for (const [index, item] of report.measurements.entries()) {
+    if (cases[index]!.horizontal === 'fill') expect(item.text).toMatch(/^A+$/); else expect(item.text).toBe(cases[index]!.text); expect(item.visibleText).toBeDefined(); expect(item.materializedNodes).toBe(item.actualNodes); expect(item.codeUnits).toBe(item.actualCodeUnits);
+    expect(item.accounting.length).toBeGreaterThan(0); expect(item.accounting.every(line => line.style === (cases[index]!.underline === 'doubleAccounting' ? 'double' : 'solid') && line.text === '' && line.strokes === (cases[index]!.underline === 'doubleAccounting' ? 2 : 1))).toBe(true);
+  }
+  const gallery = page.locator('#workbook-text-layout-probe'), screenshot = await gallery.screenshot();
+  const bounds = await gallery.boundingBox(); expect(bounds).not.toBeNull();
+  const pixels = await page.evaluate(async ({ base64, cells, origin }) => {
+    const image = new Image(); image.src = 'data:image/png;base64,' + base64; await image.decode();
+    const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height; const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
+    const data = context.getImageData(0, 0, image.width, image.height).data;
+    return cells.map(cell => {
+      const rows: number[] = []; let painted = 0, escaped = 0, left = Infinity, right = -Infinity;
+      const fromX = Math.round(cell.x - origin.x), fromY = Math.round(cell.y - origin.y), width = Math.round(cell.width), height = Math.round(cell.height);
+      for (let y = -2; y < height + 2; y++) { let count = 0; for (let x = -2; x < width + 2; x++) {
+        const px = fromX + x, py = fromY + y; if (px < 0 || py < 0 || px >= image.width || py >= image.height) continue;
+        const at = (py * image.width + px) * 4;
+        if (data[at]! > 180 && data[at + 1]! < 240 && data[at + 2]! > 180) { painted++; if (x < 0 || x >= width || y < 0 || y >= height) escaped++; else { count++; left = Math.min(left, x); right = Math.max(right, x); } }
+      } if (count >= width - 2) rows.push(y); }
+      let groups = 0; rows.forEach((row, i) => { if (!i || row > rows[i - 1]! + 1) groups++; });
+      return { painted, escaped, left, right, rows, groups, width };
+    });
+  }, { base64: screenshot.toString('base64'), cells: report.measurements.map(item => item.cell), origin: bounds! });
+  for (const [index, ink] of pixels.entries()) {
+    expect(ink.painted, 'case ' + index).toBeGreaterThan(10); expect(ink.escaped, 'case ' + index).toBe(0);
+    if (![7, 8, 9, 10].includes(index % variants.length)) { expect(ink.left, 'case ' + index).toBeLessThanOrEqual(1); expect(ink.right, 'case ' + index).toBeGreaterThanOrEqual(ink.width - 2); }
+    // At very small shrink factors two strokes can occupy one raster row.
+    if ([0, 1, 2, 3, 6, 11].includes(index % variants.length) && report.measurements[index]!.scale >= .5) expect(ink.groups, 'case ' + index).toBe(index < variants.length ? 1 : 2);
+  }
+  for (const limits of [{ maxNodes: 5 }, { maxTextUnits: 1 }]) await expect(page.evaluate(({ item, limits }) => window.workbookGridHost.textLayoutMeasurement([item], limits), { item: cases[0]!, limits })).rejects.toThrow();
+});
+
+
+test('independent native accounting styles render from text and numeric cells in LTR and RTL windows including cached candidates', async ({ page }) => {
+  const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-cell-flow.xlsx'), { documentId: 'native-accounting-window' });
+  const entries = [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]);
+  const ids = [21, 22, 23, 24, 45, 46, 47, 48], viewport = { widthPt: 220, heightPt: 130, scrollLeftPt: 0, scrollTopPt: 0, overscanRows: 0, overscanColumns: 0 };
+  const report = await page.evaluate(({ entries, ids, viewport }) => window.workbookGridHost.windowLayoutMeasurement(entries, ids.map(id => ({ sheetId: 'sheet-' + id, viewport }))), { entries, ids, viewport });
+  expect(report.unchanged).toBe(true);
+  for (const [index, item] of report.results.entries()) {
+    const cell = item.cells.find(cell => cell.row === 1 && cell.column === 1)!;
+    expect(cell.text).toBe(index % 2 ? '12' : 'Ab'); expect(cell.accounting).toBeDefined();
+    expect(cell.accounting!.nodes).toBe(cell.accounting!.actualNodes); expect(cell.accounting!.codeUnits).toBe(cell.accounting!.actualCodeUnits);
+    expect(cell.accounting!.width).toBeCloseTo(cell.rect.width, 1);
+    expect(cell.accounting!.lines).toHaveLength(1);
+    expect(cell.accounting!.lines[0]!.style).toBe([21, 22, 45, 46].includes(ids[index]!) ? 'solid' : 'double');
+    expect(cell.accounting!.lines[0]!.width).toBeCloseTo(cell.rect.width, 1);
+    expect(item.retainedSources).toBe(0); expect(item.retainedMeasurements).toBe(0);
+  }
+  const cached = await page.evaluate(({ entries, viewport }) => window.workbookGridHost.windowLayoutMeasurement(entries, [22, 24, 22, 24].map(id => ({ sheetId: 'sheet-' + id, viewport })), true), { entries, viewport });
+  expect(cached.unchanged).toBe(true);
+  for (const item of cached.results) { const cell = item.cells.find(cell => cell.row === 1 && cell.column === 1)!; expect(cell.accounting!.nodes).toBe(cell.accounting!.actualNodes); expect(cell.text).toBe('12'); }
+  expect(cached.cacheSafety.every(result => result.rejected === 'InvalidDocument' && result.rejectedNumeric === 'InvalidDocument')).toBe(true);
+});
+
+
+test('native underline ink participates in automatic row height while Calc format losses remain separate source facts', async ({ page }) => {
+  const results = [];
+  for (const suffix of ['', '-producer']) {
+    const files = await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-accounting-underlines' + suffix + '.xlsx'), { documentId: 'accounting-auto' + suffix });
+    const result = await page.evaluate(entries => window.workbookGridHost.autoRowMeasurement(entries, Array.from({ length: 20 }, (_, index) => 'sheet-' + (index + 1))), [...files].map(([path, bytes]) => [path, [...bytes]] as [string, number[]]));
+    expect(result.unchanged).toBe(true); expect(result.retained).toBe(0);
+    const heights = result.results.map(item => item.heights[1]!);
+    expect(heights[8]).toBe(15); expect(heights[9]).toBe(15);
+    for (let index = 0; index < 4; index++) { expect(heights[index]).toBeGreaterThanOrEqual(15); expect(heights[index + 4]).toBeGreaterThan(heights[index]!); }
+    expect(heights[14]).toBe(15); expect(heights[19]).toBe(15);
+    results.push(heights);
+  }
+  expect(results[0]!.slice(0, 10)).toEqual(results[1]!.slice(0, 10));
 });

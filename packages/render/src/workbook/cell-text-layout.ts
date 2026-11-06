@@ -64,15 +64,15 @@ export function layoutWorkbookCellTexts(scope: HTMLElement, snapshot: WorkbookSn
     locations.set(input, { kind: "text", index: texts.length }); texts.push({ source, text, valueType: value.type, ...size });
   }
   const rich = layoutWorkbookTexts(scope, texts, options.normalSpaceWidthPx, maxNodes, maxTextUnits, probes);
-  textNodes = rich.cells.reduce((sum, cell) => sum + cell.text.nodes + 1, 0);
-  units = rich.cells.reduce((sum, cell) => sum + (cell.text.element.textContent?.length ?? 0), 0);
+  textNodes = rich.cells.reduce((sum, cell) => sum + cell.nodes, 0);
+  units = rich.cells.reduce((sum, cell) => sum + cell.codeUnits, 0);
   const formattedText = layoutWorkbookFormattedTexts(scope, formatted, formatter, options.normalSpaceWidthPx, remaining(), Math.max(1, maxTextUnits - units), probes);
-  textNodes += formattedText.cells.reduce((sum, cell) => sum + cell.text.nodes + 1, 0);
-  units += formattedText.cells.reduce((sum, cell) => sum + (cell.text.element.textContent?.length ?? 0), 0);
+  textNodes += formattedText.cells.reduce((sum, cell) => sum + cell.nodes, 0);
+  units += formattedText.cells.reduce((sum, cell) => sum + cell.codeUnits, 0);
   if (units > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Workbook window exceeds its cumulative displayed-text budget.");
   const numeric = layoutWorkbookNumbers(scope, numbers, formatter, options.normalSpaceWidthPx, remaining(), Math.max(1, maxTextUnits - units), probes);
-  textNodes += numeric.cells.reduce((sum, cell) => sum + cell.text.nodes + 1, 0);
-  units += numeric.cells.reduce((sum, cell) => sum + (cell.text.element.textContent?.length ?? 0), 0);
+  textNodes += numeric.cells.reduce((sum, cell) => sum + cell.nodes, 0);
+  units += numeric.cells.reduce((sum, cell) => sum + cell.codeUnits, 0);
   if (units > maxTextUnits) throw new DocumentError("ResourceLimitExceeded", "Workbook window exceeds its cumulative displayed-text budget.");
   if (textNodes >= maxNodes) throw new DocumentError("ResourceLimitExceeded", "Workbook text exceeds its cumulative node budget.");
   return Object.freeze({ nodes: textNodes, units,

@@ -42,7 +42,7 @@ export function createWorkbookCommentText(source: HTMLElement, maxNodes: number 
         account(2); advance(run.text.length);
         const span = document.createElement("span"), node = document.createTextNode(run.text);
         span.dataset.officeScript = run.role; span.style.fontFamily = run.font.family;
-        decorateWorkbookText(computed, span, account).append(node); output.append(span);
+        decorateWorkbookText(computed, span, account, false).append(node); output.append(span);
         projections.push(Object.freeze({ node, sourceNodeId: source.dataset.nodeId!, from: base + run.from, to: base + run.to })); local = run.to;
       }
     };

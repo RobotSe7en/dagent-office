@@ -34,6 +34,8 @@ export function createWorkbookTextView(source: WorkbookSourceCell, maxNodes = 50
           if (!run || run.from !== offset || run.to > end) throw new DocumentError("InvalidDocument", "Worksheet font runs do not match their source text.");
           account(2); const span = document.createElement("span"), node = document.createTextNode(run.text);
           span.dataset.officeScript = run.role; span.style.fontFamily = run.font.family; decorateWorkbookText(computed, span, account).append(node); target.append(span);
+          if (span.dataset.officeAccountingUnderline) root.dataset.officeAccountingText = "true";
+          if (span.dataset.officeNativeUnderline) root.dataset.officeUnderlinedText = "true";
           projections.push(Object.freeze({ node, from: run.from, to: run.to })); offset = run.to;
         }
       } else if (child.nodeType === 1 && (child as Element).localName === "br") {

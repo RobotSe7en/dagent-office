@@ -114,7 +114,7 @@ test('native classic notes and modern threads retain source content and pane loc
 });
 
 test('comment body flow preserves native run styles, paragraph offsets and UTF-16 selection without source identities', async ({ page }) => {
-  for (const input of comments.filter(input => input.name !== 'producer/10-modern-threads')) for (const rich of input.name === '09-classic-notes' ? [false, true] : [false]) {
+  for (const input of comments.filter(input => input.name !== 'producer/10-modern-threads')) for (const rich of input.name === '09-classic-notes' ? [false, true, 'singleAccounting', 'doubleAccounting'] as const : [false] as const) {
     const result = await page.evaluate(({ files, rich }) => window.workbookDrawingWindow.commentTextMeasurement(files, rich), { files: input.files, rich });
     expect(result.unchanged).toBe(true); expect(result.results.length).toBeGreaterThan(0);
     for (const body of result.results) {
@@ -125,7 +125,7 @@ test('comment body flow preserves native run styles, paragraph offsets and UTF-1
       else {
         const start = body.expected.indexOf('混排😀禰󠄀'), runs = body.formats.filter(run => run.from >= start && run.from < start + '混排😀禰󠄀'.length);
         expect(runs.map(run => run.text).join('')).toBe('混排😀禰󠄀');
-        for (const run of runs) expect(run).toMatchObject({ underline: 'underline', style: 'double', strike: 'line-through', color: 'rgb(255, 0, 0)' });
+        for (const run of runs) expect(run).toMatchObject({ underline: 'underline', style: rich === 'singleAccounting' ? 'solid' : 'double', strike: 'line-through', color: 'rgb(255, 0, 0)' });
         expect(body.formats.find(run => run.text === 'No underline')).toMatchObject({ underline: 'none', strike: '' });
       }
     }

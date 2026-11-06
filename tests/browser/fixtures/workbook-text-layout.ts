@@ -6,6 +6,7 @@ export interface TextLayoutCase {
   text: string; type: WorkbookValue["type"]; family: string; sizePt: number; widthPt: number; heightPt: number;
   horizontal: string; vertical: string; readingOrder: string; indent: number; rightToLeft: boolean;
   wrap?: boolean; shrink?: boolean;
+  underline?: 'singleAccounting' | 'doubleAccounting'; inkOnly?: boolean;
   rotation?: number;
   splitOffsets?: readonly number[];
   justifyLastLine?: boolean;
@@ -21,6 +22,7 @@ export async function textLayoutMeasurement(scope: HTMLElement, cases: readonly 
       cell.replaceChildren(); let from = 0;
       for (const to of [...item.splitOffsets, item.text.length]) { const span = document.createElement('span'); span.textContent = item.text.slice(from, to); cell.append(span); from = to; }
     }
+    if (item.underline) { cell.style.setProperty('--office-font-underline', item.underline); cell.style.color = '#ff00ff'; }
     cell.style.fontFamily = item.family; cell.style.fontSize = `${item.sizePt}pt`; cell.style.fontWeight = 'normal'; cell.style.fontStyle = 'normal'; cell.style.lineHeight = 'normal';
     cell.style.setProperty('--office-cell-horizontal', item.horizontal); cell.style.setProperty('--office-cell-vertical', item.vertical);
     cell.style.setProperty('--office-cell-reading-order', item.readingOrder); cell.style.setProperty('--office-cell-indent', String(item.indent));
@@ -34,9 +36,10 @@ export async function textLayoutMeasurement(scope: HTMLElement, cases: readonly 
   const space = context.measureText(' ').width;
   try {
     const layouts = layoutWorkbookTexts(scope, inputs, space, limits.maxNodes ?? 50_000, limits.maxTextUnits ?? 8 * 1024 * 1024);
-    for (const item of layouts.cells) { item.element.style.outline = '0.5px solid red'; gallery.append(item.element); }
+    for (const [index, item] of layouts.cells.entries()) { item.element.style.outline = '0.5px solid red'; if (cases[index]!.inkOnly) item.text.element.style.visibility = 'hidden'; gallery.append(item.element); }
     scope.append(gallery);
     const measurements = layouts.cells.map(item => {
+      const walker = document.createTreeWalker(item.element, 0xffff_ffff); let actualNodes = 1; while (walker.nextNode()) actualNodes++;
       const cell = item.element.getBoundingClientRect(), range = document.createRange(); range.selectNodeContents(item.text.element); const text = range.getBoundingClientRect();
       const first = item.text.projections[0]?.node, last = item.text.projections.at(-1)?.node;
       const characterX = (node: Text | undefined, end: boolean) => {
@@ -44,7 +47,9 @@ export async function textLayoutMeasurement(scope: HTMLElement, cases: readonly 
         const range = document.createRange(), offset = end ? node.length - 1 : 0; range.setStart(node, offset); range.setEnd(node, offset + 1); return (range.getBoundingClientRect().x - cell.x) * .75;
       };
       return { scale: item.scale, requiredHeightPt: item.requiredHeightPt, horizontal: item.text.element.style.textAlign, direction: item.text.element.style.direction,
-        lastLine: item.text.element.style.textAlignLast, nodes: item.text.nodes,
+        lastLine: item.text.element.style.textAlignLast, nodes: item.text.nodes, materializedNodes: item.nodes, actualNodes, codeUnits: item.codeUnits, actualCodeUnits: item.element.textContent?.length ?? 0,
+        accounting: [...item.element.querySelectorAll<SVGGElement>('[data-office-view=workbook-accounting-line]')].map(line => ({ style: line.dataset.officeAccountingStyle === 'doubleAccounting' ? 'double' : 'solid', color: getComputedStyle(line.querySelector('line')!).stroke, strokes: line.childElementCount, text: line.textContent })),
+        cell: { x: cell.x, y: cell.y, width: cell.width, height: cell.height }, visibleText: item.text.element.textContent,
         lineRects: item.text.projections.flatMap(projection => { const range = document.createRange(); range.selectNode(projection.node); return [...range.getClientRects()].filter(rect => rect.width > .01 && rect.height > 0).map(rect => ({ text: projection.node.data, x: (rect.x - cell.x) * .75, y: (rect.y - cell.y) * .75, width: rect.width * .75, height: rect.height * .75 })); }),
         transform: item.text.element.style.transform, breaks: item.text.element.querySelectorAll('br').length,
         firstX: characterX(first, false), lastX: characterX(last, true),

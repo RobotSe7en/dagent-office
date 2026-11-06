@@ -40,7 +40,15 @@ export async function windowLayoutMeasurement(entries: readonly [string, number[
         const text = cell.text!, bounds = text.text.element.getBoundingClientRect();
         const clip = text.element.closest<HTMLElement>('[data-office-view="workbook-cell"],[data-office-view="workbook-text-overflow"]')!;
         const clipBounds = clip.getBoundingClientRect();
-        return { row: cell.projection.row, column: cell.projection.column, pane: cell.projection.pane, text: text.text.element.textContent,
+        const accountingLayer = text.element.querySelector<HTMLElement>('[data-office-view=workbook-accounting-underlines]');
+        let accounting;
+        if (accountingLayer) {
+          const walker = surface.document.createTreeWalker(text.element, 0xffff_ffff); let actual = 1; while (walker.nextNode()) actual++;
+          accounting = { nodes: text.nodes, actualNodes: actual, codeUnits: text.codeUnits, actualCodeUnits: text.element.textContent?.length ?? 0,
+            width: accountingLayer.getBoundingClientRect().width * .75,
+            lines: [...accountingLayer.querySelectorAll<SVGGElement>('[data-office-view=workbook-accounting-line]')].map(line => ({ style: line.dataset.officeAccountingStyle === 'doubleAccounting' ? 'double' : 'solid', color: view.getComputedStyle(line.querySelector('line')!).stroke, width: line.getBoundingClientRect().width * .75 })) };
+        }
+        return { accounting, row: cell.projection.row, column: cell.projection.column, pane: cell.projection.pane, text: text.text.element.textContent,
           rect: cell.projection.rect, clipRect: cell.projection.clip, offsets: text.text.projections.map(part => [part.from, part.to, part.node.data]), shape: text.shape, scale: text.scale,
           runs: text.text.projections.map(part => { const style = view.getComputedStyle(part.node.parentElement!); return { from: part.from, to: part.to, text: part.node.data, color: style.color, weight: style.fontWeight, style: style.fontStyle, family: style.fontFamily }; }),
           color: view.getComputedStyle(text.text.element).color, weight: view.getComputedStyle(text.text.element).fontWeight, family: view.getComputedStyle(text.text.element).fontFamily,

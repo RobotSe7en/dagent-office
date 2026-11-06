@@ -58,6 +58,8 @@ export function layoutWorkbookFormattedTexts(scope: HTMLElement, inputs: readonl
           projections.push(...text.projections);
         } else text = createWorkbookNumberText(input.source, [{ kind: "text", text: part.kind === "text" ? part.text : part.character }], display.color, remaining());
         nodes += text.nodes; count += text.nodes; element.append(text.element);
+        if (text.element.dataset.officeAccountingText) element.dataset.officeAccountingText = "true";
+        if (text.element.dataset.officeUnderlinedText) element.dataset.officeUnderlinedText = "true";
         const length = text.element.textContent?.length ?? 0; accountText(length);
         if (part.kind !== "fill") fixedUnits += length;
         if (part.kind === "space") spaces.push(text.element);

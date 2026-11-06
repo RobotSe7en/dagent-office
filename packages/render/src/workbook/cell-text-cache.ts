@@ -50,7 +50,7 @@ export class WorkbookCellTextCache {
   }
   put(key: string, cell: Cell, fonts: readonly FontResolution[], fallback: boolean): void {
     if (!cell.text) return;
-    const nodes = cell.text.text.nodes + 1, units = key.length + cell.text.element.outerHTML.length + fonts.reduce((sum, font) => sum + this.fontId(font).length, 0);
+    const nodes = cell.text.nodes, units = key.length + cell.text.element.outerHTML.length + fonts.reduce((sum, font) => sum + this.fontId(font).length, 0);
     if (nodes > this.maxNodes || units > this.maxUnits) return;
     const previous = this.entries.get(key); if (previous) { this.nodes -= previous.nodes; this.units -= previous.units; this.entries.delete(key); }
     while (this.entries.size && (this.entries.size >= this.maxEntries || this.nodes + nodes > this.maxNodes || this.units + units > this.maxUnits)) {
@@ -68,7 +68,7 @@ export function layoutCachedWorkbookCellTexts(scope: HTMLElement, snapshot: Work
   const fonts = new Map<string, FontResolution>(), missing: WorkbookCellTextInput[] = [], indices = new Map<number, number>();
   for (const [index, entry] of entries.entries()) {
     if (!entry?.cell.text) { indices.set(index, missing.length); missing.push(inputs[index]!); continue; }
-    nodes += entry.cell.text.text.nodes + 1; units += entry.cell.text.text.element.textContent?.length ?? 0; fallback ||= entry.fallback;
+    nodes += entry.cell.text.nodes; units += entry.cell.text.codeUnits; fallback ||= entry.fallback;
     for (const font of entry.fonts) fonts.set(cache.fontId(font), font);
   }
   if (nodes >= maxNodes || units > maxUnits) throw new DocumentError("ResourceLimitExceeded", "Cached workbook text exceeds the complete window budget.");
