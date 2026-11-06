@@ -1,6 +1,6 @@
 {
   "scope": "R3-06–08 public reading matrix: all selected sources and unchanged actual Calc producers. Feature-specific fixed-font and native semantic evidence remains separate; this is not a pixel-identity claim.",
-  "hostBundleSha256": "611c2531dc011c502e7871a7c3d91f8ca24b67d4e89300eae23780310b316d61",
+  "hostBundleSha256": "bc459b6d9b7597f6ec7e6aca6aca2a937427db72fff797b4766cecd6f8d81094",
   "testSha256": "9b7da134fc9758b2d319d812b2e2cd5b468d91ec2f9fc96614922b5c0ec066bd",
   "runs": [
     {

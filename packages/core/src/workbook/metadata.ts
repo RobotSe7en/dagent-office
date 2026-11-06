@@ -85,4 +85,3 @@ function validatePrint(print: WorkbookPrint, classExists: (name: string) => void
   }
   return items;
 }
-

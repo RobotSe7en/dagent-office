@@ -122,7 +122,7 @@ def generate(source):
     if total != 434:
         raise ValueError("Unexpected count of normative table differentials")
     notice = (ROOT / "packages/render/ECMA-376-TABLE-STYLES-LICENSE.txt").read_text()
-    header = "/*! @license\n" + "\n".join(" * " + line for line in notice.splitlines()) + "\n */\n"
+    header = "/*! @license\n" + "\n".join((" * " + line).rstrip() for line in notice.splitlines()) + "\n */\n"
     header += '// Generated standard data; source digest and full validation are pinned in the generator.\n'
     header += 'import type { WorkbookBuiltinTableDifferential, WorkbookBuiltinTableElement } from "./table-style-types.js";\n'
     header += "export const builtinTableDifferentials: readonly WorkbookBuiltinTableDifferential[] = [\n"

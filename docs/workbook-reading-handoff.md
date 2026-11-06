@@ -34,6 +34,8 @@ Playground 服务监听 `0.0.0.0:5174`，地址 `http://192.168.31.221:5174/`。
 - `04089c3`：累计依赖文本预算、名称作用域、自动行高压缩、局部 XMLNS、分页符缺省、取消清理、viewport 字体 resize 及 Firefox 宿主串滚修复。
 - `fd5777a`：单元格与规则读取统一使用逐次可释放的取消等待，避免悬挂来源和共享未结束 Promise 留存旧批次。此提交为最终 SDK 运行时代码；后续交付说明及 Playground 只读提示不改变该运行时。
 
+最终格式检查另清理元数据文件末尾空行及生成表样式许可证注释的尾空白，生成器同步去掉尾空白；60 份规范表样式生成检查通过。注释会进入包摘要，因此 128 矩阵与四引擎资源已在清理后的包上完整重跑、重新汇总。SDK 执行逻辑不变。
+
 网格滚轮最终采用非被动监听并 `preventDefault`，先排除 CTRL 和备注面板；仅 CSS containment／被动监听无法阻止 Firefox 宿主串滚。隐藏预布局和 AutoFit 预读仍保留。不得恢复已撤回的性能实验或重新试探已决门槛。
 
 ## 最终本地验证
@@ -42,11 +44,11 @@ Playground 服务监听 `0.0.0.0:5174`，地址 `http://192.168.31.221:5174/`。
 
 - `pnpm check`：144 个文件、1745 项测试，类型、边界、所有包及 Playground 构建通过。最终只读提示另做 Playground 构建通过。
 - [公开读取矩阵](evidence/workbook-reading-matrix.json)：现代三引擎 96 项，旧 Chromium 32 项；每引擎均含 16 独立源及 16 未修改的实际 Calc 文件，合计 128 份。旧 Chromium 同批追加 7 项回归，共 39 项。
-- [固定资源四引擎](workbook-reading-budget.md)：首屏为 14.556／23.700／18.915／21.203 秒；滚轮 p95 为 44.2／81／50／102.4ms。选择、真实计数、DOM、浏览器／Worker 绝对高水位合计 2GiB 和取消均通过。统一使用 cpuset `0,16,32,48`，只声称四个逻辑 CPU。
+- [固定资源四引擎](workbook-reading-budget.md)：首屏为 14.738／27.773／19.242／21.030 秒；滚轮 p95 为 57.3／27／58／101.9ms。选择、真实计数、DOM、浏览器／Worker 绝对高水位合计 2GiB 和取消均通过。统一使用 cpuset `0,16,32,48`，只声称四个逻辑 CPU。
 - 修复前 Office 5 项、core 3 项复现失败；修复后相关单元 37 项通过。现代三引擎字号／滚动／取消 15 项、追加逐次等待／规则取消 9 项通过。
 - 两个汇总器已重新构建公共宿主／Worker 并核对当前包摘要，完整记录分别写入矩阵及资源 JSON。旧提交的通过不能替代这些最终记录。
 
-本机执行日志为 `.cache/pr25-reviewed-full-check.log`、`.cache/pr25-reviewed-matrix-{modern,legacy}.log`、`.cache/pr25-reviewed-budget-<browser>.log` 和对应 `*-collect.log`；缓存不是交付来源，正式证据位于 `docs/evidence/`。
+本机执行日志为 `.cache/pr25-reviewed-full-check.log`、`.cache/pr25-final-matrix-{modern,legacy}.log`、`.cache/pr25-final-budget-<browser>.log` 和对应 `*-collect.log`；缓存不是交付来源，正式证据位于 `docs/evidence/`。
 
 主矩阵 32 份来源通过官方 Transitional XSD／关系审计。额外标签探针的 4 份 Calc 图表存在 numFmt／dLbl 子元素顺序错误：保留原文件和精确错误，仅在验证副本检查其余结构，不能称原文件合规。Calc 的线程扁平化、图片／渐变开关丢失及标签／负柱改写分别记录，不从原源偷偷修复。Excel/WPS 未实机验证。
 
