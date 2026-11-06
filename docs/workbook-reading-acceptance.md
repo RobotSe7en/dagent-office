@@ -1,6 +1,6 @@
 # XLSX 读取阶段验收
 
-本文件对应 PR #25 的 R3-06～08。公开入口为 `importXlsx` → `openDocument(..., { kind: "workbook" })` → `mountDocumentPreview`；编辑和输出属于后续阶段。最终固定资源复核、完整差异复审及最终 CI 尚在进行，尚不据此关闭阶段。
+R3-06～08 已完成所声明的 XLSX 读取与只读显示验收；编辑计算和输出属于后续阶段。最终提交四项 CI 全绿后合并，状态以 [PR #25](https://github.com/RobotSe7en/dagent-office/pull/25) 为准。
 
 ## 来源和检查边界
 
@@ -39,4 +39,13 @@ Calc 会扁平化现代线程、将财务下划线改成普通下划线、丢弃
 
 最终运行时代码须通过[四核／8 GiB／无交换的四引擎读取检查](workbook-reading-budget.md)，不能用功能矩阵中的非受限耗时替代。公式完整计算、编辑历史／批量修改、原生导出和独立打包闭环仍按第三轮后续任务完成。
 
-完整 PR 复审另检查 ZIP／XML 资源与部件消费、源安全、Worker 身份／修订／取消、候选原子发布、字体／图片生命周期及共享 Word/PPT 回归。最终提交四项 CI 全部成功后才合并；不使用子代理或自行降低范围。
+用户已明确授权本次子智能体独立审查；三份审查覆盖完整差异的核心、原生导入和渲染／Worker 路径。8 项 P2 均已修复并由原审查代理复核关闭，见[审查记录](workbook-reading-review.md)。最终提交四项 CI 全部成功后才合并；后续阶段不会自动沿用本次子代理例外。
+
+## 最终本地记录
+
+- 完整 `pnpm check`：144 个测试文件、1745 项测试通过，包含类型、依赖边界、包及 Playground 构建。
+- [当前公开读取矩阵](evidence/workbook-reading-matrix.json)：现代三引擎 96 项、旧 Chromium 32 项；旧 Chromium 同批另有 7 项取消／字号／滚动回归，共 39 项。
+- 四引擎均满足首屏 30 秒、选择 p95 100ms、读取滚轮 p95 120ms、5000 片段和浏览器／Worker 绝对高水位合计 2GiB；[当前完整样本](evidence/workbook-reading-budget.json)由汇总器确认与最后 SDK 代码一致。滚轮限额为用户于 2026-11-06 明确调整，优化保留，原失败历史另存。
+- 现代三引擎 15 项字号／滚动／取消复核通过，追加的 cell／rule 逐次等待和迟到清理 9 项亦通过。辅助 HTML 行内字体、转义单位、连续 resize 取代、失败保留与无整本序列化均覆盖。
+
+以上本地证据不替代最终 HEAD 的 check、browser-interaction、office-reopen 和 safari；合并者必须核对四项均成功，且 PR HEAD 没有变化。

@@ -27,6 +27,6 @@
 
 ## 验证边界
 
-修复前新增 Office 5 项、core 3 项均复现失败。补齐覆盖后，相关单元共 37 项通过；现代三引擎的新增取消／字体／滚动检查共 15 项通过。逐次等待及规则取消的追加现代三引擎 9 项亦通过；审查代理完成再次只读复核。旧 Chromium、完整工程、128 公开读取矩阵、四引擎资源与最终提交 CI 的最终结果统一记录在[读取验收](workbook-reading-acceptance.md)、[资源记录](workbook-reading-budget.md)及[执行交接](workbook-reading-handoff.md)。不能把局部检查或审查关闭代替最终阶段验收。
+修复前新增 Office 5 项、core 3 项均复现失败。补齐覆盖后，相关单元共 37 项通过；现代三引擎的新增取消／字体／滚动检查共 15 项通过。逐次等待及规则取消的追加现代三引擎 9 项亦通过；审查代理完成再次只读复核。完整工程 144／1745、128 公开读取矩阵、四引擎资源及旧 Chromium 39 项均已通过；最终提交 CI 另核对。结果统一记录在[读取验收](workbook-reading-acceptance.md)、[资源记录](workbook-reading-budget.md)及[执行交接](workbook-reading-handoff.md)。不能把局部检查或审查关闭代替最终阶段验收。
 
 固定 LibreOffice 原生来源／实际重存、官方 XSD、生产者损失及 4 份已知非法额外标签图表的分类保持独立。Excel/WPS 未实机核验；本审查不声称其已通过。

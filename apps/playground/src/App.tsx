@@ -362,7 +362,7 @@ export function App() {
         </p>
       )}
       {workbook && !loading && <p className="document-status" role="status"><span className="connection-dot" />已打开 · 修订 {workbook.source.cells.snapshot.manifest.revision} · 工作表 {workbook.source.cells.snapshot.metadata.workbook.sheets.length} · 批注 {workbook.source.cells.snapshot.annotations.length}</p>}
-      {workbook && <p className="workbook-note">只读预览试用：表样式、条件格式和部分排版仍在完善，编辑及导出尚未开放。</p>}
+      {workbook && <p className="workbook-note">工作簿只读预览；编辑及导出尚未开放。</p>}
       {submitted && <p className="submission-message"><Icon name="check" size={16} />Playground 已接收批注请求；使用固定提案验证返回与应用。</p>}
       {docxReport && <section className="export-report" aria-label="DOCX 导出报告">
         <p>已生成 DOCX · 修订 {docxReport.revision} · 保留原生批注 {docxReport.exportedAnnotationIds.length} 条。</p>

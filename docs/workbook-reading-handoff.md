@@ -1,18 +1,20 @@
 # 第三轮工作簿读取交接
 
-当前任务是完成并合并 [PR #25](https://github.com/RobotSe7en/dagent-office/pull/25)，分支 `feat/workbook-reading`。完整范围和退出条件以 [iteration-3.md](iteration-3.md) 为准；本记录不降低门槛。R3-09～16 编辑计算、R3-17～20 输出验收须在读取阶段合并后顺序实施。
+R3-01～08 的模型、原生读取和只读验收已完成。交付为分支 `feat/workbook-reading` 的 [PR #25](https://github.com/RobotSe7en/dagent-office/pull/25)；最终提交的四项 CI 全部成功后才合并，实际 CI／合并状态以该 PR 为准。完整范围和退出条件以 [iteration-3.md](iteration-3.md) 为准。
 
 ## 授权与约束
 
-用户已授权阶段 PR 的提交、推送、单独复审、修复复核和最终提交全部 CI 成功后的合并；无需再次询问合并许可。不直接提交 main、不发布 npm。用户于 2026-11-06 明确允许本次 PR #25 使用子智能体独立审查，覆盖此前禁令，仅限本次审查；后续阶段仍不得自行派生。产品语义出现新分歧时主动询问；已定选择继续有效，不重复询问。
+用户已授权阶段 PR 的提交、推送、独立复审、修复复核和最终提交全部 CI 成功后的合并；无需再次询问合并许可。不直接提交 main，不发布 npm。用户于 2026-11-06 明确允许本次 PR #25 使用子智能体独立审查，仅限本次审查；后续阶段不自行派生。产品语义出现新分歧时主动询问；已定选择继续有效，不重复询问。
 
-基础七项选择见 AGENTS.md。额外七项为：财务下划线铺满单元格；隐藏列内容按未隐藏宽度参与 AutoFit；冲突经典备注框以 VML 为准且保留两份来源及差异；旧 lineChart/marker 只保留不控制显示；坐标轴按 Office 的跨越轴语义；渐变随形状刚性旋转并保留原覆盖；负柱反转保留符号方向，填白色并保留原边框。
+基础七项选择见 [AGENTS.md](../AGENTS.md)。额外七项为：财务下划线铺满单元格；隐藏列内容按未隐藏宽度参与 AutoFit；冲突经典备注框以 VML 为准且保留两份来源及差异；旧 lineChart/marker 只保留不控制显示；坐标轴按 Office 的跨越轴语义；渐变随形状刚性旋转并保留原覆盖；负柱反转保留符号方向，填白色并保留原边框。
 
-Playground 服务监听 `0.0.0.0:5174`，`http://192.168.31.221:5174/`。5173 属于另一个项目，勿操作。当前任务期间保留 5174 服务。
+用户只将读取滚轮反馈 p95 调整为 120ms，明确要求保留并完成滚动优化。选择仍为 100ms；首屏 30 秒、真实 20 万单元格／2 万公式／40 块、四逻辑 CPU／8GiB／无交换、DOM 及内存限额和取消检查均不变。历史失败另存，不能删除慢样本或用不受限耗时替代。
+
+Playground 服务监听 `0.0.0.0:5174`，地址 `http://192.168.31.221:5174/`。5173 属于另一个项目，勿操作；保留 5174 服务。
 
 ## 已实现的读取范围
 
-- 公开原生导入、统一 `openDocument`、严格工作簿包、保存重开、专用 Worker 与有界读取通道。
+- 公开 `importXlsx`、统一 `openDocument`、严格工作簿包、保存重开、专用 Worker 与有界读取通道。
 - 单元格类型、富文本及精确 UTF-16；日期／地区及常用数字格式；高级填充、边框、旋转、竖排、命名样式关联。
 - 隐藏行列、冻结合并、RTL、跨空白格溢出、跨格居中、实际来源自动行高及隐式字体来源。
 - 智能表、基础条件格式及七类验证；当前源求值和明确不可用诊断；打印元数据保留。
@@ -21,64 +23,49 @@ Playground 服务监听 `0.0.0.0:5174`，`http://192.168.31.221:5174/`。5173 �
 - 经典备注和现代线程、可见备注框及面板、VML 优先、异常定位 needs_reanchor、提及及 uid 保留。
 - 公共只读预览、Playground 的打开／取消／切换、资源与字体诊断和释放。
 
-实现细节与独立来源见 [workbook-model.md](workbook-model.md)、[读取验收](workbook-reading-acceptance.md)和 `docs/evidence/xlsx-*.json`。不要把公式读取内核称为 R3-10 的完整依赖计算或编辑能力。
+实现细节见[工作簿模型](workbook-model.md)、[公式基础](workbook-formulas.md)及[读取验收](workbook-reading-acceptance.md)。当前标量读取内核不等于 R3-10 的完整依赖计算；编辑和原生输出尚未开放。
 
-## 最近提交与已完成检查
+## 滚动优化及独立审查
 
-- `87e4091`：完整标签布局及白色负柱。
-- `e64dd2c`：极端图表值域／描边裁剪、72pt 图例预留；修复旧图例选择器及通用 XSD 扫描器对已知非法生产者的分类。
-- `b58b46d`：图表实际测量数字字段与全部公开读取矩阵。现代 111 项、旧 Chromium 37 项通过；包括全部 16 源／16 实际生产者文件，四引擎共 128 份公开读取报告。`pnpm check` 的 142 文件／1734 测试、类型、边界和完整构建通过。
-- `a10819a`、`3092fcc`：GitHub runner 的 Azure Ubuntu 镜像下载极慢；浏览器和 Office 作业改用官方 archive/security 镜像，配置下载超时／重试。测试与性能门槛不变。
-- `3092fcc` 的 CI 工程、Office 重开及 Safari 已通过，浏览器任务仍在进行。所有上述检查不是当前未提交运行时代码的最终通过记录。
+`bf4d294` 保留有界隐藏预布局候选和 AutoFit 当前／下一批重叠读取；正式窗口仍重新读取并核对身份、修订、值、HTML、格式及字体版本，候选与当前窗口共用 DOM 预算。
 
-主矩阵 32 份来源通过官方 Transitional XSD 与 OPC 审计。额外标签探针中 4 份 Calc 图表存在 numFmt/dLbl 子元素顺序错误：保留原文件和精确错误，仅在验证副本检查其余结构，不能称原文件合规。Calc 还会扁平化线程、丢弃部分图片／渐变开关和改写标签／负柱；生产者差异不能用原源偷偷修复。Excel/WPS 未实机验证。
+用户授权后，`pr25_review_core`、`pr25_review_office`、`pr25_review_render` 分别从 main `2fab5a6` 审查整个阶段差异。共发现 8 项 P2，修复由主实施者完成，原审查代理逐项只读复核关闭。完整记录见[独立审查](workbook-reading-review.md)。
 
-## 当前未提交批次与剩余工作
+- `04089c3`：累计依赖文本预算、名称作用域、自动行高压缩、局部 XMLNS、分页符缺省、取消清理、viewport 字体 resize 及 Firefox 宿主串滚修复。
+- `fd5777a`：单元格与规则读取统一使用逐次可释放的取消等待，避免悬挂来源和共享未结束 Promise 留存旧批次。此提交为最终 SDK 运行时代码；后续交付说明及 Playground 只读提示不改变该运行时。
 
-最终性能复核暴露旧 Chromium 滚轮 p95 略超 100ms、Firefox 首屏 30.160s。用户已将读取滚轮 p95 调整到 120ms，并明确要求保留并完成优化；其余目标不变。失败和被撤回实现的完整样本保存在 [失败记录](evidence/workbook-reading-budget-failures.json)；带 CPU profile 或改变输入方式的诊断不计为验收。
+网格滚轮最终采用非被动监听并 `preventDefault`，先排除 CTRL 和备注面板；仅 CSS containment／被动监听无法阻止 Firefox 宿主串滚。隐藏预布局和 AutoFit 预读仍保留。不得恢复已撤回的性能实验或重新试探已决门槛。
 
-当前改动：
+## 最终本地验证
 
-1. 只对已授权预读来源，AutoFit 最多重叠当前与下一批回复；每批仍不超过 4096 查询槽，累计预算、原子发布和取消不变。Firefox 首屏在该改动后实测 25.748s。
-2. 根据上次真实垂直位移准备一个有界候选网格，正式请求仍重新读取并逐项核对来源和字体版本。隐藏候选与当前网格共用节点／片段额度，先完成浏览器布局，接受时复用。
-3. 网格以 `overscroll-behavior:none` 保持原生滚动边界，采用被动滚轮监听；单元格滚动仍映射到受校验的视口，备注面板继续使用原生滚动。可中断整窗及其他未达标实验已撤回，不作为当前实现。
-4. 新增同修订值变化、非法 HTML、错修订、字体变化、总 DOM 额度、预读关闭、预取取消和迟到清理检查。现代三引擎 12 项、旧 Chromium 4 项通过；额外备注面板的实际原生滚动断言已在旧 Chromium 通过，现代三引擎随最终矩阵复核。
-5. 资源包装器记录客体系统报告的 CPU 拓扑。最终四引擎统一使用 `AllowedCPUs=0,16,32,48`、CPUQuota=400%、8GiB、无交换；这是四个逻辑 CPU，不声称独占物理核。先前 0–3 位于同一客体 core 报告，历史失败仍保留。
+最后 SDK 代码上的检查均通过：
 
-当前四引擎资源检查及汇总已通过，滚轮 p95 为 49.3／29／48／90.3ms，首屏、内存、DOM、真实计数及取消全部达标。必须继续到完成：刷新当前公共包的 128 份矩阵；完整工程检查；从 main 基线完成三份子智能体独立审查，修复发现并复核；同步 README／AGENTS／第三轮任务状态／验收记录；提交推送。最终 HEAD 的 check、browser-interaction、office-reopen、safari 全部通过后，将 PR 转 ready 并以 expected-head SHA 守卫 squash merge。不得凭旧提交或单一子集成功合并。
+- `pnpm check`：144 个文件、1745 项测试，类型、边界、所有包及 Playground 构建通过。最终只读提示另做 Playground 构建通过。
+- [公开读取矩阵](evidence/workbook-reading-matrix.json)：现代三引擎 96 项，旧 Chromium 32 项；每引擎均含 16 独立源及 16 未修改的实际 Calc 文件，合计 128 份。旧 Chromium 同批追加 7 项回归，共 39 项。
+- [固定资源四引擎](workbook-reading-budget.md)：首屏为 14.556／23.700／18.915／21.203 秒；滚轮 p95 为 44.2／81／50／102.4ms。选择、真实计数、DOM、浏览器／Worker 绝对高水位合计 2GiB 和取消均通过。统一使用 cpuset `0,16,32,48`，只声称四个逻辑 CPU。
+- 修复前 Office 5 项、core 3 项复现失败；修复后相关单元 37 项通过。现代三引擎字号／滚动／取消 15 项、追加逐次等待／规则取消 9 项通过。
+- 两个汇总器已重新构建公共宿主／Worker 并核对当前包摘要，完整记录分别写入矩阵及资源 JSON。旧提交的通过不能替代这些最终记录。
+
+本机执行日志为 `.cache/pr25-reviewed-full-check.log`、`.cache/pr25-reviewed-matrix-{modern,legacy}.log`、`.cache/pr25-reviewed-budget-<browser>.log` 和对应 `*-collect.log`；缓存不是交付来源，正式证据位于 `docs/evidence/`。
+
+主矩阵 32 份来源通过官方 Transitional XSD／关系审计。额外标签探针的 4 份 Calc 图表存在 numFmt／dLbl 子元素顺序错误：保留原文件和精确错误，仅在验证副本检查其余结构，不能称原文件合规。Calc 的线程扁平化、图片／渐变开关丢失及标签／负柱改写分别记录，不从原源偷偷修复。Excel/WPS 未实机验证。
+
+## 交付及下一阶段
+
+核对 PR 最新 HEAD 的 `check`、`browser-interaction`、`office-reopen`、`safari` 均成功，再以该 SHA 守卫 squash merge；不凭旧提交 CI 合并。合并后从最新 main 创建阶段分支，继续 R3-09～16 编辑计算，再做 R3-17～20 输出验收。不直接向 main 提交，也不把当前读取通过记为后续阶段完成。
+
+后续第一项是 R3-09：复用共享会话事务、隔离分块候选、原子验证、历史和精确范围映射；随后完成 R3-10 依赖计算，再开放输入与各类编辑。排序区域外公式仍引用原地址；剪切引用精确跟随移动数据。保持唯一 HTML 包来源、当前源图表／规则和共同历史边界。
 
 ## 验证入口
 
 ```sh
 pnpm build:packages
 pnpm exec tsc --project tsconfig.tools.json --noEmit
-node scripts/playwright.mjs test workbook-preview.spec.ts --grep 'predicted viewports|idle neighbor|automatic row reads'
 node scripts/collect-workbook-reading-matrix.mjs --record
 node scripts/collect-workbook-reading-budget.mjs --record
 pnpm check
 ```
 
-资源命令见 [workbook-reading-budget.md](workbook-reading-budget.md)，各浏览器依次独占运行，不与构建或其他浏览器测试争用。运行浏览器期间不改写 dist。普通功能与实际性能不可互相替代。
+矩阵运行方法见[读取验收](workbook-reading-acceptance.md)，资源命令见[读取资源检查](workbook-reading-budget.md)。浏览器依次独占运行，不与构建争用，也不在运行期间改写 dist。代码变化后按影响重新验证；普通功能和实际性能不可互相替代。
 
 固定 Office 为官方 LibreOffice 25.8.1.1，归档 SHA-256 `f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c`。本机 `.cache/xlsx-venv/bin/python` 提供 lxml；默认 python3 未装 lxml。正式来源与证据不得被诊断脚本重写。
-
-## 子智能体独立审查修复批次（当前工作区）
-
-用户已明确授权本次子代理审查；三份只读审查覆盖 core、office、render/Worker，并提出 8 项 P2（无已确认 P1）：
-
-1. 规则／图表求值的批次文本消耗未累计：scalar 结果新增内部 `codeUnits` 与剩余额度，两个消费者统一累计；响应不增加字段。
-2. 全局名称在联合／交集／范围中丢失歧义检查：沿已有 AST 传递并检查名称上下文，不新增公式引擎。
-3. 相邻行压缩漏比较 autoHeight：补齐比较，保留显式自动覆盖及相邻固定默认行。
-4. 图表 XMLNS 被误当业务属性：统一仅忽略命名空间声明，保持其他属性严格校验；覆盖 XLSX/PPT 的局部前缀及缺省命名空间。
-5. 分页符 max 缺省值漏读：按官方 XSD 使用 0，保存重开保留。
-6. AutoFit 等待忽略取消的下一批时不释放原型：等待与 AbortSignal 竞速，外部取消后在迟到回复释放前清理。
-7. 合法 viewport 字体 resize 测量使用旧尺寸：保存 providers，viewport/container 单位、CSS 转义、条件 CSS 或辅助 HTML 行内样式在独立候选 surface 重建；支持连续 resize 取代、失败保留，无整本序列化。
-8. Firefox 备注面板原生滚动后网格滚轮带动宿主：单纯 CSS containment 不足，已恢复处理网格轮事件的非被动 preventDefault，CTRL／备注面板先排除；隐藏预布局和 AutoFit 预取优化保留。
-
-三份审查已只读复核并全部关闭上述发现。审查代理名称为 `pr25_review_core`、`pr25_review_office`、`pr25_review_render`；不得将之前本人复审称为子代理审查。
-
-修复前新 Office 5 项及 core 3 项均复现失败；当前新 Office 7 项、core 3 项及图表／相关单元合计 37 项通过。现代三引擎最新 15 项通过（`.cache/pr25-review-typography-target.log`），包含 CSS 转义、HTML 字符引用行内样式、连续 resize 取消、迟到回复前清理、宿主与备注面板原生滚动。工具类型检查正在 `.cache/pr25-review-tools-types.log` 进行；最新源码构建通过。
-
-**旧的最终记录须重做：** 已提交 `bf4d294` 的四引擎性能记录与 142/1734 工程检查曾通过，但以上修复改变运行时；必须用当前最后源码重新跑四引擎资源汇总、全量工程、128 公开矩阵及最终 HEAD 四项 CI。上一轮现代矩阵 96 来源全部通过，额外 Firefox 面板/宿主边界失败，因此该轮整体失败，不能作为当前完整通过。当前未有其他浏览器运行；下一步先旧 Chromium 9 项定向复核，然后提交推送修复批次并进行最终各门槛。当前新工作区还未提交，勿恢复旧实现或重新试阈值。
-
-追加取消复核发现 rules.source.read 同源路径，以及共享取消 Promise 保留已完成回复的风险。已提取 read-cancellation.ts 单次可释放 helper，同时用于 AutoFit cell/rules，两类来源的迟到回复均不阻止清理；现代三引擎追加 9 项通过，render 审查代理再次关闭该项。此小批正在提交；之后不要再更改运行时，直接完成最终完整检查及四引擎／128 矩阵。
