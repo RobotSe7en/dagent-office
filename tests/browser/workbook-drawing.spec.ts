@@ -11,7 +11,7 @@ import { readXlsxRecords } from '../../packages/office/src/xlsx/read.js';
 import { readDocumentZip, writeOpcZip } from '../../packages/office/src/document-zip.js';
 import { projectXlsxRecords } from '../../packages/office/tests/helpers/xlsx-record-model.js';
 import type { measureContentSource, rejectContentSource } from './fixtures/workbook-content-source.js';
-import type { measureImageView, disposeImageView } from './fixtures/workbook-image-view.js';
+import type { measureImageView, measurePictureFills, disposeImageView } from './fixtures/workbook-image-view.js';
 import type { measureObjectGeometry } from './fixtures/workbook-object-geometry.js';
 import type { measureDrawingGradients } from './fixtures/drawing-gradient.js';
 import type { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback, measureDrawingTextOverflow, measureDrawingOverflowEdges } from './fixtures/workbook-drawing-text.js';
@@ -26,7 +26,7 @@ declare global { interface Window { workbookChartHost: { measureWorkbookChartAxe
 
 declare global { interface Window { workbookShadowHost: { measureWorkbookShadows: typeof measureWorkbookShadows; mountWorkbookShadowPixels: typeof mountWorkbookShadowPixels; disposeWorkbookShadowPixels: typeof disposeWorkbookShadowPixels } } }
 
-declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; disposeImageView: typeof disposeImageView; measureObjectGeometry: typeof measureObjectGeometry; measureDrawingGradients: typeof measureDrawingGradients; measureDrawingText: typeof measureDrawingText; measureDrawingTextLayout: typeof measureDrawingTextLayout; measureNativeDrawingText: typeof measureNativeDrawingText; measureDrawingTextFallback: typeof measureDrawingTextFallback; measureDrawingTextOverflow: typeof measureDrawingTextOverflow; measureDrawingOverflowEdges: typeof measureDrawingOverflowEdges; measureWorkbookSurface: typeof measureWorkbookSurface; mountWorkbookSurfacePixels: typeof mountWorkbookSurfacePixels; disposeWorkbookSurfacePixels: typeof disposeWorkbookSurfacePixels } } }
+declare global { interface Window { workbookContentHost: { measureContentSource: typeof measureContentSource; rejectContentSource: typeof rejectContentSource; measureImageView: typeof measureImageView; measurePictureFills: typeof measurePictureFills; disposeImageView: typeof disposeImageView; measureObjectGeometry: typeof measureObjectGeometry; measureDrawingGradients: typeof measureDrawingGradients; measureDrawingText: typeof measureDrawingText; measureDrawingTextLayout: typeof measureDrawingTextLayout; measureNativeDrawingText: typeof measureNativeDrawingText; measureDrawingTextFallback: typeof measureDrawingTextFallback; measureDrawingTextOverflow: typeof measureDrawingTextOverflow; measureDrawingOverflowEdges: typeof measureDrawingOverflowEdges; measureWorkbookSurface: typeof measureWorkbookSurface; mountWorkbookSurfacePixels: typeof mountWorkbookSurfacePixels; disposeWorkbookSurfacePixels: typeof disposeWorkbookSurfacePixels } } }
 const inputs: { name: string; snapshot: WorkbookSnapshot; text: Record<string, string>; resources: Record<string, string> }[] = [];
 const chartPlots = new Map<string, BasicChartData[]>();
 let referenceTitles: { snapshot: WorkbookSnapshot; bindings: ReturnType<typeof bindWorkbookChartData> };
@@ -216,6 +216,31 @@ for (const rtl of [false, true]) test(`cropped worksheet pictures retain full ro
     await page.evaluate(() => window.workbookContentHost.disposeImageView());
     await expect(page.locator('#workbook-image-probe')).toHaveCount(0);
   }
+});
+for (const rtl of [false, true]) test(`native picture fills keep page orientation independently of frame rotation and reflections in ${rtl ? 'RTL' : 'LTR'}`, async ({ page }) => {
+  const model = openDocument(await importXlsx(readFileSync('packages/office/tests/fixtures/xlsx-picture-rotation.xlsx'), { documentId: 'picture-fill' }), { kind: 'workbook' }), snapshot = model.snapshot();
+  const resources = Object.fromEntries(snapshot.manifest.assets.map(asset => [asset.path, Buffer.from(model.getAsset(asset.path)!).toString('base64')]));
+  const result = await page.evaluate(({ snapshot, resources, rtl }) => window.workbookContentHost.measurePictureFills(snapshot, resources, rtl), { snapshot, resources, rtl });
+  expect(result).toMatchObject({ unchanged: true, degenerate: [1, 1], errors: ['InvalidDocument', 'InvalidDocument', 'InvalidDocument', 'InvalidOperation', 'InvalidOperation', 'ResourceLimitExceeded'] });
+  expect(result.results).toHaveLength(20);
+  for (const record of result.results) {
+    expect(record.nodes).toBe(record.actualNodes); expect(record.nodes).toBe(record.rotates ? 2 : 3);
+    const angle = record.orientation.rotationDegrees*Math.PI/180, sx = record.orientation.flipH ? -1 : 1, sy = record.orientation.flipV ? -1 : 1;
+    const expected = record.rotates ? [Math.cos(angle)*sx, Math.sin(angle)*sx, -Math.sin(angle)*sy, Math.cos(angle)*sy] : [sx, 0, 0, sy];
+    for (const [index, number] of expected.entries()) expect(record.matrix[index]).toBeCloseTo(number, 5);
+  }
+  const gallery = page.locator('#workbook-picture-fill-probe'), image = await gallery.screenshot(), box = (await gallery.boundingBox())!;
+  const colors = await page.evaluate(async ({ base64, points, origin }) => {
+    const image = new Image(); image.src = 'data:image/png;base64,' + base64; await image.decode();
+    const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height; const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
+    return points.map(samples => samples.map(point => [...context.getImageData(Math.round(point.x - origin.x), Math.round(point.y - origin.y), 1, 1).data]));
+  }, { base64: image.toString('base64'), points: result.results.map(record => record.samples), origin: box });
+  for (const [index, samples] of colors.entries()) for (const [at, color] of samples.entries()) {
+    const expected = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0]][at]!;
+    for (const [channel, value] of expected.entries()) expect(Math.abs(color[channel]! - value), `picture ${index}, sample ${at}`).toBeLessThanOrEqual(5);
+    expect(color[3]).toBe(255);
+  }
+  await page.evaluate(() => window.workbookContentHost.disposeImageView()); await expect(gallery).toHaveCount(0);
 });
 test.beforeEach(async ({ page }) => { await page.goto('/'); await page.addScriptTag({ content: code }); });
 

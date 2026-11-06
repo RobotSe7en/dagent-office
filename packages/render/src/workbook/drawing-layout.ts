@@ -158,7 +158,7 @@ export async function layoutWorkbookDrawings(surface: Pick<WorkbookSurface, "sou
         framePaint("fill");
         let text: WorkbookDrawingTextLayout | undefined;
         if (item.imagePath) {
-          account(2); const image = createWorkbookImageContent(source, item.imagePath, lease); images.push(image.image);
+          const image = createWorkbookImageContent(source, item.imagePath, lease, { widthPt: rect.width, heightPt: rect.height, orientation: item.orientation }); images.push(image.image); account(image.nodes);
           if (rect.width * image.scaleX > limits.maxExtentPt || rect.height * image.scaleY > limits.maxExtentPt)
             throw new DocumentError("ResourceLimitExceeded", "A cropped worksheet image exceeds its measurable extent budget.");
           content.append(image.element);

@@ -10,6 +10,55 @@ import { createWorkbookImageContent, decodeWorkbookImages } from '../../../packa
 let previous: { node: HTMLElement; dispose(): void } | undefined;
 export function disposeImageView() { previous?.node.remove(); previous?.dispose(); previous = undefined; }
 
+export async function measurePictureFills(snapshot: WorkbookSnapshot, resources: Readonly<Record<string, string>>, rtl: boolean) {
+  disposeImageView();
+  const scope = document.createElement('div'); document.body.append(scope);
+  const source = new WorkbookContentSources(document, snapshot), objects = snapshot.metadata.workbook.objects!;
+  const projection = source.project(scope, objects.map(object => object.nodeId)), paths = [...new Set(projection.assets.map(asset => asset.path))];
+  const lease = await prepareWorkbookAssets({ snapshot, async readAsset(request) { return { ...request, bytes: Uint8Array.from(atob(resources[request.path]!), value => value.charCodeAt(0)) }; } }, paths, new AbortController().signal);
+  const gallery = document.createElement('div'); gallery.id = 'workbook-picture-fill-probe'; gallery.style.cssText = 'position:absolute;left:0;top:0;display:flex;flex-wrap:wrap;width:1000px;gap:4px;background:white';
+  const original = JSON.stringify(snapshot), images: HTMLImageElement[] = [], records = [];
+  let accepted = false;
+  try {
+    for (const object of objects) {
+      const element = projection.get(object.nodeId)!, orientation = workbookDrawingOrientation(element), rect = { x: 30, y: 55, width: 180, height: 90 };
+      const path = projection.assets.find(asset => element.contains(projection.get(asset.nodeId)!))!.path;
+      const view = createWorkbookImageContent(element, path, lease, { widthPt: rect.width, heightPt: rect.height, orientation }); images.push(view.image);
+      const walker = document.createTreeWalker(view.element, 0xffff_ffff); let actualNodes = 1; while (walker.nextNode()) actualNodes++;
+      const fragment = createWorkbookDrawingFragment(document, object.nodeId, { pane: 'body', rect, clip: { x: 0, y: 0, width: 240, height: 200 } }, 240, orientation, rtl, view.element);
+      const cell = document.createElement('div'); cell.style.cssText = 'position:relative;width:240pt;height:200pt;overflow:hidden;background:white'; cell.append(fragment); gallery.append(cell);
+      records.push({ cell, orientation, rotates: element.getAttribute('data-office-image-rotate-with-shape') !== 'false', nodes: view.nodes, actualNodes, image: view.image, fill: view.element.querySelector<HTMLElement>('[data-office-view=workbook-image-fill]') });
+    }
+    await decodeWorkbookImages(images, new AbortController().signal); document.body.append(gallery);
+    const results = records.map(record => {
+      const box = record.cell.getBoundingClientRect(), angle = record.orientation.rotationDegrees * Math.PI / 180, cosine = Math.cos(angle), sine = Math.sin(angle), sx = record.orientation.flipH ? -1 : 1, sy = record.orientation.flipV ? -1 : 1;
+      const width = Math.abs(cosine)*180 + Math.abs(sine)*90, height = Math.abs(sine)*180 + Math.abs(cosine)*90;
+      // Sample on each side of the original bitmap's quadrant boundaries.
+      // Page-oriented fill samples stay in page axes, even after reflection.
+      const samples = [[-.15, -.15], [.15, -.15], [-.15, .15], [.15, .15]].map(([u, v]) => {
+        const x = record.rotates ? cosine*u!*180*sx - sine*v!*90*sy : u!*width*sx;
+        const y = record.rotates ? sine*u!*180*sx + cosine*v!*90*sy : v!*height*sy;
+        return { x: box.x + (120 + x)/.75, y: box.y + (100 + y)/.75 };
+      });
+      const body = record.cell.querySelector<HTMLElement>('[data-office-view=workbook-drawing-body]')!, bodyMatrix = new DOMMatrix(getComputedStyle(body).transform);
+      const fillMatrix = record.fill ? new DOMMatrix(getComputedStyle(record.fill).transform) : new DOMMatrix(), matrix = bodyMatrix.multiply(fillMatrix);
+      return { rotates: record.rotates, orientation: record.orientation, nodes: record.nodes, actualNodes: record.actualNodes, samples, matrix: [matrix.a, matrix.b, matrix.c, matrix.d] };
+    });
+    const errors: string[] = [], first = projection.get(objects[0]!.nodeId)!;
+    for (const value of ['yes', '', '0']) {
+      const bad = first.cloneNode(true) as HTMLElement; bad.setAttribute('data-office-image-rotate-with-shape', value);
+      try { createWorkbookImageContent(bad, paths[0]!, lease); } catch (error) { errors.push((error as { code: string }).code); }
+    }
+    const bad = first.cloneNode(true) as HTMLElement; bad.setAttribute('data-office-image-rotate-with-shape', 'false');
+    for (const frame of [undefined, { widthPt: -1, heightPt: 90, orientation: workbookDrawingOrientation(first) }, { widthPt: 1e-300, heightPt: 1e300, orientation: { ...workbookDrawingOrientation(first), rotationDegrees: 45 } }]) {
+      try { createWorkbookImageContent(bad, paths[0]!, lease, frame); } catch (error) { errors.push((error as { code: string }).code); }
+    }
+    const degenerate = createWorkbookImageContent(bad, paths[0]!, lease, { widthPt: 0, heightPt: 90, orientation: workbookDrawingOrientation(first) }); degenerate.image.removeAttribute('src');
+    previous = { node: gallery, dispose: () => { images.forEach(image => image.removeAttribute('src')); lease.dispose(); } }; accepted = true;
+    return { results, errors, unchanged: original === JSON.stringify(snapshot), degenerate: [degenerate.scaleX, degenerate.scaleY] };
+  } finally { source.dispose(); scope.remove(); if (!accepted) { gallery.remove(); lease.dispose(); } }
+}
+
 export async function measureImageView(snapshot: WorkbookSnapshot, resources: Readonly<Record<string, string>>, rtl: boolean) {
   disposeImageView();
   const scope = document.createElement('div'); document.body.append(scope);

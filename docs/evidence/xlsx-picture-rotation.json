@@ -1,0 +1,549 @@
+{
+  "scope": "Independent picture-fill rotation, reflection and crop sources.\n\nCalc producer properties describe only that producer, not normative support for\nrotWithShape=false. SDK geometry/pixels are checked separately in browsers.\n",
+  "office": "LibreOffice 25.8.1.1 54047653041915e595ad4e45cccea684809c77b5",
+  "archiveSha256": "f367c434aee8352e9742e192bedcdaef194ffcbcfeaf760c6300fb4fecbba73c",
+  "fontManifest": [
+    {
+      "file": "LiberationSans-Regular.ttf",
+      "sha256": "4659bc0c58c5028dd488ec928d41d9265db43d9b669fc14ca8b0832daca7b144"
+    }
+  ],
+  "sourceSha256": "108b9b3f4386feda8b26c9df56d982a66342b5f82874a6cc6847b02706e3e99f",
+  "specification": "https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.spreadsheet.blipfill?view=openxml-3.0.1",
+  "cases": [
+    {
+      "rotation": 0,
+      "rotates": null,
+      "flipH": false,
+      "flipV": false,
+      "crop": false,
+      "source": {
+        "fill": {},
+        "transform": {
+          "rot": "0",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "crop": {}
+      },
+      "producer": {
+        "fill": {},
+        "transform": {},
+        "crop": {}
+      }
+    },
+    {
+      "rotation": 0,
+      "rotates": true,
+      "flipH": false,
+      "flipV": false,
+      "crop": false,
+      "source": {
+        "fill": {
+          "rotWithShape": "1"
+        },
+        "transform": {
+          "rot": "0",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "crop": {}
+      },
+      "producer": {
+        "fill": {},
+        "transform": {},
+        "crop": {}
+      }
+    },
+    {
+      "rotation": 0,
+      "rotates": false,
+      "flipH": false,
+      "flipV": false,
+      "crop": false,
+      "source": {
+        "fill": {
+          "rotWithShape": "0"
+        },
+        "transform": {
+          "rot": "0",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "crop": {}
+      },
+      "producer": {
+        "fill": {},
+        "transform": {},
+        "crop": {}
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": null,
+      "flipH": false,
+      "flipV": false,
+      "crop": false,
+      "source": {
+        "fill": {},
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "crop": {}
+      },
+      "producer": {
+        "fill": {},
+        "transform": {
+          "rot": "2700000"
+        },
+        "crop": {}
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": true,
+      "flipH": false,
+      "flipV": false,
+      "crop": false,
+      "source": {
+        "fill": {
+          "rotWithShape": "1"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "crop": {}
+      },
+      "producer": {
+        "fill": {},
+        "transform": {
+          "rot": "2700000"
+        },
+        "crop": {}
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "flipH": false,
+      "flipV": false,
+      "crop": false,
+      "source": {
+        "fill": {
+          "rotWithShape": "0"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "crop": {}
+      },
+      "producer": {
+        "fill": {},
+        "transform": {
+          "rot": "2700000"
+        },
+        "crop": {}
+      }
+    },
+    {
+      "rotation": 90,
+      "rotates": null,
+      "flipH": false,
+      "flipV": false,
+      "crop": false,
+      "source": {
+        "fill": {},
+        "transform": {
+          "rot": "5400000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "crop": {}
+      },
+      "producer": {
+        "fill": {},
+        "transform": {
+          "rot": "5400000"
+        },
+        "crop": {}
+      }
+    },
+    {
+      "rotation": 90,
+      "rotates": true,
+      "flipH": false,
+      "flipV": false,
+      "crop": false,
+      "source": {
+        "fill": {
+          "rotWithShape": "1"
+        },
+        "transform": {
+          "rot": "5400000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "crop": {}
+      },
+      "producer": {
+        "fill": {},
+        "transform": {
+          "rot": "5400000"
+        },
+        "crop": {}
+      }
+    },
+    {
+      "rotation": 90,
+      "rotates": false,
+      "flipH": false,
+      "flipV": false,
+      "crop": false,
+      "source": {
+        "fill": {
+          "rotWithShape": "0"
+        },
+        "transform": {
+          "rot": "5400000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "crop": {}
+      },
+      "producer": {
+        "fill": {},
+        "transform": {
+          "rot": "5400000"
+        },
+        "crop": {}
+      }
+    },
+    {
+      "rotation": -30,
+      "rotates": null,
+      "flipH": false,
+      "flipV": false,
+      "crop": false,
+      "source": {
+        "fill": {},
+        "transform": {
+          "rot": "-1800000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "crop": {}
+      },
+      "producer": {
+        "fill": {},
+        "transform": {
+          "rot": "19800000"
+        },
+        "crop": {}
+      }
+    },
+    {
+      "rotation": -30,
+      "rotates": true,
+      "flipH": false,
+      "flipV": false,
+      "crop": false,
+      "source": {
+        "fill": {
+          "rotWithShape": "1"
+        },
+        "transform": {
+          "rot": "-1800000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "crop": {}
+      },
+      "producer": {
+        "fill": {},
+        "transform": {
+          "rot": "19800000"
+        },
+        "crop": {}
+      }
+    },
+    {
+      "rotation": -30,
+      "rotates": false,
+      "flipH": false,
+      "flipV": false,
+      "crop": false,
+      "source": {
+        "fill": {
+          "rotWithShape": "0"
+        },
+        "transform": {
+          "rot": "-1800000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "crop": {}
+      },
+      "producer": {
+        "fill": {},
+        "transform": {
+          "rot": "19800000"
+        },
+        "crop": {}
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "flipH": false,
+      "flipV": false,
+      "crop": false,
+      "source": {
+        "fill": {
+          "rotWithShape": "0"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "crop": {}
+      },
+      "producer": {
+        "fill": {},
+        "transform": {
+          "rot": "2700000"
+        },
+        "crop": {}
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "flipH": false,
+      "flipV": false,
+      "crop": true,
+      "source": {
+        "fill": {
+          "rotWithShape": "0"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "0"
+        },
+        "crop": {
+          "l": "10000",
+          "t": "20000",
+          "r": "25000",
+          "b": "10000"
+        }
+      },
+      "producer": {
+        "fill": {},
+        "transform": {
+          "rot": "2700000"
+        },
+        "crop": {
+          "l": "9982",
+          "t": "20024",
+          "r": "24985",
+          "b": "9982"
+        }
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "flipH": true,
+      "flipV": false,
+      "crop": false,
+      "source": {
+        "fill": {
+          "rotWithShape": "0"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "1",
+          "flipV": "0"
+        },
+        "crop": {}
+      },
+      "producer": {
+        "fill": {},
+        "transform": {
+          "flipH": "1",
+          "rot": "2700000"
+        },
+        "crop": {}
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "flipH": true,
+      "flipV": false,
+      "crop": true,
+      "source": {
+        "fill": {
+          "rotWithShape": "0"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "1",
+          "flipV": "0"
+        },
+        "crop": {
+          "l": "10000",
+          "t": "20000",
+          "r": "25000",
+          "b": "10000"
+        }
+      },
+      "producer": {
+        "fill": {},
+        "transform": {
+          "flipH": "1",
+          "rot": "2700000"
+        },
+        "crop": {
+          "l": "9982",
+          "t": "20024",
+          "r": "24985",
+          "b": "9982"
+        }
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "flipH": false,
+      "flipV": true,
+      "crop": false,
+      "source": {
+        "fill": {
+          "rotWithShape": "0"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "1"
+        },
+        "crop": {}
+      },
+      "producer": {
+        "fill": {},
+        "transform": {
+          "flipH": "1",
+          "rot": "13500000"
+        },
+        "crop": {}
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "flipH": false,
+      "flipV": true,
+      "crop": true,
+      "source": {
+        "fill": {
+          "rotWithShape": "0"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "0",
+          "flipV": "1"
+        },
+        "crop": {
+          "l": "10000",
+          "t": "20000",
+          "r": "25000",
+          "b": "10000"
+        }
+      },
+      "producer": {
+        "fill": {},
+        "transform": {
+          "flipH": "1",
+          "rot": "13500000"
+        },
+        "crop": {
+          "l": "9982",
+          "t": "20024",
+          "r": "24985",
+          "b": "9982"
+        }
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "flipH": true,
+      "flipV": true,
+      "crop": false,
+      "source": {
+        "fill": {
+          "rotWithShape": "0"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "1",
+          "flipV": "1"
+        },
+        "crop": {}
+      },
+      "producer": {
+        "fill": {},
+        "transform": {
+          "rot": "13500000"
+        },
+        "crop": {}
+      }
+    },
+    {
+      "rotation": 45,
+      "rotates": false,
+      "flipH": true,
+      "flipV": true,
+      "crop": true,
+      "source": {
+        "fill": {
+          "rotWithShape": "0"
+        },
+        "transform": {
+          "rot": "2700000",
+          "flipH": "1",
+          "flipV": "1"
+        },
+        "crop": {
+          "l": "10000",
+          "t": "20000",
+          "r": "25000",
+          "b": "10000"
+        }
+      },
+      "producer": {
+        "fill": {},
+        "transform": {
+          "rot": "13500000"
+        },
+        "crop": {
+          "l": "9982",
+          "t": "20024",
+          "r": "24985",
+          "b": "9982"
+        }
+      }
+    }
+  ],
+  "limits": [
+    "Calc omits rotWithShape; its producer is validated with the properties actually saved, not reconstructed source flags.",
+    "Page-axis stretch uses the rotated frame bounding rectangle and its independently rotated clip. Browser geometry/pixel checks validate this interpretation; Excel/WPS remain unverified."
+  ]
+}

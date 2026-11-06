@@ -26,7 +26,7 @@ export function workbookObjects(workbook: WorkbookMetadata, html: ParsedHtml | u
     for (const [key, value] of Object.entries(node.attributes)) {
       if (!key.startsWith("data-office-")) continue;
       if (["data-office-kind", "data-office-alt"].includes(key)) continue;
-      if (["data-office-flip-h", "data-office-flip-v", "data-office-hidden"].includes(key)) { if (!["true", "false"].includes(value)) invalid("Drawing boolean attributes must be true or false."); }
+      if (["data-office-flip-h", "data-office-flip-v", "data-office-hidden"].includes(key) || key === "data-office-image-rotate-with-shape" && object.kind === "image") { if (!["true", "false"].includes(value)) invalid("Drawing boolean attributes must be true or false."); }
       else if (key === "data-office-rotation") number(value);
       else if (key.startsWith("data-office-adjust-") && ["text", "geometry"].includes(object.kind) && /^data-office-adjust-[a-z][a-z0-9]*$/.test(key)) {
         if (!/^-?\d+$/.test(value) || !Number.isSafeInteger(Number(value))) invalid("Shape adjustments require safe integer constants.");

@@ -33,7 +33,7 @@ export async function currentChartWindowMeasurement(entries: readonly [string, n
   } finally { controller.dispose(); formatter.dispose(); surface.dispose(); container.remove(); }
 }
 
-export async function drawingWindowMeasurement(entries: readonly [string, number[]][], rtl: boolean, overflow = false) {
+export async function drawingWindowMeasurement(entries: readonly [string, number[]][], rtl: boolean, overflow = false, pageOrientedPictures = false) {
   const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)])), decoder = new TextDecoder(), encoder = new TextEncoder();
   const metadata = JSON.parse(decoder.decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata;
   const sheet = metadata.workbook.sheets[0]!; sheet.frozen = { rows: 2, columns: 1 }; sheet.rightToLeft = rtl;
@@ -55,6 +55,11 @@ export async function drawingWindowMeasurement(entries: readonly [string, number
     files.set('metadata.json', encoder.encode(JSON.stringify(metadata)));
   }
   const stylePath = manifest.styles[0]!;
+  if (pageOrientedPictures) {
+    const template = document.createElement('template'); template.innerHTML = decoder.decode(files.get(manifest.content)!);
+    for (const image of template.content.querySelectorAll('[data-office-kind=image]')) image.setAttribute('data-office-image-rotate-with-shape', 'false');
+    files.set(manifest.content, encoder.encode('<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="' + manifest.styles[0]! + '"></head><body>' + template.content.querySelector('[data-office-kind="workbook-content"]')!.outerHTML + '</body></html>'));
+  }
   files.set(stylePath, encoder.encode(decoder.decode(files.get(stylePath)!) + '\ndiv{--office-shadow-kind:outer;--office-shadow-color:#ff0000;--office-shadow-source:direct;--office-shadow-blur:4pt;--office-shadow-distance:3pt;--office-shadow-direction:30;--office-shadow-rotate-with-shape:false}'));
   const model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot(), initial = model.serialize();
   const container = document.createElement('div'); document.body.append(container);
@@ -133,7 +138,7 @@ export async function drawingWindowMeasurement(entries: readonly [string, number
     const normalized = [...files].filter(([path, bytes]) => bytes.length !== initial.get(path)!.length || bytes.some((byte, index) => byte !== initial.get(path)![index])).map(([path]) => path);
     const result = { normalized, expectedOrder, overflowParts, canonicalIds: active.element.querySelectorAll('[data-node-id]').length, objects, fragments, nodes: active.nodes, actualNodes: count, uniqueIds: new Set(ids).size === ids.length, detached, unchanged,
       gridCells: grid.element.querySelectorAll('[role="gridcell"]').length, live: [...created].filter(url => !revoked.has(url)).length,
-      imageCount: originals.length, imageUrls: new Set(originals.map(image => image.src)).size, assets: active.assets, shadowPixels: active.shadowPixels,
+      imageCount: originals.length, pageOrientedImages: active.element.querySelectorAll('[data-office-view=workbook-image-fill]').length, imageUrls: new Set(originals.map(image => image.src)).size, assets: active.assets, shadowPixels: active.shadowPixels,
       fonts: active.fonts.length, diagnostics: active.diagnostics.map(diagnostic => diagnostic.code), errors, cropError, cancelled, unavailable, staleDiagnostics,
       preserved: surface.view.innerHTML === stable && originals.every(image => image.isConnected && image.naturalWidth > 0 && image.hasAttribute('src')),
       cleaned: !surface.source.querySelector('[data-office-view="workbook-content-measurement"]') && !surface.view.querySelector('[data-office-view="workbook-drawing-text-measurement"]'), unhandled };

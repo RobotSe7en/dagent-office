@@ -1,6 +1,6 @@
 import type { WorkbookSnapshot } from '@dagent-office/core';
 import { WorkbookContentSources } from '../../../packages/render/src/workbook/content-source.js';
-import { disposeImageView, measureImageView } from './workbook-image-view.js';
+import { disposeImageView, measureImageView, measurePictureFills } from './workbook-image-view.js';
 import { measureObjectGeometry } from './workbook-object-geometry.js';
 import { measureDrawingGradients } from './drawing-gradient.js';
 import { measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback, measureDrawingTextOverflow, measureDrawingOverflowEdges } from './workbook-drawing-text.js';
@@ -41,6 +41,6 @@ export function rejectContentSource(snapshot: WorkbookSnapshot, maxNodes?: numbe
   try { const source = new WorkbookContentSources(document, snapshot, maxNodes, maxCodeUnits); source.dispose(); return ''; }
   catch (error) { return (error as { code: string }).code; }
 }
-Object.assign(window, { workbookContentHost: { measureContentSource, rejectContentSource, measureImageView, disposeImageView, measureObjectGeometry, measureDrawingGradients, measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback, measureDrawingTextOverflow, measureDrawingOverflowEdges, measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } });
+Object.assign(window, { workbookContentHost: { measureContentSource, rejectContentSource, measureImageView, measurePictureFills, disposeImageView, measureObjectGeometry, measureDrawingGradients, measureDrawingText, measureDrawingTextLayout, measureNativeDrawingText, measureDrawingTextFallback, measureDrawingTextOverflow, measureDrawingOverflowEdges, measureWorkbookSurface, mountWorkbookSurfacePixels, disposeWorkbookSurfacePixels } });
 Object.assign(window, { workbookShadowHost: { measureWorkbookShadows, mountWorkbookShadowPixels, disposeWorkbookShadowPixels } });
 Object.assign(window, { workbookChartHost: { measureWorkbookChartAxes, measureWorkbookChartTextFonts, measureWorkbookCharts, measureWorkbookChartMarkers, measureWorkbookChartGrid, measureWorkbookChartColors, measureWorkbookChartTitles, measureWorkbookChartPositions, measureWorkbookChartTitleContents, measureWorkbookComposedChart, measureWorkbookChartFormats } });

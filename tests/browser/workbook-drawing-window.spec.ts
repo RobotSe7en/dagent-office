@@ -77,6 +77,14 @@ for (const rtl of [false, true]) test(`worksheet objects compose above cells acr
 });
 
 
+test('page-oriented picture fills retain complete pane budgets and isolated failed candidates', async ({ page }) => {
+  for (const input of inputs.filter(input => input.name.endsWith('08-images-shapes'))) for (const rtl of [false, true]) {
+    const result = await page.evaluate(({ files, rtl }) => window.workbookDrawingWindow.drawingWindowMeasurement(files, rtl, false, true), { files: input.files, rtl });
+    expect(result).toMatchObject({ detached: true, unchanged: true, preserved: true, cleaned: true, released: true, clearedImages: true, removed: true, uniqueIds: true, cancelled: 'OperationCancelled', unhandled: [], pageOrientedImages: 4, imageCount: 4, imageUrls: 1, live: 1, cropError: 'ResourceLimitExceeded' });
+    expect(result.nodes).toBe(result.actualNodes); expect(result.errors).toEqual(Array(6).fill('ResourceLimitExceeded'));
+  }
+});
+
 test('offscreen object anchors still project visible hanging text outside the anchor', async ({ page }) => {
   const input = inputs.find(input => input.name === '08-images-shapes')!;
   const result = await page.evaluate(files => window.workbookDrawingWindow.drawingWindowMeasurement(files, false, true), input.files);

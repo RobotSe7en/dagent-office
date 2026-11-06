@@ -76,7 +76,8 @@ export class WorkbookDrawings {
     const fill = one(source, "blipFill", XDR); if (!fill) fail(source, "A worksheet picture has no source.");
     attributes(fill, ["dpi", "rotWithShape"]); check(fill, ["blip", "srcRect", "stretch"], A);
     if (value(fill, "dpi") !== undefined) integer(fill, "dpi");
-    if (!boolean(fill, "rotWithShape", true)) unsupported(fill, "Pictures that do not rotate with their shape are not supported.");
+    const rotates = boolean(fill, "rotWithShape", true);
+    if (value(fill, "rotWithShape") !== undefined) target.attrs["data-office-image-rotate-with-shape"] = String(rotates);
     const blip = one(fill, "blip", A), stretch = one(fill, "stretch", A); if (!blip || !stretch) unsupported(fill, "A picture requires an embedded image with rectangular stretch.");
     for (const key of blip.attrs.keys()) if (!key.startsWith("http://www.w3.org/2000/xmlns/ ") && ![R + " embed", " cstate"].includes(key)) unsupported(blip, "External or unknown image references are not supported.");
     check(blip, [], A);
