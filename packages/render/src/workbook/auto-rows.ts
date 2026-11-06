@@ -13,6 +13,7 @@ import type { WorkbookRuleSource } from "./rule-source.js";
 import { cellSourceUnits, checkWindowCancellation, checkWindowIdentity } from "./window-source.js";
 import type { WorkbookWindowResponse, WorkbookWindowSource } from "./window-source.js";
 import { implicitWorkbookFontRegions, implicitWorkbookRowSources } from "./implicit-row-sources.js";
+import { waitForWorkbookRead } from "./read-cancellation.js";
 import { WorkbookRowSourcePrototypes } from "./row-source-prototypes.js";
 import type { WorkbookSourceCell } from "./cell-source.js";
 import { workbookRowFontKey, workbookRowMetricKey } from "./row-metric-cache.js";
@@ -39,13 +40,7 @@ async function* autoRowReads(source: WorkbookWindowSource, windows: readonly Wor
   if (!windows.length) return;
   checkWindowCancellation(signal);
   const identity = { documentId: source.snapshot.manifest.documentId, revision: source.snapshot.manifest.revision };
-  const abort = new AbortController();
-  let rejectCancellation!: (error: unknown) => void;
-  const cancellation = new Promise<never>((_resolve, reject) => { rejectCancellation = reject; });
-  void cancellation.catch(() => {});
-  const cancel = (): void => {
-    abort.abort(); rejectCancellation(new DocumentError("OperationCancelled", "Automatic row reading was cancelled."));
-  };
+  const abort = new AbortController(), cancel = (): void => abort.abort();
   signal.addEventListener("abort", cancel, { once: true });
   let ahead = false;
   try { ahead = source.allowReadAhead === true; } catch { /* Optional preference cannot fail a foreground read. */ }
@@ -58,7 +53,7 @@ async function* autoRowReads(source: WorkbookWindowSource, windows: readonly Wor
   try {
     let pending = read(windows[0]!);
     for (const [index, window] of windows.entries()) {
-      const result = await Promise.race([pending, cancellation]); checkWindowCancellation(signal);
+      const result = await waitForWorkbookRead(pending, signal); checkWindowCancellation(signal);
       if ("error" in result) throw result.error;
       const next = windows[index + 1];
       if (ahead && next) pending = read(next);
@@ -134,7 +129,7 @@ export async function measureWorkbookAutoRows(surface: Pick<WorkbookSurface, "so
     if (sheet.conditionalRules?.length || sheet.dataValidations?.length) {
       if (!rules) throw new DocumentError("InvalidOperation", "Automatic rule appearance requires an authorized current-value provider.");
       const request = Object.freeze({ ...identity, sheetId, ...rules.limits, coordinates: Object.freeze(coordinates) });
-      current = checkedWorkbookRules(await rules.source.read(request, signal), request, snapshot); checkWindowCancellation(signal);
+      current = checkedWorkbookRules(await waitForWorkbookRead(rules.source.read(request, signal), signal), request, snapshot); checkWindowCancellation(signal);
     }
     const shared = new Map<number, WorkbookSourceCell>(), ordinary: Readonly<WorkbookCoordinate>[] = [];
     for (const point of coordinates) {

@@ -426,3 +426,37 @@ export async function responsiveInlineViewport(entries: Entries) {
   } finally { for (const observer of observers) observer.disconnect(); for (const reset of restore) reset(); a.preview.dispose(); b?.preview.dispose(); aHost.remove(); bHost.remove(); }
 }
 (window as unknown as { workbookPreview: Record<string, unknown> }).workbookPreview.responsiveInlineViewport = responsiveInlineViewport;
+
+export async function autoRowRulesCancellation(entries: Entries) {
+  const files = new Map(entries.map(([path, bytes]) => [path, new Uint8Array(bytes)]));
+  const metadata = JSON.parse(new TextDecoder().decode(files.get('metadata.json')!)) as WorkbookDocumentMetadata;
+  metadata.workbook.sheets[0]!.defaultRowHeightCustom = false;
+  metadata.workbook.sheets[0]!.dataValidations = [{ ruleId: 'range', kind: 'whole', operator: 'between', origin: { row: 0, column: 0 },
+    ranges: [{ from: { row: 0, column: 0 }, to: { row: 128, column: 0 } }], formulas: ['=1', '=1000'], allowBlank: true,
+    showErrorMessage: true, showInputMessage: true, errorStyle: 'stop', errorTitle: '', error: '', promptTitle: '', prompt: '' }];
+  files.set('metadata.json', new TextEncoder().encode(JSON.stringify(metadata)));
+  const model = openDocument(files, { kind: 'workbook' }), snapshot = model.snapshot(), container = host();
+  const surface = await createWorkbookSurface(container, snapshot, { widthPt: 240, heightPt: 60 });
+  const { measureWorkbookColumnFont } = await import('../../../packages/render/src/workbook/column-font.js');
+  const { measureWorkbookAutoRows } = await import('../../../packages/render/src/workbook/auto-rows.js');
+  const { DEFAULT_WORKBOOK_RULE_LIMITS } = await import('@dagent-office/core');
+  const formatter = createWorkbookNumberFormatter({ dateSystem: '1900' }), normal = measureWorkbookColumnFont(surface.source, snapshot.metadata.workbook, 'sheet-1');
+  const abort = new AbortController(), rules = modelRuleSource(model); let calls = 0, held: AbortSignal | undefined, release = () => {}, began = () => {};
+  const started = new Promise<void>(resolve => { began = resolve; });
+  const source = { ...rules, async read(request: Parameters<typeof rules.read>[0], signal: AbortSignal) {
+    if (++calls === 2) { held = signal; await new Promise<void>(resolve => { release = resolve; began(); }); }
+    return rules.read(request, held === signal ? new AbortController().signal : signal);
+  } };
+  try {
+    const work = measureWorkbookAutoRows(surface, modelWindowSource(model), 'sheet-1', normal, formatter, abort.signal, {}, { source, limits: DEFAULT_WORKBOOK_RULE_LIMITS });
+    void work.catch(() => {}); await started;
+    const retainedBeforeAbort = !!surface.source.querySelector('[data-office-view="workbook-source-measurement"]'); abort.abort();
+    let error: string | undefined, deadline: ReturnType<typeof setTimeout> | undefined;
+    try { await Promise.race([work, new Promise<never>((_resolve, reject) => { deadline = setTimeout(() => reject(Error('Cancelled rule read still waits')), 1000); })]); }
+    catch (value) { error = (value as { code: string }).code; } finally { clearTimeout(deadline); }
+    const cleanBeforeRelease = !surface.source.childNodes.length && !surface.view.childNodes.length;
+    release(); await new Promise<void>(resolve => setTimeout(resolve, 30));
+    return { calls, retainedBeforeAbort, error, cleanBeforeRelease, aborted: held!.aborted };
+  } finally { release(); formatter.dispose(); surface.dispose(); container.remove(); }
+}
+(window as unknown as { workbookPreview: Record<string, unknown> }).workbookPreview.autoRowRulesCancellation = autoRowRulesCancellation;

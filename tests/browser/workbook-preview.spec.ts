@@ -167,6 +167,11 @@ test('inline HTML viewport fonts measure at the final resized viewport', async (
   expect(result.initial).toBeGreaterThan(0); expect(result.resized).toBeCloseTo(result.fresh, 6); expect(result.resized).toBeGreaterThan(result.initial * 1.5);
 });
 
+test('cancelled automatic rule reads release typography before a late custom response', async ({ page }) => {
+  const result = await page.evaluate(entries => window.workbookPreview.autoRowRulesCancellation(entries), sparseRowFiles);
+  expect(result).toEqual({ calls: 2, retainedBeforeAbort: true, error: 'OperationCancelled', cleanBeforeRelease: true, aborted: true });
+});
+
 const matrixCases=JSON.parse(readFileSync('examples/xlsx/expected.json','utf8')) as {cases:{file:string;sheets:string[];values?:Record<string,number|boolean|string>}[]};
 for(const producer of [false,true])for(const sample of matrixCases.cases)test(`${producer?'producer':'source'} ${sample.file} completes the public reading matrix without changing its package`,async({page},testInfo)=>{
   if(sample.file.startsWith('15-'))test.slow();
