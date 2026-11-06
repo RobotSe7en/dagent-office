@@ -1,0 +1,40 @@
+name: Quick checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quick-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  workflow-and-boundaries:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: ./.github/actions/setup-project
+      - run: git diff --check HEAD^ HEAD
+      - run: pnpm check:boundaries
+      - uses: actions/cache@v4
+        with:
+          path: .cache/actionlint/actionlint_1.7.7_linux_amd64.tar.gz
+          key: actionlint-linux-amd64-023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757
+      - name: Validate workflow definitions
+        run: |
+          mkdir -p .cache/actionlint
+          archive=.cache/actionlint/actionlint_1.7.7_linux_amd64.tar.gz
+          if ! test -f "$archive"; then
+            curl --fail --location --retry 2 --max-time 30 https://github.com/rhysd/actionlint/releases/download/v1.7.7/actionlint_1.7.7_linux_amd64.tar.gz --output "$archive"
+          fi
+          printf '%s  %s\n' 023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757 "$archive" | sha256sum --check
+          tar -xzf "$archive" -C .cache/actionlint actionlint LICENSE.txt
+          .cache/actionlint/actionlint -shellcheck= -pyflakes=
