@@ -1,4 +1,4 @@
-import { createWorkbookScalarEvaluator, DocumentError } from "@doffi/core";
+import { captureWorkbookModel, createWorkbookScalarEvaluator, DocumentError } from "@doffi/core";
 import type { DeepReadonly, WorkbookChart, WorkbookChartLiteral, WorkbookChartVector, WorkbookFormulaSource, WorkbookModel, WorkbookReferenceArea, WorkbookReferenceResult, WorkbookScalarEvaluator, WorkbookScalarResult, WorkbookScalarUnavailable, WorkbookSheet, WorkbookSnapshot, WorkbookValue } from "@doffi/core";
 import { workbookCellFormat } from "./cell-format.js";
 
@@ -69,6 +69,7 @@ function references(chart: DeepReadonly<WorkbookChart>, add: (slot: WorkbookChar
  * in the snapshot; they never replace unresolved references or current cells.
  * The response is structured-cloneable for a host-owned Worker transport. */
 export function modelChartSource(model: WorkbookModel): WorkbookChartSource {
+  model = captureWorkbookModel(model);
   const snapshot = model.snapshot(), workbook = snapshot.metadata.workbook;
   const charts = new Map((workbook.charts ?? []).map(chart => [chart.chartId, chart]));
   const owners = new Map((workbook.objects ?? []).filter(object => object.kind === "chart").map(object => [object.chartId, object.sheetId]));

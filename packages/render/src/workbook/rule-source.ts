@@ -1,4 +1,4 @@
-import { readWorkbookRules } from "@doffi/core";
+import { captureWorkbookModel, readWorkbookRules } from "@doffi/core";
 import type { WorkbookModel, WorkbookRuleIssue, WorkbookRuleReadRequest, WorkbookRuleReadResponse, WorkbookSnapshot } from "@doffi/core";
 
 export interface WorkbookRuleDiagnostic {
@@ -26,6 +26,7 @@ export interface WorkbookRuleSource {
 /** The host adapter supplies event-loop checkpoints. Core owns neither timers
  * nor the host's Worker lifetime, and reads remain bound to one revision. */
 export function modelRuleSource(model: WorkbookModel): WorkbookRuleSource {
+  model = captureWorkbookModel(model);
   return Object.freeze({ snapshot: model.snapshot(), read(request: WorkbookRuleReadRequest, signal: AbortSignal) {
     return readWorkbookRules(model, request, { signal, yield: () => new Promise<void>(resolve => setTimeout(resolve, 0)) });
   } });

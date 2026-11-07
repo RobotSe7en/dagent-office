@@ -32,7 +32,11 @@ export type { FormulaExpression as WorkbookFormulaExpression, FormulaOrigin as W
 export { printFormula as printWorkbookFormula } from "./workbook/formula-print.js";
 export type { WorkbookReferenceLocation, WorkbookReferenceArea, WorkbookReferenceResult } from "./workbook/reference.js";
 export { createWorkbookScalarEvaluator } from "./workbook/scalar.js";
+export { captureWorkbookModel } from "./workbook/source.js";
 export type { WorkbookScalarEvaluator, WorkbookScalarResult, WorkbookScalarUnavailable, WorkbookScalarLimits, WorkbookScalarQueryOptions } from "./workbook/scalar.js";
+export type { WorkbookScalarContext } from "./workbook/scalar.js";
+export { createWorkbookCalculator, DEFAULT_WORKBOOK_CALCULATION_LIMITS, WORKBOOK_CALCULATION_VERSION } from "./workbook/calculation.js";
+export type { WorkbookCalculator, WorkbookCalculationLimits, WorkbookCalculationOptions, WorkbookCalculationResult, WorkbookCalculatedCell } from "./workbook/calculation.js";
 export { readWorkbookRules, DEFAULT_WORKBOOK_RULE_LIMITS } from "./workbook/rule-reader.js";
 export type { WorkbookRuleReadLimits, WorkbookRuleReadRequest, WorkbookRuleReadOptions, WorkbookRuleReadResponse, WorkbookRuleCell, WorkbookRuleValue, WorkbookRuleIssue,
   WorkbookConditionalEvaluation, WorkbookValidationEvaluation } from "./workbook/rule-reader.js";
@@ -51,5 +55,6 @@ export type {
   OpenDocumentOptions, TextOffsetMapping, TransactionReceipt, DocumentEditingSession,
   DocumentNodeChange, DocumentSessionLimits, DocumentSessionOptions, DocumentHistoryState,
   TransactionPrepareOptions,
+  WorkbookSession, WorkbookCandidateChange, WorkbookRangeChange, WorkbookStructureMapping,
   PresentationInteractionRequestInput,PresentationAnnotationSubmissionHandler,
 } from "./runtime.js";

@@ -1,14 +1,14 @@
+import { beginWorkbookValidation, workbookRuleIssue as issue, compareWorkbookRule as compare } from "./validation.js";
 import { DocumentError } from "../errors.js";
 import type { DeepReadonly, WorkbookModel } from "../runtime.js";
 import type { WorkbookConditionalRule, WorkbookCoordinate, WorkbookDataValidation, WorkbookRange } from "../contracts/workbook.js";
 import { checkLimit, freeze } from "../document/validation.js";
-import { parseFormula } from "./formula.js";
-import { printFormula } from "./formula-print.js";
 import { createWorkbookScalarEvaluator } from "./scalar.js";
 import type { WorkbookScalarResult, WorkbookScalarUnavailable } from "./scalar.js";
-import { scalarCompare, scalarToNumber, scalarToText } from "./scalar-values.js";
+import { scalarToNumber, scalarToText } from "./scalar-values.js";
 import type { ScalarValue } from "./scalar-values.js";
 import type { WorkbookReferenceLocation } from "./reference.js";
+import { currentWorkbookModel } from "./source.js";
 
 export interface WorkbookRuleReadLimits {
   readonly maxCells: number; readonly maxRules: number; readonly maxValues: number; readonly maxSteps: number; readonly maxCodeUnits: number;
@@ -43,26 +43,13 @@ type Conditional = DeepReadonly<WorkbookConditionalRule>;
 type Validation = DeepReadonly<WorkbookDataValidation>;
 type Rule = Conditional | Validation;
 type Range = DeepReadonly<WorkbookRange>;
-type WorkbookComparison = Extract<WorkbookDataValidation, { kind: "whole" | "decimal" | "date" | "time" | "textLength" }>["operator"];
 type Samples = { readonly kind: "samples"; readonly values: readonly number[] } | WorkbookRuleIssue;
 const coordinateKey = (coordinate: WorkbookCoordinate): number => coordinate.row * 16_384 + coordinate.column;
 function lowerBound<Value>(values: readonly Value[], predicate: (value: Value) => boolean): number {
   let low = 0, high = values.length;
   while (low < high) { const mid = (low + high) >>> 1; if (predicate(values[mid]!)) low = mid + 1; else high = mid; } return low;
 }
-function issue(result: WorkbookRuleValue): WorkbookRuleIssue | undefined {
-  return result.kind === "unavailable" ? { reason: result.reason, ...(result.functionName ? { functionName: result.functionName } : {}) }
-    : result.value.type === "error" ? { reason: "formula-error" } : undefined;
-}
 function truth(value: ScalarValue): boolean { return value.type === "boolean" ? value.value : value.type === "number" && value.value !== 0; }
-function compare(operator: WorkbookComparison, value: ScalarValue, bounds: readonly ScalarValue[]): boolean {
-  const a = scalarCompare(value, bounds[0]!); if (typeof a !== "number") return false;
-  if (operator === "between" || operator === "notBetween") {
-    const b = scalarCompare(value, bounds[1]!); if (typeof b !== "number") return false;
-    return operator === "between" ? a >= 0 && b <= 0 : a < 0 || b > 0;
-  }
-  return operator === "equal" ? a === 0 : operator === "notEqual" ? a !== 0 : operator === "lessThan" ? a < 0 : operator === "lessThanOrEqual" ? a <= 0 : operator === "greaterThan" ? a > 0 : a >= 0;
-}
 /** Weighted sums and ratios avoid overflowing max-min for finite endpoints. */
 function interpolate(a: number, b: number, ratio: number): number {
   if (ratio === 0) return a; if (ratio === 1) return b;
@@ -78,6 +65,7 @@ function proportion(value: number, from: number, to: number): number {
  * their rules. No rule operation modifies imported values or their caches.
  * Request identity and all batch budgets are captured before the first yield. */
 export async function readWorkbookRules(model: WorkbookModel, input: WorkbookRuleReadRequest, options: WorkbookRuleReadOptions = {}): Promise<WorkbookRuleReadResponse> {
+  model = currentWorkbookModel(model);
   if (!input || typeof input !== "object" || !options || typeof options !== "object" || options.yield !== undefined && typeof options.yield !== "function"
     || options.signal !== undefined && (!options.signal || typeof options.signal.aborted !== "boolean")) throw new DocumentError("InvalidOperation", "Invalid workbook rule query options.");
   const snapshot = model.snapshot(), sheet = snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === input.sheetId);
@@ -206,23 +194,9 @@ export async function readWorkbookRules(model: WorkbookModel, input: WorkbookRul
     return { ...base, state: "match", scale: { fromStop, toStop, ratio } };
   }
   async function validate(rule: Validation, coordinate: WorkbookCoordinate, value: WorkbookRuleValue): Promise<WorkbookValidationEvaluation> {
-    const base = { ruleId: rule.ruleId };
-    if (rule.kind === "none") return { ...base, state: "none" };
-    if (value.kind === "unavailable") return { ...base, state: "unavailable", issue: issue(value)! };
-    if (rule.allowBlank && value.value.type === "blank") return { ...base, state: "valid" };
-    if (value.value.type === "error") return { ...base, state: "invalid", issue: { reason: "formula-error" } };
-    if (rule.kind === "custom") {
-      const result = evaluate(rule.expression, rule, coordinate);
-      return result.kind === "unavailable" ? { ...base, state: "unavailable", issue: issue(result)! }
-        : { ...base, state: truth(result.value) ? "valid" : "invalid", ...(issue(result) ? { issue: issue(result)! } : {}) };
-    }
-    if (rule.kind === "list") {
-      const ast = parseFormula(rule.expression, rule.origin), text = scalarToText(value.value); if (typeof text !== "string") return { ...base, state: "invalid" };
-      if (ast.kind === "string") { account(ast.value.length); return { ...base, state: ast.value.split(',').some(item => item.toUpperCase() === text.toUpperCase()) ? "valid" : "invalid" }; }
-      const reference = model.resolveReference(printFormula(ast, coordinate), location(coordinate));
-      if (reference.kind !== "ranges") return { ...base, state: "unavailable", issue: { reason: reference.kind === "unresolved" ? reference.reason : "invalid-list-reference" } };
-      if (reference.areas.length !== 1 || reference.areas[0]!.from.row !== reference.areas[0]!.to.row && reference.areas[0]!.from.column !== reference.areas[0]!.to.column)
-        return { ...base, state: "unavailable", issue: { reason: "invalid-list-reference" } };
+    const plan = beginWorkbookValidation(rule, coordinate, value, { evaluate, account, resolve: (expression, at) => model.resolveReference(expression, location(at)) });
+    if (!("kind" in plan)) return plan;
+    const base = { ruleId: plan.ruleId }, text = plan.text, reference = { areas: plan.areas };
       let unknown: WorkbookRuleIssue | undefined, count = 0;
       for await (const candidate of stored(reference.areas)) {
         count++; const candidateValue = current(candidate, candidate.sheetId);
@@ -234,20 +208,8 @@ export async function readWorkbookRules(model: WorkbookModel, input: WorkbookRul
       const area = reference.areas[0]!, total = (area.to.row - area.from.row + 1) * (area.to.column - area.from.column + 1);
       if (text === "" && count < total) return { ...base, state: "valid" };
       return unknown ? { ...base, state: "unavailable", issue: unknown } : { ...base, state: "invalid" };
-    }
-    const scalar = rule.kind === "textLength" ? scalarToText(value.value) : value.value.type === "number" ? value.value.value : undefined;
-    if (scalar === undefined || typeof scalar === "object") return { ...base, state: "invalid", issue: { reason: "type-mismatch" } };
-    const number = typeof scalar === "string" ? scalar.length : scalar;
-    if (rule.kind === "whole" && !Number.isInteger(number)) return { ...base, state: "invalid", issue: { reason: "type-mismatch" } };
-    const bounds: ScalarValue[] = [];
-    for (const expression of rule.formulas) {
-      const result = evaluate(expression, rule, coordinate), failed = issue(result);
-      if (failed) return { ...base, state: "unavailable", issue: failed };
-      const value = scalarToNumber((result as Extract<WorkbookRuleValue, { kind: "value" }>).value);
-      if (typeof value !== "number") return { ...base, state: "unavailable", issue: { reason: "non-numeric-threshold" } }; bounds.push({ type: "number", value });
-    }
-    return { ...base, state: compare(rule.operator, { type: "number", value: number }, bounds) ? "valid" : "invalid" };
   }
+
   try {
     const cells: WorkbookRuleCell[] = [];
     for (const coordinate of coordinates) {

@@ -4,7 +4,7 @@
 
 前置工作为工作台改版收尾及路线状态同步。整体路线见[实施计划](implementation-plan.md)，模块方向见[总体架构](architecture.md)，唯一来源见[数据模型](data-model.md)，事务与宿主边界见[交互协议](editing-protocol.md)。
 
-当前分支、PR、最近验证和下一步实施位置见[执行交接](workbook-reading-handoff.md)，新 session 从该记录继续；本文保留完整范围、产品决策和验收门槛。
+当前分支、PR、最近验证和下一步实施位置见[读取交接](workbook-reading-handoff.md)与[编辑计算交接](workbook-editing-handoff.md)，新 session 从这两份记录继续；本文保留完整范围、产品决策和验收门槛。
 
 ## 目标与已定决策
 
@@ -131,8 +131,8 @@ Word/PPT 单入口包继续可读；工作簿使用明确的 chunks 分支。工
 | R3-06 | 已完成（读取） | 基础 XLSX 读取与样式映射 | 可取消 ZIP/XML、容器消费审计、类型与命名样式及高级外观；32 份独立源／实际生产者公开导入并保存重开，见[读取验收](workbook-reading-acceptance.md) |
 | R3-07 | 已完成（读取） | 智能表、规则、打印、绘图、图表、两类批注读取 | 所选表／规则／图表当前源值、三种绘图锚定、经典及现代批注、打印元数据；独立规范／生产者差异及字体对照随[读取验收](workbook-reading-acceptance.md)保存 |
 | R3-08 | 已完成（读取验收） | 只读网格、冻结合并、对象、源投影和读取验收 | 四引擎 128 份公开源／生产者矩阵、真实一万行固定资源验收、三份独立子智能体审查及 8 项 P2 修复复核；最终提交四项 CI 全绿后合并 |
-| R3-09 | 待实施 | 分块候选、历史、工作簿操作、资源原子性及范围映射 | R3-08；失败不变、无净变化、撤销及冲突 |
-| R3-10 | 待实施 | 求值、函数矩阵、增量依赖、循环、缓存、取消和预算 | R3-05/09；独立预期、Calc 对照及 2 万公式基准 |
+| R3-09 | 实施中，未验收 | 分块候选、历史、工作簿操作、资源原子性及范围映射 | R3-08；失败不变、无净变化、撤销及冲突 |
+| R3-10 | 实施中，未验收 | 求值、函数矩阵、增量依赖、循环、缓存、取消和预算 | R3-05/09；独立预期、Calc 对照及 2 万公式基准 |
 | R3-11 | 待实施 | 单元格/公式栏输入、IME、粘贴填充、查找及格式 | R3-09/10；统一事务历史 |
 | R3-12 | 待实施 | 工作表/行列、合并冻结、排序筛选、剪切及引用维护 | R3-09/10/11；跨块跨表和隐藏行引用正确 |
 | R3-13 | 待实施 | 智能表、名称、条件格式及数据验证编辑 | R3-10/12；显示、规则及各修改入口一致 |
@@ -178,7 +178,7 @@ Word/PPT 单入口包继续可读；工作簿使用明确的 chunks 分支。工
 
 验证严格契约和同源 Schema、跨块引用及安全输入、公式类型和错误语义、原子事务和映射、真实 IME、三引擎和旧 Chromium/Safari、两类批注、提案作用域、打印、Worker/资源/子进程释放及独立打包。范围限额和性能目标分别验证。
 
-已提供 `fixtures:xlsx`、`check:xlsx-fixtures`、`check:xlsx-reference` 和单独的 `record:xlsx-reference`。计划新增 `check:workbook-calculation`、`check:workbook-performance`、`check:xlsx-export`、`check:workbook-closure`；后四项尚未实现，落地后才记录结果。普通检查不改参考基线。
+已提供 `fixtures:xlsx`、`check:xlsx-fixtures`、`check:xlsx-reference` 和单独的 `record:xlsx-reference`。编辑阶段已增加 `check:workbook-calculation` 与 `check:workbook-filter-calculation` 的独立原生来源／固定 Calc 复现；两项基础证据不代表 R3-10 完整验收。`check:workbook-performance`、`check:xlsx-export`、`check:workbook-closure` 尚未实现，落地后才记录结果。普通检查不改参考基线。
 
 原生链路必须包含独立来源导入、当前源修改、导出、结构检查、Calc 实际修改值/公式/表格/图表/备注后重存、SDK 重新导入。独立打包在工作区外安装五个 tarball，普通 JS 不安装 React，不使用源码私有路径。每阶段保留 Word/PPT 回归。
 
