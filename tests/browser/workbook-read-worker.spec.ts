@@ -4,8 +4,10 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import type * as fixture from './fixtures/workbook-read-host.js';
+import type * as sessionFixture from './fixtures/workbook-session-host.js';
 declare global { interface Window { workbookReadHost: typeof fixture } }
-let workerCode = '', hostCode = '';
+declare global { interface Window { workbookSessionHost: typeof sessionFixture } }
+let workerCode = '', hostCode = '', sessionWorkerCode = '', sessionHostCode = '';
 test.beforeAll(async () => {
   async function bundle(name: string): Promise<string> {
     const result = await build({ configFile: false, build: { write: false, minify: false, lib: { entry: fileURLToPath(new URL(`./fixtures/${name}.ts`, import.meta.url)), formats: ['iife'], name: 'WorkbookReadProbe' } } });
@@ -14,6 +16,7 @@ test.beforeAll(async () => {
     return output.filter(part => part.type === 'chunk').map(part => part.code).join('\n');
   }
   workerCode = await bundle('workbook-read-worker'); hostCode = await bundle('workbook-read-host');
+  sessionWorkerCode = await bundle('workbook-session-worker'); sessionHostCode = await bundle('workbook-session-host');
 });
 test.beforeEach(async ({ page }) => { await openSdkHost(page); await page.addScriptTag({ content: hostCode }); });
 test('native XLSX pictures and charts stay in a host Worker and feed the public preview through bounded reads', async ({ page }) => {
@@ -51,4 +54,33 @@ test('10,000 actual XLSX rows open and scroll through the production read transp
   const report = JSON.stringify({ ...result, cancelled }, null, 2);
   writeFileSync(info.outputPath('native-workbook-worker.json'), report + '\n');
   await info.attach('native-workbook-worker.json', { body: report, contentType: 'application/json' });
+});
+
+test('native workbook edits, current values, cancellation and history stay in one host Worker session', async ({ page }) => {
+  await page.addScriptTag({ content: sessionHostCode });
+  for (const name of ['01-values-text', '04-formulas-names']) {
+    const result = await page.evaluate(({ code, bytes, name }) => window.workbookSessionHost.editWorker(code, bytes, name), {
+      code: sessionWorkerCode, bytes: readFileSync(`examples/xlsx/${name}.xlsx`).toString('base64'), name });
+    expect(result).toMatchObject({ isolated: true, cancelled: 'OperationCancelled', cancellationPoint: 256, copyUndo: true, originalChunksRestored: true,
+      detachedInput: true, failures: [], cancellationState: { revision: 1, history: { undoSteps: 1 } },
+      current: { kind: 'value', value: { type: 'number', value: 2 } }, audit: { sessionsCreated: 1, endpointDisposed: true, reopenedEqual: true,
+        revision: 4, history: { undoSteps: 0, redoSteps: 2 }, hostUsable: { type: 'number', value: 42 } } });
+    expect(result.largestControlReplyUnits).toBeLessThan(64 * 1024); expect(result.largestViewReplyUnits).toBeLessThan(2 * 1024 * 1024);
+    expect(result.states).toEqual([1, 2, 3, 4]); expect(result.selection?.anchor.kind).toBe('cells');
+  }
+});
+
+test('200,000 actual cells copy and cancel through the editing Worker without transferring full source chunks', { tag: '@scale' }, async ({ page }, info) => {
+  test.setTimeout(180_000); await page.addScriptTag({ content: sessionHostCode });
+  const result = await page.evaluate(({ code, bytes }) => window.workbookSessionHost.editWorker(code, bytes, 'capacity-editing-worker', true), {
+    code: sessionWorkerCode, bytes: readFileSync('examples/xlsx/15-ten-thousand-rows.xlsx').toString('base64') });
+  expect(result).toMatchObject({ isolated: true, cancelled: 'OperationCancelled', cancellationPoint: 256, copyUndo: true, originalChunksRestored: true,
+    detachedInput: true, failures: [], current: { kind: 'value', value: { type: 'number', value: 3_400_152 } },
+    audit: { cells: 200_000, formulas: 20_000, sessionsCreated: 1, endpointDisposed: true, reopenedEqual: true, revision: 4, history: { undoSteps: 0, redoSteps: 2 } } });
+  expect(result.audit.chunks).toHaveLength(40); expect(result.copied).toBeGreaterThan(700); expect(result.prepared).toBeGreaterThan(800);
+  expect(result.largestControlReplyUnits).toBeLessThan(2 * 1024 * 1024); expect(result.largestViewReplyUnits).toBeLessThan(2 * 1024 * 1024); expect(result.ticks).toBeGreaterThan(100);
+  // This capacity integration keeps the real source counts and browser event
+  // loop; final fixed-resource editing latency/history gates remain separate.
+  const report = JSON.stringify(result, null, 2); writeFileSync(info.outputPath('workbook-editing-worker.json'), report + '\n');
+  await info.attach('workbook-editing-worker.json', { body: report, contentType: 'application/json' });
 });

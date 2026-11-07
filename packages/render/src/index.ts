@@ -12,6 +12,7 @@ export type { WorkbookReadServer } from "./workbook/read-server.js";
 export { connectWorkbookReads } from "./workbook/read-client.js";
 export type { WorkbookReadConnection } from "./workbook/read-client.js";
 export type { WorkbookReadTransportLimits, WorkbookReadTransportOptions } from "./workbook/read-transport.js";
+export { transportConfig as resolveWorkbookReadTransportOptions } from "./workbook/read-transport.js";
 export { resolvePreviewFonts } from "./fonts.js";
 export type { FontResolution } from "./fonts.js";
 export { PreviewSource } from "./source-index.js";

@@ -44,7 +44,7 @@ export { resolveWorkbookCellFormat } from "./workbook/cell-format.js";
 export type { WorkbookCellFormat } from "./workbook/cell-format.js";
 export { isTextBoundary as isDocumentTextBoundary } from "./document/text.js";
 export type { WorkbookReferenceLocation, WorkbookReferenceArea, WorkbookReferenceResult } from "./workbook/reference.js";
-export { createWorkbookScalarEvaluator } from "./workbook/scalar.js";
+export { createWorkbookScalarEvaluator, copyWorkbookScalarContext } from "./workbook/scalar.js";
 export { captureWorkbookModel } from "./workbook/source.js";
 export type { WorkbookScalarEvaluator, WorkbookScalarResult, WorkbookScalarUnavailable, WorkbookScalarLimits, WorkbookScalarQueryOptions } from "./workbook/scalar.js";
 export type { WorkbookScalarContext } from "./workbook/scalar.js";
