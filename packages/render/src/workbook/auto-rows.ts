@@ -126,9 +126,9 @@ export async function measureWorkbookAutoRows(surface: Pick<WorkbookSurface, "so
     const fontState = probes.watch(surface.source.ownerDocument.fonts);
     if (!fontState.ready || fontState.epoch !== fontEpoch) throw new DocumentError("InvalidOperation", "Worksheet fonts changed during automatic row measurement.");
     let current;
-    if (sheet.conditionalRules?.length || sheet.dataValidations?.length) {
+    if (sheet.conditionalRules?.length || sheet.dataValidations?.length || rules?.source.currentValues) {
       if (!rules) throw new DocumentError("InvalidOperation", "Automatic rule appearance requires an authorized current-value provider.");
-      const request = Object.freeze({ ...identity, sheetId, ...rules.limits, coordinates: Object.freeze(coordinates) });
+      const request = Object.freeze({ ...identity, sheetId, ...rules.limits, coordinates: Object.freeze(coordinates), ...(rules.source.currentValues ? { includeCurrent: true } : {}) });
       current = checkedWorkbookRules(await waitForWorkbookRead(rules.source.read(request, signal), signal), request, snapshot); checkWindowCancellation(signal);
     }
     const shared = new Map<number, WorkbookSourceCell>(), ordinary: Readonly<WorkbookCoordinate>[] = [];

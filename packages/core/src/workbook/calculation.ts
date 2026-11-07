@@ -12,6 +12,7 @@ import type { ChunkIndex } from "./chunk-index.js";
 import { checkLimit, freeze } from "../document/validation.js";
 import { DocumentError } from "../errors.js";
 import { compareWorkbooks } from "./source-changes.js";
+import { registerWorkbookCalculation } from "./calculation-source.js";
 
 export const WORKBOOK_CALCULATION_VERSION = "doffi-scalar-1";
 export interface WorkbookCalculationLimits {
@@ -202,6 +203,7 @@ export function createWorkbookCalculator(source: WorkbookModel | (() => Workbook
         });
         const result = freeze({ documentId: manifest.documentId, revision: manifest.revision, batchId: mine, engineVersion: WORKBOOK_CALCULATION_VERSION, cells, calculated, reused, steps, dependencies: next.dependencies, codeUnits: units, readCells: readCells.size });
         guard(); graph = next; values = calculatedValues; contextKey = JSON.stringify(calculationContext); localeKey = resolvedLocale; publishedBatch = mine;
+        registerWorkbookCalculation(result, { model, context: calculationContext, values: calculatedValues });
         return result;
       } finally { evaluator.dispose(); active.clear(); }
   }
@@ -225,6 +227,6 @@ export function createWorkbookCalculator(source: WorkbookModel | (() => Workbook
       try { for (let result = iterator.next();; result = iterator.next()) if (result.done) return result.value; }
       finally { const cleanup: Iterator<unknown> = iterator; cleanup.return?.(); }
     },
-    dispose(): void { provider = undefined; graph = undefined; values.clear(); contextKey = ""; localeKey = ""; batch++; },
+    dispose(): void { provider = undefined; graph = undefined; values = new Map(); contextKey = ""; localeKey = ""; batch++; },
   });
 }

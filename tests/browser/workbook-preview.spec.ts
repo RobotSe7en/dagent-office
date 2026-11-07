@@ -31,6 +31,19 @@ test.beforeAll(async () => {
   }
 });
 test.beforeEach(async ({ page }) => { await openSdkHost(page); await page.addScriptTag({ content: code }); });
+test('completed calculation renders an unruled long chain and preserves view selection and active sheet', async ({ page }) => {
+  const model = scalarWorkbook(Array.from({ length: 150 }, (_, row) => ({ row, column: 0, value: { type: 'number' as const, value: 9999 }, formula: row ? `=A${row}+1` : '=1' })), metadata => { metadata.workbook.sheets[0]!.defaultRowHeightCustom = true; });
+  const result = await page.evaluate(entries => window.workbookPreview.calculatedPreview(entries), encodeTestPackage(model.serialize()));
+  expect(result).toEqual({ cell: '150', retained: true, sheet: 'preview-empty', errors: [], unchanged: true });
+});
+for (const rtl of [false, true]) test(`imperative source-range selection scrolls and guards worksheet races in ${rtl ? 'RTL' : 'LTR'}`, async ({ page }) => {
+  const files = await importXlsx(readFileSync('examples/xlsx/03-structure.xlsx'), { documentId: 'range-selection' });
+  const result = await page.evaluate(({ entries, rtl }) => window.workbookPreview.imperativeRangeSelection(entries, rtl), { entries: encodeTestPackage(files), rtl });
+  expect(result).toMatchObject({ invalid: 'InvalidOperation', retained: true, sameViewport: true, race: 'RevisionConflict', unchanged: true, frozen: true,
+    first: { documentId: 'range-selection', baseRevision: 0, anchor: { kind: 'cells', ranges: [{ from: { row: 0, column: 0 }, to: { row: 3, column: 3 } }] } },
+    far: { anchor: { ranges: [{ from: { row: 500, column: 40 }, to: { row: 502, column: 42 } }] } } });
+  expect(result.moved.scrollLeftPt).toBeGreaterThan(0); expect(result.moved.scrollTopPt).toBeGreaterThan(0);
+});
 for (const rtl of [false, true]) test(`public workbook preview selects cells and switches sheets without serializing source in ${rtl ? 'RTL' : 'LTR'}`, async ({ page }) => {
   for (const input of inputs.filter(input => input.name !== '08-images-shapes')) {
     const start = await page.evaluate(({ files, rtl }) => window.workbookPreview.mountPublicPreview(files, rtl), { files: input.files, rtl });

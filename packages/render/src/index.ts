@@ -1,6 +1,7 @@
 export { decorate, mountDocumentPreview, mountPreview, packagePath } from "./preview.js";
 export type { DocumentPreview, DocumentPreviewOptions } from "./preview.js";
 export type { WorkbookPreview, WorkbookPreviewInput, WorkbookPreviewSource, WorkbookPreviewOptions, WorkbookRenderReport } from "./workbook/preview-contracts.js";
+export { createWorkbookPreviewSource } from "./workbook/preview-source.js";
 export type { WorkbookViewport } from "./workbook/viewport.js";
 export type { WorkbookWindowSource, WorkbookWindowRequest, WorkbookWindowResponse } from "./workbook/window-source.js";
 export type { WorkbookAssetSource } from "./workbook/assets.js";

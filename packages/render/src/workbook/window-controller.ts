@@ -159,10 +159,10 @@ export class WorkbookWindowController {
       if (!await Promise.race([loader.load(sheetId, dimensions, viewport), cancelled]) || !current()) return false;
       const frame = loader.frame!;
       let rules: WorkbookRuleReadResponse | undefined;
-      if (sheet.conditionalRules?.length || sheet.dataValidations?.length) {
+      if (sheet.conditionalRules?.length || sheet.dataValidations?.length || this.providers.rules?.currentValues) {
         if (!this.providers.rules) throw new DocumentError("InvalidOperation", "This worksheet requires an authorized current-value rule provider.");
         const request = Object.freeze({ documentId: frame.documentId, revision: frame.revision, sheetId, ...this.ruleLimits,
-          coordinates: Object.freeze(frame.sourceCoordinates.map(point => Object.freeze({ row: point.row, column: point.column }))) });
+          coordinates: Object.freeze(frame.sourceCoordinates.map(point => Object.freeze({ row: point.row, column: point.column }))), ...(this.providers.rules.currentValues ? { includeCurrent: true } : {}) });
         const response = await Promise.race([this.providers.rules.read(request, abort.signal), cancelled]);
         if (response === false || !current()) return false;
         rules = checkedWorkbookRules(response, request, this.snapshot);

@@ -1,4 +1,4 @@
-import type { DocumentErrorData, DocumentSelection, WorkbookModel, WorkbookSnapshot } from "@doffi/core";
+import type { DeepReadonly, DocumentErrorData, DocumentSelection, WorkbookModel, WorkbookRange, WorkbookSnapshot } from "@doffi/core";
 import type { FontResolution } from "../contracts.js";
 import type { WorkbookWindowSource } from "./window-source.js";
 import type { WorkbookAssetSource } from "./assets.js";
@@ -26,6 +26,8 @@ export interface WorkbookPreviewOptions {
   readonly heightPt?: number;
   readonly sheetId?: string;
   readonly locale?: string;
+  /** Keep a source selection while scrolling/resizing the same revision. */
+  readonly retainSelection?: boolean;
   readonly limits?: WorkbookWindowControllerOptions;
   readonly onError?: (error: DocumentErrorData) => void;
   readonly onSelectionChange?: (selection: DocumentSelection | undefined) => void;
@@ -63,6 +65,9 @@ export interface WorkbookPreview {
   update(input: WorkbookPreviewInput): void;
   showSheet(sheetId: string): Promise<WorkbookRenderReport>;
   setViewport(viewport: WorkbookViewport): Promise<WorkbookRenderReport>;
+  /** Select source coordinates on the displayed worksheet; rendering and
+   * scrolling never rewrite the document source. */
+  selectRange(range: DeepReadonly<WorkbookRange>, ensureVisible?: boolean): Promise<DocumentSelection>;
   openComment(annotationId: string): void;
   closeComment(): void;
   dispose(): void;

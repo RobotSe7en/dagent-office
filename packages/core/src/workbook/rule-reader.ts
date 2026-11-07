@@ -4,6 +4,8 @@ import type { DeepReadonly, WorkbookModel } from "../runtime.js";
 import type { WorkbookConditionalRule, WorkbookCoordinate, WorkbookDataValidation, WorkbookRange } from "../contracts/workbook.js";
 import { checkLimit, freeze } from "../document/validation.js";
 import { createWorkbookScalarEvaluator } from "./scalar.js";
+import { createWorkbookCalculatedEvaluator } from "./calculated-evaluator.js";
+import type { WorkbookCalculationResult } from "./calculation.js";
 import type { WorkbookScalarResult, WorkbookScalarUnavailable } from "./scalar.js";
 import { scalarToNumber, scalarToText } from "./scalar-values.js";
 import type { ScalarValue } from "./scalar-values.js";
@@ -16,12 +18,15 @@ export interface WorkbookRuleReadLimits {
 export const DEFAULT_WORKBOOK_RULE_LIMITS: WorkbookRuleReadLimits = Object.freeze({ maxCells: 25_000, maxRules: 256, maxValues: 250_000, maxSteps: 5_000_000, maxCodeUnits: 8 * 1024 * 1024 });
 export interface WorkbookRuleReadRequest extends WorkbookRuleReadLimits {
   readonly documentId: string; readonly revision: number; readonly sheetId: string; readonly coordinates: readonly WorkbookCoordinate[];
+  /** Include current values even at coordinates with no conditional/validation rule. */
+  readonly includeCurrent?: boolean;
 }
 export interface WorkbookRuleReadOptions {
   readonly signal?: { readonly aborted: boolean };
   /** The host supplies a macrotask checkpoint when message-based cancellation
    * must run. Core owns no Worker, timer or event-loop implementation. */
   readonly yield?: () => Promise<void>;
+  readonly calculation?: WorkbookCalculationResult;
 }
 export type WorkbookRuleValue = { readonly kind: "value"; readonly value: ScalarValue } | WorkbookScalarUnavailable;
 export type WorkbookRuleReason = WorkbookScalarUnavailable["reason"] | "formula-error" | "non-numeric-threshold" | "empty-scale" | "invalid-threshold-order" | "invalid-list-reference" | "type-mismatch";
@@ -70,8 +75,8 @@ export async function readWorkbookRules(model: WorkbookModel, input: WorkbookRul
     || options.signal !== undefined && (!options.signal || typeof options.signal.aborted !== "boolean")) throw new DocumentError("InvalidOperation", "Invalid workbook rule query options.");
   const snapshot = model.snapshot(), sheet = snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === input.sheetId);
   if (input.documentId !== snapshot.manifest.documentId || input.revision !== snapshot.manifest.revision) throw new DocumentError("RevisionConflict", "Workbook rules belong to another source revision.");
-  if (!sheet || Object.keys(input).some(key => !["documentId", "revision", "sheetId", "coordinates", ...Object.keys(DEFAULT_WORKBOOK_RULE_LIMITS)].includes(key))
-    || Object.keys(options).some(key => !["signal", "yield"].includes(key))) throw new DocumentError("InvalidOperation", "Invalid workbook rule query.");
+  if (!sheet || input.includeCurrent !== undefined && typeof input.includeCurrent !== "boolean" || Object.keys(input).some(key => !["documentId", "revision", "sheetId", "coordinates", "includeCurrent", ...Object.keys(DEFAULT_WORKBOOK_RULE_LIMITS)].includes(key))
+    || Object.keys(options).some(key => !["signal", "yield", "calculation"].includes(key))) throw new DocumentError("InvalidOperation", "Invalid workbook rule query.");
   const limits = Object.fromEntries(Object.keys(DEFAULT_WORKBOOK_RULE_LIMITS).map(key => [key, input[key as keyof WorkbookRuleReadLimits]])) as unknown as WorkbookRuleReadLimits;
   if (!Object.values(limits).every(value => Number.isSafeInteger(value) && value > 0) || !Array.isArray(input.coordinates)) throw new DocumentError("InvalidOperation", "Workbook rule queries require coordinates and positive safe-integer budgets.");
   checkLimit(input.coordinates.length, limits.maxCells);
@@ -82,6 +87,7 @@ export async function readWorkbookRules(model: WorkbookModel, input: WorkbookRul
   });
   if (new Set(coordinates.map(coordinateKey)).size !== coordinates.length) throw new DocumentError("InvalidOperation", "Workbook rule coordinates must be unique.");
   const sheetId = sheet.sheetId, documentId = snapshot.manifest.documentId, revision = snapshot.manifest.revision, signal = options.signal, checkpoint = options.yield;
+  const calculation = options.calculation, includeCurrent = input.includeCurrent === true;
   let steps = 0, units = 0, readCells = 0, retainedSamples = 0, checkpoints = 0;
   const step = (): void => { if (signal?.aborted) throw new DocumentError("OperationCancelled", "Workbook rule reading was cancelled."); checkLimit(++steps, limits.maxSteps); };
   const account = (amount: number): void => { units += amount; checkLimit(units, limits.maxCodeUnits); };
@@ -102,7 +108,8 @@ export async function readWorkbookRules(model: WorkbookModel, input: WorkbookRul
       }
     }
   }
-  const evaluator = createWorkbookScalarEvaluator(model, { maxSteps: limits.maxSteps, maxCells: limits.maxValues, maxCodeUnits: limits.maxCodeUnits });
+  const evaluatorLimits = { maxSteps: limits.maxSteps, maxCells: limits.maxValues, maxCodeUnits: limits.maxCodeUnits };
+  const evaluator = calculation === undefined ? createWorkbookScalarEvaluator(model, evaluatorLimits) : createWorkbookCalculatedEvaluator(model, calculation, evaluatorLimits);
   const currentValues = new Map<string, WorkbookRuleValue>(), samples = new Map<string, Samples>();
   const location = (coordinate: WorkbookCoordinate): WorkbookReferenceLocation => ({ sheetId, row: coordinate.row, column: coordinate.column });
   function accept(result: WorkbookScalarResult): WorkbookRuleValue {
@@ -213,7 +220,7 @@ export async function readWorkbookRules(model: WorkbookModel, input: WorkbookRul
   try {
     const cells: WorkbookRuleCell[] = [];
     for (const coordinate of coordinates) {
-      step(); const definitions = [...matched.get(coordinateKey(coordinate))!]; if (!definitions.length) continue;
+      step(); const definitions = [...matched.get(coordinateKey(coordinate))!]; if (!definitions.length && !includeCurrent) continue;
       const value = current(coordinate), conditions = definitions.filter((rule): rule is Conditional => "priority" in rule).sort((a, b) => a.priority - b.priority);
       const conditionalResults: WorkbookConditionalEvaluation[] = [];
       for (const rule of conditions) {
