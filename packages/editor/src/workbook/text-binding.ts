@@ -6,6 +6,7 @@ export type WorkbookNavigationDirection = "up" | "down" | "left" | "right";
 export interface WorkbookTextBindingOptions {
   readonly prepareOptions?: () => TransactionPrepareOptions;
   readonly onApplied?: (receipt: TransactionReceipt) => void;
+  readonly onCancelled?: () => void;
   readonly onNavigate?: (direction: WorkbookNavigationDirection, extend: boolean) => void;
   readonly onHistory?: (direction: "undo" | "redo") => void;
   readonly onClear?: (selection: DocumentSelection) => void;
@@ -25,7 +26,7 @@ export function bindWorkbookTextInput(input: HTMLTextAreaElement, controller: Wo
   const view = input?.ownerDocument?.defaultView;
   if (!view || !(input instanceof view.HTMLTextAreaElement) || !input.isConnected) throw new DocumentError("InvalidOperation", "Workbook text binding requires a connected native textarea.");
   if (!options || typeof options !== "object" || Array.isArray(options)
-    || Object.keys(options).some(key => !["prepareOptions", "onApplied", "onNavigate", "onHistory", "onClear", "onPaste", "onError"].includes(key))
+    || Object.keys(options).some(key => !["prepareOptions", "onApplied", "onCancelled", "onNavigate", "onHistory", "onClear", "onPaste", "onError"].includes(key))
     || Object.values(options).some(value => value !== undefined && typeof value !== "function")) throw new DocumentError("InvalidOperation", "Invalid workbook text binding options.");
   const abort = new view.AbortController(), events = { signal: abort.signal };
   let disposed = false, editing = false;
@@ -68,7 +69,7 @@ export function bindWorkbookTextInput(input: HTMLTextAreaElement, controller: Wo
     const state = controller.state();
     if (event.isComposing || event.keyCode === 229 || state.composing) return;
     const command = event.ctrlKey || event.metaKey, key = event.key.toLowerCase();
-    if (key === "escape") { event.preventDefault(); controller.cancel(); refresh(); input.select(); return; }
+    if (key === "escape") { event.preventDefault(); controller.cancel(); refresh(); input.select(); notify(options.onCancelled); return; }
     if (key === "f2") { event.preventDefault(); editing = true; input.setSelectionRange(input.value.length, input.value.length); return; }
     if (key === "enter" && event.altKey && !command) {
       event.preventDefault();
@@ -99,7 +100,9 @@ export function bindWorkbookTextInput(input: HTMLTextAreaElement, controller: Wo
     refresh,
     focus(selectAll = true) {
       check(); if (typeof selectAll !== "boolean") throw new DocumentError("InvalidOperation", "Invalid workbook input focus mode.");
-      input.focus({ preventScroll: true }); editing = !selectAll;
+      // Firefox can otherwise retain keyboard focus in the preview iframe
+      // even after the parent shadow textarea reports itself focused.
+      view!.focus(); input.focus({ preventScroll: true }); editing = !selectAll;
       if (selectAll) input.select(); else input.setSelectionRange(input.value.length, input.value.length);
     },
     apply,

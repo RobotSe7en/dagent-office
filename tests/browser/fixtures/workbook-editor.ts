@@ -1,0 +1,50 @@
+import { createDocumentSession, openDocument } from "@doffi/core";
+import type { WorkbookSession } from "@doffi/core";
+import { mountWorkbookEditor } from "@doffi/editor";
+import type { WorkbookEditorView } from "@doffi/editor";
+import { decodeTestPackage } from "./package-transport.js";
+import type { TestPackage } from "./package-transport.js";
+let session: WorkbookSession, editor: WorkbookEditorView, container: HTMLDivElement;
+const errors: string[] = [];
+export async function mount(entries: TestPackage): Promise<void> {
+  editor?.dispose(); session?.dispose(); container?.remove(); errors.length = 0;
+  session = createDocumentSession(openDocument(decodeTestPackage(entries), { kind: "workbook" }));
+  container = document.createElement("div"); document.body.append(container);
+  // The fixture opens only its own parent-realm UI shadows for browser
+  // automation. Production source and render surfaces remain closed.
+  const attach = Element.prototype.attachShadow;
+  Element.prototype.attachShadow = function(init) { return attach.call(this, { ...init, mode: "open" }); };
+  try { editor = mountWorkbookEditor(container, session, { widthPt: 420, heightPt: 240, onError: error => errors.push((error as { code?: string }).code ?? error.message) }); }
+  finally { Element.prototype.attachShadow = attach; }
+  await editor.ready;
+}
+export async function settled() { return editor.settled(); }
+export async function select(fromRow: number, fromColumn = 0, toRow = fromRow, toColumn = fromColumn): Promise<void> {
+  await editor.selectRange("sheet-1", { from: { row: fromRow, column: fromColumn }, to: { row: toRow, column: toColumn } }); editor.focusInput();
+}
+export function inspect() {
+  return { input: editor.inputState(), selection: editor.selection(), revision: session.snapshot().manifest.revision, history: session.history(), errors: [...errors],
+    cells: [session.getCell("sheet-1", 0, 0), session.getCell("sheet-1", 0, 1)], calculated: session.getCalculatedCell("sheet-1", 0, 1),
+    cleanSource: [...session.serialize()].filter(([path]) => path.endsWith(".html")).every(([, bytes]) => !/contenteditable|data-office-view|textarea/.test(new TextDecoder().decode(bytes))) };
+}
+export function external(value: string): void {
+  const manifest = session.snapshot().manifest;
+  session.commit(session.prepare({ protocolVersion: 1, documentId: manifest.documentId, baseRevision: manifest.revision,
+    operations: [{ op: "setWorkbookCells", sheetId: "sheet-1", cells: [{ row: 0, column: 0, source: { kind: "value", value: { type: "text", value } } }] }] }));
+}
+export function cell(sheetId: string, row: number, column: number) { return session.getCell(sheetId, row, column); }
+export function paste(text: string): boolean {
+  const input = editor.element.shadowRoot!.querySelector("textarea")!, data = new DataTransfer(); data.setData("text/plain", text);
+  const event = new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }); Object.defineProperty(event, "clipboardData", { value: data });
+  return !input.dispatchEvent(event);
+}
+export function point(row: number, column: string): { x: number; y: number } {
+  const root = editor.element.shadowRoot!.querySelector(".preview")!.firstElementChild!.shadowRoot!, headers = [...root.querySelectorAll(".header>div")];
+  const x = headers.find(node => node.textContent === column)!.getBoundingClientRect(), y = headers.find(node => node.textContent === String(row + 1))!.getBoundingClientRect();
+  return { x: x.x + x.width / 2, y: y.y + y.height / 2 };
+}
+export function dispose(): { revision: number; usable: boolean } {
+  editor.dispose(); const revision = session.snapshot().manifest.revision; external("host remains usable"); container.remove();
+  return { revision, usable: session.getCell("sheet-1", 0, 0)?.value.type === "text" };
+}
+(window as unknown as { workbookEditor: unknown }).workbookEditor = { mount, settled, select, inspect, external, cell, paste, point, dispose };

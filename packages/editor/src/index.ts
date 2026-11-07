@@ -19,3 +19,5 @@ export { createWorkbookInputController } from "./workbook/input-controller.js";
 export type { WorkbookInputController, WorkbookInputState } from "./workbook/input-controller.js";
 export { bindWorkbookTextInput } from "./workbook/text-binding.js";
 export type { WorkbookTextBinding, WorkbookTextBindingOptions, WorkbookNavigationDirection } from "./workbook/text-binding.js";
+export { mountWorkbookEditor } from "./workbook/editor.js";
+export type { WorkbookEditorOptions, WorkbookEditorView } from "./workbook/editor-contracts.js";

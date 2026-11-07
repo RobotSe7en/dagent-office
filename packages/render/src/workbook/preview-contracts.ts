@@ -68,6 +68,9 @@ export interface WorkbookPreview {
   /** Select source coordinates on the displayed worksheet; rendering and
    * scrolling never rewrite the document source. */
   selectRange(range: DeepReadonly<WorkbookRange>, ensureVisible?: boolean): Promise<DocumentSelection>;
+  /** Move in visual direction, skipping hidden dimensions and merged interiors;
+   * extension keeps the original source endpoint. */
+  moveSelection(direction: "up" | "down" | "left" | "right", extend?: boolean): Promise<DocumentSelection>;
   openComment(annotationId: string): void;
   closeComment(): void;
   dispose(): void;

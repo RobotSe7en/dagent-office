@@ -64,3 +64,25 @@ test("invalid final visibility, duplicate names, removed targets and unknown sib
   expect(() => prepare(session, [{ op: "removeWorkbookSheet", sheetId: "sheet-1" }, { op: "updateWorkbookSheet", sheetId: "sheet-1", changes: { name: "Gone" } }])).toThrow();
   expect(session.serialize()).toEqual(saved);
 });
+test("intermediate worksheet name collisions reject atomically instead of retargeting formulas during a swap", () => {
+  const session = createDocumentSession(scalarWorkbook([
+    { row: 0, column: 0, value: number(999), formula: "=Sheet1!C1" }, { row: 0, column: 1, value: number(999), formula: "=Other!C1" },
+  ], metadata => { metadata.workbook.sheets.push({ ...metadata.workbook.sheets[0]!, sheetId: "second", name: "Other" }); }));
+  const before = session.serialize();
+  for (const operations of [
+    [{ op: "updateWorkbookSheet", sheetId: "sheet-1", changes: { name: "other" } }, { op: "updateWorkbookSheet", sheetId: "second", changes: { name: "Sheet1" } }],
+    [{ op: "insertWorkbookSheet", name: "sheet1" }, { op: "removeWorkbookSheet", sheetId: "sheet-1" }],
+  ] satisfies DocumentOperation[][]) {
+    expect(() => prepare(session, operations)).toThrowError(expect.objectContaining({ code: "InvalidOperation" }));
+    expect(session.serialize()).toEqual(before); expect(session.history().undoSteps).toBe(0);
+  }
+  commit(session, [{ op: "updateWorkbookSheet", sheetId: "sheet-1", changes: { name: "Temporary" } },
+    { op: "updateWorkbookSheet", sheetId: "second", changes: { name: "Sheet1" } }, { op: "updateWorkbookSheet", sheetId: "sheet-1", changes: { name: "Other" } }]);
+  for (const [column, sheetId] of [[0, "sheet-1"], [1, "second"]] as const) {
+    const reference = session.resolveReference(session.getCell("sheet-1", 0, column)!.formula!.expression, { sheetId: "sheet-1", row: 0, column });
+    expect(reference).toMatchObject({ kind: "ranges", areas: [{ sheetId }] });
+  }
+  expect(session.history().undoSteps).toBe(1); session.undo();
+  expect(session.getCell("sheet-1", 0, 0)?.formula?.expression).toBe("=Sheet1!C1");
+  expect(session.getCell("sheet-1", 0, 1)?.formula?.expression).toBe("=Other!C1");
+});

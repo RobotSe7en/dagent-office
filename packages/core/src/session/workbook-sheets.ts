@@ -11,7 +11,12 @@ function invalid(message: string): never { throw new DocumentError("InvalidOpera
 export function editWorkbookSheet(workbook: WorkbookMetadata, cells: WorkbookCellEdit, content: WorkbookContentEdit,
   annotations: Annotation[], operation: WorkbookOperation, allocate: () => string, mapping: WorkbookStructureMapping[]): void {
   const sheet = (id: string): WorkbookSheet => workbook.sheets.find(sheet => sheet.sheetId === id) ?? invalid("An earlier operation removed the worksheet.");
+  const checkName = (name: string, target?: WorkbookSheet): void => {
+    if (name.startsWith("'") || name.endsWith("'") || workbook.sheets.some(sheet => sheet !== target && sheet.name.toUpperCase() === name.toUpperCase()))
+      invalid("Worksheet names must remain valid and unique throughout a reference-editing batch.");
+  };
   if (operation.op === "insertWorkbookSheet") {
+    checkName(operation.name);
     const before = operation.beforeSheetId ? sheet(operation.beforeSheetId) : undefined, template = workbook.sheets[0]!;
     const added: WorkbookSheet = { sheetId: allocate(), name: operation.name, visibility: "visible", defaultRowHeightPt: 15, defaultColumnWidth: 8.43,
       defaultCssClass: template.defaultCssClass, ...(template.defaultNumberFormatId ? { defaultNumberFormatId: template.defaultNumberFormatId } : {}),
@@ -21,6 +26,7 @@ export function editWorkbookSheet(workbook: WorkbookMetadata, cells: WorkbookCel
   if (!("sheetId" in operation)) invalid("Expected a worksheet operation.");
   const target = sheet(operation.sheetId);
   if (operation.op === "updateWorkbookSheet") {
+    if (operation.changes.name !== undefined) checkName(operation.changes.name, target);
     if (operation.changes.name !== undefined && operation.changes.name !== target.name) rewriteWorkbookReferences(workbook, cells, { kind: "renameSheet", from: target.name, to: operation.changes.name });
     Object.assign(target, operation.changes);
     if (target.visibility !== "visible" && workbook.activeSheetId === target.sheetId) workbook.activeSheetId = workbook.sheets.find(sheet => sheet.visibility === "visible")?.sheetId ?? target.sheetId;

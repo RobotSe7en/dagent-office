@@ -1,5 +1,5 @@
 import { createWorkbookNumberFormatter, DocumentError, WorkbookRangeSchema } from "@doffi/core";
-import type { DeepReadonly, DocumentSelection, WorkbookRange, WorkbookSnapshot } from "@doffi/core";
+import type { DeepReadonly, DocumentSelection, WorkbookCoordinate, WorkbookRange, WorkbookSnapshot } from "@doffi/core";
 import { createWorkbookPreviewChrome, workbookColumnLabel } from "./preview-chrome.js";
 import type { WorkbookPreview, WorkbookPreviewInput, WorkbookPreviewOptions, WorkbookRenderReport } from "./preview-contracts.js";
 import { decorateWorkbookPreview } from "./preview-decoration.js";
@@ -11,6 +11,8 @@ import type { WorkbookSurface } from "./surface.js";
 import { WorkbookWindowController } from "./window-controller.js";
 import type { WorkbookRenderedWindow } from "./window-controller.js";
 import type { WorkbookViewport } from "./viewport.js";
+import { navigateWorkbookSelection } from "./selection-navigation.js";
+import type { WorkbookSelectionNavigation } from "./selection-navigation.js";
 
 interface PreviewWindow { readonly controls: WorkbookPreviewDecoration; commitChrome(): void }
 interface PreviewContext {
@@ -63,6 +65,7 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
   let desired: WorkbookViewport = Object.freeze({ widthPt: config.widthPt ?? 600, heightPt: config.heightPt ?? 360, scrollLeftPt: 0, scrollTopPt: 0 });
   let active: PreviewContext | undefined, pending: { readonly kind: "update" | "resize"; cancel(): void } | undefined, disposed = false, generation = 0;
   let selection: DocumentSelection | undefined, latest: Promise<void> = Promise.resolve();
+  let navigation: WorkbookSelectionNavigation | undefined;
   let resolveReady!: () => void, rejectReady!: (error: unknown) => void;
   const ready = new Promise<void>((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
   // Hosts may observe ready after mounting other UI. Do not create an unhandled
@@ -91,7 +94,7 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
     }),
   });
   const clearSelection = (): void => {
-    chrome.cell("", ""); chrome.validation("");
+    chrome.cell("", ""); chrome.validation(""); navigation = undefined;
     if (!selection) return; selection = undefined;
     const ticket = generation;
     queueMicrotask(() => { if (!disposed && ticket === generation && !selection) {
@@ -141,6 +144,7 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
     ui.controls.selectRange(range);
     const anchor = Object.freeze({ kind: "cells" as const, sheetId: sheet.sheetId, ranges: Object.freeze([Object.freeze({ from: Object.freeze({ ...range.from }), to: Object.freeze({ ...range.to }) })]) });
     selection = Object.freeze({ documentId: context.snapshot.manifest.documentId, baseRevision: context.snapshot.manifest.revision, anchor });
+    if (notify) navigation = { origin: anchor.ranges[0]!.from, focus: anchor.ranges[0]!.from };
     const address = (at: WorkbookRange["from"]) => workbookColumnLabel(at.column) + (at.row + 1);
     chrome.cell(address(cell) + (!showRange || cell.row === range.to.row && cell.column === range.to.column ? "" : ":" + address(range.to)), value?.formula?.expression ?? (value?.value.type === "blank" || !value ? "" : String(value.value.value)));
     const validation = window.rules?.cells.find(item => item.row === cell.row && item.column === cell.column)?.validation;
@@ -154,7 +158,7 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
     if (notify) try { config.onSelectionChange?.(selection); } catch { /* Host-owned callback. */ }
     return selection;
   }
-  async function selectRange(input: DeepReadonly<WorkbookRange>, ensureVisible = true): Promise<DocumentSelection> {
+  async function selectRange(input: DeepReadonly<WorkbookRange>, ensureVisible = true, visibleAt?: DeepReadonly<WorkbookCoordinate>): Promise<DocumentSelection> {
     check();
     const parsed = WorkbookRangeSchema.safeParse(input);
     if (!parsed.success || parsed.data.from.row > parsed.data.to.row || parsed.data.from.column > parsed.data.to.column || typeof ensureVisible !== "boolean") throw new DocumentError("InvalidOperation", "Workbook selection requires an ordered source range.");
@@ -167,7 +171,7 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
     if (ensureVisible) {
       const dimensions = owned.window.dimensions;
       const fit = (axis: "rows" | "columns", frozen: number, extent: number, scroll: number): number => {
-        const first = axis === "rows" ? range.from.row : range.from.column;
+        const point = visibleAt ?? range.from, first = axis === "rows" ? point.row : point.column;
         if (first < frozen) return scroll;
         const dimension = dimensions[axis], fixed = dimension.position(frozen), size = Math.max(0, extent - Math.min(extent, fixed));
         if (!size) return scroll;
@@ -179,6 +183,21 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
     }
     if (current().context.providers !== providers || current().window.frame.sheetId !== sheet.sheetId) throw new DocumentError("RevisionConflict", "The workbook source changed during selection.");
     return selectSourceRange(range, true);
+  }
+  async function moveSelection(direction: "up" | "down" | "left" | "right", extend = false): Promise<DocumentSelection> {
+    check();
+    if (!["up", "down", "left", "right"].includes(direction) || typeof extend !== "boolean") throw new DocumentError("InvalidOperation", "Invalid workbook selection movement.");
+    await settled();
+    const { context, window } = current(), sheet = context.snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === window.frame.sheetId)!;
+    const first = (axis: "rows" | "columns"): number => {
+      const dimensions = window.dimensions[axis], coordinate = dimensions.size(0) > 0 ? 0 : dimensions.neighbor(0, 1);
+      if (coordinate === undefined) throw new DocumentError("InvalidOperation", "The worksheet has no visible coordinate on this axis."); return coordinate;
+    };
+    const point = navigation?.focus ?? { row: first("rows"), column: first("columns") };
+    const next = navigateWorkbookSelection(sheet, window.dimensions, navigation ?? { origin: point, focus: point }, direction, extend);
+    const selected = await selectRange(next.range, true, next.navigation.focus);
+    if (selection === selected) navigation = next.navigation;
+    return selected;
   }
   function render(context: PreviewContext, sheetId: string, viewport: WorkbookViewport): Promise<WorkbookRenderReport> {
     if (pending?.kind === "resize") { pending.cancel(); pending = undefined; chrome.busy(false); }
@@ -263,9 +282,10 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
   }
   try { update(input); } catch (error) { chrome.dispose(); throw error; }
   return Object.freeze({ kind: "workbook", element: chrome.element, ready, snapshot: () => current().context.snapshot,
-    layout: () => reportOf(current().window), fonts: () => current().window.fonts, selection: () => { check(); return selection; }, settled, update, showSheet, setViewport, selectRange,
+    layout: () => reportOf(current().window), fonts: () => current().window.fonts, selection: () => { check(); return selection; }, settled, update, showSheet, setViewport,
+    selectRange: (range: DeepReadonly<WorkbookRange>, ensureVisible?: boolean) => selectRange(range, ensureVisible), moveSelection,
     openComment(annotationId: string) { current().ui.controls.openComment(annotationId); }, closeComment() { current().ui.controls.closeComment(); },
     dispose() { if (disposed) return; disposed = true; ++generation; pending?.cancel(); pending = undefined; active?.dispose(); active = undefined;
-      selection = undefined; chrome.dispose(); rejectReady(new DocumentError("OperationCancelled", "Workbook preview was disposed before becoming ready.")); },
+      selection = undefined; navigation = undefined; chrome.dispose(); rejectReady(new DocumentError("OperationCancelled", "Workbook preview was disposed before becoming ready.")); },
   });
 }
