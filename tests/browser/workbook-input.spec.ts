@@ -76,6 +76,70 @@ test("mounted workbook TSV paste and rectangle clear use single cross-chunk hist
   await page.getByRole("button", { name: "撤销", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
   expect(await page.evaluate(() => window.workbookEditor.cell("sheet-1", 256, 31))).toMatchObject({ value: { type: "text", value: "中文😀禰󠄀" } });
 });
+test("mounted find follows exact occurrences and preserves selection scope through atomic replacements", async ({ page }) => {
+  await page.evaluate(() => window.workbookInput.dispose()); await page.addScriptTag({ content: editorCode });
+  await page.evaluate(entries => window.workbookEditor.mount(entries), encodeTestPackage(scalarWorkbook([
+    { row: 255, column: 31, value: { type: "text", value: "猫😀禰󠄀 猫" } }, { row: 256, column: 32, value: { type: "text", value: "猫" } },
+    { row: 0, column: 0, value: { type: "text", value: "猫 outside" } },
+  ], metadata => { metadata.workbook.sheets[0]!.defaultRowHeightCustom = true; }).serialize()));
+  await page.evaluate(() => window.workbookEditor.select(255, 31, 256, 32));
+  const find = page.getByRole("textbox", { name: "查找内容", exact: true }), replacement = page.getByRole("textbox", { name: "替换为", exact: true });
+  await find.fill("猫"); await page.getByRole("combobox", { name: "查找范围", exact: true }).selectOption("selection");
+  await find.press("Enter"); await page.evaluate(() => window.workbookEditor.settled());
+  await expect(page.getByRole("status", { name: "工作簿编辑状态", exact: true })).toContainText("匹配 1 / 3");
+  const input = page.getByRole("textbox", { name: "单元格或公式输入", exact: true });
+  expect(await input.evaluate((element: HTMLTextAreaElement) => [element.selectionStart, element.selectionEnd])).toEqual([0, 1]);
+  await page.getByRole("button", { name: "查找下一个", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  await expect(page.getByRole("status", { name: "工作簿编辑状态", exact: true })).toContainText("匹配 2 / 3");
+  expect(await input.evaluate((element: HTMLTextAreaElement) => [element.selectionStart, element.selectionEnd])).toEqual([7, 8]);
+  await replacement.fill("=literal"); await page.getByRole("button", { name: "替换当前项", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  expect(await page.evaluate(() => window.workbookEditor.cell("sheet-1", 255, 31))).toMatchObject({ value: { type: "text", value: "猫😀禰󠄀 =literal" } });
+  expect(await page.evaluate(() => window.workbookEditor.inspect())).toMatchObject({ history: { undoSteps: 1 }, errors: [] });
+  await replacement.fill("$&"); await page.getByRole("button", { name: "全部替换", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  expect(await page.evaluate(() => window.workbookEditor.cell("sheet-1", 255, 31))).toMatchObject({ value: { type: "text", value: "$&😀禰󠄀 =literal" } });
+  expect(await page.evaluate(() => window.workbookEditor.cell("sheet-1", 256, 32))).toMatchObject({ value: { type: "text", value: "$&" } });
+  expect(await page.evaluate(() => window.workbookEditor.cell("sheet-1", 0, 0))).toMatchObject({ value: { type: "text", value: "猫 outside" } });
+  expect(await page.evaluate(() => window.workbookEditor.inspect())).toMatchObject({ history: { undoSteps: 2 }, cleanSource: true, errors: [] });
+  await page.getByRole("button", { name: "撤销", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  expect(await page.evaluate(() => window.workbookEditor.cell("sheet-1", 256, 32))).toMatchObject({ value: { type: "text", value: "猫" } });
+});
+test("mounted display search uses current calculation and cancellable replacement leaves source intact", async ({ page }) => {
+  await page.evaluate(() => window.workbookInput.dispose()); await page.addScriptTag({ content: editorCode });
+  await page.evaluate(entries => window.workbookEditor.mountObserved(entries), encodeTestPackage(scalarWorkbook([
+    { row: 0, column: 0, value: { type: "number", value: 1 } }, { row: 0, column: 1, value: { type: "number", value: 999 }, formula: "=A1+1" },
+  ], metadata => { metadata.workbook.calculationMode = "manual"; metadata.workbook.sheets[0]!.defaultRowHeightCustom = true; }).serialize()));
+  expect(await page.evaluate(() => window.workbookEditor.displayedCell(0, 1))).toBe("999");
+  const find = page.getByRole("textbox", { name: "查找内容", exact: true }); await find.fill("2");
+  await page.getByRole("combobox", { name: "查找字段", exact: true }).selectOption("display"); await find.press("Enter"); await page.evaluate(() => window.workbookEditor.settled());
+  await expect(page.getByRole("status", { name: "工作簿编辑状态", exact: true })).toContainText("匹配 1 / 1");
+  expect(await page.evaluate(() => window.workbookEditor.displayedCell(0, 1))).toBe("2");
+  expect(await page.evaluate(() => window.workbookEditor.cell("sheet-1", 0, 1))).toMatchObject({ value: { type: "number", value: 999 }, formula: { cacheState: "imported" } });
+  expect(await page.evaluate(() => window.workbookEditor.inspect())).toMatchObject({ revision: 0, history: { undoSteps: 0 }, selection: { anchor: { ranges: [{ from: { row: 0, column: 1 } }] } } });
+  await expect(page.getByRole("button", { name: "全部替换", exact: true })).toBeDisabled();
+  await page.getByRole("combobox", { name: "查找字段", exact: true }).selectOption("source"); await find.fill("1");
+  await page.getByRole("textbox", { name: "替换为", exact: true }).fill("3"); await page.evaluate(() => window.workbookEditor.cancelSearchAtProgress());
+  await page.getByRole("button", { name: "全部替换", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  await expect(page.getByRole("status", { name: "工作簿编辑状态", exact: true })).toContainText("操作已取消");
+  expect(await page.evaluate(() => window.workbookEditor.inspect())).toMatchObject({ revision: 0, history: { undoSteps: 0 }, errors: [] });
+  const input = page.getByRole("textbox", { name: "单元格或公式输入", exact: true }); await input.focus(); await input.press("Control+f"); await expect(find).toBeFocused();
+});
+test("workbook search identifies hidden-sheet matches without changing visibility or source", async ({ page }) => {
+  const seed = createDocumentSession(openDocument(scalarWorkbook([], metadata => {
+    metadata.workbook.sheets.push({ ...metadata.workbook.sheets[0]!, sheetId: "hidden", name: "Hidden", visibility: "hidden" });
+  }).serialize(), { kind: "workbook" }));
+  seed.commit(seed.prepare({ protocolVersion: 1, documentId: "scalar-kernel", baseRevision: 0,
+    operations: [{ op: "setWorkbookCells", sheetId: "hidden", cells: [{ row: 0, column: 0, source: { kind: "value", value: { type: "text", value: "needle" } } }] }] }));
+  const entries = encodeTestPackage(seed.serialize()); seed.dispose();
+  await page.evaluate(() => window.workbookInput.dispose()); await page.addScriptTag({ content: editorCode }); await page.evaluate(entries => window.workbookEditor.mount(entries), entries);
+  const find = page.getByRole("textbox", { name: "查找内容", exact: true }); await find.fill("needle");
+  await page.getByRole("combobox", { name: "查找范围", exact: true }).selectOption("workbook"); await find.press("Enter"); await page.evaluate(() => window.workbookEditor.settled());
+  await expect(page.getByRole("status", { name: "工作簿编辑状态", exact: true })).toContainText("Hidden（隐藏）!A1");
+  expect(await page.evaluate(() => window.workbookEditor.inspect())).toMatchObject({ revision: 1, history: { undoSteps: 0 }, errors: [] });
+  await page.getByRole("textbox", { name: "替换为", exact: true }).fill("updated"); await page.getByRole("button", { name: "替换当前项", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  expect(await page.evaluate(() => window.workbookEditor.cell("hidden", 0, 0))).toMatchObject({ value: { type: "text", value: "updated" } });
+  expect(await page.evaluate(() => window.workbookEditor.inspect())).toMatchObject({ history: { undoSteps: 1 }, errors: [] });
+  await expect(page.getByRole("tab", { name: "Hidden", exact: true })).toHaveCount(0);
+});
 test("mounted workbook fill shifts formulas, extends numeric seeds and cancels before source publication", async ({ page }) => {
   await page.evaluate(() => window.workbookInput.dispose()); await page.addScriptTag({ content: editorCode }); await page.evaluate(entries => window.workbookEditor.mount(entries), editorSource(false, false));
   await page.evaluate(() => window.workbookEditor.select(0, 0, 2, 1)); await page.getByRole("button", { name: "向下填充", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());

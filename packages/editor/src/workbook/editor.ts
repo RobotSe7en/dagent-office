@@ -9,6 +9,10 @@ import { bindWorkbookTextInput } from "./text-binding.js";
 import { createWorkbookPasteTransaction } from "./text-input.js";
 import type { WorkbookTextInputMode } from "./text-input.js";
 import { createWorkbookFillTransaction } from "./fill.js";
+import { findWorkbookText } from "./find.js";
+import { createWorkbookReplaceTransaction } from "./replace.js";
+import type { WorkbookFindMatch, WorkbookFindQuery, WorkbookFindResult, WorkbookReplaceOptions } from "./find-contracts.js";
+import { workbookInputTextView } from "./text-projection.js";
 
 /** Direct small-document host integration. The host owns the sole session;
  * source cells, candidates and history remain behind its core boundary. */
@@ -20,6 +24,9 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
   let disposed = false, choosing = 0, refreshQueued = false, forceCalculation = false, latest: Promise<void> = Promise.resolve();
   let interaction: Promise<void> = Promise.resolve();
   let revision = -1, generation = 0, calculationAbort: AbortController | undefined, commandAbort: AbortController | undefined, preview: WorkbookPreview;
+  let found: { readonly key: string; readonly result: WorkbookFindResult; index: number } | undefined;
+  let findSelectionScope: WorkbookFindQuery["scope"];
+  const searchFields = [ui.find, ui.replacement, ui.findField, ui.findScope, ui.matchCase, ui.entireCell, ui.replacementMode];
   const buttons: { readonly button: HTMLButtonElement; readonly available: () => boolean }[] = [];
   function check(): void { if (disposed) throw new DocumentError("InvalidOperation", "This workbook editor has been disposed."); }
   function preparation(input?: TransactionPrepareOptions): TransactionPrepareOptions {
@@ -38,6 +45,7 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
     for (const { button, available } of buttons) button.disabled = !available();
     const state = input.state(); ui.mode.value = state.mode; ui.mode.disabled = Boolean(commandAbort) || state.composing || !state.selection;
     ui.address.disabled = Boolean(commandAbort) || revision < 0;
+    for (const field of searchFields) field.disabled = Boolean(commandAbort);
   }
   function notify(): void { try { config.onSelectionChange?.(input.state().selection); } catch { /* Host-owned callback. */ } }
   function address(range: DeepReadonly<WorkbookRange>): string {
@@ -57,8 +65,9 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
     if (!snapshot.metadata.workbook.sheets.some(sheet => sheet.sheetId === sheetId)) return;
     acceptSelection({ ...selected, baseRevision: snapshot.manifest.revision }, ui.input === ui.input.ownerDocument.activeElement || ui.element === ui.element.ownerDocument.activeElement);
   }
-  async function choose(sheetId: string, range: DeepReadonly<WorkbookRange>, focus = false): Promise<DocumentSelection> {
+  async function choose(sheetId: string, range: DeepReadonly<WorkbookRange>, focus = false, retainFind = false): Promise<DocumentSelection> {
     check(); if (pendingInput()) throw new DocumentError("InvalidOperation", "请先确认或取消当前单元格输入。");
+    if (!retainFind) { found = undefined; findSelectionScope = undefined; }
     await sourceSettled(); check();
     choosing++;
     try {
@@ -77,6 +86,7 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
   }
   function sourceSelection(selected: DocumentSelection | undefined): void {
     if (disposed || choosing) return;
+    found = undefined; findSelectionScope = undefined;
     commandAbort?.abort();
     try {
       if (!selected) {
@@ -170,10 +180,85 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
       if (!disposed) ui.status.textContent = "操作已取消。";
     } finally { if (commandAbort === abort) commandAbort = undefined; if (!disposed) { ui.input.disabled = !input.state().selection; controls(); } }
   }
+  function findQuery(): WorkbookFindQuery {
+    const selected = input.state().selection, scope = ui.findScope.value, sheetId = preview.layout().sheetId;
+    if (scope === "selection" && selected?.anchor.kind !== "cells") throw new DocumentError("InvalidOperation", "请先选择查找区域。");
+    const anchor = selected?.anchor;
+    const ranges = anchor?.kind === "cells" ? anchor.ranges.map(range => ({ sheetId: anchor.sheetId, range })) : [];
+    if (scope === "selection") findSelectionScope ??= ranges;
+    return { text: ui.find.value, field: ui.findField.value as NonNullable<WorkbookFindQuery["field"]>, matchCase: ui.matchCase.checked, entireCell: ui.entireCell.checked,
+      ...(scope === "workbook" ? {} : { scope: scope === "selection" ? findSelectionScope! : [{ sheetId, range: { from: { row: 0, column: 0 }, to: { row: 1_048_575, column: 16383 } } }] }) };
+  }
+  function findKey(query: WorkbookFindQuery): string { return JSON.stringify(query); }
+  function currentFind(query: WorkbookFindQuery): typeof found {
+    const snapshot = session.snapshot(); return found?.key === findKey(query) && found.result.documentId === snapshot.manifest.documentId && found.result.baseRevision === snapshot.manifest.revision ? found : undefined;
+  }
+  async function revealMatch(match: WorkbookFindMatch, field: WorkbookFindQuery["field"]): Promise<string> {
+    const sheet = session.snapshot().metadata.workbook.sheets.find(sheet => sheet.sheetId === match.sheetId);
+    if (sheet && sheet.visibility !== "visible") return ` · ${sheet.name}（隐藏）!${address({ from: match, to: match })}`;
+    await choose(match.sheetId, { from: { row: match.row, column: match.column }, to: { row: match.row, column: match.column } }, false, true);
+    if (field === "display") return "";
+    const state = input.state(), cell = session.getCell(match.sheetId, match.row, match.column);
+    const raw = cell?.formula?.expression ?? (!cell || cell.value.type === "blank" ? "" : cell.value.type === "boolean" ? cell.value.value ? "TRUE" : "FALSE" : String(cell.value.value));
+    const prefix = state.text === "'" + raw ? 1 : 0;
+    binding.focus(false); ui.input.setSelectionRange(workbookInputTextView(state.text.slice(0, match.from + prefix)).length, workbookInputTextView(state.text.slice(0, match.to + prefix)).length);
+    return "";
+  }
+  async function search(replace: "all" | "one" | undefined = undefined): Promise<void> {
+    check(); if (pendingInput() || commandAbort) throw new DocumentError("InvalidOperation", "请先完成当前输入或操作。");
+    await sourceSettled(); check();
+    const query = findQuery(), key = findKey(query), previous = currentFind(query), replacement = ui.replacement.value;
+    const valueMode = ui.replacementMode.value as WorkbookReplaceOptions["valueMode"];
+    if (replace === "one" && (!previous || previous.index < 0)) throw new DocumentError("InvalidOperation", "请先查找并选中要替换的匹配项。");
+    const abort = new view!.AbortController(); commandAbort = abort; ui.input.disabled = true; controls(); ui.error.hidden = true;
+    try {
+      const scan = { signal: abort.signal, yield: () => new Promise<void>(resolve => setTimeout(resolve, 0)), onProgress: (progress: { readonly cells: number; readonly matches: number }) => {
+        if (!disposed) ui.status.textContent = `正在${replace ? "替换" : "查找"} · 已检查 ${progress.cells} 格 · 匹配 ${progress.matches} 项`;
+      }, ...(config.locale === undefined ? {} : { locale: config.locale }) };
+      if (replace) {
+        const transaction = await createWorkbookReplaceTransaction(session, query, replacement, { ...scan, ...(valueMode === undefined ? {} : { valueMode }),
+          ...(replace === "one" && previous ? { only: { documentId: previous.result.documentId, baseRevision: previous.result.baseRevision, match: previous.result.matches[previous.index]! } } : {}) });
+        if (disposed || abort.signal.aborted) throw new DocumentError("OperationCancelled", "Workbook replacement was cancelled.");
+        const count = transaction.operations.reduce((sum, operation) => sum + (operation.op === "setWorkbookCells" ? operation.cells.length : 0), 0);
+        const receipt = session.commit(session.prepare(transaction, preparation())); found = undefined;
+        readCurrentSelection();
+        await sourceSettled();
+        if (!disposed) {
+          if (ui.findScope.value === "selection" && session.snapshot().manifest.revision === receipt.revision) findSelectionScope = query.scope;
+          ui.status.textContent = receipt.changed ? `已替换 ${count} 个单元格。` : "没有需要替换的内容。";
+        }
+      } else {
+        let result = query.field === "display" ? undefined : previous?.result;
+        if (!result) {
+          const prepared = preparation(), calculation = query.field === "display" ? await session.calculate({ signal: abort.signal, yield: scan.yield, ...(prepared.calculationContext ? { context: prepared.calculationContext } : {}) }) : undefined;
+          if (calculation) {
+            if (disposed || abort.signal.aborted) throw new DocumentError("OperationCancelled", "Workbook search was cancelled.");
+            const model = captureWorkbookModel(session), anchor = input.state().selection?.anchor;
+            choosing++;
+            try {
+              preview.update(createWorkbookPreviewSource(model, calculation)); await preview.settled();
+              if (!disposed && !abort.signal.aborted && anchor?.kind === "cells" && preview.layout().sheetId === anchor.sheetId) await preview.selectRange(anchor.ranges[0]!, false);
+            } finally { choosing--; }
+          }
+          result = await findWorkbookText(session, query, { ...scan, ...(calculation === undefined ? {} : { calculation }) });
+        }
+        if (disposed || abort.signal.aborted) throw new DocumentError("OperationCancelled", "Workbook search was cancelled.");
+        const index = result.matches.length ? previous ? (previous.index + 1) % result.matches.length : 0 : -1;
+        found = { key, result, index };
+        const location = index >= 0 ? await revealMatch(result.matches[index]!, query.field) : "";
+        if (disposed || abort.signal.aborted) throw new DocumentError("OperationCancelled", "Workbook search was cancelled.");
+        ui.status.textContent = `${index >= 0 ? `匹配 ${index + 1} / ${result.matches.length}${location}` : "没有匹配项"}${result.complete ? "。" : `；${result.diagnostics.length} 格无法取得显示值，结果不完整。`}`;
+      }
+    } catch (error) {
+      if (!(error instanceof DocumentError && error.code === "OperationCancelled" && abort.signal.aborted)) throw error;
+      if (!disposed) ui.status.textContent = "操作已取消。";
+    } finally { if (commandAbort === abort) commandAbort = undefined; if (!disposed) { ui.input.disabled = !input.state().selection; controls(); } }
+  }
   const binding = bindWorkbookTextInput(ui.input, input, {
     prepareOptions: () => preparation(),
     onApplied() { controls(); ui.error.hidden = true; }, onCancelled: cancelInput,
     onNavigate(direction, extend) { void runInteraction(async () => {
+      found = undefined; findSelectionScope = undefined;
       await sourceSettled(); if (pendingInput()) return; choosing++;
       try { const selected = await preview.moveSelection(direction, extend); check(); acceptSelection(selected, true); } finally { choosing--; }
     }); },
@@ -200,10 +285,10 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
       ...(config.heightPt === undefined ? {} : { heightPt: config.heightPt }), ...(config.locale === undefined ? {} : { locale: config.locale }),
       ...(config.limits === undefined ? {} : { limits: config.limits }), onError: error => report(new DocumentError(error.code, error.message, error.details)), onSelectionChange: sourceSelection });
   } catch (error) { binding.dispose(); input.dispose(); ui.element.remove(); throw error; }
-  const unsubscribe = session.subscribe(event => { if (event.type === "documentChanged" || event.type === "annotationChanged") { commandAbort?.abort(); void scheduleRefresh(); } });
-  const button = (label: string, action: () => unknown, available: () => boolean): void => {
+  const unsubscribe = session.subscribe(event => { if (event.type === "documentChanged" || event.type === "annotationChanged") { found = undefined; findSelectionScope = undefined; commandAbort?.abort(); void scheduleRefresh(); } });
+  const button = (label: string, action: () => unknown, available: () => boolean, parent: HTMLElement = ui.tools): void => {
     const button = ui.element.ownerDocument.createElement("button"); button.type = "button"; button.textContent = label;
-    button.addEventListener("click", () => { try { action(); } catch (error) { report(error); } }, { signal: events.signal }); ui.tools.append(button); buttons.push({ button, available });
+    button.addEventListener("click", () => { try { action(); } catch (error) { report(error); } }, { signal: events.signal }); parent.append(button); buttons.push({ button, available });
   };
   const idle = (): boolean => !commandAbort && !pendingInput();
   button("确认输入", () => binding.apply(), () => !commandAbort && Boolean(input.state().selection) && !input.state().composing);
@@ -215,6 +300,19 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
   button("向右填充", () => { void runInteraction(() => fill("column")); }, idle);
   button("数列填充", () => { void runInteraction(() => { const anchor = input.state().selection?.anchor; return fill(anchor?.kind === "cells" && anchor.ranges[0]!.from.column === anchor.ranges[0]!.to.column ? "row" : "column", true); }); }, idle);
   button("取消操作", () => commandAbort?.abort(), () => Boolean(commandAbort));
+  button("查找下一个", () => { void runInteraction(() => search()); }, () => idle() && Boolean(ui.find.value), ui.searchTools);
+  button("替换当前项", () => { void runInteraction(() => search("one")); }, () => idle() && ui.findField.value !== "display" && Boolean(found && found.index >= 0), ui.searchTools);
+  button("全部替换", () => { void runInteraction(() => search("all")); }, () => idle() && ui.findField.value !== "display" && Boolean(ui.find.value), ui.searchTools);
+  const searchSettings = (): string => JSON.stringify([ui.find.value, ui.findField.value, ui.findScope.value, ui.matchCase.checked, ui.entireCell.checked]);
+  let lastSearchSettings = searchSettings();
+  for (const field of [ui.find, ui.findField, ui.findScope, ui.matchCase, ui.entireCell]) for (const event of ["input", "change"]) field.addEventListener(event, () => {
+    const current = searchSettings(); if (current !== lastSearchSettings) { found = undefined; findSelectionScope = undefined; lastSearchSettings = current; } controls();
+  }, { signal: events.signal });
+  ui.find.addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); void runInteraction(() => search()); } }, { signal: events.signal });
+  ui.element.addEventListener("keydown", event => {
+    if (!(event.ctrlKey || event.metaKey) || event.altKey || event.isComposing || !["f", "h"].includes(event.key.toLowerCase())) return;
+    event.preventDefault(); if (!commandAbort) { ui.find.focus(); ui.find.select(); }
+  }, { signal: events.signal });
   for (const type of ["input", "keydown", "compositionstart", "compositionend"]) ui.input.addEventListener(type, controls, { signal: events.signal });
   ui.mode.addEventListener("change", () => { try { input.setMode(ui.mode.value as WorkbookTextInputMode); binding.refresh(); controls(); } catch (error) { report(error); } }, { signal: events.signal });
   ui.address.addEventListener("keydown", event => {

@@ -5,8 +5,11 @@ import type { WorkbookEditorView } from "@doffi/editor";
 import { decodeTestPackage } from "./package-transport.js";
 import type { TestPackage } from "./package-transport.js";
 let session: WorkbookSession, editor: WorkbookEditorView, container: HTMLDivElement;
+let observer: MutationObserver | undefined;
+const textViews = new WeakMap<HTMLIFrameElement, ShadowRoot>(), restores: (() => void)[] = [];
 const errors: string[] = [];
-export async function mount(entries: TestPackage): Promise<void> {
+export async function mount(entries: TestPackage, observeText = false): Promise<void> {
+  observer?.disconnect(); for (const restore of restores.splice(0)) restore();
   editor?.dispose(); session?.dispose(); container?.remove(); errors.length = 0;
   session = createDocumentSession(openDocument(decodeTestPackage(entries), { kind: "workbook" }));
   container = document.createElement("div"); document.body.append(container);
@@ -16,7 +19,24 @@ export async function mount(entries: TestPackage): Promise<void> {
   Element.prototype.attachShadow = function(init) { return attach.call(this, { ...init, mode: "open" }); };
   try { editor = mountWorkbookEditor(container, session, { widthPt: 420, heightPt: 240, onError: error => errors.push((error as { code?: string }).code ?? error.message) }); }
   finally { Element.prototype.attachShadow = attach; }
+  if (observeText) {
+    const root = editor.element.shadowRoot!.querySelector(".preview")!.firstElementChild!.shadowRoot!, watched = new WeakSet<HTMLIFrameElement>();
+    const watch = () => { for (const frame of root.querySelectorAll<HTMLIFrameElement>("iframe")) {
+      if (watched.has(frame)) continue; watched.add(frame);
+      frame.addEventListener("load", () => {
+        const prototype = (frame.contentWindow as Window & typeof globalThis).Element.prototype, attach = prototype.attachShadow;
+        prototype.attachShadow = function(init) { const value = attach.call(this, init); if (this.localName === "office-workbook-view-surface") textViews.set(frame, value); return value; };
+        restores.push(() => { prototype.attachShadow = attach; });
+      }, { capture: true, once: true });
+    } };
+    observer = new MutationObserver(watch); observer.observe(root, { childList: true, subtree: true }); watch();
+  }
   await editor.ready;
+}
+export async function mountObserved(entries: TestPackage): Promise<void> { await mount(entries, true); }
+export function displayedCell(row: number, column: number): string | undefined {
+  const frame = editor.element.shadowRoot!.querySelector(".preview")!.firstElementChild!.shadowRoot!.querySelector<HTMLIFrameElement>("iframe")!;
+  return textViews.get(frame)?.querySelector(`[data-office-view="workbook-cell"][data-row="${row}"][data-column="${column}"]`)?.textContent ?? undefined;
 }
 export async function settled() { return editor.settled(); }
 export async function select(fromRow: number, fromColumn = 0, toRow = fromRow, toColumn = fromColumn): Promise<void> {
@@ -50,8 +70,16 @@ export function cancelFillAtProgress(): void {
     [...root.querySelectorAll<HTMLButtonElement>(".tools button")].find(button => button.textContent === "取消操作")!.click();
   }); observer.observe(status, { childList: true, subtree: true });
 }
+export function cancelSearchAtProgress(): void {
+  const root = editor.element.shadowRoot!, status = root.querySelector('[role="status"]')!;
+  const observer = new MutationObserver(() => {
+    if (!/正在(?:查找|替换) · 已检查 /.test(status.textContent!)) return; observer.disconnect();
+    [...root.querySelectorAll<HTMLButtonElement>(".tools button")].find(button => button.textContent === "取消操作")!.click();
+  }); observer.observe(status, { childList: true, subtree: true });
+}
 export function dispose(): { revision: number; usable: boolean } {
+  observer?.disconnect(); for (const restore of restores.splice(0)) restore();
   editor.dispose(); const revision = session.snapshot().manifest.revision; external("host remains usable"); container.remove();
   return { revision, usable: session.getCell("sheet-1", 0, 0)?.value.type === "text" };
 }
-(window as unknown as { workbookEditor: unknown }).workbookEditor = { mount, settled, select, inspect, external, cell, paste, point, cancelFillAtProgress, dispose };
+(window as unknown as { workbookEditor: unknown }).workbookEditor = { mount, mountObserved, displayedCell, settled, select, inspect, external, cell, paste, point, cancelFillAtProgress, cancelSearchAtProgress, dispose };

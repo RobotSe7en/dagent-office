@@ -23,3 +23,6 @@ export { mountWorkbookEditor } from "./workbook/editor.js";
 export type { WorkbookEditorOptions, WorkbookEditorView } from "./workbook/editor-contracts.js";
 export { createWorkbookFillTransaction } from "./workbook/fill.js";
 export type { WorkbookFillOptions } from "./workbook/fill.js";
+export { findWorkbookText } from "./workbook/find.js";
+export { createWorkbookReplaceTransaction } from "./workbook/replace.js";
+export type { WorkbookFindQuery, WorkbookFindOptions, WorkbookFindProgress, WorkbookFindMatch, WorkbookFindDiagnostic, WorkbookFindResult, WorkbookReplaceOptions } from "./workbook/find-contracts.js";
