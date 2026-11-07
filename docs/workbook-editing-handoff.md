@@ -6,7 +6,7 @@
 
 - main／远端 main 的基线为 `5451736`；当前分支 `feat/workbook-editing`。
 - 读取阶段已合并；CI 优化及触发频率调整分别为 `31cca2f`、`d65c0e9`，不再是待办。
-- R3-09/10/11 实施中，R3-09～16 均未完成；基础提交 `85d755f`、审查修复 `8136ccd`、输入／计算显示原语 `21526a4`、直连网格／名称空间守卫 `79a9283`、公式／数列填充 `abcc53c`、富文本输入 `1c3136e`、查找替换 `2d910be`、其空行修正 `cfaeedc`、格式／链接事务 `e937f85`、选择性复制／批量校验优化 `a0a243e` 及候选异步准备 `5b07a86` 已推送，[阶段草稿 PR #31](https://github.com/RobotSe7en/doffi/pull/31) 未执行阶段最终 CI，不能合并。后续已接入专属 Worker 会话通道并通过本地定向验证；默认 Worker 编辑器与 Playground 界面尚未接入。
+- R3-09/10/11 实施中，R3-09～16 均未完成；基础提交 `85d755f`、审查修复 `8136ccd`、输入／计算显示原语 `21526a4`、直连网格／名称空间守卫 `79a9283`、公式／数列填充 `abcc53c`、富文本输入 `1c3136e`、查找替换 `2d910be`、其空行修正 `cfaeedc`、格式／链接事务 `e937f85`、选择性复制／批量校验优化 `a0a243e` 、候选异步准备 `5b07a86` 及 Worker 会话通道 `2150842` 已推送，[阶段草稿 PR #31](https://github.com/RobotSe7en/doffi/pull/31) 未执行阶段最终 CI，不能合并。后续已接入专属 Worker 会话通道并通过本地定向验证；默认 Worker 编辑器与 Playground 界面尚未接入。
 - 两位授权审查者 `workbook_edit_review_one`、`workbook_edit_review_two` 已完成两轮只读基础审查。首轮 8 项、第二轮 6 项原始问题及 3 项追加边界，均由实施者修复并经原审查者复核关闭。整个阶段仍须最终差异复审，不能凭基础审查合并；详见[审查记录](workbook-editing-review.md)。
 - 不直接提交 main，不发布 npm；普通推送只执行快速检查。阶段最终验收按 [CI 执行](ci-performance.md) 显式发起。
 
@@ -62,7 +62,7 @@
 - `79a9283` 的远端快速检查成功，运行 `42347498456`，没有启动全量 CI。
 - 新增 [81 项独立原生函数来源与 Calc 观察](evidence/workbook-calculation-functions.json)，SDK 对照通过。10 项来源差异按既有逻辑转文本声明、用户日期选择及逐项规范／官方依据保留，不能声称 81 项都与 Calc 相同或 Excel/WPS 实机通过。新增来源的 7 份 XML 部件通过官方 XSD 与关系审计；`check:workbook-calculation` 重新运行固定 Calc 并核对证据，不改基线。
 - 新增 [16 项筛选／SUBTOTAL 原生参考](evidence/workbook-filter-calculation.json)，SDK 对照通过。固定 Calc 将一个手动隐藏且符合筛选条件的行在 9／109 中均排除；保留原始观察，按规范区分当前筛选与手动隐藏行，不声称所有值与 Calc 一致。该来源 14 份 XML 部件通过官方 XSD／关系审计；`check:workbook-filter-calculation` 固定生产者复现通过。
-- 本地非受限 Node 诊断使用原 10,000×20／200,000 实际格／20,000 公式／40 块：全量约 2.959s；20 次小编辑加增量计算 p95 约 362.1ms，每次计算 2 项、复用 19,998 项，20 步历史保留约 24.74MB。日志和报告位于 `.cache/workbook-calculation-probe.{log,json}`；不是固定资源、浏览器或 100 步历史的验收。
+- 本地非受限 Node 诊断使用原 10,000×20／200,000 实际格／20,000 公式／40 块：全量约 2.959s；20 次小编辑加增量计算的原报告字段约 362.1ms（该探针以最大项代替 p95，按最近秩应为 358.7ms；原始样本保留），每次计算 2 项、复用 19,998 项，20 步历史保留约 24.74MB。日志和报告位于 `.cache/workbook-calculation-probe.{log,json}`；不是固定资源、浏览器或 100 步历史的验收。
 - 更名后的旧 Office 缓存启动脚本仍指向旧目录；已用原固定 SHA-256 归档重建本地工具，使用 `.cache/acceptance-office-deps/installed/usr/lib/x86_64-linux-gnu` 作为进程级 `LD_LIBRARY_PATH`，未变更 SDK 或全局系统安装。
 - 输入／计算读取定向单测 5 文件／14 项通过，覆盖 1200 格长链、批次上下文、来源隔离、已释放会话读取、过期输入、跨块粘贴、空文本及一次撤销。新浏览器输入用例已加入日常四引擎文件矩阵；本次本地仅验证 Chromium／Firefox／WebKit，旧 Chromium 待阶段验收。
 - 此批完整 `pnpm check` 通过：161 文件／1839 项，类型、边界、五包及 Playground 构建成功，日志 `.cache/workbook-input-check.log`。随后补充的原生草稿状态守卫／图表批次上下文用例经类型、包构建、计算／图表 3 文件／32 项及 3 引擎输入 16 项通过（另 2 项非 Chromium CDP IME 跳过），日志 `.cache/workbook-calculated-recheck.log` 与 `.cache/workbook-native-input-final.log`；对应预览定向 18 项已通过。它们不是完整阶段或容量验收。
@@ -87,6 +87,10 @@
 - `5b07a86` 的远端快速检查成功，运行 `42361103875`。Worker 通道完整 `pnpm check` 171 文件／1918 项、类型、边界、五包及 Playground 构建通过，日志 `.cache/workbook-worker-check.log`。随后追加超额已提交回执和过期视图两项检查，定向 3 文件／43 项及工具类型通过，日志 `.cache/workbook-worker-final-{unit,types}.log`。回执超额另有缓存诊断 `.cache/workbook-worker-receipt-probe.log`，确认源实际已撤销且主线程收到修订 2，不能把错误解释为未提交。
 - 真实 Worker 三引擎回归 9 项通过，覆盖已有原生图片／图表／规则读取，以及两份原生源的准备、取消、当前值、历史、包重开和断开后宿主继续使用原会话，日志 `.cache/workbook-worker-final-browser.log`。初轮测试宿主误用预览选区 API，修正后复跑；初轮失败日志单独保留 `.cache/workbook-worker-browser-initial.log`。这是 SDK 端口与公开预览集成，尚非默认编辑器／Playground UI。
 - Chromium 实际 200,000 格／20,000 公式／40 块的 Worker 编辑集成通过：整表向右一列复制、准备处理 256 格时取消、当前公式结果、复制／种子两次撤销、原始块摘要恢复及包重开均通过，宿主始终只创建一项核心会话。复制准备约 16.16s，782 次命令生成／907 次准备进度，最大控制回复 928,175 字符、窗口回复 778,368 字符；单次报告保存在 `.cache/workbook-worker-capacity-chromium/**/workbook-editing-worker.json`，执行日志 `.cache/workbook-worker-capacity-browser.log`。这里只声称不受限 Chromium 集成，不声称固定资源、反馈 p95、四引擎或 100 步编辑历史门槛。现有 `preview.update` 完整重建仍未解决。
+
+
+- `2150842` 的远端快速检查成功，运行 `42363714141`。候选／提交重开时，私有已验证缓冲区且原摘要声明未变的块复用摘要证明；新字节或新声明仍校验 SHA-256，位置／样式变化仍重新解析，字节及累计格数额度独立检查。新增 5 项回归及模型／事务／准备 4 文件／40 项通过，格式原生／端口 2 文件／20 项、原生表编辑及读取快照 2 文件／8 项通过；包构建与工具类型通过，日志 `.cache/workbook-digest-{build,types,unit,native,native-additional}.log`。三引擎原生读取／Worker 编辑 9 项复核通过，日志 `.cache/workbook-digest-browser.log`。本次未将此前完整检查计为摘要修改后的完整阶段检查。
+- 相同 200,000 实际格／20,000 公式的 20 次小编辑诊断，按最近秩 `ceil(n×.95)-1` 重新计算双方原始样本，p95 为约 357.93→172.87ms，最大值 403.23→189.22ms；两次都计算 2 项、复用 19,998 项，20 步历史均保留 24,743,329 字节。进程生命周期峰值 RSS 分别约 595.7／707.6MB，不据此宣称内存改善。原探针过于保守的分位数标签、全部样本及单次报告保留在 `.cache/workbook-calculation-{before,after}-digest-reuse.*`；规范化对照为 `.cache/workbook-digest-reuse-comparison.json`。这是不受限 Node 诊断，未代替固定资源浏览器或 100 步验收。
 
 ## 接下来的工作
 

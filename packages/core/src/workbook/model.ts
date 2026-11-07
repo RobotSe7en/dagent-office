@@ -45,6 +45,7 @@ export function* openWorkbookModelSteps(files: Map<string, Uint8Array>, manifest
   const { formats, cellStyleClasses, items } = validateWorkbookMetadata(metadata.workbook, classes, documentLimits.maxNodes);
   const bindingKey = JSON.stringify([[...classes].sort(), [...cellStyleClasses].sort(), [...formats].sort()]);
   const prior = previous ? workbookSource(previous) : undefined;
+  const priorDescriptors = new Map(previous?.snapshot().manifest.chunks.map(chunk => [chunk.path, chunk]) ?? []);
   const canReuse = prior?.bindingKey === bindingKey && prior.limits.maxNodes <= documentLimits.maxNodes
     && prior.limits.maxDepth <= documentLimits.maxDepth;
   const content = manifest.content === undefined ? undefined : parseHtml(readText(files, manifest.content), { kind: "workbook-content", entrypoint: manifest.content, styles: manifest.styles, assets: manifest.assets }, files, documentLimits, cssBudget);
@@ -57,8 +58,14 @@ export function* openWorkbookModelSteps(files: Map<string, Uint8Array>, manifest
     const sheet = sheets.get(chunk.sheetId), key = chunk.row / CHUNK_ROWS * (MAX_SHEET_COLUMNS / CHUNK_COLUMNS) + chunk.column / CHUNK_COLUMNS;
     if (!sheet || sheet.has(key)) invalid("Workbook chunks must have unique positions on existing worksheets.");
     const bytes = files.get(chunk.path);
-    if (!bytes || assetDigest(bytes) !== chunk.sha256) invalid("Workbook chunk bytes do not match their digest.");
-    const known = canReuse && prior.files.get(chunk.path) === bytes ? prior.chunks.get(chunk.path) : undefined;
+    if (!bytes) invalid("Workbook chunk bytes do not match their digest.");
+    checkLimit(bytes.byteLength, documentLimits.maxFileBytes);
+    // Only private, already-owned immutable buffers carry a digest proof.
+    // New bytes and changed declarations still hash before index reuse; style
+    // bindings, positions and every cumulative quota remain independent.
+    const unchanged = prior?.files.get(chunk.path) === bytes && priorDescriptors.get(chunk.path)?.sha256 === chunk.sha256;
+    if (!unchanged && assetDigest(bytes) !== chunk.sha256) invalid("Workbook chunk bytes do not match their digest.");
+    const known = canReuse && unchanged ? prior.chunks.get(chunk.path) : undefined;
     const samePosition = known && known.position.sheetId === chunk.sheetId && known.position.row === chunk.row && known.position.column === chunk.column;
     const index = samePosition ? known : indexWorkbookChunk(bytes, chunk, documentLimits.maxFileBytes, { takeOwnership: true, formulas, textCache, cssClasses: classes, cellStyleClasses, numberFormats: formats, maxNodes: documentLimits.maxNodes, maxDepth: documentLimits.maxDepth });
     if (samePosition) for (const expression of index.formulaTemplates) formulas.include(expression);
