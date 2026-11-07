@@ -6,8 +6,8 @@
 
 - main／远端 main 的基线为 `5451736`；当前分支 `feat/workbook-editing`。
 - 读取阶段已合并；CI 优化及触发频率调整分别为 `31cca2f`、`d65c0e9`，不再是待办。
-- R3-09/10 实施中，R3-11～16 尚未完成，未创建阶段 PR，未执行阶段最终 CI。
-- 两位授权审查者 `workbook_edit_review_one`、`workbook_edit_review_two` 已完成只读基础审查，8 项不同问题均由实施者修复并经原审查者复核关闭。后续新增功能和整个阶段仍须最终差异复审，不能凭基础审查合并；详见[审查记录](workbook-editing-review.md)。
+- R3-09/10 实施中，R3-11～16 尚未完成；基础提交 `85d755f` 已推送并创建[阶段草稿 PR #31](https://github.com/RobotSe7en/doffi/pull/31)，未执行阶段最终 CI，不能合并。
+- 两位授权审查者 `workbook_edit_review_one`、`workbook_edit_review_two` 已完成两轮只读基础审查。首轮 8 项、第二轮 6 项原始问题及 3 项追加边界，均由实施者修复并经原审查者复核关闭。整个阶段仍须最终差异复审，不能凭基础审查合并；详见[审查记录](workbook-editing-review.md)。
 - 不直接提交 main，不发布 npm；普通推送只执行快速检查。阶段最终验收按 [CI 执行](ci-performance.md) 显式发起。
 
 ## 已有改动
@@ -33,8 +33,10 @@
 - 上述通过后增加了映射类型及私有包验证改动，应在后续检查中重新覆盖。
 - 包构建通过；固定格式测试的类型分支补齐后 `tsconfig.tools.json` 类型检查通过。
 - 未将任何检查记作阶段最终验收；阶段必须在最终源上完成全量检查与容量专项。
-- 最近完整 `pnpm check` 全部通过：155 文件／1813 项，类型、边界、五包与 Playground 构建成功，日志 `.cache/workbook-editing-check.log`。覆盖共享依赖发现、验证影响和 ISBLANK 源存在性。此后新增读取适配器捕获不可变模型的修复，另做包构建、类型和定向读取检查；阶段最终检查仍须重新在最终源执行。
+- 最近完整 `pnpm check` 全部通过：157 文件／1827 项，类型、边界、五包与 Playground 构建成功，日志 `.cache/workbook-editing-check.log`。覆盖两轮审查修复、验证影响、ISBLANK、不可变读取及新增原生参考；阶段最终检查仍须重新在完整阶段的最终源执行。
 - 不可变读取修复后，窗口／图表／资源既有定向 48 项及新增 3 份原生来源会话读取检查通过；新适配器在提交与释放会话后仍返回捕获修订的数据。`build:packages`、工具类型检查、依赖边界及 `git diff --check` 通过。
+- 第二轮审查修复新增 11 项回归：工作表身份归一、删除表引用、可见性及计算名称依赖、深度预算与稀疏隐含目标。两人分别复核 4 文件／33 项、5 文件／43 项通过；上述完整检查已覆盖该轮全部修复，PR 仍为草稿。
+- 草稿 PR 的 `Quick checks` 在 `85d755f` 成功，运行 `42340514947`；未启动全量 CI。普通提交／推送继续只触发快速检查，不能将其计作阶段验收。
 - 新增 [81 项独立原生函数来源与 Calc 观察](evidence/workbook-calculation-functions.json)，SDK 对照通过。10 项来源差异按既有逻辑转文本声明、用户日期选择及逐项规范／官方依据保留，不能声称 81 项都与 Calc 相同或 Excel/WPS 实机通过。新增来源的 7 份 XML 部件通过官方 XSD 与关系审计；`check:workbook-calculation` 重新运行固定 Calc 并核对证据，不改基线。
 - 新增 [16 项筛选／SUBTOTAL 原生参考](evidence/workbook-filter-calculation.json)，SDK 对照通过。固定 Calc 将一个手动隐藏且符合筛选条件的行在 9／109 中均排除；保留原始观察，按规范区分当前筛选与手动隐藏行，不声称所有值与 Calc 一致。该来源 14 份 XML 部件通过官方 XSD／关系审计；`check:workbook-filter-calculation` 固定生产者复现通过。
 - 本地非受限 Node 诊断使用原 10,000×20／200,000 实际格／20,000 公式／40 块：全量约 2.959s；20 次小编辑加增量计算 p95 约 362.1ms，每次计算 2 项、复用 19,998 项，20 步历史保留约 24.74MB。日志和报告位于 `.cache/workbook-calculation-probe.{log,json}`；不是固定资源、浏览器或 100 步历史的验收。
@@ -48,3 +50,5 @@
 4. 阶段完成后使用两位子智能体独立审查整个基线差异，逐项修复与复核，再在最终 HEAD 发起日常 CI＋容量专项并以 SHA 守卫合并。
 
 Playground 原服务为 5174；5173 属于另一个项目，勿操作。读取的滚动准备优化与全部已定门槛保持。
+
+2026-11-07 用户问及分支 ahead：远端 `feat/workbook-reading` 为 ahead 161／behind 5，来自旧分支与 squash 合并后主线不同的提交身份；其最终 `d4f250e` 与 PR #25 合并提交 `c1d8dea` 文件树完全一致，没有遗漏读取代码。当前 `feat/workbook-editing` 从 main `5451736` 开始，推送基础提交时为 ahead 1／behind 0；不要把旧分支的提交数当作当前阶段新增工作或重复合并依据。

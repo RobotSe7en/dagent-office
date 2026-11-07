@@ -13,23 +13,36 @@ import { rangeContains } from "./workbook-cells.js";
 import { workbookExpressionDependencies } from "../workbook/expression-dependencies.js";
 import { parseFormula } from "../workbook/formula.js";
 import { WorkbookDependencyIndex } from "../workbook/dependency-index.js";
+import { workbookExpressionIdentity } from "../workbook/expression-identity.js";
+import type { WorkbookReferenceArea } from "../workbook/reference.js";
+import type { WorkbookScalarKernel } from "../workbook/scalar.js";
 
 /** All cell-writing entry points validate the final candidate through this
  * shared rule implementation. Unsupported stop conditions never mean pass. */
 export function validateWorkbookCandidate(previous: WorkbookModel, model: WorkbookModel, sourceRanges: readonly WorkbookRangeChange[], options?: TransactionPrepareOptions): void {
   const snapshot = model.snapshot(), rules = new Map(snapshot.metadata.workbook.sheets.map(sheet => [sheet.sheetId, sheet.dataValidations ?? []]));
   const prior = previous.snapshot(), previousRules = new Map(prior.metadata.workbook.sheets.flatMap(sheet => sheet.dataValidations?.map(rule => [rule.ruleId, rule] as const) ?? []));
-  const contextChanged = JSON.stringify(prior.metadata.workbook.names) !== JSON.stringify(snapshot.metadata.workbook.names) || prior.metadata.locale !== snapshot.metadata.locale;
-  const changedRules = new Set([...rules.values()].flatMap(items => items.filter(rule => contextChanged || JSON.stringify(previousRules.get(rule.ruleId)) !== JSON.stringify(rule)).map(rule => rule.ruleId)));
+  const namesIdentity = (source: WorkbookModel): string => JSON.stringify(source.snapshot().metadata.workbook.names?.map(name => ({ ...name, expression: workbookExpressionIdentity(source, name.expression, name.origin) })));
+  const ruleIdentity = (source: WorkbookModel, rule: DeepReadonly<WorkbookDataValidation> | undefined): string | undefined => rule && JSON.stringify({ ...rule,
+    ...("expression" in rule ? { expression: workbookExpressionIdentity(source, rule.expression, rule.origin) } : {}),
+    ...("formulas" in rule ? { formulas: rule.formulas.map(expression => workbookExpressionIdentity(source, expression, rule.origin)) } : {}),
+  });
+  const contextChanged = namesIdentity(previous) !== namesIdentity(model) || prior.metadata.locale !== snapshot.metadata.locale;
+  const changedRules = new Set([...rules.values()].flatMap(items => items.filter(rule => contextChanged || ruleIdentity(previous, previousRules.get(rule.ruleId)) !== ruleIdentity(model, rule)).map(rule => rule.ruleId)));
+  const visibilityChanges = snapshot.metadata.workbook.sheets.filter(sheet => {
+    const old = prior.metadata.workbook.sheets.find(item => item.sheetId === sheet.sheetId);
+    const identity = (item: typeof old): string => JSON.stringify(item && [item.defaultRowsHidden ?? false, item.rowDimensions.filter(span => span.hidden !== undefined).map(span => [span.from, span.to, span.hidden]), item.autoFilter, item.tables?.map(table => table.autoFilter)]);
+    return identity(old) !== identity(sheet);
+  });
   if (![...rules.values()].some(items => items.length)) return;
   const previousSheets = new Set(prior.metadata.workbook.sheets.map(sheet => sheet.sheetId)), nextSheets = new Set(rules.keys());
   const changes: WorkbookRangeChange[] = [];
   for (const change of sourceRanges) for (let row = change.range.from.row; row <= change.range.to.row; row++) for (let column = change.range.from.column; column <= change.range.to.column; column++) {
     const before = previousSheets.has(change.sheetId) ? previous.getCell(change.sheetId, row, column) : undefined, after = nextSheets.has(change.sheetId) ? model.getCell(change.sheetId, row, column) : undefined;
-    const signature = (cell: typeof before): string => cell?.formula ? cell.formula.expression : JSON.stringify(cell?.value ?? { type: "blank" });
-    if (signature(before) !== signature(after)) changes.push({ sheetId: change.sheetId, range: { from: { row, column }, to: { row, column } } });
+    const signature = (source: WorkbookModel, cell: typeof before): string => cell?.formula ? workbookExpressionIdentity(source, cell.formula.expression, cell) : JSON.stringify(cell?.value ?? { type: "blank" });
+    if (signature(previous, before) !== signature(model, after)) changes.push({ sheetId: change.sheetId, range: { from: { row, column }, to: { row, column } } });
   }
-  if (![...rules.values()].some(items => items.length) || !changes.length && !changedRules.size) return;
+  if (!changes.length && !changedRules.size && !visibilityChanges.length) return;
   const limits = DEFAULT_WORKBOOK_RULE_LIMITS;
   let steps = 0, units = 0, cells = 0;
   const step = (): void => checkLimit(++steps, limits.maxSteps);
@@ -45,32 +58,72 @@ export function validateWorkbookCandidate(previous: WorkbookModel, model: Workbo
   const beforeValues = new Map(beforeCalculation.cells.map(cell => [cellKey(cell), cell.state === "valid" ? JSON.stringify(cell.value) : cell.state === "unavailable" ? JSON.stringify(cell.issue) : "stale"]));
   const derived = calculation.cells.filter(cell => beforeValues.get(cellKey(cell)) !== (cell.state === "valid" ? JSON.stringify(cell.value) : cell.state === "unavailable" ? JSON.stringify(cell.issue) : "stale"));
   const affected = new WorkbookDependencyIndex([...changes.map(change => ({ area: { sheetId: change.sheetId, ...change.range }, owner: "source" })), ...derived.map(cell => ({ area: { sheetId: cell.sheetId, from: cell, to: cell }, owner: "calculated" }))], step);
+  const visibilityRanges: WorkbookRangeChange[] = [];
+  for (const sheet of visibilityChanges) {
+    const old = prior.metadata.workbook.sheets.find(item => item.sheetId === sheet.sheetId);
+    const left = old?.rowDimensions.filter(span => span.hidden !== undefined) ?? [], right = sheet.rowDimensions.filter(span => span.hidden !== undefined);
+    const boundaries = [...new Set([0, 1_048_576, ...[...left, ...right].flatMap(span => [span.from, span.to + 1])])].sort((a, b) => { step(); return a - b; });
+    let a = 0, b = 0;
+    const add = (from: number, to: number): void => { visibilityRanges.push({ sheetId: sheet.sheetId, range: { from: { row: from, column: 0 }, to: { row: to, column: 16_383 } } }); };
+    for (let index = 0; index + 1 < boundaries.length; index++) {
+      step(); const from = boundaries[index]!, to = boundaries[index + 1]! - 1;
+      while (left[a] && left[a]!.to < from) { step(); a++; } while (right[b] && right[b]!.to < from) { step(); b++; }
+      const hiddenBefore = left[a] && left[a]!.from <= from ? left[a]!.hidden : old?.defaultRowsHidden ?? false;
+      const hiddenAfter = right[b] && right[b]!.from <= from ? right[b]!.hidden : sheet.defaultRowsHidden ?? false;
+      if (hiddenBefore !== hiddenAfter) add(from, to);
+    }
+    const filters = (source: typeof old) => [...source?.autoFilter ? [source.autoFilter] : [], ...source?.tables?.flatMap(table => table.autoFilter ? [table.autoFilter] : []) ?? []];
+    const beforeFilters = filters(old), afterFilters = filters(sheet);
+    if (JSON.stringify(beforeFilters) !== JSON.stringify(afterFilters)) for (const filter of [...beforeFilters, ...afterFilters]) {
+      step(); if (filter.range.from.row < filter.range.to.row) add(filter.range.from.row + 1, filter.range.to.row);
+    }
+  }
+  const visibility = new WorkbookDependencyIndex(visibilityRanges.map(change => ({ area: { sheetId: change.sheetId, ...change.range }, owner: "visibility" })), step);
+  let referenceRead: ((area: DeepReadonly<WorkbookReferenceArea>) => void) | undefined;
   const evaluator = createWorkbookScalarKernel(model, { maxSteps: limits.maxSteps, maxCells: limits.maxValues, maxCodeUnits: limits.maxCodeUnits }, options?.calculationContext, {
-    step, account, read: () => checkLimit(++readCells, limits.maxValues),
+    step, account, read: location => { checkLimit(++readCells, limits.maxValues); referenceRead?.({ sheetId: location.sheetId, from: location, to: location }); },
+    reference: area => referenceRead?.(area),
     cachedCell: location => {
       const value = calculator.getCell(location); return value.state === "valid" ? value.value : value.state === "unavailable" ? value.issue : undefined;
     },
   });
-  function current(location: WorkbookReferenceLocation): WorkbookRuleValue {
-    step(); const value = evaluator.cell(location); return value.kind === "value" ? { kind: "value", value: value.value } : { kind: "unavailable", reason: value.reason, ...(value.functionName ? { functionName: value.functionName } : {}) };
+  let previousEvaluator: WorkbookScalarKernel | undefined;
+  function originalEvaluator(): WorkbookScalarKernel {
+    if (previousEvaluator) return previousEvaluator;
+    const values = new Map(beforeCalculation.cells.map(cell => [cellKey(cell), cell]));
+    return previousEvaluator = createWorkbookScalarKernel(previous, { maxSteps: limits.maxSteps, maxCells: limits.maxValues, maxCodeUnits: limits.maxCodeUnits }, options?.calculationContext, {
+      step, account, read: () => checkLimit(++readCells, limits.maxValues), cachedCell: location => {
+        const value = values.get(cellKey(location)); return value?.state === "valid" ? value.value : value?.state === "unavailable" ? value.issue : undefined;
+      },
+    });
   }
-  function validate(rule: DeepReadonly<WorkbookDataValidation>, location: WorkbookReferenceLocation): WorkbookValidationEvaluation {
-    const plan = beginWorkbookValidation(rule, location, current(location), { account,
-      resolve: (expression, at) => model.resolveReference(expression, { sheetId: location.sheetId, ...at }),
+  function reference(expression: string, at: WorkbookReferenceLocation, collect: (area: DeepReadonly<WorkbookReferenceArea>) => void) {
+    const outer = referenceRead; referenceRead = collect;
+    try { return evaluator.referenceAreas(expression, at); } finally { referenceRead = outer; }
+  }
+  function current(location: WorkbookReferenceLocation, kernel = evaluator): WorkbookRuleValue {
+    step(); const value = kernel.cell(location); return value.kind === "value" ? { kind: "value", value: value.value } : { kind: "unavailable", reason: value.reason, ...(value.functionName ? { functionName: value.functionName } : {}) };
+  }
+  function validate(rule: DeepReadonly<WorkbookDataValidation>, location: WorkbookReferenceLocation, source = model, kernel = evaluator): WorkbookValidationEvaluation {
+    const plan = beginWorkbookValidation(rule, location, current(location, kernel), { account,
+      resolve: (expression, at) => {
+        const origin = { sheetId: location.sheetId, ...at }, value = source.resolveReference(expression, origin);
+        return value.kind === "unresolved" ? kernel.referenceAreas(expression, origin) : value;
+      },
       evaluate: (expression, definition, coordinate) => {
-        const result = evaluator.evaluate(expression, { sheetId: location.sheetId, ...definition.origin }, { at: { sheetId: location.sheetId, ...coordinate } });
+        const result = kernel.evaluate(expression, { sheetId: location.sheetId, ...definition.origin }, { at: { sheetId: location.sheetId, ...coordinate } });
         return result.kind === "value" ? { kind: "value", value: result.value } : { kind: "unavailable", reason: result.reason, ...(result.functionName ? { functionName: result.functionName } : {}) };
       },
     });
     if (!("kind" in plan)) return plan;
     let unknown: WorkbookRuleIssue | undefined, count = 0;
-    for (const area of plan.areas) for (const chunk of snapshot.manifest.chunks) {
+    for (const area of plan.areas) for (const chunk of source.snapshot().manifest.chunks) {
       step(); if (chunk.sheetId !== area.sheetId) continue;
       const row = Math.max(area.from.row, chunk.row), lastRow = Math.min(area.to.row, chunk.row + 255), column = Math.max(area.from.column, chunk.column), lastColumn = Math.min(area.to.column, chunk.column + 31);
       if (row > lastRow || column > lastColumn) continue;
       const columns = lastColumn - column + 1, batchRows = Math.max(1, Math.floor(4096 / columns));
-      for (let start = row; start <= lastRow; start += batchRows) for (const cell of model.readWindow({ sheetId: area.sheetId, row: start, column, rows: Math.min(batchRows, lastRow - start + 1), columns })) {
-        step(); checkLimit(++count, limits.maxValues); const value = current({ sheetId: area.sheetId, row: cell.row, column: cell.column });
+      for (let start = row; start <= lastRow; start += batchRows) for (const cell of source.readWindow({ sheetId: area.sheetId, row: start, column, rows: Math.min(batchRows, lastRow - start + 1), columns })) {
+        step(); checkLimit(++count, limits.maxValues); const value = current({ sheetId: area.sheetId, row: cell.row, column: cell.column }, kernel);
         if (value.kind === "unavailable") { unknown = workbookRuleIssue(value); continue; }
         const text = scalarToText(value.value); if (typeof text === "string" && text.toUpperCase() === plan.text.toUpperCase()) return { ruleId: plan.ruleId, state: "valid" };
       }
@@ -80,20 +133,35 @@ export function validateWorkbookCandidate(previous: WorkbookModel, model: Workbo
     return unknown ? { ruleId: plan.ruleId, state: "unavailable", issue: unknown } : { ruleId: plan.ruleId, state: "invalid" };
   }
   try {
-    const targets = new Map<string, { location: WorkbookReferenceLocation; rule: DeepReadonly<WorkbookDataValidation> }>();
+    const targets = new Set<string>();
     function relevant(rule: DeepReadonly<WorkbookDataValidation>, location: WorkbookReferenceLocation): boolean {
       if (rule.kind === "none") return false;
       if (changedRules.has(rule.ruleId) || affected.query({ sheetId: location.sheetId, from: location, to: location }, step).next().done === false) return true;
-      let match = false;
+      let match = false, subtotal = false; const dependencies: DeepReadonly<WorkbookReferenceArea>[] = [];
+      const collect = (area: DeepReadonly<WorkbookReferenceArea>): void => { dependencies.push(area); if (affected.query(area, step).next().done === false) match = true; };
       const expressions = "expression" in rule ? [rule.expression] : rule.formulas;
-      for (const expression of expressions) workbookExpressionDependencies(model, parseFormula(expression, rule.origin), location, step, area => { if (affected.query(area, step).next().done === false) match = true; });
+      for (const expression of expressions) workbookExpressionDependencies(model, parseFormula(expression, rule.origin), location, step, collect,
+        name => { subtotal ||= name === "SUBTOTAL"; }, (expression, at) => reference(expression, at, collect));
+      if (subtotal && dependencies.some(area => visibility.query(area, step).next().done === false)) match = true;
       return match;
     }
     function add(location: WorkbookReferenceLocation): void {
       const rule = rules.get(location.sheetId)?.find(rule => rule.ranges.some(range => rangeContains(range, location.row, location.column))); if (!rule) return;
       const key = cellKey(location); if (targets.has(key)) return;
       if (!relevant(rule, location)) return;
-      checkLimit(targets.size + 1, limits.maxCells); targets.set(key, { location, rule });
+      checkLimit(++cells, limits.maxCells); targets.add(key);
+      const result = validate(rule, location);
+      if (result.state === "valid" || result.state === "none") return;
+      // A view-only metadata edit may preserve an imported violation. It must
+      // still reject a previously valid target becoming invalid/unavailable.
+      if (!changes.length && !changedRules.size && result.state === "invalid") {
+        const oldRule = previousRules.get(rule.ruleId);
+        if (oldRule && validate(oldRule, location, previous, originalEvaluator()).state === "invalid") return;
+      }
+      if (result.state === "invalid" && rule.errorStyle !== "stop" && options?.validation?.acceptedRuleIds.includes(rule.ruleId)) return;
+      throw new DocumentError("InvalidOperation", result.state === "unavailable" ? "The candidate's data validation cannot be evaluated." : "The candidate does not satisfy its data validation.", [
+        { code: rule.errorStyle === "stop" || result.state === "unavailable" ? "validation-blocked" : "validation-confirmation-required", path: [location.sheetId, location.row, location.column, rule.ruleId], message: rule.error || result.issue?.reason || "The cell does not satisfy the rule." },
+      ]);
     }
     // Explicit clears must include now-absent cells. Other implicit blanks are
     // skipped only when the definition itself explicitly permits blank values.
@@ -105,23 +173,16 @@ export function validateWorkbookCandidate(previous: WorkbookModel, model: Workbo
     for (const [sheetId, definitions] of rules) for (const rule of definitions) {
       checkLimit(definitions.length, limits.maxRules);
       if (rule.allowBlank || rule.kind === "none") continue;
+      let references = false;
       const expressions = "expression" in rule ? [rule.expression] : rule.formulas;
-      let dependent = false;
-      for (const expression of expressions) workbookExpressionDependencies(model, parseFormula(expression, rule.origin), { sheetId, ...rule.origin }, step, () => { dependent = true; });
-      if (!changedRules.has(rule.ruleId) && !dependent) continue;
+      for (const expression of expressions) workbookExpressionDependencies(model, parseFormula(expression, rule.origin), { sheetId, ...rule.origin }, step, () => { references = true; });
+      if (!changedRules.has(rule.ruleId) && !references) continue;
       for (const range of rule.ranges) {
-        checkLimit((range.to.row - range.from.row + 1) * (range.to.column - range.from.column + 1), limits.maxCells);
+        // Visit implicit targets without materializing their source cells.
+        // Every actual target is checked, including nonlinear relative names;
+        // the cumulative step budget bounds scans that cannot be completed.
         for (let row = range.from.row; row <= range.to.row; row++) for (let column = range.from.column; column <= range.to.column; column++) { step(); add({ sheetId, row, column }); }
       }
     }
-    for (const { location, rule } of targets.values()) {
-      step(); const { sheetId, row, column } = location; checkLimit(++cells, limits.maxCells);
-      const result = validate(rule, location);
-      if (result.state === "valid" || result.state === "none") continue;
-      if (result.state === "invalid" && rule.errorStyle !== "stop" && options?.validation?.acceptedRuleIds.includes(rule.ruleId)) continue;
-      throw new DocumentError("InvalidOperation", result.state === "unavailable" ? "The candidate's data validation cannot be evaluated." : "The candidate does not satisfy its data validation.", [
-        { code: rule.errorStyle === "stop" || result.state === "unavailable" ? "validation-blocked" : "validation-confirmation-required", path: [sheetId, row, column, rule.ruleId], message: rule.error || result.issue?.reason || "The cell does not satisfy the rule." },
-      ]);
-    }
-  } finally { evaluator.dispose(); calculator.dispose(); }
+  } finally { evaluator.dispose(); previousEvaluator?.dispose(); calculator.dispose(); }
 }
