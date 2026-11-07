@@ -27,7 +27,7 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
     return config.locale !== undefined && supplied.calculationContext?.locale === undefined ? { ...supplied, calculationContext: { ...supplied.calculationContext, locale: config.locale } } : supplied;
   }
   function runInteraction<T>(action: () => Promise<T>): Promise<T> { const work = interaction.then(action); interaction = work.then(() => {}, report); return work; }
-  function pendingInput(): boolean { const state = input.state(); return state.dirty || state.composing || ui.input.value !== state.text; }
+  function pendingInput(): boolean { return binding.hasPendingInput(); }
   function report(error: unknown): void {
     if (disposed) return; const problem = error instanceof Error ? error : new Error("工作簿编辑失败。");
     ui.error.textContent = problem instanceof DocumentError && problem.code === "RevisionConflict" ? "文档已变化。当前输入已保留，请先复制输入或取消后重新选择。" : problem.message; ui.error.hidden = false;
@@ -215,8 +215,8 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
   button("向右填充", () => { void runInteraction(() => fill("column")); }, idle);
   button("数列填充", () => { void runInteraction(() => { const anchor = input.state().selection?.anchor; return fill(anchor?.kind === "cells" && anchor.ranges[0]!.from.column === anchor.ranges[0]!.to.column ? "row" : "column", true); }); }, idle);
   button("取消操作", () => commandAbort?.abort(), () => Boolean(commandAbort));
-  for (const type of ["input", "compositionstart", "compositionend"]) ui.input.addEventListener(type, controls, { signal: events.signal });
-  ui.mode.addEventListener("change", () => { try { input.setMode(ui.mode.value as WorkbookTextInputMode); controls(); } catch (error) { report(error); } }, { signal: events.signal });
+  for (const type of ["input", "keydown", "compositionstart", "compositionend"]) ui.input.addEventListener(type, controls, { signal: events.signal });
+  ui.mode.addEventListener("change", () => { try { input.setMode(ui.mode.value as WorkbookTextInputMode); binding.refresh(); controls(); } catch (error) { report(error); } }, { signal: events.signal });
   ui.address.addEventListener("keydown", event => {
     if (event.key !== "Enter") return; event.preventDefault();
     try {

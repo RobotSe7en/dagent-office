@@ -1,6 +1,7 @@
 import { DocumentError } from "@doffi/core";
 import type { DocumentSelection, TransactionPrepareOptions, TransactionReceipt } from "@doffi/core";
 import type { WorkbookInputController } from "./input-controller.js";
+import { reconcileWorkbookInputText, workbookInputTextView } from "./text-projection.js";
 
 export type WorkbookNavigationDirection = "up" | "down" | "left" | "right";
 export interface WorkbookTextBindingOptions {
@@ -14,6 +15,7 @@ export interface WorkbookTextBindingOptions {
   readonly onError?: (error: DocumentError, recoveryText: string) => void;
 }
 export interface WorkbookTextBinding {
+  hasPendingInput(): boolean;
   refresh(): void;
   focus(selectAll?: boolean): void;
   apply(): TransactionReceipt | undefined;
@@ -40,29 +42,29 @@ export function bindWorkbookTextInput(input: HTMLTextAreaElement, controller: Wo
   }
   function refresh(): void {
     check(); const state = controller.state();
-    if (input.value !== state.text) input.value = state.text;
+    const visible = workbookInputTextView(state.text); if (input.value !== visible) input.value = visible;
     if (!state.dirty && !state.composing) editing = false;
   }
   function apply(): TransactionReceipt | undefined {
     check(); let receipt: TransactionReceipt;
-    try { controller.setText(input.value); receipt = controller.apply(options.prepareOptions?.()); refresh(); }
+    try { controller.setText(reconcileWorkbookInputText(controller.state().text, input.value)); receipt = controller.apply(options.prepareOptions?.()); refresh(); }
     catch (error) { report(error); return; }
     notify(options.onApplied, receipt); return receipt;
   }
   input.addEventListener("input", () => {
     editing = true;
-    try { controller.setText(input.value); } catch (error) { report(error); }
+    try { controller.setText(reconcileWorkbookInputText(controller.state().text, input.value)); } catch (error) { report(error); }
   }, events);
   input.addEventListener("pointerdown", () => { editing = true; }, events);
   input.addEventListener("compositionstart", () => {
     try { controller.compositionStart(); editing = true; } catch (error) { report(error); }
   }, events);
   input.addEventListener("compositionend", () => {
-    try { controller.compositionEnd(input.value); } catch (error) { report(error); }
+    try { controller.compositionEnd(reconcileWorkbookInputText(controller.state().text, input.value)); } catch (error) { report(error); }
   }, events);
   input.addEventListener("paste", event => {
     const state = controller.state();
-    if (editing || state.dirty || state.composing || input.value !== state.text || !state.selection || !options.onPaste || !event.clipboardData?.types.includes("text/plain")) return;
+    if (editing || state.dirty || state.composing || input.value !== workbookInputTextView(state.text) || !state.selection || !options.onPaste || !event.clipboardData?.types.includes("text/plain")) return;
     event.preventDefault(); notify(options.onPaste, event.clipboardData.getData("text/plain"), state.selection);
   }, events);
   input.addEventListener("keydown", event => {
@@ -75,7 +77,7 @@ export function bindWorkbookTextInput(input: HTMLTextAreaElement, controller: Wo
       event.preventDefault();
       try {
         const from = input.selectionStart, to = input.selectionEnd;
-        controller.setText(input.value.slice(0, from) + "\n" + input.value.slice(to));
+        controller.setText(reconcileWorkbookInputText(controller.state().text, input.value.slice(0, from) + "\n" + input.value.slice(to)));
         input.setRangeText("\n", from, to, "end"); editing = true;
       } catch (error) { report(error); }
       return;
@@ -97,6 +99,7 @@ export function bindWorkbookTextInput(input: HTMLTextAreaElement, controller: Wo
   }, events);
   refresh();
   return Object.freeze({
+    hasPendingInput() { check(); const state = controller.state(); return state.dirty || state.composing || input.value !== workbookInputTextView(state.text); },
     refresh,
     focus(selectAll = true) {
       check(); if (typeof selectAll !== "boolean") throw new DocumentError("InvalidOperation", "Invalid workbook input focus mode.");

@@ -15,7 +15,7 @@ const numeric = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
  * source type. The caller still prepares and commits the shared transaction. */
 export function parseWorkbookTextInput(text: string, origin: WorkbookCoordinate, mode: WorkbookTextInputMode = "auto"): WorkbookCellSource {
   if (typeof text !== "string" || !["auto", "text", "number"].includes(mode) || !WorkbookCoordinateSchema.safeParse(origin).success) invalid("Invalid workbook text input or coordinate.");
-  if (text.length > 32767) throw new DocumentError("ResourceLimitExceeded", "Workbook cell input exceeds its text budget.");
+  if (text.length > 32767 && !(mode === "auto" && text.startsWith("'") && text.length === 32768)) throw new DocumentError("ResourceLimitExceeded", "Workbook cell input exceeds its text budget.");
   unicode(text);
   const value = (item: Extract<WorkbookCellSource, { kind: "value" }>["value"]): WorkbookCellSource => Object.freeze({ kind: "value", value: Object.freeze(item) });
   if (mode === "text") return value({ type: "text", value: text });

@@ -6,6 +6,7 @@ import type * as fixture from "./fixtures/workbook-input.js";
 import type * as editorFixture from "./fixtures/workbook-editor.js";
 import { scalarWorkbook } from "../../packages/core/tests/workbook-scalar-fixture.js";
 import { encodeTestPackage } from "./package-transport.js";
+import { createDocumentSession, openDocument } from "@doffi/core";
 declare global { interface Window { workbookInput: typeof fixture } }
 declare global { interface Window { workbookEditor: typeof editorFixture } }
 let code = "", editorCode = "";
@@ -91,6 +92,24 @@ test("mounted workbook fill shifts formulas, extends numeric seeds and cancels b
   expect(await page.evaluate(() => window.workbookEditor.cell("sheet-1", 256, 0))).toBeUndefined();
   await expect(page.getByRole("button", { name: "取消操作", exact: true })).toBeDisabled();
 });
+test("mounted rich cell input retains font spans and line endings, with explicit type conversion", async ({ page }) => {
+  const files = new Map(scalarWorkbook([]).serialize());
+  files.set("styles.css", new TextEncoder().encode(new TextDecoder().decode(files.get("styles.css")!) + ".emphasis{font-style:italic}"));
+  const seed = createDocumentSession(openDocument(files, { kind: "workbook" }));
+  seed.commit(seed.prepare({ protocolVersion: 1, documentId: "scalar-kernel", baseRevision: 0, operations: [{ op: "setWorkbookCells", sheetId: "sheet-1", cells: [{ row: 0, column: 0,
+    source: { kind: "richText", html: '<span class="cell-default">ABC&#13;</span><span class="emphasis">中文禰󠄀</span>' } }] }] }));
+  const entries = encodeTestPackage(seed.serialize()); seed.dispose();
+  await page.evaluate(() => window.workbookInput.dispose()); await page.addScriptTag({ content: editorCode }); await page.evaluate(entries => window.workbookEditor.mount(entries), entries); await page.evaluate(() => window.workbookEditor.select(0));
+  const input = page.getByRole("textbox", { name: "单元格或公式输入", exact: true }); await expect(input).toHaveValue("ABC\n中文禰󠄀");
+  await input.press("F2"); await input.pressSequentially("尾"); await input.press("Control+Enter"); await page.evaluate(() => window.workbookEditor.settled());
+  expect(await page.evaluate(() => window.workbookEditor.cell("sheet-1", 0, 0))).toMatchObject({ text: "ABC\r中文禰󠄀尾", html: expect.stringContaining('<span class="cell-default">ABC&#13;</span><span class="emphasis">中文禰󠄀尾</span>') });
+  await page.getByRole("button", { name: "撤销", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  await page.getByRole("combobox", { name: "输入类型", exact: true }).selectOption("text"); await input.fill("12"); await page.getByRole("button", { name: "确认输入", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled()); await expect(input).toHaveValue("'12");
+  await page.getByRole("combobox", { name: "输入类型", exact: true }).selectOption("number"); await expect(input).toHaveValue("12");
+  await page.getByRole("button", { name: "确认输入", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  expect(await page.evaluate(() => window.workbookEditor.cell("sheet-1", 0, 0))).toMatchObject({ value: { type: "number", value: 12 } });
+  expect(await page.evaluate(() => window.workbookEditor.inspect())).toMatchObject({ history: { undoSteps: 2 }, errors: [], cleanSource: true });
+});
 test("mounted workbook real IME preserves a conflicting draft and disposal leaves its host session usable", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "CDP composition is Chromium-specific.");
   await page.evaluate(() => window.workbookInput.dispose()); await page.addScriptTag({ content: editorCode }); await page.evaluate(entries => window.workbookEditor.mount(entries), editorSource()); await page.evaluate(() => window.workbookEditor.select(0));
@@ -111,6 +130,22 @@ test("native typing remains transient until one Enter transaction, with shared u
   await input.press("Control+y"); expect(await page.evaluate(() => window.workbookInput.inspect())).toMatchObject({ history: { undoSteps: 1 }, state: { text: "00123" }, errors: [] });
   await input.press("F2"); await input.press("End"); await input.pressSequentially("X"); await input.press("Escape"); await expect(input).toHaveValue("00123");
   await input.press("Shift+ArrowRight"); expect(await page.evaluate(() => window.workbookInput.inspect())).toMatchObject({ history: { undoSteps: 1 }, navigation: [{ direction: "down", extend: false }, { direction: "right", extend: true }] });
+});
+test("native textarea confirmation and edits retain untouched source CR, CRLF and variation sequences", async ({ page }) => {
+  const original = "甲\r\n乙\r丙\n丁😀禰󠄀";
+  await page.evaluate(text => window.workbookInput.seedText(text), original);
+  const input = page.getByRole("textbox", { name: "工作簿输入", exact: true }); await expect(input).toHaveValue(original.replace(/\r\n?/g, "\n"));
+  await input.press("Control+Enter"); expect(await page.evaluate(() => window.workbookInput.inspect())).toMatchObject({ revision: 1, history: { undoSteps: 0 }, state: { text: original, dirty: false }, errors: [] });
+  await input.press("Control+End"); await input.pressSequentially("尾"); await input.press("Control+Enter");
+  expect(await page.evaluate(() => window.workbookInput.inspect())).toMatchObject({ revision: 2, history: { undoSteps: 1 }, state: { text: original + "尾" }, errors: [] });
+  await input.press("Control+z"); expect(await page.evaluate(() => window.workbookInput.inspect())).toMatchObject({ history: { undoSteps: 0 }, state: { text: original } });
+});
+test("native editing preserves formula-like literal text and explicit whole-cell formula replacement", async ({ page }) => {
+  await page.evaluate(() => window.workbookInput.seedText("=1")); const input = page.getByRole("textbox", { name: "工作簿输入", exact: true }); await expect(input).toHaveValue("'=1");
+  await input.press("F2"); await input.pressSequentially("X"); await input.press("Control+Enter");
+  expect(await page.evaluate(() => window.workbookInput.inspect())).toMatchObject({ history: { undoSteps: 1 }, state: { text: "'=1X" }, cells: expect.arrayContaining([expect.objectContaining({ cell: expect.objectContaining({ value: { type: "text", value: "=1X" } }) })]), errors: [] });
+  await input.press("Control+a"); await input.pressSequentially("=1+1"); await input.press("Control+Enter");
+  expect(await page.evaluate(() => window.workbookInput.inspect())).toMatchObject({ history: { undoSteps: 2 }, cells: expect.arrayContaining([expect.objectContaining({ cell: expect.objectContaining({ formula: expect.objectContaining({ expression: "=1+1" }) }) })]), errors: [] });
 });
 test("native formula and multiline editing preserve draft failures and source types", async ({ page }) => {
   const input = page.getByRole("textbox", { name: "工作簿输入", exact: true });

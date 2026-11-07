@@ -34,3 +34,25 @@ test("idle apply preserves explicitly typed text and empty strings without a new
   controller.select(selection(source, 1)); controller.setMode("text"); controller.apply(); const emptyRevision = source.snapshot().manifest.revision;
   expect(controller.apply()).toMatchObject({ changed: false, revision: emptyRevision }); expect(source.getCell("sheet-1", 1, 0)?.value).toEqual({ type: "text", value: "" });
 });
+test("editing literal formula-like text keeps its type while whole replacement can enter a formula", () => {
+  const source = session(), controller = createWorkbookInputController(source); controller.select(selection(source)); controller.setMode("text"); controller.setText("=1"); controller.apply();
+  expect(controller.state()).toMatchObject({ text: "'=1", dirty: false }); controller.setText(controller.state().text + "X"); controller.apply();
+  expect(source.getCell("sheet-1", 0, 0)).toMatchObject({ value: { type: "text", value: "=1X" } });
+  controller.setText("=1+1"); controller.apply(); expect(source.getCell("sheet-1", 0, 0)?.formula?.expression).toBe("=1+1");
+  controller.setMode("text"); controller.setText("12"); controller.apply(); expect(controller.state().text).toBe("'12");
+  controller.setMode("number"); expect(controller.state().text).toBe("12"); controller.apply(); expect(source.getCell("sheet-1", 0, 0)?.value).toEqual({ type: "number", value: 12 });
+});
+test("rich input preserves unaffected font runs, CR and variation sequences through one IME commit", () => {
+  const files = new Map(createWorkbook({ documentId: "input-controller" })); files.set("styles.css", new TextEncoder().encode(new TextDecoder().decode(files.get("styles.css")!) + '.emphasis{font-style:italic;--office-font-east-asia:"Noto Serif CJK SC"}'));
+  const source = createDocumentSession(openDocument(files, { kind: "workbook" }));
+  source.commit(source.prepare({ protocolVersion: 1, documentId: "input-controller", baseRevision: 0, operations: [{ op: "setWorkbookCells", sheetId: "sheet-1", cells: [{ row: 0, column: 0,
+    source: { kind: "richText", html: '<span class="cell-default">ABC&#13;</span><span class="emphasis">中文禰󠄀</span>' } }] }] })); source.clearHistory();
+  const original = source.getCell("sheet-1", 0, 0)!.html, controller = createWorkbookInputController(source); controller.select(selection(source)); controller.compositionStart(); controller.compositionEnd(controller.state().text + "尾"); controller.apply();
+  expect(source.getCell("sheet-1", 0, 0)?.html).toContain('<span class="cell-default">ABC&#13;</span><span class="emphasis">中文禰󠄀尾</span>');
+  expect(source.history().undoSteps).toBe(1); source.undo(); expect(source.getCell("sheet-1", 0, 0)?.html).toBe(original);
+});
+test("literal input escaping supports the full source text budget without an idle edit", () => {
+  const source = session(), controller = createWorkbookInputController(source); controller.select(selection(source)); controller.setMode("text"); controller.setText("=" + "A".repeat(32766)); controller.apply();
+  expect(controller.state().text).toHaveLength(32768); const revision = source.snapshot().manifest.revision;
+  expect(controller.apply()).toMatchObject({ changed: false, revision }); expect(source.getCell("sheet-1", 0, 0)?.value).toEqual({ type: "text", value: "=" + "A".repeat(32766) });
+});

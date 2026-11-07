@@ -44,6 +44,7 @@ export function external(text: string): void {
   const snapshot = session.snapshot(); session.commit(session.prepare({ protocolVersion: 1, documentId: snapshot.manifest.documentId, baseRevision: snapshot.manifest.revision,
     operations: [{ op: "setWorkbookCells", sheetId: "sheet-1", cells: [{ row: 0, column: 0, source: { kind: "value", value: { type: "text", value: text } } }] }] }));
 }
+export function seedText(text: string): void { external(text); renew(); session.clearHistory(); }
 export function paste(text: string): boolean {
   const data = new DataTransfer(); data.setData("text/plain", text);
   const event = new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true });
@@ -53,4 +54,4 @@ export function paste(text: string): boolean {
 export function releaseBinding(): void { binding.dispose(); }
 export function dispose(): void { binding.dispose(); controller.dispose(); input.remove(); }
 export function hostStillUsable(): boolean { external("host remains usable"); return session.getCell("sheet-1", 0, 0)?.value.type === "text"; }
-(window as unknown as { workbookInput: unknown }).workbookInput = { mount, inspect, select, external, paste, releaseBinding, dispose, hostStillUsable };
+(window as unknown as { workbookInput: unknown }).workbookInput = { mount, inspect, select, external, seedText, paste, releaseBinding, dispose, hostStillUsable };

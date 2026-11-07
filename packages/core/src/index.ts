@@ -32,8 +32,11 @@ export type { FormulaExpression as WorkbookFormulaExpression, FormulaOrigin as W
 export { printFormula as printWorkbookFormula } from "./workbook/formula-print.js";
 export { copyFormula as copyWorkbookFormula } from "./workbook/formula-rewrite.js";
 export { readWorkbookCellSource } from "./workbook/cell-source.js";
+export { replaceWorkbookCellText } from "./workbook/cell-text.js";
+export type { WorkbookCellTextEdit } from "./workbook/cell-text.js";
 export { resolveWorkbookCellFormat } from "./workbook/cell-format.js";
 export type { WorkbookCellFormat } from "./workbook/cell-format.js";
+export { isTextBoundary as isDocumentTextBoundary } from "./document/text.js";
 export type { WorkbookReferenceLocation, WorkbookReferenceArea, WorkbookReferenceResult } from "./workbook/reference.js";
 export { createWorkbookScalarEvaluator } from "./workbook/scalar.js";
 export { captureWorkbookModel } from "./workbook/source.js";
