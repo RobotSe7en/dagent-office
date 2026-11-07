@@ -5,7 +5,7 @@ import { mountDocumentPreview } from "@doffi/render";
 import type { WorkbookPreview, WorkbookReadConnection } from "@doffi/render";
 import { decodeTestBytes } from "./package-transport.js";
 
-export async function editWorker(code: string, input: string, documentId: string, capacity = false) {
+export async function editWorker(code: string, input: string, documentId: string, capacity = false, crossSheet = false) {
   const url = URL.createObjectURL(new Blob([code], { type: "text/javascript" })), worker = new Worker(url), channel = new MessageChannel(), abort = new AbortController();
   const container = document.createElement("div"); document.body.append(container);
   let client: WorkbookSessionConnection | undefined, source: WorkbookReadConnection | undefined, preview: WorkbookPreview | undefined;
@@ -32,12 +32,13 @@ export async function editWorker(code: string, input: string, documentId: string
     const seed = await client.prepare({ kind: "transaction", transaction: { protocolVersion: 1, documentId, baseRevision: 0, operations: [{ op: "setWorkbookCells", sheetId, cells: [
       { row: 12000, column: 32, source: { kind: "value", value: { type: "number", value: 1 } } },
       { row: 12001, column: 32, source: { kind: "formula", expression: "=AG12001+1" } },
-    ] }] } }, undefined, { signal: abort.signal });
+    ] }, ...(crossSheet ? [{ op: "insertWorkbookSheet" as const, name: "Copy target" }] : [])] } }, undefined, { signal: abort.signal });
     const seedPreparedMs = performance.now() - start, isolated = client.state().revision === 0 && client.state().history.undoSteps === 0;
     await client.commit(seed);
     let next = await client.view(undefined, { signal: abort.signal, previous: source });
     await preview.update(next); await preview.settled(); source.dispose(); source = next;
     const seededChunks = source.cells.snapshot.manifest.chunks;
+    const targetSheetId = crossSheet ? source.cells.snapshot.metadata.workbook.sheets.find(sheet => sheet.name === "Copy target")!.sheetId : sheetId;
     const cancelling = new AbortController(); let cancelled = "", cancellationPoint = 0;
     try {
       const candidate = await client.prepare({ kind: "fill", documentId, revision: 1, sheetId, source: { from: { row: 12000, column: 32 }, to: { row: 12000, column: 32 } },
@@ -48,20 +49,22 @@ export async function editWorker(code: string, input: string, documentId: string
     } catch (reason) { cancelled = (reason as { code: string }).code; }
     const cancellationState = client.state();
     const copyStart = performance.now(), copy = await client.prepare({ kind: "copy", documentId, revision: 1, sheetId,
+      ...(crossSheet ? { targetSheetId } : {}),
       source: capacity ? { from: { row: 0, column: 0 }, to: { row: 9999, column: 19 } } : { from: { row: 12000, column: 32 }, to: { row: 12001, column: 32 } },
       target: capacity ? { row: 0, column: 1 } : { row: 12000, column: 33 } }, undefined, { signal: abort.signal, onProgress: value => { if (value.phase === "copy") copied++; else prepared++; } });
     const copyPreparedMs = performance.now() - copyStart; await client.commit(copy);
     next = await client.view(undefined, { signal: abort.signal, previous: source });
     const at = capacity ? { row: 9999, column: 20 } : { row: 12001, column: 33 };
-    const current = await next.rules!.read({ documentId, revision: 2, sheetId, coordinates: [at], includeCurrent: true, ...DEFAULT_WORKBOOK_RULE_LIMITS }, abort.signal);
+    const current = await next.rules!.read({ documentId, revision: 2, sheetId: targetSheetId, coordinates: [at], includeCurrent: true, ...DEFAULT_WORKBOOK_RULE_LIMITS }, abort.signal);
     await preview.update(next); await preview.settled(); source.dispose(); source = next;
+    if (crossSheet) await preview.showSheet(targetSheetId);
     await preview.selectRange({ from: at, to: at }); const shown = preview.layout(), selection = preview.selection();
     await client.undo(); next = await client.view(undefined, { signal: abort.signal });
     const copyUndo = JSON.stringify(next.cells.snapshot.manifest.chunks) === JSON.stringify(seededChunks); next.dispose();
     await client.undo(); client.dispose(); client = undefined;
     const auditTimeout = setTimeout(() => { failures.push("Worker close audit timed out"); auditResolve({}); }, 15_000);
     worker.postMessage({ kind: "closed-audit" }); const audit = await audited; clearTimeout(auditTimeout);
-    return { first, shown, selection, current: current.cells[0]?.current, isolated, seedPreparedMs, copyPreparedMs, cancelled, cancellationPoint, cancellationState,
+    return { first, shown, targetSheetId, selection, current: current.cells[0]?.current, isolated, seedPreparedMs, copyPreparedMs, cancelled, cancellationPoint, cancellationState,
       copyUndo, originalChunksRestored: JSON.stringify(audit.chunks) === JSON.stringify(initial.manifest.chunks), audit,
       detachedInput: bytes.byteLength === 0, largestControlReplyUnits, largestViewReplyUnits, copied, prepared, ticks, states, failures, userAgent: navigator.userAgent };
   } finally {

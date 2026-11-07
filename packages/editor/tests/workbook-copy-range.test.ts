@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { createDocumentSession, openDocument } from "@doffi/core";
+import { createDocumentSession, createWorkbookCalculatedEvaluator, openDocument } from "@doffi/core";
 import type { DocumentOperation, WorkbookDocumentMetadata, WorkbookSession } from "@doffi/core";
 import { scalarWorkbook } from "../../core/tests/workbook-scalar-fixture.js";
 import { createWorkbookRangeCopyTransaction } from "../src/workbook/copy-range.js";
@@ -89,4 +89,66 @@ test("range copy cancellation, source replacement, bounds and budgets leave no g
     if (changed) return; changed = true; apply(session, [{ op: "setWorkbookCells", sheetId: "sheet-1", cells: [{ row: 0, column: 0, source: { kind: "value", value: number(2) } }] }]);
   } })).rejects.toMatchObject({ code: "RevisionConflict" });
   expect(session.getCell("sheet-1", 400, 0)).toBeUndefined(); expect(session.getCell("sheet-1", 0, 0)?.value).toEqual(number(2));
+});
+
+test("cross-sheet copy at identical coordinates preserves source rich spans and inherited formats in one undo", async () => {
+  const session = styled(); apply(session, [{ op: "insertWorkbookSheet", name: "Destination" }]);
+  const targetSheetId = session.snapshot().metadata.workbook.sheets.find(sheet => sheet.name === "Destination")!.sheetId;
+  apply(session, [{ op: "setWorkbookCells", sheetId: "sheet-1", cells: [{ row: 255, column: 31, source: { kind: "richText", html: '<span class="source-font">甲&#13;</span><span class="cell-default">禰󠄀😀</span>' } }] },
+    { op: "setWorkbookCells", sheetId: targetSheetId, cells: [{ row: 255, column: 31, source: { kind: "value", value: text("old") }, cssClass: "target-font" }] }]);
+  session.clearHistory(); const before = session.serialize(), rich = session.getCell("sheet-1", 255, 31)!;
+  const command = await createWorkbookRangeCopyTransaction(session, "sheet-1", range(255, 31, 256, 32), { row: 255, column: 31 }, { targetSheetId });
+  expect(session.serialize()).toEqual(before); session.commit(session.prepare(command));
+  expect(session.getCell(targetSheetId, 255, 31)).toMatchObject({ value: rich.value, cssClass: "source-font", formatId: "date" });
+  expect(session.getCell(targetSheetId, 255, 31)?.html).toContain('<span class="cell-default">禰󠄀😀</span>');
+  expect(session.getCell(targetSheetId, 255, 32)?.formula?.expression).toBe("=LEN(AF256)+$A$1");
+  expect(session.getCell(targetSheetId, 256, 32)?.value).toEqual(number(9)); expect(session.getCell("sheet-1", 255, 31)?.html).toBe(rich.html);
+  expect(openDocument(session.serialize(), { kind: "workbook" }).getCell(targetSheetId, 255, 31)?.value).toEqual(rich.value);
+  expect(session.history().undoSteps).toBe(1); session.undo(); expect(session.getCell(targetSheetId, 255, 31)?.value).toEqual(text("old"));
+  expect(session.snapshot().manifest.chunks).toEqual(openDocument(before, { kind: "workbook" }).snapshot().manifest.chunks);
+});
+
+test("cross-sheet selective values read the source calculation and retain destination content formatting", async () => {
+  const session = styled(); apply(session, [{ op: "insertWorkbookSheet", name: "Destination" }]);
+  const targetSheetId = session.snapshot().metadata.workbook.sheets.find(sheet => sheet.name === "Destination")!.sheetId;
+  apply(session, [{ op: "setWorkbookCells", sheetId: "sheet-1", cells: [{ row: 0, column: 1, source: { kind: "formula", expression: "=A1+1" } }] },
+    { op: "setWorkbookCells", sheetId: targetSheetId, cells: [{ row: 256, column: 32, source: { kind: "value", value: number(100) }, cssClass: "target-font", formatId: "date" }] }]);
+  session.clearHistory(); const calculation = session.calculateSync();
+  session.commit(session.prepare(await createWorkbookRangeCopyTransaction(session, "sheet-1", range(0, 1), { row: 256, column: 32 }, { targetSheetId, mode: "values", calculation })));
+  expect(session.getCell(targetSheetId, 256, 32)).toMatchObject({ value: number(8), cssClass: "target-font", formatId: "date" });
+  expect(session.getCell(targetSheetId, 256, 32)?.formula).toBeUndefined(); expect(session.getCell("sheet-1", 0, 1)?.formula?.expression).toBe("=A1+1");
+  expect(session.history().undoSteps).toBe(1); session.undo(); expect(session.getCell(targetSheetId, 256, 32)?.value).toEqual(number(100));
+});
+
+test("copied formula tokens retain explicit sheets while relative cells, local names and unqualified tables use destination context", async () => {
+  const expression = "=A1+Sheet1!$A$1+Local+Sheet1!Local+Shared+SUM(SourceTable[Amount])+SUM([Amount])";
+  const model = scalarWorkbook([{ row: 0, column: 0, value: number(5) }, { row: 1, column: 0, value: number(7) }, { row: 0, column: 1, value: number(999), formula: expression }], metadata => {
+    const source = metadata.workbook.sheets[0]!, target = { ...structuredClone(source), sheetId: "destination", name: "Destination" }; metadata.workbook.sheets.push(target);
+    for (const [sheet, name] of [[source, "SourceTable"], [target, "DestinationTable"]] as const) sheet.tables = [{ tableId: "table-" + sheet.sheetId, name, range: range(0, 0, 2, 1), header: false, totals: false, totalsPreviouslyShown: false,
+      showFirstColumn: false, showLastColumn: false, rowStripes: false, columnStripes: false,
+      columns: [{ columnId: "amount-" + sheet.sheetId, name: "Amount", totalFunction: "none" }, { columnId: "formula-" + sheet.sheetId, name: "Formula", totalFunction: "none" }] }];
+    metadata.workbook.names = [{ nameId: "local-source", name: "Local", sheetId: source.sheetId, origin: { row: 0, column: 0 }, expression: "=3" },
+      { nameId: "local-destination", name: "Local", sheetId: target.sheetId, origin: { row: 0, column: 0 }, expression: "=17" },
+      { nameId: "shared", name: "Shared", origin: { row: 0, column: 0 }, expression: "=2" }];
+  }), session = createDocumentSession(model);
+  apply(session, [{ op: "setWorkbookCells", sheetId: "destination", cells: [{ row: 0, column: 0, source: { kind: "value", value: number(11) } }, { row: 1, column: 0, source: { kind: "value", value: number(13) } }] }]); session.clearHistory();
+  session.commit(session.prepare(await createWorkbookRangeCopyTransaction(session, "sheet-1", range(0, 1), { row: 1, column: 1 }, { targetSheetId: "destination", mode: "formulas" })));
+  const copied = session.getCell("destination", 1, 1)!.formula!.expression;
+  expect(copied).toContain("A2"); expect(copied).toContain("'Sheet1'!$A$1"); expect(copied).toContain("SourceTable[Amount]"); expect(copied).toContain("SUM([Amount])");
+  const evaluator = createWorkbookCalculatedEvaluator(session, session.calculateSync());
+  try { expect(evaluator.cell({ sheetId: "destination", row: 1, column: 1 })).toMatchObject({ kind: "value", value: number(76) }); }
+  finally { evaluator.dispose(); }
+  session.undo(); expect(session.getCell("destination", 1, 1)).toBeUndefined(); expect(session.getCell("sheet-1", 0, 1)?.formula?.expression).toBe(expression);
+});
+
+test("cross-sheet format paste leaves formula caches intact and invalid destinations fail atomically", async () => {
+  const session = styled(); apply(session, [{ op: "insertWorkbookSheet", name: "Destination" }]);
+  const targetSheetId = session.snapshot().metadata.workbook.sheets.find(sheet => sheet.name === "Destination")!.sheetId;
+  apply(session, [{ op: "setWorkbookCells", sheetId: targetSheetId, cells: [{ row: 0, column: 0, source: { kind: "formula", expression: "=UNIMPLEMENTED()" }, cssClass: "target-font" }] }]);
+  session.clearHistory(); const previous = session.getCell(targetSheetId, 0, 0)!;
+  session.commit(session.prepare(await createWorkbookRangeCopyTransaction(session, "sheet-1", range(255, 32), { row: 0, column: 0 }, { targetSheetId, mode: "formats" })));
+  expect(session.getCell(targetSheetId, 0, 0)).toMatchObject({ value: previous.value, formula: previous.formula, formatId: "date", cssClass: "source-font" });
+  const before = session.serialize();
+  for (const destination of ["missing", null]) await expect(createWorkbookRangeCopyTransaction(session, "sheet-1", range(0), { row: 0, column: 0 }, { targetSheetId: destination as string })).rejects.toMatchObject({ code: "InvalidOperation" });
+  expect(session.serialize()).toEqual(before); expect(session.history().undoSteps).toBe(1);
 });

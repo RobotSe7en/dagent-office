@@ -116,6 +116,31 @@ test("find and replacement stay revision-bound in the Worker", async () => {
   await expect(client.prepare({ kind: "copy", documentId: "worker-session", revision: 1, sheetId, source: { from: { row: 0, column: 0 }, to: { row: 0, column: 0 } }, target: { row: 0, column: 1 } })).rejects.toThrowError(expect.objectContaining({ code: "RevisionConflict" }));
 });
 
+test("cross-sheet Worker copy validates the destination, cancels privately and shares the sole core history", async () => {
+  const s = createDocumentSession(scalarWorkbook([{ row: 0, column: 0, value: { type: "number", value: 7 } }], metadata => {
+    const target = { ...structuredClone(metadata.workbook.sheets[0]!), sheetId: "destination", name: "Destination" };
+    target.dataValidations = [{ ruleId: "minimum", kind: "whole", operator: "greaterThanOrEqual", formulas: ["=10"], origin: { row: 0, column: 0 },
+      ranges: [{ from: { row: 0, column: 0 }, to: { row: 0, column: 0 } }], allowBlank: true, showErrorMessage: true, showInputMessage: false, errorStyle: "stop",
+      errorTitle: "", error: "", promptTitle: "", prompt: "" }];
+    metadata.workbook.sheets.push(target);
+  })); cleanups.push(() => s.dispose()); const { client } = await pair(s), before = s.serialize();
+  const copy = { kind: "copy" as const, documentId: "scalar-kernel", revision: 0, sheetId, targetSheetId: "destination",
+    source: { from: { row: 0, column: 0 }, to: { row: 0, column: 0 } }, target: { row: 0, column: 0 } };
+  await expect(client.prepare(copy)).rejects.toThrowError(expect.objectContaining({ code: "InvalidOperation" }));
+  expect(s.serialize()).toEqual(before); expect(s.history().undoSteps).toBe(0);
+  const abort = new AbortController();
+  await expect(client.prepare({ ...copy, source: { from: { row: 0, column: 0 }, to: { row: 600, column: 0 } }, target: { row: 400, column: 0 } }, undefined, {
+    signal: abort.signal, onProgress(value) { if (value.phase === "copy" && value.completed === 256) abort.abort(); },
+  })).rejects.toThrowError(expect.objectContaining({ code: "OperationCancelled" }));
+  expect(s.serialize()).toEqual(before); expect(s.history().undoSteps).toBe(0);
+  await client.commit(await client.prepare(command(s, [number(0, 0, 12)])));
+  const candidate = await client.prepare({ ...copy, revision: 1, mode: "values" });
+  expect(await client.commit(candidate)).toMatchObject({ revision: 2, affectedSheetIds: ["destination"] });
+  expect(s.getCell("destination", 0, 0)?.value).toEqual({ type: "number", value: 12 }); expect(s.getCell(sheetId, 0, 0)?.value).toEqual({ type: "number", value: 12 });
+  expect(client.state().history.undoSteps).toBe(2); await client.undo(); expect(s.getCell("destination", 0, 0)).toBeUndefined();
+  await client.redo(); expect(s.getCell("destination", 0, 0)?.value).toEqual({ type: "number", value: 12 });
+});
+
 test("Worker reference queries use current worksheet identities without creating history", async () => {
   const { s, client } = await pair();
   const result = await client.resolveReference("=Sheet1!$A$1:B2", { sheetId, row: 0, column: 0 });

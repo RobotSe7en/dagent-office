@@ -77,9 +77,10 @@ export function serveWorkbookSession(port: MessagePort, session: WorkbookSession
           if (!keys(payload.command, ["kind", "documentId", "revision", "sheetId", "at", "text", "options"])) invalidSessionTransport("Invalid workbook paste command.");
           transaction = createWorkbookPasteTransaction(base.snapshot(), command.sheetId, command.at, command.text, command.options);
         } else if (command.kind === "copy") {
-          if (!keys(payload.command, ["kind", "documentId", "revision", "sheetId", "source", "target", "mode", "skipBlanks"])) invalidSessionTransport("Invalid workbook copy command.");
+          if (!keys(payload.command, ["kind", "documentId", "revision", "sheetId", "source", "target", "targetSheetId", "mode", "skipBlanks"])) invalidSessionTransport("Invalid workbook copy command.");
           const calculation = command.mode === "values" ? await calculate(base, abort, progress, preparation, guard) : undefined; guard();
           transaction = await createWorkbookRangeCopyTransaction(session, command.sheetId, command.source, command.target, { ...common,
+            ...(command.targetSheetId === undefined ? {} : { targetSheetId: command.targetSheetId }),
             ...(command.mode === undefined ? {} : { mode: command.mode }), ...(command.skipBlanks === undefined ? {} : { skipBlanks: command.skipBlanks }),
             ...(calculation ? { calculation } : {}), onProgress: value => progress({ phase: "copy", ...value }) });
         } else if (command.kind === "fill") {

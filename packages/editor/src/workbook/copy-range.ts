@@ -3,6 +3,8 @@ import type { DeepReadonly, DocumentTransaction, WorkbookCalculationResult, Work
 import { workbookTextSplice } from "./text-projection.js";
 
 export interface WorkbookRangeCopyOptions {
+  /** Defaults to the source worksheet; both belong to the same workbook. */
+  readonly targetSheetId?: string;
   /** Contents includes rich source and cell formats. Values and formulas keep
    * destination formats; formats leaves destination content and caches intact. */
   readonly mode?: "contents" | "values" | "formulas" | "formats";
@@ -20,25 +22,27 @@ function invalid(message: string): never { throw new DocumentError("InvalidOpera
 function overlap(a: DeepReadonly<WorkbookRange>, b: DeepReadonly<WorkbookRange>): boolean {
   return a.from.row <= b.to.row && b.from.row <= a.to.row && a.from.column <= b.to.column && b.from.column <= a.to.column;
 }
-/** Copy one fixed source rectangle. This command handles same-sheet unmerged
+/** Copy one fixed source rectangle. This command handles unmerged
  * content/format input; clipboard lifetime, links, comments and structural
  * copy are composed separately. No output is read back as a later seed. */
 export async function createWorkbookRangeCopyTransaction(input: WorkbookModel, sheetId: string, range: DeepReadonly<WorkbookRange>, origin: WorkbookCoordinate, options: WorkbookRangeCopyOptions = {}): Promise<DocumentTransaction> {
-  if (!options || typeof options !== "object" || Array.isArray(options) || Object.keys(options).some(key => !["mode", "calculation", "skipBlanks", "maxCells", "maxCodeUnits", "maxSteps", "signal", "yield", "onProgress"].includes(key))) invalid("Invalid workbook range-copy options.");
+  if (!options || typeof options !== "object" || Array.isArray(options) || Object.keys(options).some(key => !["targetSheetId", "mode", "calculation", "skipBlanks", "maxCells", "maxCodeUnits", "maxSteps", "signal", "yield", "onProgress"].includes(key))) invalid("Invalid workbook range-copy options.");
   const config = { mode: "contents", skipBlanks: false, maxCells: 250_000, maxCodeUnits: 64 * 1024 * 1024, maxSteps: 10_000_000, ...options };
   if (!["contents", "values", "formulas", "formats"].includes(config.mode) || typeof config.skipBlanks !== "boolean"
+    || config.targetSheetId !== undefined && (typeof config.targetSheetId !== "string" || !config.targetSheetId || config.targetSheetId.length > 256)
     || ![config.maxCells, config.maxCodeUnits, config.maxSteps].every(value => Number.isSafeInteger(value) && value > 0)
     || config.signal !== undefined && (!config.signal || typeof config.signal.aborted !== "boolean") || config.yield !== undefined && typeof config.yield !== "function"
     || config.onProgress !== undefined && typeof config.onProgress !== "function") invalid("Invalid workbook range-copy mode or budget.");
   const parsed = WorkbookRangeSchema.safeParse(range), coordinate = WorkbookCoordinateSchema.safeParse(origin);
   if (!parsed.success || parsed.data.from.row > parsed.data.to.row || parsed.data.from.column > parsed.data.to.column || !coordinate.success) invalid("Range copy requires an ordered source rectangle and a destination coordinate.");
   const source = parsed.data, destination = coordinate.data, model = captureWorkbookModel(input), snapshot = model.snapshot(), sheet = snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === sheetId);
-  if (!sheet) invalid("Range copy requires an existing worksheet.");
+  const targetSheetId = config.targetSheetId ?? sheetId, targetSheet = snapshot.metadata.workbook.sheets.find(sheet => sheet.sheetId === targetSheetId);
+  if (!sheet || !targetSheet) invalid("Range copy requires existing source and destination worksheets.");
   const rows = source.to.row - source.from.row + 1, columns = source.to.column - source.from.column + 1, total = rows * columns;
   if (total > config.maxCells) throw new DocumentError("ResourceLimitExceeded", "Range copy exceeds its cell budget.");
   const target = { from: destination, to: { row: destination.row + rows - 1, column: destination.column + columns - 1 } };
   if (target.to.row >= 1_048_576 || target.to.column >= 16_384) invalid("Range copy exceeds the destination worksheet bounds.");
-  if (sheet.merges.some(merge => overlap(merge, source) || overlap(merge, target))) invalid("Range copy requires unmerged source and destination cells.");
+  if (sheet.merges.some(merge => overlap(merge, source)) || targetSheet.merges.some(merge => overlap(merge, target))) invalid("Range copy requires unmerged source and destination cells.");
   let units = 0, steps = 0, completed = 0;
   const guard = (): void => {
     if (config.signal?.aborted) throw new DocumentError("OperationCancelled", "Workbook range copy was cancelled.");
@@ -52,9 +56,9 @@ export async function createWorkbookRangeCopyTransaction(input: WorkbookModel, s
     guard();
     for (let row = 0; row < rows; row++) for (let column = 0; column < columns; column++) {
       guard(); const from = { row: source.from.row + row, column: source.from.column + column }, to = { row: destination.row + row, column: destination.column + column };
-      const raw = model.getCell(sheetId, from.row, from.column), same = from.row === to.row && from.column === to.column;
+      const raw = model.getCell(sheetId, from.row, from.column), same = sheetId === targetSheetId && from.row === to.row && from.column === to.column;
       if (!(config.skipBlanks && (!raw || raw.value.type === "blank" && !raw.formula)) && (!same || config.mode === "values" && raw?.formula)) {
-        const format = resolveWorkbookCellFormat(sheet, from, raw), previous = model.getCell(sheetId, to.row, to.column);
+        const format = resolveWorkbookCellFormat(sheet, from, raw), previous = model.getCell(targetSheetId, to.row, to.column);
         if (config.mode === "formats" || config.mode === "contents") {
           if (format.numberFormatId === undefined && general === undefined) {
             const identifiers = new Set(snapshot.metadata.workbook.numberFormats.map(format => format.formatId)); let serial = 1;
@@ -62,7 +66,7 @@ export async function createWorkbookRangeCopyTransaction(input: WorkbookModel, s
           }
         }
         if (config.mode === "formats") {
-          const targetFormat = resolveWorkbookCellFormat(sheet, to, previous);
+          const targetFormat = resolveWorkbookCellFormat(targetSheet, to, previous);
           if (previous || targetFormat.cssClass !== format.cssClass || (targetFormat.numberFormatId ?? general) !== (format.numberFormatId ?? general)) {
             const cell = { ...to, cssClass: format.cssClass, formatId: format.numberFormatId ?? general ?? null }; account(JSON.stringify(cell).length); formats.push(cell);
           }
@@ -82,12 +86,12 @@ export async function createWorkbookRangeCopyTransaction(input: WorkbookModel, s
           let unchanged = false;
           if (config.mode !== "contents" && content.kind === "value" && content.value.type === "text" && previous?.value.type === "text" && !previous.formula) {
             const edit = workbookTextSplice(previous.text, content.value.value);
-            if (edit) content = replaceWorkbookCellText(model, { sheetId, ...to }, [edit]); else unchanged = true;
+            if (edit) content = replaceWorkbookCellText(model, { sheetId: targetSheetId, ...to }, [edit]); else unchanged = true;
           }
           const cell: WorkbookCellInput = { ...to, source: content };
           if (config.mode === "contents") {
             cell.cssClass = format.cssClass; cell.formatId = format.numberFormatId ?? general ?? null;
-            const targetFormat = resolveWorkbookCellFormat(sheet, to, previous);
+            const targetFormat = resolveWorkbookCellFormat(targetSheet, to, previous);
             unchanged = !previous && content.kind === "value" && content.value.type === "blank" && targetFormat.cssClass === format.cssClass
               && (targetFormat.numberFormatId ?? general) === (format.numberFormatId ?? general);
           } else if (!previous && content.kind === "value" && content.value.type === "blank") unchanged = true;
@@ -103,8 +107,8 @@ export async function createWorkbookRangeCopyTransaction(input: WorkbookModel, s
     if (registerGeneral && (cells.some(cell => cell.formatId === general) || formats.some(cell => cell.formatId === general))) {
       const operation = { op: "setWorkbookNumberFormat" as const, format: { formatId: general!, builtinId: 0 } }; account(JSON.stringify(operation).length); operations.push(operation);
     }
-    if (cells.length) operations.push({ op: "setWorkbookCells", sheetId, cells });
-    if (formats.length) operations.push({ op: "setWorkbookCellFormats", sheetId, cells: formats });
+    if (cells.length) operations.push({ op: "setWorkbookCells", sheetId: targetSheetId, cells });
+    if (formats.length) operations.push({ op: "setWorkbookCellFormats", sheetId: targetSheetId, cells: formats });
     return { protocolVersion: 1, documentId: snapshot.manifest.documentId, baseRevision: snapshot.manifest.revision, operations };
   } finally { evaluator?.dispose(); }
 }

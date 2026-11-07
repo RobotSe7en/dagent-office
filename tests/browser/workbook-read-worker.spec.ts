@@ -138,17 +138,18 @@ test('10,000 actual XLSX rows open and scroll through the production read transp
   await info.attach('native-workbook-worker.json', { body: report, contentType: 'application/json' });
 });
 
-test('native workbook edits, current values, cancellation and history stay in one host Worker session', async ({ page }) => {
+test('native workbook edits, cross-sheet copy, current values, cancellation and history stay in one host Worker session', async ({ page }) => {
   await page.addScriptTag({ content: sessionHostCode });
   for (const name of ['01-values-text', '04-formulas-names']) {
-    const result = await page.evaluate(({ code, bytes, name }) => window.workbookSessionHost.editWorker(code, bytes, name), {
+    const result = await page.evaluate(({ code, bytes, name }) => window.workbookSessionHost.editWorker(code, bytes, name, false, true), {
       code: sessionWorkerCode, bytes: readFileSync(`examples/xlsx/${name}.xlsx`).toString('base64'), name });
     expect(result).toMatchObject({ isolated: true, cancelled: 'OperationCancelled', cancellationPoint: 256, copyUndo: true, originalChunksRestored: true,
       detachedInput: true, failures: [], cancellationState: { revision: 1, history: { undoSteps: 1 } },
       current: { kind: 'value', value: { type: 'number', value: 2 } }, audit: { sessionsCreated: 1, endpointDisposed: true, reopenedEqual: true,
         revision: 4, history: { undoSteps: 0, redoSteps: 2 }, hostUsable: { type: 'number', value: 42 } } });
     expect(result.largestControlReplyUnits).toBeLessThan(64 * 1024); expect(result.largestViewReplyUnits).toBeLessThan(2 * 1024 * 1024);
-    expect(result.states).toEqual([1, 2, 3, 4]); expect(result.selection?.anchor.kind).toBe('cells');
+    expect(result.states).toEqual([1, 2, 3, 4]); expect(result.selection?.anchor).toMatchObject({ kind: 'cells', sheetId: result.targetSheetId });
+    expect(result.shown.sheetId).toBe(result.targetSheetId); expect(result.shown.sheetId).not.toBe(result.first.sheetId);
   }
 });
 

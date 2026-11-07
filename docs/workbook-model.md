@@ -233,6 +233,8 @@ editor 的 `serveWorkbookSession(port, session, options?)` 绑定宿主已经创
 
 `resolveReference(expression, origin, execution?)` 在当前 Worker 来源解析地址或名称，返回有界区域或明确的错误／未解析结果，不新增历史。`find` 可携本连接仍持有的实际 `view`，显示值严格使用其完成批次；同修订的不同宿主时间也不能混用。单项替换命令携原始匹配证明，重新检查修订、查询及 UTF-16 位置。
 
+`createWorkbookRangeCopyTransaction` 的 `targetSheetId` 及 Worker `copy` 命令同名选项允许同一本工作簿的跨表复制；缺省仍为原表。内容／值／公式／格式模式分别保留既有语义：值模式读取来源实际计算批次，保留目标格式，格式模式不改内容和公式缓存。源格式身份随内容复制，未限定引用在目标表上下文解析，显式工作表／表格限定保持，单元格相对地址调整；名称作用域与结构引用规则依据 [Microsoft 名称说明](https://support.microsoft.com/en-us/excel/names-in-formulas)及[结构引用说明](https://support.microsoft.com/en-gb/excel/using-structured-references-with-excel-tables?nochrome=true)，不据此声称 Excel/WPS 实机通过。两表必须已存在，目标规则在同一候选边界执行，取消不提交。此命令仍只覆盖未合并区域的单元格；完整剪贴板、链接／批注复制及合并模板继续实施。
+
 `view(candidate?, options?)` 返回调用者负责释放的不可变读取连接，复用已有窗口／资源／图表／规则读取通道。当前源使用会话的增量计算，候选计算保持隔离；自动／手动模式决定缺省是否计算，可用 `calculate` 和宿主 `calculationContext` 显式选择。计算视图在握手中声明当前值能力，规则和图表读取同一完成批次；原始单元格及导入缓存不被改写。新视图可在准备好后更新预览，再释放旧视图。候选被丢弃或失效时，其视图随之关闭。
 
 `options.previous` 可传本连接仍保留的视图，Worker 依据其实际不可变模型和完成计算批次生成单元格变化提示。复制对象、其他连接视图和已释放视图不能代替；提示超出消息额度时省略，预览回到完整测量。更新完成后再释放旧连接，保留视图仍受数量预算限制。
