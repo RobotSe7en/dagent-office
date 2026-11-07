@@ -17,7 +17,7 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     window.workbookHostProbe = { created: 0, terminated: 0, roots: [], failLayout: false };
     const attach = Element.prototype.attachShadow;
-    Element.prototype.attachShadow = function (options) { const root = attach.call(this, options); window.workbookHostProbe.roots.push(root); return root; };
+    Element.prototype.attachShadow = function (options) { const root = attach.call(this, { ...options, mode: 'open' }); window.workbookHostProbe.roots.push(root); return root; };
     const NativeWorker = window.Worker;
     window.Worker = class extends NativeWorker {
       constructor(url: string | URL, options?: WorkerOptions) { super(url, options); window.workbookHostProbe.created++; }
@@ -33,6 +33,22 @@ test.beforeEach(async ({ page }) => {
 });
 const status = (page: Page) => page.getByRole('status').filter({ hasText: '已打开' });
 const upload = (page: Page) => page.getByLabel('打开文件', { exact: true }).filter({ visible: false });
+test('Playground edits through its Worker, retains drafts on file switches and reopens the same history', async ({ page }) => {
+  await upload(page).setInputFiles('examples/xlsx/09-classic-notes.xlsx'); await expect(status(page)).toContainText('修订 0', { timeout: 30_000 });
+  const input = page.getByRole('textbox', { name: '单元格或公式输入', exact: true }), address = page.getByRole('textbox', { name: '选择单元格或区域', exact: true });
+  await address.fill('AG257'); await address.press('Enter'); await expect(input).toHaveValue('');
+  await input.fill('=1+1'); await input.press('Control+Enter'); await expect(status(page)).toContainText('修订 1'); await expect(input).toHaveValue('=1+1');
+  await input.fill('draft pending'); await page.getByRole('button', { name: '打开报告协作样例', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('请先确认或取消'); await expect(input).toHaveValue('draft pending');
+  await expect(page.getByRole('heading', { name: '09-classic-notes.xlsx', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '新建 PPT', exact: true }).click(); await expect(input).toHaveValue('draft pending');
+  await expect(page.getByRole('heading', { name: '09-classic-notes.xlsx', exact: true })).toBeVisible();
+  await input.press('Escape'); await expect(input).toHaveValue('=1+1'); await page.getByRole('button', { name: '打开报告协作样例', exact: true }).click();
+  await expect(page.getByLabel('会话状态', { exact: true })).toContainText('修订 0');
+  await page.getByRole('button', { name: '打开 09-classic-notes.xlsx', exact: true }).click(); await expect(status(page)).toContainText('修订 1'); await expect(input).toHaveValue('=1+1');
+  await page.getByRole('button', { name: '撤销', exact: true }).click(); await expect(status(page)).toContainText('修订 2'); await expect(input).toHaveValue('');
+  expect(await page.evaluate(() => ({ created: window.workbookHostProbe.created, terminated: window.workbookHostProbe.terminated }))).toEqual({ created: 1, terminated: 0 });
+});
 async function workbookState(page: Page) {
   const frame = page.frames().find(frame => frame.url() === 'about:srcdoc');
   if (!frame) throw Error('Workbook frame is missing');
@@ -52,7 +68,7 @@ for (const large of [false, true]) test(`Playground opens a ${large ? 'ten-thous
   if (large) await reopen.click(); else await upload(page).setInputFiles('examples/xlsx/09-classic-notes.xlsx');
   await expect(status(page)).toContainText('工作表 1', { timeout: 60_000 });
   await expect(page.getByRole('heading', { name: filename, exact: true })).toBeVisible();
-  await expect(page.getByLabel('Excel 只读预览', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Excel 工作簿编辑', { exact: true })).toBeVisible();
   const first = await workbookState(page);
   expect(first.grids).toBe(1); expect(first.readonly).toBe(true); expect(first.cells).toBeGreaterThan(0); expect(first.cells).toBeLessThan(2000);
   await expect(page.getByRole('toolbar', { name: '文件与导出' })).toHaveCount(0);
@@ -70,7 +86,8 @@ for (const large of [false, true]) test(`Playground opens a ${large ? 'ten-thous
   await expect(page.locator('iframe[title="幻灯片只读预览"]')).toBeVisible();
   await reopen.click();
   await expect(status(page)).toContainText('工作表 1');
-  expect(await workbookState(page)).toEqual(first);
+  await expect.poll(() => workbookState(page)).toEqual(first);
+  await expect(page.getByRole('alert')).toHaveCount(0);
   await reopen.click();
   await expect(page.getByRole('button', { name: '取消读取' })).toHaveCount(0);
   expect(await page.evaluate(() => ({ created: window.workbookHostProbe.created, terminated: window.workbookHostProbe.terminated }))).toEqual({ created: 1, terminated: 0 });

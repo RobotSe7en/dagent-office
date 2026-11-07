@@ -8,6 +8,24 @@ import { invalidCases, manifest, repository, validCases } from "./fixtures.js";
 const ajv = new Ajv2020({ strict: true, allErrors: true });
 const validators = new Map(CONTRACT_NAMES.map((name) => [name, ajv.compile(getContractJsonSchema(name))]));
 
+test("merge operations and explicit clearing share strict runtime and generated JSON contracts", () => {
+  const target = { sheetId: "sheet-1", range: { from: { row: 0, column: 0 }, to: { row: 1, column: 1 } } };
+  const valid = [{ op: "mergeWorkbookCells", ...target }, { op: "mergeWorkbookCells", ...target, coveredContent: "clear" }, { op: "unmergeWorkbookCells", ...target }];
+  const invalid = [{ ...valid[0], coveredContent: "guess" }, { ...valid[2], coveredContent: "clear" }, { ...valid[0], partial: true }, { ...valid[0], range: undefined }];
+  for (const operation of valid) { expect(validators.get("document-operation")!(operation)).toBe(true); expect(parseContract("document-operation", operation)).toEqual(operation); }
+  for (const operation of invalid) { expect(validators.get("document-operation")!(operation)).toBe(false); expect(() => parseContract("document-operation", operation)).toThrow(DocumentError); }
+});
+
+test("worksheet filter commands require either a strict definition or explicit null removal", () => {
+  const command = { op: "setWorkbookAutoFilter", sheetId: "sheet-1", filter: { range: { from: { row: 0, column: 0 }, to: { row: 3, column: 1 } }, columns: [] } };
+  for (const operation of [command, { ...command, filter: null }]) {
+    expect(validators.get("document-operation")!(operation)).toBe(true); expect(parseContract("document-operation", operation)).toEqual(operation);
+  }
+  for (const operation of [{ ...command, filter: undefined }, { ...command, filter: { ...command.filter, hiddenRows: [] } }, { ...command, partial: true }]) {
+    expect(validators.get("document-operation")!(operation)).toBe(false); expect(() => parseContract("document-operation", operation)).toThrow(DocumentError);
+  }
+});
+
 test("unlocated workbook comments are allowed only as explicit recovery annotations in both contracts", () => {
   const anchor = { kind: "cells", sheetId: "sheet-1", ranges: [] };
   expect(validators.get("anchor")!(anchor)).toBe(false);
