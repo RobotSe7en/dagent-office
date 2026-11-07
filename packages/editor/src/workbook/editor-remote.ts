@@ -53,7 +53,8 @@ export function mountWorkbookRemoteEditor(container: HTMLElement, client: Workbo
   function report(error: unknown): void {
     if (disposed) return; const problem = error instanceof Error ? error : new Error("工作簿编辑失败。");
     if (problem instanceof DocumentError && problem.code === "OperationCancelled" && input.state().dirty) { ui.status.textContent = "输入已更新，请确认当前草稿。"; return; }
-    ui.error.textContent = problem instanceof DocumentError && problem.code === "RevisionConflict" ? "文档已变化。当前输入已保留，请先复制输入或取消后重新选择。" : problem.message; ui.error.hidden = false;
+    ui.error.textContent = problem instanceof DocumentError && problem.code === "RevisionConflict" ? "文档已变化。当前输入已保留，请先复制输入或取消后重新选择。"
+      : problem instanceof DocumentError && problem.details.some(detail => detail.code === "merge-covered-content") ? "合并范围包含其他内容。若确认删除，请使用“合并并清除覆盖内容”。" : problem.message; ui.error.hidden = false;
     try { config.onError?.(problem); } catch { /* Host reporting does not own source changes. */ }
   }
   function preparation(supplied?: TransactionPrepareOptions): TransactionPrepareOptions {
@@ -78,6 +79,9 @@ export function mountWorkbookRemoteEditor(container: HTMLElement, client: Workbo
   }
   function notify(): void { try { config.onSelectionChange?.(input.state().selection); } catch { /* Host callback. */ } }
   function runInteraction<T>(action: () => Promise<T>): Promise<T> { const next = interaction.then(action); interaction = next.then(() => {}, report); return next; }
+  // Internal controls use the queue's reporting boundary. Public methods keep
+  // the rejecting Promise for their caller; a control must not report it twice.
+  function queueInteraction(action: () => Promise<unknown>): void { void runInteraction(action); }
   async function acceptSelection(selected: DocumentSelection, focus = false): Promise<void> {
     await input.select(selected); check(); binding.refresh();
     if (selected.anchor.kind === "cells") ui.address.value = address(selected.anchor.ranges[0]!);
@@ -217,6 +221,14 @@ export function mountWorkbookRemoteEditor(container: HTMLElement, client: Workbo
       source: { from: { ...range.from }, to: { ...range.to, [axis]: range.from[axis] + seeds - 1 } }, target });
     await sourceSettled();
   }
+  async function changeMerge(unmerge = false, clear = false): Promise<void> {
+    check(); const selected = input.state().selection, anchor = selected?.anchor;
+    if (!selected || anchor?.kind !== "cells" || anchor.ranges.length !== 1) throw new DocumentError("InvalidOperation", "请选择一个合并区域。");
+    if (selected.baseRevision !== client.state().revision) throw new DocumentError("RevisionConflict", "Merge selection belongs to a previous source.");
+    const target = { sheetId: anchor.sheetId, range: anchor.ranges[0]! };
+    await perform([unmerge ? { op: "unmergeWorkbookCells", ...target } : { op: "mergeWorkbookCells", ...target, coveredContent: clear ? "clear" : "reject" }]);
+    await sourceSettled(); binding.focus();
+  }
   function findQuery(): WorkbookFindQuery {
     const anchor = input.state().selection?.anchor, scope = ui.findScope.value, sheetId = preview!.layout().sheetId;
     if (scope === "selection" && anchor?.kind !== "cells") throw new DocumentError("InvalidOperation", "请先选择查找区域。");
@@ -292,17 +304,20 @@ export function mountWorkbookRemoteEditor(container: HTMLElement, client: Workbo
     element.addEventListener("click", () => { try { const result = action(); if (result instanceof Promise) void result.catch(report); } catch (error) { report(error); } }, { signal: events.signal }); parent.append(element); buttons.push({ button: element, available });
   }
   button("确认输入", () => binding.apply(), () => !!input.state().selection && !input.state().composing && !input.state().applying && !commandAbort && !refreshing);
-  button("取消输入", () => runInteraction(cancelInput), () => !!input.state().selection && !input.state().applying && !commandAbort);
-  button("撤销", () => runInteraction(() => history("undo")), () => idle() && client.state().history.undoSteps > 0);
-  button("重做", () => runInteraction(() => history("redo")), () => idle() && client.state().history.redoSteps > 0);
+  button("取消输入", () => queueInteraction(cancelInput), () => !!input.state().selection && !input.state().applying && !commandAbort);
+  button("撤销", () => queueInteraction(() => history("undo")), () => idle() && client.state().history.undoSteps > 0);
+  button("重做", () => queueInteraction(() => history("redo")), () => idle() && client.state().history.redoSteps > 0);
   button("重新计算", recalculate, idle);
-  button("向下填充", () => runInteraction(() => fill("row")), idle);
-  button("向右填充", () => runInteraction(() => fill("column")), idle);
-  button("数列填充", () => runInteraction(() => { const anchor = input.state().selection?.anchor; return fill(anchor?.kind === "cells" && anchor.ranges[0]!.from.column === anchor.ranges[0]!.to.column ? "row" : "column", true); }), idle);
+  button("向下填充", () => queueInteraction(() => fill("row")), idle);
+  button("向右填充", () => queueInteraction(() => fill("column")), idle);
+  button("数列填充", () => queueInteraction(() => { const anchor = input.state().selection?.anchor; return fill(anchor?.kind === "cells" && anchor.ranges[0]!.from.column === anchor.ranges[0]!.to.column ? "row" : "column", true); }), idle);
+  button("合并单元格", () => queueInteraction(() => changeMerge()), idle);
+  button("合并并清除覆盖内容", () => queueInteraction(() => changeMerge(false, true)), idle);
+  button("取消合并", () => queueInteraction(() => changeMerge(true)), idle);
   button("取消操作", () => commandAbort?.abort(), () => !!commandAbort && !commandApplying);
-  button("查找下一个", () => runInteraction(() => search()), () => idle() && !!ui.find.value, ui.searchTools);
-  button("替换当前项", () => runInteraction(() => search("one")), () => idle() && ui.findField.value !== "display" && !!found && found.result.baseRevision === client.state().revision && found.index >= 0, ui.searchTools);
-  button("全部替换", () => runInteraction(() => search("all")), () => idle() && ui.findField.value !== "display" && !!ui.find.value, ui.searchTools);
+  button("查找下一个", () => queueInteraction(() => search()), () => idle() && !!ui.find.value, ui.searchTools);
+  button("替换当前项", () => queueInteraction(() => search("one")), () => idle() && ui.findField.value !== "display" && !!found && found.result.baseRevision === client.state().revision && found.index >= 0, ui.searchTools);
+  button("全部替换", () => queueInteraction(() => search("all")), () => idle() && ui.findField.value !== "display" && !!ui.find.value, ui.searchTools);
   for (const field of [ui.find, ui.findField, ui.findScope, ui.matchCase, ui.entireCell]) for (const type of ["input", "change"]) field.addEventListener(type, () => { found = undefined; findSelectionScope = undefined; controls(); }, { signal: events.signal });
   ui.find.addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); void runInteraction(() => search()); } }, { signal: events.signal });
   ui.element.addEventListener("keydown", event => { if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.isComposing && ["f", "h"].includes(event.key.toLowerCase())) { event.preventDefault(); if (!commandAbort) { ui.find.focus(); ui.find.select(); } } }, { signal: events.signal });

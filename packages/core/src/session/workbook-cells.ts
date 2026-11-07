@@ -59,18 +59,20 @@ export class WorkbookCellEdit {
     if (!chunk) return this.base.getCell(sheetId, row, column);
     const html = chunk.cells.get(coordinate(row, column)); return html === undefined ? undefined : { sheetId, row, column, html, ...decodeWorkbookCell(html) };
   }
-  *entries(sheetId?: string, formulasOnly = false): Generator<WorkbookCell> {
+  *entries(sheetId?: string, formulasOnly = false, ranges?: readonly WorkbookRange[]): Generator<WorkbookCell> {
     for (const descriptor of [...this.manifest.chunks]) {
       if (sheetId !== undefined && descriptor.sheetId !== sheetId) continue;
+      if (ranges && !ranges.some(range => rangesIntersect(range, { from: descriptor, to: { row: descriptor.row + CHUNK_ROWS - 1, column: descriptor.column + CHUNK_COLUMNS - 1 } }))) continue;
+      const includes = (cell: { row: number; column: number }): boolean => !ranges || ranges.some(range => rangeContains(range, cell.row, cell.column));
       const edited = this.chunks.get(this.key(descriptor.sheetId, descriptor.row, descriptor.column));
       if (edited) {
         for (const [key, html] of [...edited.cells]) {
           const cell = { sheetId: descriptor.sheetId, row: Math.floor(key / 16_384), column: key % 16_384, html, ...decodeWorkbookCell(html) };
-          if (!formulasOnly || cell.formula) yield cell;
+          if (includes(cell) && (!formulasOnly || cell.formula)) yield cell;
         }
       } else if (formulasOnly) {
-        for (const location of this.originals.get(descriptor.path)?.formulaLocations() ?? []) yield this.base.getCell(descriptor.sheetId, location.row, location.column)!;
-      } else for (const cell of this.originals.get(descriptor.path)?.readWindow({ ...descriptor, rows: CHUNK_ROWS, columns: CHUNK_COLUMNS }) ?? []) yield { sheetId: descriptor.sheetId, ...cell, ...decodeWorkbookCell(cell.html) };
+        for (const location of this.originals.get(descriptor.path)?.formulaLocations() ?? []) if (includes(location)) yield this.base.getCell(descriptor.sheetId, location.row, location.column)!;
+      } else for (const cell of this.originals.get(descriptor.path)?.readWindow({ ...descriptor, rows: CHUNK_ROWS, columns: CHUNK_COLUMNS }) ?? []) if (includes(cell)) yield { sheetId: descriptor.sheetId, ...cell, ...decodeWorkbookCell(cell.html) };
     }
   }
   removeSheet(sheetId: string): void {

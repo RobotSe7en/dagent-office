@@ -26,6 +26,7 @@ import { editWorkbookSheet } from "./workbook-sheets.js";
 import { editWorkbookHyperlink, sameWorkbookHyperlinks } from "./workbook-hyperlinks.js";
 import { compileNumberFormat } from "../workbook/number-format.js";
 import { WorkbookRegionIndex } from "../workbook/region-index.js";
+import { editWorkbookMerge, sameWorkbookMerges } from "./workbook-merges.js";
 
 const names = new Set<string>(WorkbookOperationSchema.options.map(schema => schema.shape.op.value));
 export function isWorkbookOperation(operation: DocumentOperation): operation is WorkbookOperation { return names.has(operation.op); }
@@ -68,7 +69,7 @@ export function createWorkbookSession(document: WorkbookModel, options: Document
       if ("beforeSheetId" in operation && operation.beforeSheetId !== undefined && !baseSheets.has(operation.beforeSheetId)) invalid("Worksheet references must belong to the base snapshot.");
     }
     const cells = new WorkbookCellEdit(base, manifest, files, limits, allocate);
-    const richContent = new WorkbookContentEdit(manifest, files, limits, allocate), mapping: WorkbookStructureMapping[] = [], hyperlinkSheets = new Set<string>();
+    const richContent = new WorkbookContentEdit(manifest, files, limits, allocate), mapping: WorkbookStructureMapping[] = [], hyperlinkSheets = new Set<string>(), mergeSheets = new Set<string>();
     function annotation(operation: AnnotationOperation): void {
       if (operation.op === "addAnnotation") {
         const value = operation.annotation;
@@ -120,10 +121,18 @@ export function createWorkbookSession(document: WorkbookModel, options: Document
       } else if (operation.op === "clearWorkbookRanges") {
         if (!workbook.sheets.some(sheet => sheet.sheetId === operation.sheetId)) invalid("An earlier operation removed the worksheet.");
         for (const value of cells.clearSteps(operation.sheetId, operation.ranges, operation.mode)) yield { kind: "progress", value: { phase: "cells", ...value } };
+      } else if (operation.op === "mergeWorkbookCells" || operation.op === "unmergeWorkbookCells") {
+        const sheet = workbook.sheets.find(sheet => sheet.sheetId === operation.sheetId) ?? invalid("An earlier operation removed the worksheet.");
+        for (const value of editWorkbookMerge(sheet, cells, operation)) yield { kind: "progress", value: { phase: "cells", ...value } };
+        mergeSheets.add(sheet.sheetId);
       }
       else if (operation.op === "setWorkbookSettings") Object.assign(workbook, operation.changes);
       else editWorkbookSheet(workbook, cells, richContent, annotations, operation, allocate, mapping);
       yield { kind: "progress", value: { phase: "operations", completed: ++operationCount, total: transaction.operations.length } };
+    }
+    for (const sheet of workbook.sheets.filter(sheet => mergeSheets.has(sheet.sheetId))) {
+      const previous = base.snapshot().metadata.workbook.sheets.find(previous => previous.sheetId === sheet.sheetId);
+      if (previous && sameWorkbookMerges(previous.merges, sheet.merges)) sheet.merges = previous.merges.map(range => ({ from: { ...range.from }, to: { ...range.to } }));
     }
     for (const sheet of workbook.sheets.filter(sheet => hyperlinkSheets.has(sheet.sheetId))) {
       const previous = base.snapshot().metadata.workbook.sheets.find(previous => previous.sheetId === sheet.sheetId);

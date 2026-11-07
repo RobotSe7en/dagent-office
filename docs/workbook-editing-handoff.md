@@ -6,9 +6,9 @@
 
 - main／远端 main 的基线为 `5451736`；当前分支 `feat/workbook-editing`。
 - 读取阶段已合并；CI 优化及触发频率调整分别为 `31cca2f`、`d65c0e9`，不再是待办。
-- R3-09/10/11 实施中，R3-09～16 均未完成；基础、输入、填充、查找、格式与复制、异步候选、Worker 会话、摘要复用及增量预览均已推送，远端原生输入提交为 `95d9e43`。[阶段草稿 PR #31](https://github.com/RobotSe7en/doffi/pull/31) 未执行阶段最终 CI，不能合并。后续已接入公共 Worker 编辑器与 Playground 并完成下列本批定向检查；不能将这一进展计作完整 R3-11 或 R3-16。
+- R3-09/10/11/12 实施中，R3-09～16 均未完成；公共 Worker 编辑器／Playground 已推送为 `b161098`，跨表复制为 `04ab466`。[阶段草稿 PR #31](https://github.com/RobotSe7en/doffi/pull/31) 未执行阶段最终 CI，不能合并。后续开始合并／取消合并事务；不能将这些进展计作完整 R3-11、R3-12 或 R3-16。
 - 两位授权审查者 `workbook_edit_review_one`、`workbook_edit_review_two` 已完成两轮只读基础审查。首轮 8 项、第二轮 6 项原始问题及 3 项追加边界，均由实施者修复并经原审查者复核关闭。整个阶段仍须最终差异复审，不能凭基础审查合并；详见[审查记录](workbook-editing-review.md)。
-- 不直接提交 main，不发布 npm；普通推送只执行快速检查。阶段最终验收按 [CI 执行](ci-performance.md) 显式发起。尚有 R3-09～20 共 12 项未完成验收：本阶段 8 项中 3 项实施中、5 项待实施，输出阶段另 4 项。
+- 不直接提交 main，不发布 npm；普通推送只执行快速检查。阶段最终验收按 [CI 执行](ci-performance.md) 显式发起。尚有 R3-09～20 共 12 项未完成验收：合并事务开始后，本阶段 8 项中 4 项实施中、4 项待实施，输出阶段另 4 项。
 
 ## 已有改动
 
@@ -112,6 +112,11 @@
 
 - `b161098` 已推送，远端快速检查 `42381613553` 成功，未启动远端全量 CI。后续跨表复制定向 4 文件／52 项通过，包含源／目标身份、同坐标、富文本、继承格式、相对及显式引用、名称／结构引用目标上下文、源完成计算与目标停止验证、取消、一次撤销和重做；日志 `.cache/workbook-cross-sheet-regressions.log`。3 份独立原生来源的跨表／跨块复制和包 ZIP 重开，加既有原生格式检查共 2 文件／6 项通过，日志 `.cache/workbook-cross-sheet-native.log`；命名样式定义和原始来源不改写。初次追加验证测试遗漏四个必填提示字段，类型检查先失败，补齐后最终构建、类型和边界全部通过，日志 `.cache/workbook-cross-sheet-final-build.log`、`.cache/workbook-cross-sheet-published-types.log`、`.cache/workbook-cross-sheet-boundaries.log`。
 - 真实 Worker 三引擎跨表复制／当前值／取消／历史 3 项通过，每项分别使用两份独立原生来源，日志 `.cache/workbook-cross-sheet-browser.log`。全部仍是一项核心会话，来源和完整历史留在 Worker；复制后预览目标表，撤销两步恢复原始块并包重开。这不是完整剪贴板、原生导出或固定资源阶段验收。
+
+- `04ab466` 的远端快速检查 `42382526674` 成功，未启动远端全量 CI。后续合并事务保留左上角、默认拒绝覆盖内容，显式清除仍经过停止验证、异步取消和历史边界；只扫描相关实际格，不展开稀疏范围。重复／还原的合并集合保持原元数据顺序，部分交叉与表格内合并失败，取消合并可与内部编辑同批执行。直连及 Worker 界面已接入三项命令；完整合并复制模板、结构移动和排序仍待后续完成。
+- 合并定向 5 文件／155 项通过，日志 `.cache/workbook-merges-regressions.log`，包括新契约与同源 JSON Schema、跨块／富文本／来源隔离、明确覆盖选择、全表稀疏、无净变化、数据验证、取消及过期候选。初轮定向将计算接口状态写成标量接口字段，修正断言后通过；随后原生检查的可空正文类型先失败，改为保存正文身份与可空节点证明后重新运行完整检查，结果另记。
+- 合并及跨表复制后的完整 `pnpm check` 180 文件／1986 项、架构边界、类型、SDK 与 Playground 构建通过，日志 `.cache/workbook-merges-complete-check.log`；新增原生合并还原、经典备注／现代线程正文身份及 ZIP 重开检查均包括在内。三引擎首轮交互为 93 通过／6 项 CDP IME 跳过／3 失败，日志 `.cache/workbook-merges-browser.log`；失败是 Worker 按钮和交互队列重复报告同一次默认合并拒绝，来源与历史未变化。内部按钮改为仅用队列的报告边界，公开方法继续返回可拒绝的 Promise；修复后构建与类型通过，日志 `.cache/workbook-merges-ui-fixed-{build,types}.log`，后续交互复核另记。
+- 远端合并拒绝及清除／取消合并／两次撤销的三引擎定向 3 项通过，日志 `.cache/workbook-merges-ui-fixed-browser.log`。随后完整输入／Worker／Playground 三引擎回归 96 通过、6 项非 Chromium CDP IME 按声明跳过，日志 `.cache/workbook-merges-final-browser.log`；未放宽失败断言。这覆盖本批界面错误通知修复，不能替代完整阶段双人审查、最终 HEAD 日常 CI 和固定资源容量门槛。
 
 ## 接下来的工作
 

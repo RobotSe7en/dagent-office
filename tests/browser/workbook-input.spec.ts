@@ -99,6 +99,25 @@ test("mounted workbook formula input, calculation, address selection and toolbar
   expect(await page.evaluate(() => window.workbookEditor.inspect())).toMatchObject({ history: { undoSteps: 0, redoSteps: 1 }, calculated: { value: { type: "number", value: 2 } }, errors: [] });
   await page.getByRole("button", { name: "重做", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled()); await expect(input).toHaveValue("5");
 });
+test("mounted workbook merge requires an explicit clearing choice and unmerge/undo retain the source", async ({ page }) => {
+  await page.evaluate(() => window.workbookInput.dispose()); await page.addScriptTag({ content: editorCode });
+  const entries = encodeTestPackage(scalarWorkbook([{ row: 0, column: 0, value: { type: "number", value: 7 } }, { row: 0, column: 1, value: { type: "number", value: 3 } }]).serialize());
+  await page.evaluate(entries => window.workbookEditor.mount(entries), entries); await page.evaluate(() => window.workbookEditor.select(0, 0, 0, 1));
+  const area = { from: { row: 0, column: 0 }, to: { row: 0, column: 1 } };
+  await page.getByRole("button", { name: "合并单元格", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  await expect(page.getByRole("alert")).toContainText("合并范围包含其他内容");
+  expect(await page.evaluate(() => window.workbookEditor.inspect())).toMatchObject({ revision: 0, history: { undoSteps: 0 }, merges: [], errors: ["InvalidOperation"] });
+  await page.getByRole("button", { name: "合并并清除覆盖内容", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  expect(await page.evaluate(() => window.workbookEditor.inspect())).toMatchObject({ revision: 1, history: { undoSteps: 1 }, merges: [area] });
+  expect(await page.evaluate(() => window.workbookEditor.cell("sheet-1", 0, 1))).toBeUndefined();
+  await page.getByRole("button", { name: "取消合并", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  expect(await page.evaluate(() => window.workbookEditor.inspect())).toMatchObject({ revision: 2, merges: [] });
+  await page.getByRole("button", { name: "撤销", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  expect(await page.evaluate(() => window.workbookEditor.inspect())).toMatchObject({ merges: [area] });
+  await page.getByRole("button", { name: "撤销", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  expect(await page.evaluate(() => window.workbookEditor.inspect())).toMatchObject({ merges: [], history: { undoSteps: 0, redoSteps: 2 }, cells: [{ value: { type: "number", value: 7 } }, { value: { type: "number", value: 3 } }] });
+});
+
 for (const rtl of [false, true]) test(`mounted workbook keyboard extends source ranges across hidden dimensions in ${rtl ? "RTL" : "LTR"}`, async ({ page }) => {
   await page.evaluate(() => window.workbookInput.dispose()); await page.addScriptTag({ content: editorCode }); await page.evaluate(entries => window.workbookEditor.mount(entries), editorSource(rtl)); await page.evaluate(() => window.workbookEditor.select(0));
   const input = page.getByRole("textbox", { name: "单元格或公式输入", exact: true }); await input.press(rtl ? "ArrowLeft" : "ArrowRight"); await page.evaluate(() => window.workbookEditor.settled());

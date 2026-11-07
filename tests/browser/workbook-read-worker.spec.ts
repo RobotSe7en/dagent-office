@@ -84,6 +84,28 @@ test('mounted remote editor rejects a delayed address result after an external s
   await expect(address).toHaveValue('A1'); await page.evaluate(() => window.workbookRemoteEditor.finish());
 });
 
+test('mounted remote merge requires explicit covered-content clearing and preserves both undo steps in its Worker', async ({ page }) => {
+  await page.addScriptTag({ content: editorHostCode });
+  const bytes = Buffer.from(writeDocumentZip(scalarWorkbook([{ row: 0, column: 0, value: { type: 'number', value: 7 } }, { row: 0, column: 1, value: { type: 'number', value: 3 } }]).serialize())).toString('base64');
+  await page.evaluate(({ code, bytes }) => window.workbookRemoteEditor.mount(code, bytes), { code: sessionWorkerCode, bytes });
+  const address = page.getByRole('textbox', { name: '选择单元格或区域', exact: true }); await address.fill('A1:B1'); await address.press('Enter'); await page.evaluate(() => window.workbookRemoteEditor.settled());
+  const area = { from: { row: 0, column: 0 }, to: { row: 0, column: 1 } };
+  await page.getByRole('button', { name: '合并单元格', exact: true }).click(); await page.evaluate(() => window.workbookRemoteEditor.settled());
+  await expect(page.getByRole('alert')).toContainText('合并范围包含其他内容');
+  expect(await page.evaluate(() => window.workbookRemoteEditor.inspect())).toMatchObject({ revision: 0, history: { undoSteps: 0 }, merges: [], errors: ['InvalidOperation'] });
+  await page.getByRole('button', { name: '合并并清除覆盖内容', exact: true }).click(); await page.evaluate(() => window.workbookRemoteEditor.settled());
+  expect(await page.evaluate(() => window.workbookRemoteEditor.inspect())).toMatchObject({ revision: 1, history: { undoSteps: 1 }, merges: [area], source: { text: '7' } });
+  expect(await page.evaluate(() => window.workbookRemoteEditor.value(0, 1))).toBe('');
+  await page.getByRole('button', { name: '取消合并', exact: true }).click(); await page.evaluate(() => window.workbookRemoteEditor.settled());
+  expect(await page.evaluate(() => window.workbookRemoteEditor.inspect())).toMatchObject({ revision: 2, merges: [] });
+  await page.getByRole('button', { name: '撤销', exact: true }).click(); await page.evaluate(() => window.workbookRemoteEditor.settled());
+  expect(await page.evaluate(() => window.workbookRemoteEditor.inspect())).toMatchObject({ merges: [area] });
+  await page.getByRole('button', { name: '撤销', exact: true }).click(); await page.evaluate(() => window.workbookRemoteEditor.settled());
+  expect(await page.evaluate(() => window.workbookRemoteEditor.inspect())).toMatchObject({ revision: 4, merges: [], history: { undoSteps: 0, redoSteps: 2 }, source: { text: '7' } });
+  expect(await page.evaluate(() => window.workbookRemoteEditor.value(0, 1))).toBe('3');
+  expect(await page.evaluate(() => window.workbookRemoteEditor.finish())).toMatchObject({ sessionsCreated: 1, endpointDisposed: true });
+});
+
 test('100 ordinary edits and complete undo/redo retain bounded current previews on 200,000 actual cells', { tag: '@scale' }, async ({ page }, info) => {
   test.setTimeout(360_000); await page.addScriptTag({ content: performanceHostCode });
   const result = await page.evaluate(({ code, bytes }) => window.workbookEditingPerformance.ordinaryWorkerEdits(code, bytes), {

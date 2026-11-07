@@ -48,7 +48,8 @@ function mountWorkbookDirectEditor(container: HTMLElement, session: WorkbookSess
   function pendingInput(): boolean { return binding.hasPendingInput(); }
   function report(error: unknown): void {
     if (disposed) return; const problem = error instanceof Error ? error : new Error("工作簿编辑失败。");
-    ui.error.textContent = problem instanceof DocumentError && problem.code === "RevisionConflict" ? "文档已变化。当前输入已保留，请先复制输入或取消后重新选择。" : problem.message; ui.error.hidden = false;
+    ui.error.textContent = problem instanceof DocumentError && problem.code === "RevisionConflict" ? "文档已变化。当前输入已保留，请先复制输入或取消后重新选择。"
+      : problem instanceof DocumentError && problem.details.some(detail => detail.code === "merge-covered-content") ? "合并范围包含其他内容。若确认删除，请使用“合并并清除覆盖内容”。" : problem.message; ui.error.hidden = false;
     try { config.onError?.(problem); } catch { /* Host callback does not alter the edit. */ }
   }
   function controls(): void {
@@ -162,6 +163,14 @@ function mountWorkbookDirectEditor(container: HTMLElement, session: WorkbookSess
   function history(direction: "undo" | "redo"): void {
     check(); if (pendingInput()) throw new DocumentError("InvalidOperation", "请先确认或取消当前单元格输入。");
     session[direction](); readCurrentSelection(); controls(); ui.error.hidden = true;
+  }
+  async function changeMerge(unmerge = false, clear = false): Promise<void> {
+    check(); const selected = input.state().selection, anchor = selected?.anchor;
+    if (!selected || anchor?.kind !== "cells" || anchor.ranges.length !== 1) throw new DocumentError("InvalidOperation", "请选择一个合并区域。");
+    if (selected.baseRevision !== session.snapshot().manifest.revision) throw new DocumentError("RevisionConflict", "Merge selection belongs to a previous source.");
+    const target = { sheetId: anchor.sheetId, range: anchor.ranges[0]! };
+    perform([unmerge ? { op: "unmergeWorkbookCells", ...target } : { op: "mergeWorkbookCells", ...target, coveredContent: clear ? "clear" : "reject" }]);
+    await sourceSettled(); binding.focus();
   }
   async function fill(axis: "row" | "column", series = false): Promise<void> {
     check(); if (pendingInput() || commandAbort) throw new DocumentError("InvalidOperation", "请先完成当前输入或操作。");
@@ -328,6 +337,9 @@ function mountWorkbookDirectEditor(container: HTMLElement, session: WorkbookSess
   button("向下填充", () => { void runInteraction(() => fill("row")); }, idle);
   button("向右填充", () => { void runInteraction(() => fill("column")); }, idle);
   button("数列填充", () => { void runInteraction(() => { const anchor = input.state().selection?.anchor; return fill(anchor?.kind === "cells" && anchor.ranges[0]!.from.column === anchor.ranges[0]!.to.column ? "row" : "column", true); }); }, idle);
+  button("合并单元格", () => { void runInteraction(() => changeMerge()); }, idle);
+  button("合并并清除覆盖内容", () => { void runInteraction(() => changeMerge(false, true)); }, idle);
+  button("取消合并", () => { void runInteraction(() => changeMerge(true)); }, idle);
   button("取消操作", () => commandAbort?.abort(), () => Boolean(commandAbort));
   button("查找下一个", () => { void runInteraction(() => search()); }, () => idle() && Boolean(ui.find.value), ui.searchTools);
   button("替换当前项", () => { void runInteraction(() => search("one")); }, () => idle() && ui.findField.value !== "display" && Boolean(found && found.index >= 0), ui.searchTools);
