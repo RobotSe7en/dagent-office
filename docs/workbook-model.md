@@ -229,6 +229,8 @@ pnpm probe:workbook-model
 
 ## Worker 会话通道（R3 编辑阶段实施中）
 
+`setWorkbookAutoFilter` 可设置普通工作表区域的完整筛选定义，`filter: null` 显式移除。它只改变定义，保留单元格、手动行尺寸／隐藏信息和原生公式缓存；当前小计与显示读取新定义并经过同一停止验证、候选和历史边界。定义仍接受原有列唯一性、区域、日期分组、预算及与表格／合并互斥检查。该命令可由宿主核心会话或 Worker 的原始类型事务使用；人工筛选界面及智能表内筛选编辑仍待接入。
+
 editor 的 `serveWorkbookSession(port, session, options?)` 绑定宿主已经创建的唯一核心会话，`connectWorkbookSession(port, options?, signal?)` 只连接这条专属授权端口。文档身份与修订用于冲突检查，不能选择另一个会话。宿主创建／终止 Worker、提供原生文件和身份权限；SDK 关闭连接时释放所属候选与视图，保留宿主会话。传输标识为 `doffi/workbook-session/1`。
 
 客户端 `prepare` 接收原始类型事务或输入／TSV 粘贴／复制／填充／替换命令。后者只传文字、范围与选项，在 Worker 中生成操作并经过同一 `prepareAsync`；候选返回只读影响摘要，原始源块、模型、计算图和历史不传到主线程。`commit`／`discard` 接受本连接实际返回的候选，`undo`／`redo` 调用原核心历史。映射采用 JSON 节点对数组，工作簿结构步骤保持原有顺序。`find` 接收当前显示值查找所需的宿主时间和地区；`state()` 与订阅返回修订及历史状态；不构造第二个客户端核心会话。

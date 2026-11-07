@@ -150,6 +150,26 @@ test("Worker reference queries use current worksheet identities without creating
   expect(s.history().undoSteps).toBe(0);
 });
 
+test("Worker filter edits publish current subtotals while retaining every source row and the shared undo boundary", async () => {
+  const s = createDocumentSession(scalarWorkbook([
+    { row: 0, column: 0, value: { type: "text", value: "Amount" } }, { row: 0, column: 1, value: { type: "text", value: "Choice" } },
+    ...[3, 7, 5].map((value, index) => ({ row: index + 1, column: 0, value: { type: "number" as const, value } })),
+    ...["keep", "hide", "keep"].map((value, index) => ({ row: index + 1, column: 1, value: { type: "text" as const, value } })),
+    { row: 0, column: 3, value: { type: "number", value: 999 }, formula: "=SUBTOTAL(9,A2:A4)" },
+  ])); cleanups.push(() => s.dispose()); const { client } = await pair(s), originalChunks = s.snapshot().manifest.chunks;
+  const candidate = await client.prepare(command(s, [{ op: "setWorkbookAutoFilter", sheetId, filter: { range: { from: { row: 0, column: 0 }, to: { row: 3, column: 1 } },
+    columns: [{ column: 1, hiddenButton: false, showButton: true, criterion: { kind: "values", values: ["keep"], dates: [], blank: false } }] } }]));
+  expect(s.snapshot().metadata.workbook.sheets[0]!.autoFilter).toBeUndefined(); await client.commit(candidate);
+  const view = await client.view();
+  try {
+    const current = await view.rules!.read({ ...DEFAULT_WORKBOOK_RULE_LIMITS, documentId: "scalar-kernel", revision: 1, sheetId, includeCurrent: true, coordinates: [{ row: 0, column: 3 }] }, new AbortController().signal);
+    expect(current.cells[0]?.current).toMatchObject({ kind: "value", value: { type: "number", value: 8 } });
+  } finally { view.dispose(); }
+  expect(s.getCell(sheetId, 2, 0)?.value).toEqual({ type: "number", value: 7 }); expect(s.snapshot().manifest.chunks).toEqual(originalChunks);
+  expect(client.state().history.undoSteps).toBe(1); await client.undo(); expect(s.snapshot().metadata.workbook.sheets[0]!.autoFilter).toBeUndefined();
+  expect(s.snapshot().manifest.chunks).toEqual(originalChunks); await client.redo(); expect(s.snapshot().metadata.workbook.sheets[0]!.autoFilter?.columns).toHaveLength(1);
+});
+
 test("a late reference response cannot select coordinates from a previous source", async () => {
   const { s, client, channel } = await pair(), send = channel.port1.postMessage.bind(channel.port1); let held: unknown;
   Object.defineProperty(channel.port1, "postMessage", { configurable: true, value(message: { value?: { reference?: unknown } }, transfer: Transferable[] = []) {

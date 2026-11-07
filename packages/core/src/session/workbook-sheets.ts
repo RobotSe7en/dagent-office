@@ -25,6 +25,10 @@ export function editWorkbookSheet(workbook: WorkbookMetadata, cells: WorkbookCel
   }
   if (!("sheetId" in operation)) invalid("Expected a worksheet operation.");
   const target = sheet(operation.sheetId);
+  if (operation.op === "setWorkbookAutoFilter") {
+    if (operation.filter === null) delete target.autoFilter; else target.autoFilter = operation.filter;
+    return;
+  }
   if (operation.op === "updateWorkbookSheet") {
     if (operation.changes.name !== undefined) checkName(operation.changes.name, target);
     if (operation.changes.name !== undefined && operation.changes.name !== target.name) rewriteWorkbookReferences(workbook, cells, { kind: "renameSheet", from: target.name, to: operation.changes.name });

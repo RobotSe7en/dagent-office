@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { IdentifierSchema } from "./primitives.js";
-import { WorkbookCoordinateSchema, WorkbookHyperlinkSchema, WorkbookNumberFormatSchema, WorkbookRangeSchema, WorkbookSheetSchema, WorkbookValueSchema } from "./workbook.js";
+import { WorkbookAutoFilterSchema, WorkbookCoordinateSchema, WorkbookHyperlinkSchema, WorkbookNumberFormatSchema, WorkbookRangeSchema, WorkbookSheetSchema, WorkbookValueSchema } from "./workbook.js";
 
 export const WorkbookCellSourceSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("value"), value: WorkbookValueSchema }),
@@ -26,6 +26,7 @@ export const WorkbookOperationSchema = z.discriminatedUnion("op", [
   z.strictObject({ op: z.literal("clearWorkbookRanges"), sheetId: IdentifierSchema, ranges: z.array(WorkbookRangeSchema).min(1), mode: z.enum(["contents", "all"]) }),
   z.strictObject({ op: z.literal("mergeWorkbookCells"), sheetId: IdentifierSchema, range: WorkbookRangeSchema, coveredContent: z.enum(["reject", "clear"]).optional() }),
   z.strictObject({ op: z.literal("unmergeWorkbookCells"), sheetId: IdentifierSchema, range: WorkbookRangeSchema }),
+  z.strictObject({ op: z.literal("setWorkbookAutoFilter"), sheetId: IdentifierSchema, filter: WorkbookAutoFilterSchema.nullable() }),
   z.strictObject({ op: z.literal("setWorkbookSettings"), changes: z.strictObject({
     calculationMode: z.enum(["auto", "manual"]).optional(), activeSheetId: IdentifierSchema.optional(),
   }) }),
