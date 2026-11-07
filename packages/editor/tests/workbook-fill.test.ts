@@ -71,3 +71,21 @@ test("blank fill remains sparse and stop validation rejects the complete generat
   const filled = await createWorkbookFillTransaction(source, "sheet-1", range(0), range(10, 0, 20));
   expect(() => source.prepare(filled)).toThrowError(expect.objectContaining({ code: "InvalidOperation" })); expect(source.serialize()).toEqual(original); expect(source.history().undoSteps).toBe(0);
 });
+test("fill registers an absent General definition atomically while preserving sparse empty fills and undo", async () => {
+  const files = new Map(createWorkbook({ documentId: "fill" })), metadata = JSON.parse(new TextDecoder().decode(files.get("metadata.json")!)) as WorkbookDocumentMetadata;
+  metadata.workbook.numberFormats = [{ formatId: "date", code: "yyyy-mm-dd" }, { formatId: "fill-general-1", code: "0.00" }];
+  delete metadata.workbook.sheets[0]!.defaultNumberFormatId;
+  metadata.workbook.sheets[0]!.rowDimensions = [{ from: 1, to: 2, numberFormatId: "date" }]; files.set("metadata.json", new TextEncoder().encode(JSON.stringify(metadata)));
+  const source = createDocumentSession(openDocument(files, { kind: "workbook" })); seed(source, [5, 22]);
+  const before = source.serialize(), transaction = await createWorkbookFillTransaction(source, "sheet-1", range(0), range(1, 0, 2));
+  expect(transaction.operations[0]).toEqual({ op: "setWorkbookNumberFormat", format: { formatId: "fill-general-2", builtinId: 0 } });
+  expect(source.serialize()).toEqual(before); source.commit(source.prepare(transaction));
+  for (const row of [1, 2]) expect(source.getCell("sheet-1", row, 0)).toMatchObject({ value: number(5), formatId: "fill-general-2" });
+  expect(source.history().undoSteps).toBe(1); source.undo(); expect(source.getCell("sheet-1", 1, 0)?.value).toEqual(number(22));
+  expect(source.snapshot().metadata.workbook.numberFormats).toEqual(metadata.workbook.numberFormats); expect(source.getCell("sheet-1", 2, 0)).toBeUndefined();
+  const emptyFiles = new Map(files), emptyMetadata = structuredClone(metadata); emptyMetadata.workbook.sheets[0]!.rowDimensions = [];
+  emptyFiles.set("metadata.json", new TextEncoder().encode(JSON.stringify(emptyMetadata))); const empty = createDocumentSession(openDocument(emptyFiles, { kind: "workbook" }));
+  const unchanged = await createWorkbookFillTransaction(empty, "sheet-1", range(0), range(1, 0, 260));
+  expect(unchanged.operations).toEqual([]); expect(empty.commit(empty.prepare(unchanged))).toMatchObject({ changed: false, revision: 0 });
+  expect(empty.snapshot().metadata.workbook.numberFormats).toEqual(metadata.workbook.numberFormats);
+});

@@ -1,11 +1,11 @@
-import type { WorkbookCellInput } from "../contracts/workbook-operations.js";
+import type { WorkbookCellFormatInput, WorkbookCellInput } from "../contracts/workbook-operations.js";
 import type { WorkbookManifest } from "../contracts/document.js";
 import type { WorkbookChunkDescriptor, WorkbookRange } from "../contracts/workbook.js";
 import type { DocumentReadLimits, WorkbookCell, WorkbookModel } from "../runtime.js";
 import { assetDigest } from "../document/assets.js";
 import { decodeText, encode } from "../document/package.js";
 import { checkLimit, invalid } from "../document/validation.js";
-import { CHUNK_COLUMNS, CHUNK_ROWS, decodeWorkbookCell, indexWorkbookChunk } from "../workbook/chunk-index.js";
+import { CHUNK_COLUMNS, CHUNK_ROWS, decodeWorkbookCell, indexWorkbookChunk, parseWorkbookCellElement } from "../workbook/chunk-index.js";
 import { parseFormula } from "../workbook/formula.js";
 import { checkRange } from "../workbook/ranges.js";
 import { workbookSource } from "../workbook/source.js";
@@ -97,12 +97,45 @@ export class WorkbookCellEdit {
     }
     if (cssClass) attrs.class = cssClass; if (formatId) attrs["data-format-id"] = formatId;
     const source = "<td" + Object.entries(attrs).map(([name, value]) => " " + name + '="' + escapeWorkbookText(value) + '"').join("") + ">" + html + "</td>";
-    const chunk = this.chunk(sheetId, input.row, input.column);
+    this.store(sheetId, input.row, input.column, source, attrs["data-value-type"] === "blank" && !attrs["data-formula"] && !cssClass && !formatId);
+  }
+  /** Attributes alone change; formula caches and the exact rich-text body stay
+   * source bytes. A format-only edit never passes through typed value input. */
+  format(sheetId: string, input: WorkbookCellFormatInput): void {
+    const previous = this.get(sheetId, input.row, input.column);
+    const cssClass = input.cssClass === undefined ? previous?.cssClass : input.cssClass;
+    const formatId = input.formatId === undefined ? previous?.formatId : input.formatId;
+    if ((cssClass ?? undefined) === previous?.cssClass && (formatId ?? undefined) === previous?.formatId) return;
+    if (!previous) { this.set(sheetId, { row: input.row, column: input.column, source: { kind: "value", value: { type: "blank" } }, ...(cssClass ? { cssClass } : {}), ...(formatId ? { formatId } : {}) }); return; }
+    const root = parseWorkbookCellElement(previous.html), attrs = Object.fromEntries(root.attrs.map(attr => [attr.name, attr.value]));
+    if (cssClass) attrs.class = cssClass; else delete attrs.class;
+    if (formatId) attrs["data-format-id"] = formatId; else delete attrs["data-format-id"];
+    const tail = (html: string): string => {
+      let quote = "";
+      for (let index = 0; index < html.length; index++) {
+        const character = html[index]!;
+        if (quote) { if (character === quote) quote = ""; }
+        else if (character === '"' || character === "'") quote = character;
+        else if (character === ">") return html.slice(index + 1);
+      }
+      return invalid("A workbook cell has no complete opening tag.");
+    };
+    const body = tail(previous.html);
+    let source = "<td" + Object.entries(attrs).map(([name, value]) => " " + name + '="' + escapeWorkbookText(value) + '"').join("") + ">" + body;
+    const original = this.base.getCell(sheetId, input.row, input.column);
+    if (original && (cssClass ?? undefined) === original.cssClass && (formatId ?? undefined) === original.formatId && body === tail(original.html)) {
+      const originalAttrs = Object.fromEntries(parseWorkbookCellElement(original.html).attrs.map(attr => [attr.name, attr.value]));
+      if (Object.keys(attrs).length === Object.keys(originalAttrs).length && Object.entries(attrs).every(([key, value]) => originalAttrs[key] === value)) source = original.html;
+    }
+    this.store(sheetId, input.row, input.column, source, previous.value.type === "blank" && !previous.formula && !cssClass && !formatId && root.childNodes.length === 0);
+  }
+  private store(sheetId: string, row: number, column: number, source: string, empty: boolean): void {
+    const chunk = this.chunk(sheetId, row, column);
     // Validate even intermediate cells that a later operation would clear.
-    const probe = this.serialize(chunk.descriptor, new Map([[coordinate(input.row, input.column), source]]));
+    const probe = this.serialize(chunk.descriptor, new Map([[coordinate(row, column), source]]));
     indexWorkbookChunk(probe, chunk.descriptor, this.limits.maxFileBytes, { maxNodes: this.limits.maxNodes, maxDepth: this.limits.maxDepth });
-    if (attrs["data-value-type"] === "blank" && !attrs["data-formula"] && !cssClass && !formatId) chunk.cells.delete(coordinate(input.row, input.column));
-    else chunk.cells.set(coordinate(input.row, input.column), source);
+    if (empty) chunk.cells.delete(coordinate(row, column));
+    else chunk.cells.set(coordinate(row, column), source);
   }
   clear(sheetId: string, ranges: readonly WorkbookRange[], mode: "contents" | "all"): void {
     for (const range of ranges) checkRange(range);

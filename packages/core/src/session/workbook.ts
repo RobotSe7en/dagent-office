@@ -14,12 +14,15 @@ import { copyWorkbookScalarContext } from "../workbook/scalar.js";
 import { workbookSource, registerWorkbookModelProvider } from "../workbook/source.js";
 import { createSessionLifecycle } from "./lifecycle.js";
 import { compareWorkbooks, retainedWorkbookBytes, sameWorkbookSource } from "../workbook/source-changes.js";
-import { WorkbookCellEdit, rangeContains } from "./workbook-cells.js";
+import { WorkbookCellEdit } from "./workbook-cells.js";
 import { checkResourceUse, stageResourceFiles } from "./resources.js";
 import { validateWorkbookCandidate } from "./workbook-validation.js";
 import { checkTransactionSize } from "./limits.js";
 import { WorkbookContentEdit } from "./workbook-content.js";
 import { editWorkbookSheet } from "./workbook-sheets.js";
+import { editWorkbookHyperlink, sameWorkbookHyperlinks } from "./workbook-hyperlinks.js";
+import { compileNumberFormat } from "../workbook/number-format.js";
+import { WorkbookRegionIndex } from "../workbook/region-index.js";
 
 const names = new Set<string>(WorkbookOperationSchema.options.map(schema => schema.shape.op.value));
 export function isWorkbookOperation(operation: DocumentOperation): operation is WorkbookOperation { return names.has(operation.op); }
@@ -60,7 +63,7 @@ export function createWorkbookSession(document: WorkbookModel, options: Document
       if ("beforeSheetId" in operation && operation.beforeSheetId !== undefined && !baseSheets.has(operation.beforeSheetId)) invalid("Worksheet references must belong to the base snapshot.");
     }
     const cells = new WorkbookCellEdit(base, manifest, files, limits, allocate);
-    const richContent = new WorkbookContentEdit(manifest, files, limits, allocate), mapping: WorkbookStructureMapping[] = [];
+    const richContent = new WorkbookContentEdit(manifest, files, limits, allocate), mapping: WorkbookStructureMapping[] = [], hyperlinkSheets = new Set<string>();
     function annotation(operation: AnnotationOperation): void {
       if (operation.op === "addAnnotation") {
         const value = operation.annotation;
@@ -86,20 +89,37 @@ export function createWorkbookSession(document: WorkbookModel, options: Document
     }
     for (const operation of transaction.operations) {
       if (!isWorkbookOperation(operation)) { annotation(operation as AnnotationOperation); continue; }
-      if (operation.op === "setWorkbookCells") {
+      if (operation.op === "setWorkbookCells" || operation.op === "setWorkbookCellFormats") {
         const sheet = workbook.sheets.find(item => item.sheetId === operation.sheetId) ?? invalid("An earlier operation removed the worksheet.");
-        const seen = new Set<string>();
+        const seen = new Set<string>(), merges = new WorkbookRegionIndex(sheet.merges);
         for (const cell of operation.cells) {
           const key = cell.row + ":" + cell.column; if (seen.has(key)) invalid("A cell batch cannot repeat coordinates."); seen.add(key);
-          if (sheet.merges.some(range => rangeContains(range, cell.row, cell.column) && (range.from.row !== cell.row || range.from.column !== cell.column))) invalid("Only the leading cell of a merged region can be edited.");
-          cells.set(operation.sheetId, cell);
+          const merge = merges.at(cell.row, cell.column);
+          if (merge && (merge.from.row !== cell.row || merge.from.column !== cell.column)) invalid("Only the leading cell of a merged region can be edited.");
+          if (operation.op === "setWorkbookCells" && "source" in cell) cells.set(operation.sheetId, cell);
+          else cells.format(operation.sheetId, cell);
         }
+      } else if (operation.op === "setWorkbookNumberFormat") {
+        if ("code" in operation.format) compileNumberFormat(operation.format.code);
+        const index = workbook.numberFormats.findIndex(format => format.formatId === operation.format.formatId);
+        if (index < 0) workbook.numberFormats.push(operation.format); else workbook.numberFormats[index] = operation.format;
+      } else if (operation.op === "setWorkbookHyperlink") {
+        const sheet = workbook.sheets.find(item => item.sheetId === operation.sheetId) ?? invalid("An earlier operation removed the worksheet.");
+        editWorkbookHyperlink(sheet, operation, limits.maxNodes);
+        hyperlinkSheets.add(sheet.sheetId);
       } else if (operation.op === "clearWorkbookRanges") {
         if (!workbook.sheets.some(sheet => sheet.sheetId === operation.sheetId)) invalid("An earlier operation removed the worksheet.");
         cells.clear(operation.sheetId, operation.ranges, operation.mode);
       }
       else if (operation.op === "setWorkbookSettings") Object.assign(workbook, operation.changes);
       else editWorkbookSheet(workbook, cells, richContent, annotations, operation, allocate, mapping);
+    }
+    for (const sheet of workbook.sheets.filter(sheet => hyperlinkSheets.has(sheet.sheetId))) {
+      const previous = base.snapshot().metadata.workbook.sheets.find(previous => previous.sheetId === sheet.sheetId);
+      if (previous && sameWorkbookHyperlinks(previous.hyperlinks ?? [], sheet.hyperlinks ?? [])) {
+        if (previous.hyperlinks === undefined) delete sheet.hyperlinks;
+        else sheet.hyperlinks = previous.hyperlinks.map(link => ({ ...link, range: { from: { ...link.range.from }, to: { ...link.range.to } } }));
+      }
     }
     if (resolvedIds) for (const value of annotations) if (resolvedIds.includes(value.annotationId) && value.status === "open") value.status = "resolved";
     cells.flush(); richContent.flush();

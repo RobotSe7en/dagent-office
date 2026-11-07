@@ -65,7 +65,8 @@ export async function createWorkbookFillTransaction(input: WorkbookModel, sheetI
     if (!Number.isFinite(increment)) invalid("The numeric series step exceeds its finite range.");
     for (let index = 0; index < values.length; index++) if (Math.abs(values[index]! - (base + index * increment)) > Number.EPSILON * 16 * Math.max(1, Math.abs(values[index]!), Math.abs(base), Math.abs(index * increment))) invalid("The fill seeds do not form an arithmetic series.");
   }
-  const general = snapshot.metadata.workbook.numberFormats.find(format => "builtinId" in format ? format.builtinId === 0 : format.code.toUpperCase() === "GENERAL")?.formatId;
+  let general = snapshot.metadata.workbook.numberFormats.find(format => "builtinId" in format ? format.builtinId === 0 : format.code.toUpperCase() === "GENERAL")?.formatId;
+  let registerGeneral = false;
   const modulo = (value: number, size: number) => (value % size + size) % size;
   const cells: WorkbookCellInput[] = []; let completed = 0;
   guard();
@@ -81,7 +82,10 @@ export async function createWorkbookFillTransaction(input: WorkbookModel, sheetI
       let unchangedBlank = false;
       if (config.format === "source") {
         const targetCell = model.getCell(sheetId, row, column), targetFormat = resolveWorkbookCellFormat(sheet, { row, column }, targetCell);
-        if (template.numberFormatId === undefined && general === undefined && targetFormat.numberFormatId !== undefined) invalid("Copying General formatting requires a registered General number format.");
+        if (template.numberFormatId === undefined && general === undefined) {
+          const identifiers = new Set(snapshot.metadata.workbook.numberFormats.map(format => format.formatId)); let serial = 1;
+          do { general = "fill-general-" + serial++; } while (identifiers.has(general)); registerGeneral = true;
+        }
         cell.cssClass = template.cssClass; cell.formatId = template.numberFormatId ?? general ?? null;
         unchangedBlank = !targetCell && source.kind === "value" && source.value.type === "blank" && targetFormat.cssClass === template.cssClass
           && (targetFormat.numberFormatId ?? general) === (template.numberFormatId ?? general);
@@ -91,6 +95,11 @@ export async function createWorkbookFillTransaction(input: WorkbookModel, sheetI
     if (++completed % 256 === 0 || completed === total) { progress(completed, total); guard(); if (completed < total && config.yield) { await config.yield(); guard(); } }
   }
   guard();
+  const operations: DocumentTransaction["operations"] = [];
+  if (registerGeneral && cells.some(cell => cell.formatId === general)) {
+    const definition = { op: "setWorkbookNumberFormat" as const, format: { formatId: general!, builtinId: 0 } }; account(JSON.stringify(definition).length); operations.push(definition);
+  }
+  if (cells.length) operations.push({ op: "setWorkbookCells", sheetId, cells });
   return { protocolVersion: 1, documentId: snapshot.manifest.documentId, baseRevision: snapshot.manifest.revision,
-    operations: cells.length ? [{ op: "setWorkbookCells", sheetId, cells }] : [] };
+    operations };
 }
