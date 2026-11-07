@@ -10,20 +10,22 @@ import type * as editorFixture from './fixtures/workbook-remote-editor.js';
 import type * as fixture from './fixtures/workbook-read-host.js';
 import type * as sessionFixture from './fixtures/workbook-session-host.js';
 import type * as performanceFixture from './fixtures/workbook-editing-performance.js';
+import type * as mountedPerformanceFixture from './fixtures/workbook-editor-performance.js';
 declare global { interface Window { workbookReadHost: typeof fixture } }
 declare global { interface Window { workbookSessionHost: typeof sessionFixture } }
 declare global { interface Window { workbookEditingPerformance: typeof performanceFixture } }
+declare global { interface Window { workbookEditorPerformance: typeof mountedPerformanceFixture } }
 declare global { interface Window { workbookRemoteEditor: typeof editorFixture } }
 let workerCode = '', hostCode = '', sessionWorkerCode = '', sessionHostCode = '';
 let performanceHostCode = '';
 let editorHostCode = '';
+async function bundle(name: string): Promise<string> {
+  const result = await build({ configFile: false, build: { write: false, minify: false, lib: { entry: fileURLToPath(new URL(`./fixtures/${name}.ts`, import.meta.url)), formats: ['iife'], name: 'WorkbookReadProbe' } } });
+  if (!Array.isArray(result) && !('output' in result)) throw Error('Unexpected read-worker bundle');
+  const output = Array.isArray(result) ? result.flatMap(part => part.output) : result.output;
+  return output.filter(part => part.type === 'chunk').map(part => part.code).join('\n');
+}
 test.beforeAll(async () => {
-  async function bundle(name: string): Promise<string> {
-    const result = await build({ configFile: false, build: { write: false, minify: false, lib: { entry: fileURLToPath(new URL(`./fixtures/${name}.ts`, import.meta.url)), formats: ['iife'], name: 'WorkbookReadProbe' } } });
-    if (!Array.isArray(result) && !('output' in result)) throw Error('Unexpected read-worker bundle');
-    const output = Array.isArray(result) ? result.flatMap(part => part.output) : result.output;
-    return output.filter(part => part.type === 'chunk').map(part => part.code).join('\n');
-  }
   workerCode = await bundle('workbook-read-worker'); hostCode = await bundle('workbook-read-host');
   sessionWorkerCode = await bundle('workbook-session-worker'); sessionHostCode = await bundle('workbook-session-host');
   performanceHostCode = await bundle('workbook-editing-performance');
@@ -122,6 +124,23 @@ test('100 ordinary edits and complete undo/redo retain bounded current previews 
   // Record the complete edit→calculation→preview distribution. A non-pinned
   // host must not silently certify the 4-CPU/8-GiB stage's 500ms p95 gate.
 });
+test('mounted editor displays 100 current dependent results and full history on 200,000 actual cells', { tag: '@scale' }, async ({ page }, info) => {
+  test.setTimeout(360_000); const mountedPerformanceHostCode = await bundle('workbook-editor-performance'); await page.addScriptTag({ content: mountedPerformanceHostCode });
+  const result = await page.evaluate(({ code, bytes }) => window.workbookEditorPerformance.ordinaryMountedWorkerEdits(code, bytes), {
+    code: sessionWorkerCode, bytes: readFileSync('examples/xlsx/15-ten-thousand-rows.xlsx').toString('base64') });
+  const sha256 = (input: string | Uint8Array) => createHash('sha256').update(input).digest('hex');
+  const report = JSON.stringify({ ...result, sourceSha256: sha256(readFileSync('examples/xlsx/15-ten-thousand-rows.xlsx')),
+    workerBundleSha256: sha256(sessionWorkerCode), hostBundleSha256: sha256(mountedPerformanceHostCode) }, null, 2); writeFileSync(info.outputPath('workbook-mounted-editing.json'), report + '\n');
+  await info.attach('workbook-mounted-editing.json', { body: report, contentType: 'application/json' });
+  expect(result.samples).toHaveLength(100); expect(result.maximumReadRow).toBeLessThan(1000);
+  expect(result).toMatchObject({ sameFrame: true, originalChunksRestored: true, restoredInput: '22', undoneText: '492', redoneText: '669', restoredText: '492', finalRevision: 400, failures: [],
+    fullHistory: { undoSteps: 100, redoSteps: 0 }, undoneHistory: { undoSteps: 0, redoSteps: 100 }, redoneHistory: { undoSteps: 100, redoSteps: 0 },
+    audit: { cells: 200_000, formulas: 20_000, sessionsCreated: 1, revision: 400, endpointDisposed: true, reopenedEqual: true, history: { undoSteps: 0, redoSteps: 100 } } });
+  expect(result.fullHistory.retainedBytes).toBeLessThan(512 * 1024 * 1024); expect(result.largestReplyUnits).toBeLessThan(2 * 1024 * 1024);
+  // This host is not pinned. Record every edit→calculation→visible formula
+  // sample; final four-engine CPU/memory/p95 gates remain mandatory.
+});
+
 test.beforeEach(async ({ page }) => { await openSdkHost(page); await page.addScriptTag({ content: hostCode }); });
 test('native XLSX pictures and charts stay in a host Worker and feed the public preview through bounded reads', async ({ page }) => {
   for (const name of ['07-three-charts', '08-images-shapes']) {
