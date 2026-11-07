@@ -1,6 +1,6 @@
 import { DocumentError } from "@doffi/core";
 import type { ChangeMapping, DocumentHistoryState, DocumentTransaction, TransactionPreparationProgress, TransactionPrepareOptions, TransactionReceipt,
-  WorkbookCandidateChange, WorkbookCoordinate, WorkbookRange, WorkbookScalarContext } from "@doffi/core";
+  WorkbookCandidateChange, WorkbookCoordinate, WorkbookRange, WorkbookScalarContext, WorkbookReferenceLocation, WorkbookReferenceResult } from "@doffi/core";
 import type { WorkbookReadConnection, WorkbookReadTransportOptions } from "@doffi/render";
 import { resolveWorkbookReadTransportOptions } from "@doffi/render";
 import type { WorkbookFindQuery, WorkbookFindResult, WorkbookReplaceOptions } from "./find-contracts.js";
@@ -26,7 +26,7 @@ export type WorkbookSessionCommand =
       readonly mode?: WorkbookRangeCopyOptions["mode"]; readonly skipBlanks?: boolean })
   | (WorkbookSessionIdentity & { readonly kind: "fill"; readonly sheetId: string; readonly source: WorkbookRange; readonly target: WorkbookRange;
       readonly mode?: WorkbookFillOptions["mode"]; readonly axis?: WorkbookFillOptions["axis"] })
-  | (WorkbookSessionIdentity & { readonly kind: "replace"; readonly query: WorkbookFindQuery; readonly replacement: string; readonly valueMode?: WorkbookReplaceOptions["valueMode"] });
+  | (WorkbookSessionIdentity & { readonly kind: "replace"; readonly query: WorkbookFindQuery; readonly replacement: string; readonly valueMode?: WorkbookReplaceOptions["valueMode"]; readonly only?: WorkbookReplaceOptions["only"] });
 export interface WorkbookSessionProgress { readonly phase: TransactionPreparationProgress["phase"] | "copy" | "fill" | "find"; readonly completed: number; readonly total: number }
 export interface WorkbookSessionExecution {
   readonly signal?: AbortSignal;
@@ -43,6 +43,9 @@ export interface WorkbookSessionViewOptions extends WorkbookSessionExecution {
 export interface WorkbookSessionFindOptions extends WorkbookSessionExecution {
   readonly calculationContext?: WorkbookScalarContext;
   readonly locale?: string;
+  /** Search the completed values of this retained current-source view.
+   * Supplying a second calculation context would be ambiguous. */
+  readonly view?: WorkbookReadConnection;
 }
 export interface WorkbookSessionTransportOptions {
   readonly maxPendingRequests?: number;
@@ -60,6 +63,7 @@ export interface WorkbookSessionConnection {
   view(candidate?: WorkbookSessionCandidate, options?: WorkbookSessionViewOptions): Promise<WorkbookReadConnection>;
   /** One bounded reversible input spelling, read inside the owning Worker. */
   readInput(sheetId: string, at: WorkbookCoordinate, candidate?: WorkbookSessionCandidate, execution?: WorkbookSessionExecution): Promise<WorkbookSessionInput>;
+  resolveReference(expression: string, origin: WorkbookReferenceLocation, execution?: WorkbookSessionExecution): Promise<WorkbookReferenceResult>;
   commit(candidate: WorkbookSessionCandidate): Promise<WorkbookSessionReceipt>;
   discard(candidate: WorkbookSessionCandidate): Promise<void>;
   undo(): Promise<WorkbookSessionReceipt>;

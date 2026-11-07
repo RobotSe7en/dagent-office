@@ -4,14 +4,19 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { createHash } from 'node:crypto';
+import { writeDocumentZip } from '@doffi/office';
+import { scalarWorkbook } from '../../packages/core/tests/workbook-scalar-fixture.js';
+import type * as editorFixture from './fixtures/workbook-remote-editor.js';
 import type * as fixture from './fixtures/workbook-read-host.js';
 import type * as sessionFixture from './fixtures/workbook-session-host.js';
 import type * as performanceFixture from './fixtures/workbook-editing-performance.js';
 declare global { interface Window { workbookReadHost: typeof fixture } }
 declare global { interface Window { workbookSessionHost: typeof sessionFixture } }
 declare global { interface Window { workbookEditingPerformance: typeof performanceFixture } }
+declare global { interface Window { workbookRemoteEditor: typeof editorFixture } }
 let workerCode = '', hostCode = '', sessionWorkerCode = '', sessionHostCode = '';
 let performanceHostCode = '';
+let editorHostCode = '';
 test.beforeAll(async () => {
   async function bundle(name: string): Promise<string> {
     const result = await build({ configFile: false, build: { write: false, minify: false, lib: { entry: fileURLToPath(new URL(`./fixtures/${name}.ts`, import.meta.url)), formats: ['iife'], name: 'WorkbookReadProbe' } } });
@@ -22,6 +27,61 @@ test.beforeAll(async () => {
   workerCode = await bundle('workbook-read-worker'); hostCode = await bundle('workbook-read-host');
   sessionWorkerCode = await bundle('workbook-session-worker'); sessionHostCode = await bundle('workbook-session-host');
   performanceHostCode = await bundle('workbook-editing-performance');
+  editorHostCode = await bundle('workbook-remote-editor');
+});
+test('mounted remote workbook editor shares Worker input, address selection and history and leaves its host usable', async ({ page }) => {
+  await page.addScriptTag({ content: editorHostCode });
+  const bytes = Buffer.from(writeDocumentZip(scalarWorkbook([{ row: 0, column: 0, value: { type: 'number', value: 1 } },
+    { row: 0, column: 1, value: { type: 'number', value: 999 }, formula: '=A1+1' }]).serialize())).toString('base64');
+  await page.evaluate(({ code, bytes }) => window.workbookRemoteEditor.mount(code, bytes), { code: sessionWorkerCode, bytes });
+  const input = page.getByRole('textbox', { name: '单元格或公式输入', exact: true }); await expect(input).toHaveValue('1');
+  await input.fill('5'); await input.press('Enter'); await page.evaluate(() => window.workbookRemoteEditor.settled());
+  expect(await page.evaluate(() => window.workbookRemoteEditor.inspect())).toMatchObject({ revision: 1, history: { undoSteps: 1 }, source: { text: '5' }, current: { kind: 'value', value: { type: 'number', value: 6 } }, errors: [] });
+  const address = page.getByRole('textbox', { name: '选择单元格或区域', exact: true }); await address.fill('A1'); await address.press('Enter'); await page.evaluate(() => window.workbookRemoteEditor.settled()); await expect(input).toHaveValue('5');
+  await page.getByRole('button', { name: '撤销', exact: true }).click(); await page.evaluate(() => window.workbookRemoteEditor.settled()); await expect(input).toHaveValue('1');
+  await page.getByRole('button', { name: '重做', exact: true }).click(); await page.evaluate(() => window.workbookRemoteEditor.settled()); await expect(input).toHaveValue('5');
+  await input.fill('='); await page.evaluate(() => window.workbookRemoteEditor.external('external')); await input.press('Enter'); await page.evaluate(() => window.workbookRemoteEditor.settled());
+  expect(await page.evaluate(() => window.workbookRemoteEditor.inspect())).toMatchObject({ source: { text: 'external' }, input: { text: '=', dirty: true }, errors: ['RevisionConflict'] });
+  await input.press('Escape'); await page.evaluate(() => window.workbookRemoteEditor.settled()); await expect(input).toHaveValue('external');
+  expect(await page.evaluate(() => window.workbookRemoteEditor.disposeEditor())).toBe(true);
+  expect(await page.evaluate(() => window.workbookRemoteEditor.finish())).toMatchObject({ sessionsCreated: 1, endpointDisposed: true, hostUsable: { type: 'number', value: 42 } });
+});
+test('mounted remote workbook fill and scoped single/all replacements remain atomic Worker commands', async ({ page }) => {
+  await page.addScriptTag({ content: editorHostCode });
+  const bytes = Buffer.from(writeDocumentZip(scalarWorkbook([{ row: 0, column: 0, value: { type: 'number', value: 1 } }, { row: 1, column: 0, value: { type: 'number', value: 3 } },
+    { row: 0, column: 2, value: { type: 'text', value: '甲猫😀猫' } }, { row: 1, column: 2, value: { type: 'text', value: '猫' } }, { row: 2, column: 2, value: { type: 'text', value: 'outside猫' } }]).serialize())).toString('base64');
+  await page.evaluate(({ code, bytes }) => window.workbookRemoteEditor.mount(code, bytes), { code: sessionWorkerCode, bytes });
+  const address = page.getByRole('textbox', { name: '选择单元格或区域', exact: true });
+  await address.fill('A1:A5'); await address.press('Enter'); await page.evaluate(() => window.workbookRemoteEditor.settled());
+  await page.getByRole('button', { name: '数列填充', exact: true }).click(); await page.evaluate(() => window.workbookRemoteEditor.settled());
+  expect(await page.evaluate(() => window.workbookRemoteEditor.value(4, 0))).toBe('9');
+  await page.getByRole('button', { name: '撤销', exact: true }).click(); await page.evaluate(() => window.workbookRemoteEditor.settled()); expect(await page.evaluate(() => window.workbookRemoteEditor.value(4, 0))).toBe('');
+  await address.fill('C1:C2'); await address.press('Enter'); await page.evaluate(() => window.workbookRemoteEditor.settled());
+  await page.getByLabel('查找范围', { exact: true }).selectOption('selection'); await page.getByLabel('查找内容', { exact: true }).fill('猫');
+  await page.getByRole('button', { name: '查找下一个', exact: true }).click(); await page.evaluate(() => window.workbookRemoteEditor.settled());
+  await expect(page.getByRole('status', { name: '工作簿编辑状态', exact: true })).toContainText('匹配 1 / 3');
+  await page.getByLabel('替换为', { exact: true }).fill('$&'); await page.getByRole('button', { name: '替换当前项', exact: true }).click(); await page.evaluate(() => window.workbookRemoteEditor.settled());
+  expect(await page.evaluate(() => window.workbookRemoteEditor.value(0, 2))).toBe('甲$&😀猫');
+  await page.getByRole('button', { name: '查找下一个', exact: true }).click(); await page.evaluate(() => window.workbookRemoteEditor.settled());
+  await expect(page.getByRole('status', { name: '工作簿编辑状态', exact: true })).toContainText('匹配 1 / 2');
+  await page.getByRole('button', { name: '全部替换', exact: true }).click(); await page.evaluate(() => window.workbookRemoteEditor.settled());
+  expect(await page.evaluate(() => Promise.all([window.workbookRemoteEditor.value(0, 2), window.workbookRemoteEditor.value(1, 2), window.workbookRemoteEditor.value(2, 2)]))).toEqual(['甲$&😀$&', '$&', 'outside猫']);
+  expect(await page.evaluate(() => window.workbookRemoteEditor.inspect())).toMatchObject({ history: { undoSteps: 2 }, errors: [] });
+  await page.evaluate(() => window.workbookRemoteEditor.finish());
+});
+
+test('mounted remote editor rejects a delayed address result after an external source revision', async ({ page }) => {
+  await page.addScriptTag({ content: editorHostCode });
+  const bytes = Buffer.from(writeDocumentZip(scalarWorkbook([{ row: 0, column: 0, value: { type: 'number', value: 1 } }]).serialize())).toString('base64');
+  await page.evaluate(({ code, bytes }) => window.workbookRemoteEditor.mount(code, bytes), { code: sessionWorkerCode, bytes });
+  await page.evaluate(() => window.workbookRemoteEditor.holdReference());
+  const address = page.getByRole('textbox', { name: '选择单元格或区域', exact: true }); await address.fill('C5'); await address.press('Enter');
+  await expect.poll(() => page.evaluate(() => window.workbookRemoteEditor.referenceHeld())).toBe(true);
+  await page.evaluate(() => window.workbookRemoteEditor.external('external', false));
+  await page.evaluate(() => window.workbookRemoteEditor.releaseReference()); await page.evaluate(() => window.workbookRemoteEditor.settled());
+  expect(await page.evaluate(() => window.workbookRemoteEditor.inspect())).toMatchObject({ revision: 1, history: { undoSteps: 1 }, source: { text: 'external' },
+    selection: { baseRevision: 1, anchor: { ranges: [{ from: { row: 0, column: 0 }, to: { row: 0, column: 0 } }] } }, errors: ['RevisionConflict'] });
+  await expect(address).toHaveValue('A1'); await page.evaluate(() => window.workbookRemoteEditor.finish());
 });
 
 test('100 ordinary edits and complete undo/redo retain bounded current previews on 200,000 actual cells', { tag: '@scale' }, async ({ page }, info) => {

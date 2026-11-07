@@ -87,9 +87,9 @@ export function serveWorkbookSession(port: MessagePort, session: WorkbookSession
           transaction = await createWorkbookFillTransaction(session, command.sheetId, command.source, command.target, { ...common,
             ...(command.mode === undefined ? {} : { mode: command.mode }), ...(command.axis === undefined ? {} : { axis: command.axis }), onProgress: value => progress({ phase: "fill", ...value }) });
         } else if (command.kind === "replace") {
-          if (!keys(payload.command, ["kind", "documentId", "revision", "query", "replacement", "valueMode"])) invalidSessionTransport("Invalid workbook replacement command.");
+          if (!keys(payload.command, ["kind", "documentId", "revision", "query", "replacement", "valueMode", "only"])) invalidSessionTransport("Invalid workbook replacement command.");
           transaction = await createWorkbookReplaceTransaction(session, command.query, command.replacement, { ...common,
-            ...(command.valueMode === undefined ? {} : { valueMode: command.valueMode }), onProgress: value => progress({ phase: "find", completed: value.cells, total: 0 }) });
+            ...(command.valueMode === undefined ? {} : { valueMode: command.valueMode }), ...(command.only === undefined ? {} : { only: command.only }), onProgress: value => progress({ phase: "find", completed: value.cells, total: 0 }) });
         } else invalidSessionTransport("Unknown workbook preparation command.");
       }
       guard(); owned = await session.prepareAsync(transaction, preparation, { ...common, onProgress: progress }); guard();
@@ -121,6 +121,14 @@ export function serveWorkbookSession(port: MessagePort, session: WorkbookSession
     } else if (operation === "undo" || operation === "redo") {
       if (!keys(payload, ["documentId", "revision"])) invalidSessionTransport("Invalid workbook history request."); identity(payload);
       mutationResult(id, () => session[operation]());
+    } else if (operation === "reference") {
+      if (!keys(payload, ["documentId", "revision", "expression", "origin"]) || typeof payload.expression !== "string" || !record(payload.origin)
+        || !keys(payload.origin, ["sheetId", "row", "column"]) || typeof payload.origin.sheetId !== "string") invalidSessionTransport("Invalid workbook reference request.");
+      identity(payload); const model = captureWorkbookModel(session);
+      const coordinate = WorkbookCoordinateSchema.safeParse({ row: payload.origin.row, column: payload.origin.column });
+      if (!coordinate.success) invalidSessionTransport("Invalid workbook reference origin.");
+      const { documentId, revision } = model.snapshot().manifest;
+      post(id, { documentId, revision, reference: model.resolveReference(payload.expression, { sheetId: payload.origin.sheetId, ...coordinate.data }) });
     } else if (operation === "inputText") {
       if (!keys(payload, ["documentId", "revision", "sheetId", "at", "handle"])) invalidSessionTransport("Invalid workbook input read.");
       const owned = payload.handle === undefined ? undefined : positiveId(payload.handle) ? candidates.get(payload.handle) : undefined;
@@ -161,11 +169,15 @@ export function serveWorkbookSession(port: MessagePort, session: WorkbookSession
       views.add(view); viewRequests.set(id, { server: view, model, ...(calculation ? { calculation } : {}) }); owned?.views.add(view);
       send({ id, ok: true, value, port: channel.port2 }, [channel.port2]);
     } else if (operation === "find") {
-      if (!keys(payload, ["documentId", "revision", "query", "calculationContext", "locale"])) invalidSessionTransport("Invalid workbook find request."); identity(payload);
+      if (!keys(payload, ["documentId", "revision", "query", "calculationContext", "locale", "viewHandle"])) invalidSessionTransport("Invalid workbook find request."); identity(payload);
       const model = captureWorkbookModel(session), query = payload.query as WorkbookFindQuery;
+      const view = payload.viewHandle === undefined ? undefined : positiveId(payload.viewHandle) ? viewRequests.get(payload.viewHandle) : undefined;
+      if (payload.viewHandle !== undefined && (!view || view.server.disposed || view.model !== model)) throw new DocumentError("RevisionConflict", "Workbook find requires a retained view of its actual current source.");
+      if (view && payload.calculationContext !== undefined) invalidSessionTransport("Workbook find cannot replace a retained view's calculation context.");
+      if (view && query?.field === "display" && !view.calculation) invalidSessionTransport("Display search requires a view with completed calculation.");
       const context = payload.calculationContext === undefined ? undefined : copyWorkbookScalarContext(payload.calculationContext as never);
       const locale = payload.locale === undefined ? context?.locale : copyWorkbookScalarContext({ locale: payload.locale as string }).locale;
-      const calculation = query?.field === "display" ? await calculate(model, abort, progress, context === undefined ? undefined : { calculationContext: context }, () => { if (captureWorkbookModel(session) !== model) throw new DocumentError("RevisionConflict", "Workbook find source changed while calculating."); }) : undefined;
+      const calculation = query?.field === "display" ? view?.calculation ?? await calculate(model, abort, progress, context === undefined ? undefined : { calculationContext: context }, () => { if (captureWorkbookModel(session) !== model) throw new DocumentError("RevisionConflict", "Workbook find source changed while calculating."); }) : undefined;
       const result = await findWorkbookText(session, query, { signal: abort.signal, yield: yieldTask, ...(calculation ? { calculation } : {}),
         ...(locale === undefined ? {} : { locale }),
         onProgress: value => progress({ phase: "find", completed: value.cells, total: 0 }) });

@@ -66,6 +66,9 @@ test("a sent commit retains its real outcome while a receipt is delayed", async 
   } });
   const applying = input.apply(); await vi.waitFor(() => expect(held).toBeDefined());
   expect(s.getCell("sheet-1", 0, 0)?.value).toEqual({ type: "text", value: "12" });
-  expect(() => input.cancel()).toThrowError(expect.objectContaining({ code: "InvalidOperation" })); expect(() => input.setText("new draft")).toThrow();
-  send(held); expect(await applying).toMatchObject({ revision: 1 }); expect(input.state()).toMatchObject({ applying: false, dirty: false, text: "'12", selection: { baseRevision: 1 } });
+  expect(() => input.cancel()).toThrowError(expect.objectContaining({ code: "InvalidOperation" })); input.setText("12尾");
+  send(held); expect(await applying).toMatchObject({ revision: 1 }); expect(input.state()).toMatchObject({ applying: false, dirty: true, text: "12尾", mode: "text", selection: { baseRevision: 1 } });
+  Object.defineProperty(channel.port1, "postMessage", { configurable: true, value: send });
+  await input.apply(); expect(input.state()).toMatchObject({ dirty: false, text: "12尾", mode: "auto", selection: { baseRevision: 2 } });
+  expect(s.history().undoSteps).toBe(2); expect(s.getCell("sheet-1", 0, 0)?.text).toBe("12尾");
 });

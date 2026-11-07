@@ -28,7 +28,7 @@ export function createWorkbookRemoteInputController(client: WorkbookSessionConne
   const check = (): void => { if (disposed) invalid("This remote workbook input controller has been disposed."); };
   const notify = (): void => { if (!disposed) try { options.onChange?.(); } catch { /* Reporting never owns a source mutation. */ } };
   const dirty = (): boolean => text !== original || mode !== "auto";
-  const mutate = (): void => { check(); if (committing) invalid("The workbook input is awaiting its commit outcome."); version++; selectionAbort?.abort(); preparationAbort?.abort(); };
+  const mutate = (): void => { check(); version++; selectionAbort?.abort(); if (!committing) preparationAbort?.abort(); };
   function setText(value: string): void {
     check(); if (!selection || typeof value !== "string") invalid("Workbook text input requires a selected cell and string value.");
     if (value.length > 32767 && !(mode === "auto" && value.startsWith("'") && value.length === 32768)) throw new DocumentError("ResourceLimitExceeded", "Workbook input exceeds its text budget.");
@@ -54,7 +54,7 @@ export function createWorkbookRemoteInputController(client: WorkbookSessionConne
       if (mode === value) return; mutate(); if (mode === "auto" && value !== "auto" && text.startsWith("'")) text = text.slice(1); mode = value; notify();
     },
     compositionStart() { check(); if (!selection) invalid("Composition requires a selected cell."); mutate(); composing = true; notify(); },
-    compositionEnd(value: string) { check(); if (committing) invalid("The workbook input is awaiting its commit outcome."); composing = false; setText(value); notify(); },
+    compositionEnd(value: string) { check(); composing = false; setText(value); notify(); },
     async apply(preparation?: TransactionPrepareOptions) {
       check(); const selected = selection;
       if (!selected) throw new DocumentError("InvalidOperation", "Workbook input requires a selected cell.");
@@ -70,7 +70,13 @@ export function createWorkbookRemoteInputController(client: WorkbookSessionConne
         candidate = await client.prepare({ kind: "input", documentId: selected.documentId, revision: selected.baseRevision, sheetId: selected.anchor.sheetId, at, text: submitted, mode: submittedMode }, preparation, { signal: abort.signal });
         guard(); const canonical = await client.readInput(selected.anchor.sheetId, at, candidate, { signal: abort.signal }); guard();
         committing = true; const receipt = await client.commit(candidate); consumed = true;
-        if (!disposed) { selection = Object.freeze({ ...selected, baseRevision: receipt.revision }); text = original = canonical.text; mode = "auto"; composing = false; }
+        if (!disposed) {
+          selection = Object.freeze({ ...selected, baseRevision: receipt.revision }); original = canonical.text;
+          if (ticket === version) { text = canonical.text; mode = "auto"; composing = false; }
+          // Continued typing after this controller sent its own commit is a
+          // new transient draft. Preserve it against that known receipt;
+          // any later external revision still conflicts at the next apply.
+        }
         return receipt;
       } finally {
         if (candidate && !consumed) try { await client.discard(candidate); } catch { /* Host disposal or a changed source can consume this lease. */ }
@@ -78,7 +84,7 @@ export function createWorkbookRemoteInputController(client: WorkbookSessionConne
         committing = applying = false; notify();
       }
     },
-    cancel() { mutate(); text = original; mode = "auto"; composing = false; notify(); },
+    cancel() { check(); if (committing) invalid("The workbook input is awaiting its commit outcome."); mutate(); text = original; mode = "auto"; composing = false; notify(); },
     dispose() { if (disposed) return; disposed = true; version++; selectionAbort?.abort(); preparationAbort?.abort(); selection = undefined; text = original = ""; composing = false; },
   });
 }

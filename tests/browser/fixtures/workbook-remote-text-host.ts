@@ -7,18 +7,23 @@ let actions: {
   inspect(): Promise<unknown>; settled(): Promise<void>; select(row: number, column: number): Promise<void>;
   external(text: string): Promise<void>; reload(): Promise<void>; undo(): Promise<void>; setMode(mode: 'auto' | 'text' | 'number'): void;
   releaseBinding(): void; hostStillUsable(): Promise<boolean>; finish(): Promise<unknown>;
+  holdCommit(): void; commitHeld(): boolean; releaseCommit(): void;
 };
 export async function mountRemoteText(code: string, encoded: string) {
   cleanup(); const host = document.createElement('div'), input = document.createElement('textarea'), canvas = document.createElement('div');
   input.setAttribute('aria-label', 'Worker 单元格输入'); host.append(input, canvas); document.body.append(host);
   const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' })), worker = new Worker(url), channel = new MessageChannel();
+  let holdReceipt = false, heldReceipt: unknown;
+  channel.port2.addEventListener('message', event => {
+    if (holdReceipt && event.data.value?.receipt) { holdReceipt = false; heldReceipt = event.data; event.stopImmediatePropagation(); }
+  });
   const bytes = decodeTestBytes(encoded); worker.postMessage({ kind: 'open', format: 'package', bytes, port: channel.port1 }, [bytes.buffer, channel.port1]);
   const client = await connectWorkbookSession(channel.port2); let source = await client.view(), released = false, work = Promise.resolve();
   const preview = mountDocumentPreview(canvas, source, { widthPt: 420, heightPt: 240 }); await preview.ready;
   const sheetId = source.cells.snapshot.metadata.workbook.activeSheetId, errors: { code: string; text: string }[] = [], navigation: string[] = [];
   const selection = (row = 0, column = 0) => ({ documentId: client.state().documentId, baseRevision: client.state().revision,
     anchor: { kind: 'cells' as const, sheetId, ranges: [{ from: { row, column }, to: { row, column } }] } });
-  const controller = createWorkbookRemoteInputController(client, { onChange() { const state = controller.state(); input.disabled = state.applying || state.selecting; } });
+  const controller = createWorkbookRemoteInputController(client, { onChange() { input.disabled = controller.state().selecting; } });
   const report = (error: unknown) => { if (!released) errors.push({ code: (error as { code?: string }).code ?? 'InvalidOperation', text: input.value }); };
   const queue = (action: () => Promise<void>) => { work = work.catch(report).then(async () => { if (!released) await action(); }); void work.catch(report); };
   async function refresh() {
@@ -45,6 +50,8 @@ export async function mountRemoteText(code: string, encoded: string) {
     async reload() { controller.cancel(); const state = controller.state(); const at = state.selection?.anchor.kind === 'cells' ? state.selection.anchor.ranges[0]!.from : { row: 0, column: 0 }; await controller.select(selection(at.row, at.column)); binding.refresh(); binding.focus(); },
     async undo() { await client.undo(); await refresh(); binding.focus(); },
     setMode(mode) { controller.setMode(mode); binding.refresh(); }, releaseBinding() { binding.dispose(); },
+    holdCommit() { holdReceipt = true; heldReceipt = undefined; }, commitHeld() { return heldReceipt !== undefined; },
+    releaseCommit() { if (heldReceipt === undefined) throw Error('No Worker receipt is held'); const data = heldReceipt; heldReceipt = undefined; channel.port2.dispatchEvent(new MessageEvent('message', { data })); },
     async hostStillUsable() { const candidate = await client.prepare({ kind: 'input', documentId: client.state().documentId, revision: client.state().revision, sheetId, at: { row: 0, column: 0 }, text: 'host remains usable', mode: 'text' }); await client.commit(candidate); return (await client.readInput(sheetId, { row: 0, column: 0 })).text === 'host remains usable'; },
     async finish() {
       await work; release(); let resolve!: (value: unknown) => void; const response = new Promise<unknown>(done => { resolve = done; });
@@ -63,5 +70,8 @@ export function undo() { return actions.undo(); }
 export function setMode(mode: 'auto' | 'text' | 'number') { return actions.setMode(mode); }
 export function releaseBinding() { actions.releaseBinding(); }
 export function hostStillUsable() { return actions.hostStillUsable(); }
+export function holdCommit() { actions.holdCommit(); }
+export function commitHeld() { return actions.commitHeld(); }
+export function releaseCommit() { actions.releaseCommit(); }
 export function finish() { return actions.finish(); }
-Object.assign(window, { workbookRemoteText: { mountRemoteText, inspect, settled, select, external, reload, undo, setMode, releaseBinding, hostStillUsable, finish } });
+Object.assign(window, { workbookRemoteText: { mountRemoteText, inspect, settled, select, external, reload, undo, setMode, releaseBinding, hostStillUsable, holdCommit, commitHeld, releaseCommit, finish } });

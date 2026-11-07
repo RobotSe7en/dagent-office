@@ -112,7 +112,11 @@ function bindInput<Receipt>(input: HTMLTextAreaElement, controller: InputDriver<
     }
     if ((key === "enter" && !event.altKey) || key === "tab") {
       event.preventDefault(); const result = apply(), direction = key === "tab" ? event.shiftKey ? "left" : "right" : event.shiftKey ? "up" : "down";
-      const navigate = (receipt: Receipt | undefined): void => { if (receipt && !disposed && !command) notify(options.onNavigate, direction, false); };
+      const navigate = (receipt: Receipt | undefined): void => {
+        if (!receipt || disposed || command) return;
+        const latest = controller.state(); if (asynchronous && (latest.dirty || latest.composing || input.value !== workbookInputTextView(latest.text))) return;
+        notify(options.onNavigate, direction, false);
+      };
       if (asynchronous) void Promise.resolve(result).then(navigate, report); else navigate(result as Receipt | undefined);
       return;
     }

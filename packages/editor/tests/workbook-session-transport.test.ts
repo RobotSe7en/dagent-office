@@ -116,6 +116,48 @@ test("find and replacement stay revision-bound in the Worker", async () => {
   await expect(client.prepare({ kind: "copy", documentId: "worker-session", revision: 1, sheetId, source: { from: { row: 0, column: 0 }, to: { row: 0, column: 0 } }, target: { row: 0, column: 1 } })).rejects.toThrowError(expect.objectContaining({ code: "RevisionConflict" }));
 });
 
+test("Worker reference queries use current worksheet identities without creating history", async () => {
+  const { s, client } = await pair();
+  const result = await client.resolveReference("=Sheet1!$A$1:B2", { sheetId, row: 0, column: 0 });
+  expect(result).toEqual({ kind: "ranges", areas: [{ sheetId, from: { row: 0, column: 0 }, to: { row: 1, column: 1 } }] });
+  expect(result.kind === "ranges" && Object.isFrozen(result.areas[0]?.from)).toBe(true);
+  expect(await client.resolveReference("=Missing", { sheetId, row: 0, column: 0 })).toEqual({ kind: "error", code: "#NAME?" });
+  expect(s.history().undoSteps).toBe(0);
+});
+
+test("a late reference response cannot select coordinates from a previous source", async () => {
+  const { s, client, channel } = await pair(), send = channel.port1.postMessage.bind(channel.port1); let held: unknown;
+  Object.defineProperty(channel.port1, "postMessage", { configurable: true, value(message: { value?: { reference?: unknown } }, transfer: Transferable[] = []) {
+    if (message.value?.reference) { held = message; return; } send(message, transfer);
+  } });
+  const resolving = client.resolveReference("=A1", { sheetId, row: 0, column: 0 }); await vi.waitFor(() => expect(held).toBeDefined());
+  s.commit(s.prepare(transaction(s, [number(0, 0, 1)]))); await vi.waitFor(() => expect(client.state().revision).toBe(1)); send(held);
+  await expect(resolving).rejects.toThrowError(expect.objectContaining({ code: "RevisionConflict" }));
+});
+
+test("display search reads the exact retained view batch at an unchanged source revision", async () => {
+  const s = createDocumentSession(scalarWorkbook([{ row: 0, column: 0, value: { type: "number", value: 999 }, formula: "=TODAY()" }])); cleanups.push(() => s.dispose());
+  const { client } = await pair(s), first = await client.view(undefined, { calculationContext: { now: { unixMilliseconds: 0, utcOffsetMinutes: 0 } } });
+  const current = (await first.rules!.read({ ...DEFAULT_WORKBOOK_RULE_LIMITS, documentId: "scalar-kernel", revision: 0, sheetId, coordinates: [{ row: 0, column: 0 }], includeCurrent: true }, new AbortController().signal)).cells[0]?.current;
+  if (current?.kind !== "value" || current.value.type !== "number") throw Error("Expected a completed current value");
+  const query = { text: String(current.value.value), field: "display" as const, entireCell: true };
+  const second = await client.view(undefined, { calculationContext: { now: { unixMilliseconds: 86400000, utcOffsetMinutes: 0 } } });
+  expect((await client.find(query, { view: first })).matches).toHaveLength(1); expect((await client.find(query, { view: second })).matches).toHaveLength(0);
+  await expect(client.find(query, { view: first, calculationContext: {} })).rejects.toThrowError(expect.objectContaining({ code: "InvalidOperation" }));
+  await expect(client.find(query, { view: { ...first } })).rejects.toThrowError(expect.objectContaining({ code: "InvalidOperation" }));
+  const manual = await client.view(undefined, { calculate: false }); await expect(client.find(query, { view: manual })).rejects.toThrow();
+  manual.dispose(); first.dispose(); second.dispose();
+});
+
+test("Worker single replacement rechecks its exact original occurrence and rejects stale proof", async () => {
+  const s = createDocumentSession(scalarWorkbook([{ row: 0, column: 0, value: { type: "text", value: "甲猫😀猫" } }])); cleanups.push(() => s.dispose());
+  const { client } = await pair(s), query = { text: "猫" }, result = await client.find(query), only = { documentId: result.documentId, baseRevision: result.baseRevision, match: result.matches[0]! };
+  await client.commit(await client.prepare({ kind: "replace", documentId: "scalar-kernel", revision: 0, query, replacement: "$&", only }));
+  expect(s.getCell(sheetId, 0, 0)?.text).toBe("甲$&😀猫"); const before = s.serialize();
+  await expect(client.prepare({ kind: "replace", documentId: "scalar-kernel", revision: 1, query, replacement: "old", only })).rejects.toThrowError(expect.objectContaining({ code: "RevisionConflict" }));
+  expect(s.serialize()).toEqual(before); expect(s.history().undoSteps).toBe(1);
+});
+
 test("foreign and invalidated candidates cannot be applied through another endpoint", async () => {
   const s = workbook(), a = await pair(s), b = await pair(s), candidate = await a.client.prepare(command(s, [number(0, 0, 1)]));
   await expect(b.client.commit(candidate)).rejects.toThrowError(expect.objectContaining({ code: "InvalidOperation" }));

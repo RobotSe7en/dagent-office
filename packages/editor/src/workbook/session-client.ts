@@ -1,5 +1,5 @@
 import { DocumentError, DocumentErrorDataSchema, WorkbookCoordinateSchema, WorkbookRangeSchema } from "@doffi/core";
-import type { TransactionPrepareOptions, WorkbookChangeImpact, WorkbookCoordinate } from "@doffi/core";
+import type { TransactionPrepareOptions, WorkbookChangeImpact, WorkbookCoordinate, WorkbookReferenceLocation, WorkbookReferenceResult } from "@doffi/core";
 import { connectWorkbookReads, linkWorkbookPreviewSource } from "@doffi/render";
 import type { WorkbookReadConnection } from "@doffi/render";
 import { checkSessionMessage, freezeSessionValue, invalidSessionTransport, keys, positiveId, record, sessionTransportConfig, WORKBOOK_SESSION_PROTOCOL } from "./session-transport.js";
@@ -128,6 +128,24 @@ export async function connectWorkbookSession(port: MessagePort, options: Workboo
           || !Array.isArray(value.candidate.affectedNodeIds) || !record(value.candidate.mapping)) invalidSessionTransport("Invalid workbook candidate response.");
         const candidate = freezeSessionValue(value.candidate as unknown as WorkbookSessionCandidate); candidates.set(candidate, { handle: value.handle, consumed: false }); return candidate;
       },
+      async resolveReference(expression: string, origin: WorkbookReferenceLocation, execution?: WorkbookSessionExecution) {
+        if (typeof expression !== "string" || !record(origin) || !keys(origin, ["sheetId", "row", "column"]) || typeof origin.sheetId !== "string") invalidSessionTransport("Invalid workbook reference request.");
+        const expected = identity(), { value } = await request("reference", { ...expected, expression, origin }, execution);
+        if (!record(value) || !keys(value, ["documentId", "revision", "reference"]) || value.documentId !== expected.documentId || value.revision !== expected.revision || !record(value.reference)) invalidSessionTransport("Invalid workbook reference result.");
+        const result = value.reference;
+        if (result.kind === "ranges") {
+          if (!keys(result, ["kind", "areas"]) || !Array.isArray(result.areas) || result.areas.length > 4096) invalidSessionTransport("Invalid workbook reference areas.");
+          for (const area of result.areas) {
+            const parsed = record(area) ? WorkbookRangeSchema.safeParse({ from: area.from, to: area.to }) : undefined;
+            if (!record(area) || !keys(area, ["sheetId", "from", "to"]) || typeof area.sheetId !== "string" || !area.sheetId || area.sheetId.length > 256
+              || !parsed?.success || parsed.data.from.row > parsed.data.to.row || parsed.data.from.column > parsed.data.to.column) invalidSessionTransport("Invalid workbook reference rectangle.");
+          }
+        } else if (result.kind === "error") { if (!keys(result, ["kind", "code"]) || !["#REF!", "#NAME?", "#VALUE!", "#NULL!"].includes(String(result.code))) invalidSessionTransport("Invalid workbook reference error."); }
+        else if (result.kind === "unresolved") { if (!keys(result, ["kind", "reason"]) || !["calculation-required", "circular-name", "ambiguous-name-scope"].includes(String(result.reason))) invalidSessionTransport("Invalid workbook reference diagnostic."); }
+        else invalidSessionTransport("Invalid workbook reference kind.");
+        if (current.revision !== expected.revision) throw new DocumentError("RevisionConflict", "Workbook reference source changed before completion.");
+        return freezeSessionValue(result as unknown as WorkbookReferenceResult);
+      },
       async readInput(sheetId: string, at: WorkbookCoordinate, candidate?: WorkbookSessionCandidate, execution?: WorkbookSessionExecution) {
         const coordinate = WorkbookCoordinateSchema.safeParse(at);
         if (!coordinate.success || typeof sheetId !== "string" || !sheetId || sheetId.length > 256) invalidSessionTransport("Invalid workbook input coordinate.");
@@ -185,9 +203,10 @@ export async function connectWorkbookSession(port: MessagePort, options: Workboo
       async undo() { return receipt(await request("undo", identity(), {}, true)); },
       async redo() { return receipt(await request("redo", identity(), {}, true)); },
       async find(query: WorkbookFindQuery, options: WorkbookSessionFindOptions = {}) {
-        if (!options || typeof options !== "object" || Array.isArray(options) || Object.keys(options).some(key => !["signal", "onProgress", "calculationContext", "locale"].includes(key))) invalidSessionTransport("Invalid workbook find options.");
-        const { calculationContext, locale, ...execution } = options;
-        const expected = identity(), { value } = await request("find", { ...expected, query, ...(calculationContext === undefined ? {} : { calculationContext }), ...(locale === undefined ? {} : { locale }) }, execution);
+        if (!options || typeof options !== "object" || Array.isArray(options) || Object.keys(options).some(key => !["signal", "onProgress", "calculationContext", "locale", "view"].includes(key))) invalidSessionTransport("Invalid workbook find options.");
+        const { calculationContext, locale, view, ...execution } = options, viewHandle = view === undefined ? undefined : viewHandles.get(view);
+        if (view !== undefined && (viewHandle === undefined || !views.has(view))) invalidSessionTransport("Workbook find requires this connection's retained view.");
+        const expected = identity(), { value } = await request("find", { ...expected, query, ...(calculationContext === undefined ? {} : { calculationContext }), ...(locale === undefined ? {} : { locale }), ...(viewHandle === undefined ? {} : { viewHandle }) }, execution);
         if (!record(value) || value.documentId !== expected.documentId || value.baseRevision !== expected.revision || current.revision !== expected.revision || !Array.isArray(value.matches) || !Array.isArray(value.diagnostics) || typeof value.complete !== "boolean") invalidSessionTransport("Invalid workbook find result.");
         return freezeSessionValue(value as unknown as WorkbookFindResult);
       },

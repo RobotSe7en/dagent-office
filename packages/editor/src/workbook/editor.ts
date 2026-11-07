@@ -13,10 +13,20 @@ import { findWorkbookText } from "./find.js";
 import { createWorkbookReplaceTransaction } from "./replace.js";
 import type { WorkbookFindMatch, WorkbookFindQuery, WorkbookFindResult, WorkbookReplaceOptions } from "./find-contracts.js";
 import { workbookInputTextView } from "./text-projection.js";
+import { mountWorkbookRemoteEditor } from "./editor-remote.js";
+import type { WorkbookRemoteEditorOptions, WorkbookRemoteEditorView } from "./editor-remote.js";
+import type { WorkbookSessionConnection } from "./session-transport.js";
 
-/** Direct small-document host integration. The host owns the sole session;
- * source cells, candidates and history remain behind its core boundary. */
-export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSession, options: WorkbookEditorOptions = {}): WorkbookEditorView {
+/** The host supplies its Worker connection or direct small-document session;
+ * source cells, candidates and history remain behind that core boundary. */
+export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSessionConnection, options?: WorkbookRemoteEditorOptions): WorkbookRemoteEditorView;
+export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSession, options?: WorkbookEditorOptions): WorkbookEditorView;
+export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSession | WorkbookSessionConnection, options: WorkbookEditorOptions = {}): WorkbookEditorView | WorkbookRemoteEditorView {
+  if (!session || typeof session !== "object") throw new DocumentError("InvalidOperation", "Workbook editing requires its owning session or authorized connection.");
+  if (!("kind" in session)) return mountWorkbookRemoteEditor(container, session, options);
+  return mountWorkbookDirectEditor(container, session, options);
+}
+function mountWorkbookDirectEditor(container: HTMLElement, session: WorkbookSession, options: WorkbookEditorOptions): WorkbookEditorView {
   const view = container?.ownerDocument?.defaultView;
   if (!view || !container.isConnected || session.kind !== "workbook") throw new DocumentError("InvalidOperation", "Workbook editing requires a connected container and its owning workbook session.");
   if (!options || typeof options !== "object" || Array.isArray(options) || Object.keys(options).some(key => !["title", "widthPt", "heightPt", "locale", "limits", "prepareOptions", "onError", "onSelectionChange"].includes(key))) throw new DocumentError("InvalidOperation", "Invalid workbook editor options.");

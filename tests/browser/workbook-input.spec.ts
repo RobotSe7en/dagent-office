@@ -64,6 +64,19 @@ test('Worker real IME retains a conflicting draft until explicit cancellation an
   await input.press('Escape'); await page.evaluate(() => window.workbookRemoteText.settled()); await expect(input).toHaveValue('external');
   await page.evaluate(() => window.workbookRemoteText.finish());
 });
+test('Worker typing while awaiting a real commit receipt preserves the next draft and delays navigation', async ({ page }) => {
+  await page.evaluate(() => window.workbookInput.dispose()); await page.addScriptTag({ content: remoteCode });
+  await page.evaluate(({ code, source }) => window.workbookRemoteText.mountRemoteText(code, source), { code: remoteWorker, source: remoteSource() });
+  const input = page.getByRole('textbox', { name: 'Worker 单元格输入', exact: true });
+  await input.fill('first'); await page.evaluate(() => window.workbookRemoteText.holdCommit()); await input.press('Enter');
+  await expect.poll(() => page.evaluate(() => window.workbookRemoteText.commitHeld())).toBe(true); await input.pressSequentially('tail');
+  expect(await page.evaluate(() => window.workbookRemoteText.inspect())).toMatchObject({ revision: 1, source: { text: 'first' }, input: { text: 'firsttail', dirty: true, applying: true }, navigation: [] });
+  await page.evaluate(() => window.workbookRemoteText.releaseCommit()); await page.evaluate(() => window.workbookRemoteText.settled());
+  expect(await page.evaluate(() => window.workbookRemoteText.inspect())).toMatchObject({ history: { undoSteps: 1 }, input: { text: 'firsttail', dirty: true, applying: false, selection: { baseRevision: 1 } }, navigation: [] });
+  await input.press('Enter'); await page.evaluate(() => window.workbookRemoteText.settled());
+  expect(await page.evaluate(() => window.workbookRemoteText.inspect())).toMatchObject({ revision: 2, source: { text: 'firsttail' }, history: { undoSteps: 2 }, input: { dirty: false }, navigation: ['down'], errors: [] });
+  await page.evaluate(() => window.workbookRemoteText.finish());
+});
 function editorSource(rtl = false, structure = true) {
   return encodeTestPackage(scalarWorkbook([{ row: 0, column: 0, value: { type: "number", value: 1 } }, { row: 0, column: 1, value: { type: "number", value: 999 }, formula: "=A1+1" }], metadata => {
     const sheet = metadata.workbook.sheets[0]!; sheet.rightToLeft = rtl; sheet.defaultRowHeightCustom = true;
