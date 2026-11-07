@@ -177,16 +177,19 @@ function plainCell(source: string): { attrs: Record<string, string>; text: strin
   return { attrs, text };
 }
 
+/** Shared inert parser for bounded source slices and rich-input extraction. */
+export function parseWorkbookCellElement(source: string): Element {
+  const context = defaultTreeAdapter.createElement("tr", htmlNamespace.NS.HTML, []);
+  const fragment = parseHtmlFragment(source, context, { maxFiles: 1, maxPackageBytes: 8 * 1024 * 1024, maxFileBytes: 8 * 1024 * 1024, maxNodes: 100_000, maxDepth: 16, maxCssNodes: 1 }, tags);
+  const [cell] = only(fragment, ["td"]); return cell!;
+}
 /** Only used on already validated, bounded cell slices. Canonical entity-free
- * plain cells need no second HTML parse; all other syntax uses the same inert
- * parser as before. Opening still validates every source chunk independently. */
+ * plain cells need no second HTML parse. Opening validates every source chunk. */
 export function decodeWorkbookCell(source: string): { value: WorkbookValue; formula?: WorkbookFormulaSource; text: string; cssClass?: string; formatId?: string } {
   let plain = plainCell(source);
   if (!plain) {
-    const context = defaultTreeAdapter.createElement("tr", htmlNamespace.NS.HTML, []);
-    const fragment = parseHtmlFragment(source, context, { maxFiles: 1, maxPackageBytes: 8 * 1024 * 1024, maxFileBytes: 8 * 1024 * 1024, maxNodes: 100_000, maxDepth: 16, maxCssNodes: 1 }, tags);
-    const [cell] = only(fragment, ["td"]);
-    plain = { attrs: Object.fromEntries(cell!.attrs.map(a => [a.name, a.value])), text: textContent(cell!) };
+    const cell = parseWorkbookCellElement(source);
+    plain = { attrs: Object.fromEntries(cell.attrs.map(a => [a.name, a.value])), text: textContent(cell) };
   }
   const { attrs, text } = plain;
   const type = attrs["data-value-type"], raw = attrs["data-value"];

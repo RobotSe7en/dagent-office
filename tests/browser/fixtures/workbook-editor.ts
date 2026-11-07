@@ -43,8 +43,15 @@ export function point(row: number, column: string): { x: number; y: number } {
   const x = headers.find(node => node.textContent === column)!.getBoundingClientRect(), y = headers.find(node => node.textContent === String(row + 1))!.getBoundingClientRect();
   return { x: x.x + x.width / 2, y: y.y + y.height / 2 };
 }
+export function cancelFillAtProgress(): void {
+  const root = editor.element.shadowRoot!, status = root.querySelector('[role="status"]')!;
+  const observer = new MutationObserver(() => {
+    if (!/正在填充 256 /.test(status.textContent!)) return; observer.disconnect();
+    [...root.querySelectorAll<HTMLButtonElement>(".tools button")].find(button => button.textContent === "取消操作")!.click();
+  }); observer.observe(status, { childList: true, subtree: true });
+}
 export function dispose(): { revision: number; usable: boolean } {
   editor.dispose(); const revision = session.snapshot().manifest.revision; external("host remains usable"); container.remove();
   return { revision, usable: session.getCell("sheet-1", 0, 0)?.value.type === "text" };
 }
-(window as unknown as { workbookEditor: unknown }).workbookEditor = { mount, settled, select, inspect, external, cell, paste, point, dispose };
+(window as unknown as { workbookEditor: unknown }).workbookEditor = { mount, settled, select, inspect, external, cell, paste, point, cancelFillAtProgress, dispose };

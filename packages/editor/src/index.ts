@@ -21,3 +21,5 @@ export { bindWorkbookTextInput } from "./workbook/text-binding.js";
 export type { WorkbookTextBinding, WorkbookTextBindingOptions, WorkbookNavigationDirection } from "./workbook/text-binding.js";
 export { mountWorkbookEditor } from "./workbook/editor.js";
 export type { WorkbookEditorOptions, WorkbookEditorView } from "./workbook/editor-contracts.js";
+export { createWorkbookFillTransaction } from "./workbook/fill.js";
+export type { WorkbookFillOptions } from "./workbook/fill.js";

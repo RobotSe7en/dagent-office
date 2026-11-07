@@ -75,6 +75,22 @@ test("mounted workbook TSV paste and rectangle clear use single cross-chunk hist
   await page.getByRole("button", { name: "撤销", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
   expect(await page.evaluate(() => window.workbookEditor.cell("sheet-1", 256, 31))).toMatchObject({ value: { type: "text", value: "中文😀禰󠄀" } });
 });
+test("mounted workbook fill shifts formulas, extends numeric seeds and cancels before source publication", async ({ page }) => {
+  await page.evaluate(() => window.workbookInput.dispose()); await page.addScriptTag({ content: editorCode }); await page.evaluate(entries => window.workbookEditor.mount(entries), editorSource(false, false));
+  await page.evaluate(() => window.workbookEditor.select(0, 0, 2, 1)); await page.getByRole("button", { name: "向下填充", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  expect(await page.evaluate(() => window.workbookEditor.cell("sheet-1", 2, 0))).toMatchObject({ value: { type: "number", value: 1 } });
+  expect(await page.evaluate(() => window.workbookEditor.cell("sheet-1", 2, 1))).toMatchObject({ formula: { expression: "=(A3+1)" } });
+  expect(await page.evaluate(() => window.workbookEditor.inspect())).toMatchObject({ history: { undoSteps: 1 }, errors: [] });
+  await page.getByRole("button", { name: "撤销", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  await page.evaluate(() => window.workbookEditor.select(0, 0, 4)); await page.getByRole("button", { name: "数列填充", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  expect(await page.evaluate(() => window.workbookEditor.cell("sheet-1", 4, 0))).toMatchObject({ value: { type: "number", value: 5 } });
+  await page.getByRole("button", { name: "撤销", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  await page.evaluate(() => window.workbookEditor.select(0, 0, 512)); await page.evaluate(() => window.workbookEditor.cancelFillAtProgress());
+  await page.getByRole("button", { name: "向下填充", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  expect(await page.evaluate(() => window.workbookEditor.inspect())).toMatchObject({ history: { undoSteps: 0 }, cleanSource: true, errors: [] });
+  expect(await page.evaluate(() => window.workbookEditor.cell("sheet-1", 256, 0))).toBeUndefined();
+  await expect(page.getByRole("button", { name: "取消操作", exact: true })).toBeDisabled();
+});
 test("mounted workbook real IME preserves a conflicting draft and disposal leaves its host session usable", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "CDP composition is Chromium-specific.");
   await page.evaluate(() => window.workbookInput.dispose()); await page.addScriptTag({ content: editorCode }); await page.evaluate(entries => window.workbookEditor.mount(entries), editorSource()); await page.evaluate(() => window.workbookEditor.select(0));

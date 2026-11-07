@@ -8,6 +8,7 @@ import { createWorkbookInputController } from "./input-controller.js";
 import { bindWorkbookTextInput } from "./text-binding.js";
 import { createWorkbookPasteTransaction } from "./text-input.js";
 import type { WorkbookTextInputMode } from "./text-input.js";
+import { createWorkbookFillTransaction } from "./fill.js";
 
 /** Direct small-document host integration. The host owns the sole session;
  * source cells, candidates and history remain behind its core boundary. */
@@ -18,7 +19,7 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
   const config = { ...options }, ui = createWorkbookEditorUi(container, config.title ?? "工作簿编辑"), input = createWorkbookInputController(session), events = new view.AbortController();
   let disposed = false, choosing = 0, refreshQueued = false, forceCalculation = false, latest: Promise<void> = Promise.resolve();
   let interaction: Promise<void> = Promise.resolve();
-  let revision = -1, generation = 0, calculationAbort: AbortController | undefined, preview: WorkbookPreview;
+  let revision = -1, generation = 0, calculationAbort: AbortController | undefined, commandAbort: AbortController | undefined, preview: WorkbookPreview;
   const buttons: { readonly button: HTMLButtonElement; readonly available: () => boolean }[] = [];
   function check(): void { if (disposed) throw new DocumentError("InvalidOperation", "This workbook editor has been disposed."); }
   function preparation(input?: TransactionPrepareOptions): TransactionPrepareOptions {
@@ -35,7 +36,8 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
   function controls(): void {
     if (disposed) return;
     for (const { button, available } of buttons) button.disabled = !available();
-    ui.mode.value = input.state().mode;
+    const state = input.state(); ui.mode.value = state.mode; ui.mode.disabled = Boolean(commandAbort) || state.composing || !state.selection;
+    ui.address.disabled = Boolean(commandAbort) || revision < 0;
   }
   function notify(): void { try { config.onSelectionChange?.(input.state().selection); } catch { /* Host-owned callback. */ } }
   function address(range: DeepReadonly<WorkbookRange>): string {
@@ -75,6 +77,7 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
   }
   function sourceSelection(selected: DocumentSelection | undefined): void {
     if (disposed || choosing) return;
+    commandAbort?.abort();
     try {
       if (!selected) {
         const previous = input.state().selection, sheetId = preview.layout().sheetId;
@@ -137,6 +140,36 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
     check(); if (pendingInput()) throw new DocumentError("InvalidOperation", "请先确认或取消当前单元格输入。");
     session[direction](); readCurrentSelection(); controls(); ui.error.hidden = true;
   }
+  async function fill(axis: "row" | "column", series = false): Promise<void> {
+    check(); if (pendingInput() || commandAbort) throw new DocumentError("InvalidOperation", "请先完成当前输入或操作。");
+    const selected = input.state().selection;
+    if (selected?.anchor.kind !== "cells") throw new DocumentError("InvalidOperation", "请先选择填充区域。");
+    const range = selected.anchor.ranges[0]!, count = range.to[axis] - range.from[axis] + 1;
+    if (series && range.from.row !== range.to.row && range.from.column !== range.to.column) throw new DocumentError("InvalidOperation", "数列填充请选择单行或单列。");
+    if (count < 2) throw new DocumentError("InvalidOperation", axis === "row" ? "向下填充需要至少两行。" : "向右填充需要至少两列。");
+    const model = captureWorkbookModel(session), manifest = model.snapshot().manifest, sheetId = selected.anchor.sheetId;
+    if (selected.documentId !== manifest.documentId || selected.baseRevision !== manifest.revision) throw new DocumentError("RevisionConflict", "Fill selection belongs to a previous source.");
+    let seeds = 1;
+    if (series) {
+      const next = { ...range.from, [axis]: range.from[axis] + 1 }, value = model.getCell(sheetId, next.row, next.column);
+      if (value?.formula || value && value.value.type !== "number" && value.value.type !== "blank") throw new DocumentError("InvalidOperation", "数列填充的种子必须是数字或空白。");
+      if (value?.value.type === "number") seeds = 2;
+    }
+    const source = { from: { ...range.from }, to: { ...range.to, [axis]: range.from[axis] + seeds - 1 } };
+    const target = { from: { ...range.from, [axis]: range.from[axis] + seeds }, to: { ...range.to } };
+    if (target.from[axis] > target.to[axis]) return;
+    const abort = new view!.AbortController(); commandAbort = abort; ui.input.disabled = true; controls(); ui.error.hidden = true;
+    try {
+      const transaction = await createWorkbookFillTransaction(session, sheetId, source, target, { mode: series ? "series" : "copy", axis, signal: abort.signal,
+        yield: () => new Promise<void>(resolve => setTimeout(resolve, 0)), onProgress: progress => { if (!disposed) ui.status.textContent = `正在填充 ${progress.completed} / ${progress.total}`; } });
+      if (disposed || abort.signal.aborted) throw new DocumentError("OperationCancelled", "Workbook fill was cancelled.");
+      const receipt = session.commit(session.prepare(transaction, preparation())); readCurrentSelection();
+      if (!receipt.changed) ui.status.textContent = "选区没有变化。";
+    } catch (error) {
+      if (!(error instanceof DocumentError && error.code === "OperationCancelled" && abort.signal.aborted)) throw error;
+      if (!disposed) ui.status.textContent = "操作已取消。";
+    } finally { if (commandAbort === abort) commandAbort = undefined; if (!disposed) { ui.input.disabled = !input.state().selection; controls(); } }
+  }
   const binding = bindWorkbookTextInput(ui.input, input, {
     prepareOptions: () => preparation(),
     onApplied() { controls(); ui.error.hidden = true; }, onCancelled: cancelInput,
@@ -167,16 +200,21 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
       ...(config.heightPt === undefined ? {} : { heightPt: config.heightPt }), ...(config.locale === undefined ? {} : { locale: config.locale }),
       ...(config.limits === undefined ? {} : { limits: config.limits }), onError: error => report(new DocumentError(error.code, error.message, error.details)), onSelectionChange: sourceSelection });
   } catch (error) { binding.dispose(); input.dispose(); ui.element.remove(); throw error; }
-  const unsubscribe = session.subscribe(event => { if (event.type === "documentChanged" || event.type === "annotationChanged") void scheduleRefresh(); });
+  const unsubscribe = session.subscribe(event => { if (event.type === "documentChanged" || event.type === "annotationChanged") { commandAbort?.abort(); void scheduleRefresh(); } });
   const button = (label: string, action: () => unknown, available: () => boolean): void => {
     const button = ui.element.ownerDocument.createElement("button"); button.type = "button"; button.textContent = label;
     button.addEventListener("click", () => { try { action(); } catch (error) { report(error); } }, { signal: events.signal }); ui.tools.append(button); buttons.push({ button, available });
   };
-  button("确认输入", () => binding.apply(), () => Boolean(input.state().selection) && !input.state().composing);
-  button("取消输入", cancelInput, () => Boolean(input.state().selection));
-  button("撤销", () => history("undo"), () => !pendingInput() && session.history().undoSteps > 0);
-  button("重做", () => history("redo"), () => !pendingInput() && session.history().redoSteps > 0);
-  button("重新计算", () => { void scheduleRefresh(true).catch(() => {}); }, () => !pendingInput());
+  const idle = (): boolean => !commandAbort && !pendingInput();
+  button("确认输入", () => binding.apply(), () => !commandAbort && Boolean(input.state().selection) && !input.state().composing);
+  button("取消输入", cancelInput, () => !commandAbort && Boolean(input.state().selection));
+  button("撤销", () => history("undo"), () => idle() && session.history().undoSteps > 0);
+  button("重做", () => history("redo"), () => idle() && session.history().redoSteps > 0);
+  button("重新计算", () => { void scheduleRefresh(true).catch(() => {}); }, idle);
+  button("向下填充", () => { void runInteraction(() => fill("row")); }, idle);
+  button("向右填充", () => { void runInteraction(() => fill("column")); }, idle);
+  button("数列填充", () => { void runInteraction(() => { const anchor = input.state().selection?.anchor; return fill(anchor?.kind === "cells" && anchor.ranges[0]!.from.column === anchor.ranges[0]!.to.column ? "row" : "column", true); }); }, idle);
+  button("取消操作", () => commandAbort?.abort(), () => Boolean(commandAbort));
   for (const type of ["input", "compositionstart", "compositionend"]) ui.input.addEventListener(type, controls, { signal: events.signal });
   ui.mode.addEventListener("change", () => { try { input.setMode(ui.mode.value as WorkbookTextInputMode); controls(); } catch (error) { report(error); } }, { signal: events.signal });
   ui.address.addEventListener("keydown", event => {
@@ -191,6 +229,6 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
   return Object.freeze({ element: ui.element, ready, settled, selection() { check(); return input.state().selection; }, inputState() { check(); return input.state(); },
     selectRange: (sheetId: string, range: DeepReadonly<WorkbookRange>) => runInteraction(() => choose(sheetId, range)), focusInput(selectAll = true) { check(); binding.focus(selectAll); }, applyInput: binding.apply, cancelInput, perform,
     recalculate: async () => { await scheduleRefresh(true); return settled(); },
-    dispose() { if (disposed) return; disposed = true; ++generation; calculationAbort?.abort(); unsubscribe(); events.abort(); binding.dispose(); input.dispose(); preview.dispose(); ui.element.remove(); },
+    dispose() { if (disposed) return; disposed = true; ++generation; calculationAbort?.abort(); commandAbort?.abort(); unsubscribe(); events.abort(); binding.dispose(); input.dispose(); preview.dispose(); ui.element.remove(); },
   });
 }
