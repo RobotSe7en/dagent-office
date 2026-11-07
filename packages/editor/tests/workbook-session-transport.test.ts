@@ -48,6 +48,39 @@ test("remote no-op commits preserve redo and emit no core error", async () => {
   expect(s.history()).toEqual(before); expect(events).toEqual([]); expect((await client.redo()).changed).toBe(true);
 });
 
+test("Worker input preserves literal types, no-op revisions and failed source drafts", async () => {
+  const { s, client } = await pair(), at = { row: 256, column: 32 };
+  const input = (revision: number, text: string, mode?: "auto" | "text" | "number") => ({ kind: "input" as const, documentId: "worker-session", revision, sheetId, at, text, ...(mode ? { mode } : {}) });
+  await client.commit(await client.prepare(input(0, "12", "text"))); expect(s.getCell(sheetId, at.row, at.column)?.value).toEqual({ type: "text", value: "12" });
+  expect(await client.commit(await client.prepare(input(1, "'12")))).toMatchObject({ changed: false, revision: 1 });
+  await client.commit(await client.prepare(input(1, "12", "number"))); expect(s.getCell(sheetId, at.row, at.column)?.value).toEqual({ type: "number", value: 12 });
+  const before = s.serialize(); await expect(client.prepare(input(1, "old"))).rejects.toThrowError(expect.objectContaining({ code: "RevisionConflict" }));
+  await expect(client.prepare(input(2, "="))).rejects.toThrowError(expect.objectContaining({ code: "InvalidOperation" }));
+  expect(s.serialize()).toEqual(before); expect(client.state().history.undoSteps).toBe(2);
+});
+
+test("Worker text input retains rich spans, CRLF and variation sequences against its authoritative source", async () => {
+  const s = workbook(), at = { row: 0, column: 0 };
+  s.commit(s.prepare(transaction(s, [{ op: "setWorkbookCells", sheetId, cells: [{ ...at, source: { kind: "richText", html: '<span class="cell-default">ABC&#13;&#10;</span><span class="cell-default">中文禰󠄀</span>' } }] }])));
+  const original = s.getCell(sheetId, 0, 0)!, { client } = await pair(s), before = s.serialize();
+  const candidate = await client.prepare({ kind: "input", documentId: "worker-session", revision: 1, sheetId, at, text: original.text + "尾" });
+  expect(s.serialize()).toEqual(before); await client.commit(candidate);
+  expect(s.getCell(sheetId, 0, 0)?.html).toContain('<span class="cell-default">ABC&#13;\n</span><span class="cell-default">中文禰󠄀尾</span>');
+  await client.undo(); expect(s.getCell(sheetId, 0, 0)?.html).toBe(original.html);
+});
+
+test("Worker TSV paste crosses both chunk boundaries as one typed history step", async () => {
+  const { s, client } = await pair(), before = s.serialize();
+  const candidate = await client.prepare({ kind: "paste", documentId: "worker-session", revision: 0, sheetId, at: { row: 255, column: 31 }, text: '"甲\t乙"\tTRUE\n=1+1\t00123' });
+  expect(s.serialize()).toEqual(before); await client.commit(candidate);
+  expect(s.getCell(sheetId, 255, 31)?.value).toEqual({ type: "text", value: "甲\t乙" });
+  expect(s.getCell(sheetId, 255, 32)?.value).toEqual({ type: "boolean", value: true });
+  expect(s.getCell(sheetId, 256, 31)?.formula?.expression).toBe("=1+1"); expect(s.getCell(sheetId, 256, 32)?.value).toEqual({ type: "text", value: "00123" });
+  expect(s.history().undoSteps).toBe(1); await client.undo();
+  expect(s.snapshot().manifest.chunks).toEqual([]); expect([...s.serialize()].filter(([path]) => path.startsWith("sheets/"))).toEqual([]);
+  await client.redo(); expect(s.getCell(sheetId, 256, 31)?.formula?.expression).toBe("=1+1");
+});
+
 test.each(["fill", "cells"] as const)("cancelling at %s releases work without a source or history change", async phase => {
   const { s, client } = await pair(); s.commit(s.prepare(transaction(s, [number(0, 0, 1)]))); s.clearHistory();
   await vi.waitFor(() => expect(client.state().revision).toBe(1)); const before = s.serialize(), abort = new AbortController(), progress: WorkbookSessionProgress[] = [];

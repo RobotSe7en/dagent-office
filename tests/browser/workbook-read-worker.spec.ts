@@ -3,11 +3,15 @@ import { expect, test } from '@playwright/test';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
+import { createHash } from 'node:crypto';
 import type * as fixture from './fixtures/workbook-read-host.js';
 import type * as sessionFixture from './fixtures/workbook-session-host.js';
+import type * as performanceFixture from './fixtures/workbook-editing-performance.js';
 declare global { interface Window { workbookReadHost: typeof fixture } }
 declare global { interface Window { workbookSessionHost: typeof sessionFixture } }
+declare global { interface Window { workbookEditingPerformance: typeof performanceFixture } }
 let workerCode = '', hostCode = '', sessionWorkerCode = '', sessionHostCode = '';
+let performanceHostCode = '';
 test.beforeAll(async () => {
   async function bundle(name: string): Promise<string> {
     const result = await build({ configFile: false, build: { write: false, minify: false, lib: { entry: fileURLToPath(new URL(`./fixtures/${name}.ts`, import.meta.url)), formats: ['iife'], name: 'WorkbookReadProbe' } } });
@@ -17,6 +21,24 @@ test.beforeAll(async () => {
   }
   workerCode = await bundle('workbook-read-worker'); hostCode = await bundle('workbook-read-host');
   sessionWorkerCode = await bundle('workbook-session-worker'); sessionHostCode = await bundle('workbook-session-host');
+  performanceHostCode = await bundle('workbook-editing-performance');
+});
+
+test('100 ordinary edits and complete undo/redo retain bounded current previews on 200,000 actual cells', { tag: '@scale' }, async ({ page }, info) => {
+  test.setTimeout(360_000); await page.addScriptTag({ content: performanceHostCode });
+  const result = await page.evaluate(({ code, bytes }) => window.workbookEditingPerformance.ordinaryWorkerEdits(code, bytes), {
+    code: sessionWorkerCode, bytes: readFileSync('examples/xlsx/15-ten-thousand-rows.xlsx').toString('base64') });
+  const sha256 = (input: string | Uint8Array) => createHash('sha256').update(input).digest('hex');
+  const report = JSON.stringify({ ...result, sourceSha256: sha256(readFileSync('examples/xlsx/15-ten-thousand-rows.xlsx')),
+    workerBundleSha256: sha256(sessionWorkerCode), hostBundleSha256: sha256(performanceHostCode) }, null, 2); writeFileSync(info.outputPath('workbook-ordinary-editing.json'), report + '\n');
+  await info.attach('workbook-ordinary-editing.json', { body: report, contentType: 'application/json' });
+  expect(result.samples).toHaveLength(100); expect(result.maximumReadRow).toBeLessThan(1000);
+  expect(result).toMatchObject({ sameFrame: true, originalChunksRestored: true, restoredInput: '22', failures: [], fullHistory: { undoSteps: 100, redoSteps: 0 },
+    undoneHistory: { undoSteps: 0, redoSteps: 100 }, redoneHistory: { undoSteps: 100, redoSteps: 0 },
+    audit: { cells: 200_000, formulas: 20_000, sessionsCreated: 1, revision: 400, endpointDisposed: true, reopenedEqual: true, history: { undoSteps: 0, redoSteps: 100 } } });
+  expect(result.fullHistory.retainedBytes).toBeLessThan(512 * 1024 * 1024); expect(result.largestReplyUnits).toBeLessThan(2 * 1024 * 1024);
+  // Record the complete edit→calculation→preview distribution. A non-pinned
+  // host must not silently certify the 4-CPU/8-GiB stage's 500ms p95 gate.
 });
 test.beforeEach(async ({ page }) => { await openSdkHost(page); await page.addScriptTag({ content: hostCode }); });
 test('native XLSX pictures and charts stay in a host Worker and feed the public preview through bounded reads', async ({ page }) => {

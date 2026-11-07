@@ -6,10 +6,12 @@ import { resolveWorkbookReadTransportOptions } from "@doffi/render";
 import type { WorkbookFindQuery, WorkbookFindResult, WorkbookReplaceOptions } from "./find-contracts.js";
 import type { WorkbookRangeCopyOptions } from "./copy-range.js";
 import type { WorkbookFillOptions } from "./fill.js";
+import type { WorkbookPasteOptions, WorkbookTextInputMode } from "./text-input.js";
 
 export const WORKBOOK_SESSION_PROTOCOL = "doffi/workbook-session/1";
 export interface WorkbookSessionIdentity { readonly documentId: string; readonly revision: number }
 export interface WorkbookSessionState extends WorkbookSessionIdentity { readonly history: DocumentHistoryState }
+export interface WorkbookSessionInput extends WorkbookSessionIdentity { readonly sheetId: string; readonly at: WorkbookCoordinate; readonly text: string }
 /** JSON mapping, rather than a cloned runtime Map with mutable methods. */
 export interface WorkbookSessionMapping extends Omit<ChangeMapping, "nodes"> { readonly nodes: readonly (readonly [string, string | null])[] }
 export interface WorkbookSessionReceipt extends Omit<TransactionReceipt, "mapping"> { readonly mapping: WorkbookSessionMapping }
@@ -18,6 +20,8 @@ export interface WorkbookSessionCandidate extends Pick<WorkbookCandidateChange, 
 }
 export type WorkbookSessionCommand =
   | { readonly kind: "transaction"; readonly transaction: DocumentTransaction }
+  | (WorkbookSessionIdentity & { readonly kind: "input"; readonly sheetId: string; readonly at: WorkbookCoordinate; readonly text: string; readonly mode?: WorkbookTextInputMode })
+  | (WorkbookSessionIdentity & { readonly kind: "paste"; readonly sheetId: string; readonly at: WorkbookCoordinate; readonly text: string; readonly options?: WorkbookPasteOptions })
   | (WorkbookSessionIdentity & { readonly kind: "copy"; readonly sheetId: string; readonly source: WorkbookRange; readonly target: WorkbookCoordinate;
       readonly mode?: WorkbookRangeCopyOptions["mode"]; readonly skipBlanks?: boolean })
   | (WorkbookSessionIdentity & { readonly kind: "fill"; readonly sheetId: string; readonly source: WorkbookRange; readonly target: WorkbookRange;
@@ -54,6 +58,8 @@ export interface WorkbookSessionConnection {
   /** A view is immutable and belongs to its caller. It transfers metadata and
    * requested windows, never the package or a second editing session. */
   view(candidate?: WorkbookSessionCandidate, options?: WorkbookSessionViewOptions): Promise<WorkbookReadConnection>;
+  /** One bounded reversible input spelling, read inside the owning Worker. */
+  readInput(sheetId: string, at: WorkbookCoordinate, candidate?: WorkbookSessionCandidate, execution?: WorkbookSessionExecution): Promise<WorkbookSessionInput>;
   commit(candidate: WorkbookSessionCandidate): Promise<WorkbookSessionReceipt>;
   discard(candidate: WorkbookSessionCandidate): Promise<void>;
   undo(): Promise<WorkbookSessionReceipt>;

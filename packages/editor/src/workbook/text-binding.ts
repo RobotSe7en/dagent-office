@@ -1,6 +1,8 @@
 import { DocumentError } from "@doffi/core";
 import type { DocumentSelection, TransactionPrepareOptions, TransactionReceipt } from "@doffi/core";
 import type { WorkbookInputController } from "./input-controller.js";
+import type { WorkbookRemoteInputController } from "./remote-input.js";
+import type { WorkbookSessionReceipt } from "./session-transport.js";
 import { reconcileWorkbookInputText, workbookInputTextView } from "./text-projection.js";
 
 export type WorkbookNavigationDirection = "up" | "down" | "left" | "right";
@@ -21,10 +23,23 @@ export interface WorkbookTextBinding {
   apply(): TransactionReceipt | undefined;
   dispose(): void;
 }
+export interface WorkbookAsyncTextBindingOptions extends Omit<WorkbookTextBindingOptions, "onApplied"> { readonly onApplied?: (receipt: WorkbookSessionReceipt) => void }
+export interface WorkbookAsyncTextBinding extends Omit<WorkbookTextBinding, "apply"> { apply(): Promise<WorkbookSessionReceipt | undefined> }
+type InputDriver<Receipt> = Pick<WorkbookInputController, "state" | "setText" | "compositionStart" | "compositionEnd" | "cancel"> & { apply(options?: TransactionPrepareOptions): Receipt | Promise<Receipt> };
+type BindingOptions<Receipt> = Omit<WorkbookTextBindingOptions, "onApplied"> & { readonly onApplied?: (receipt: Receipt) => void };
+type InputBinding<Receipt> = Omit<WorkbookTextBinding, "apply"> & { apply(): Receipt | undefined | Promise<Receipt | undefined> };
 
 /** Binds a host-owned native input to transient text and core transactions.
  * The host owns navigation, clipboard transactions and document history. */
 export function bindWorkbookTextInput(input: HTMLTextAreaElement, controller: WorkbookInputController, options: WorkbookTextBindingOptions = {}): WorkbookTextBinding {
+  // This public signature supplies a synchronous driver. The private mode
+  // preserves the existing synchronous return contract.
+  return bindInput(input, controller, options, false) as WorkbookTextBinding;
+}
+export function bindWorkbookAsyncTextInput(input: HTMLTextAreaElement, controller: WorkbookRemoteInputController, options: WorkbookAsyncTextBindingOptions = {}): WorkbookAsyncTextBinding {
+  return bindInput(input, controller, options, true) as WorkbookAsyncTextBinding;
+}
+function bindInput<Receipt>(input: HTMLTextAreaElement, controller: InputDriver<Receipt>, options: BindingOptions<Receipt>, asynchronous: boolean): InputBinding<Receipt> {
   const view = input?.ownerDocument?.defaultView;
   if (!view || !(input instanceof view.HTMLTextAreaElement) || !input.isConnected) throw new DocumentError("InvalidOperation", "Workbook text binding requires a connected native textarea.");
   if (!options || typeof options !== "object" || Array.isArray(options)
@@ -45,11 +60,24 @@ export function bindWorkbookTextInput(input: HTMLTextAreaElement, controller: Wo
     const visible = workbookInputTextView(state.text); if (input.value !== visible) input.value = visible;
     if (!state.dirty && !state.composing) editing = false;
   }
-  function apply(): TransactionReceipt | undefined {
-    check(); let receipt: TransactionReceipt;
-    try { controller.setText(reconcileWorkbookInputText(controller.state().text, input.value)); receipt = controller.apply(options.prepareOptions?.()); refresh(); }
+  function complete(receipt: Receipt): Receipt {
+    if (!disposed) {
+      try { refresh(); } catch (error) { report(error); }
+      notify(options.onApplied, receipt);
+    }
+    return receipt;
+  }
+  function apply(): Receipt | undefined | Promise<Receipt | undefined> {
+    if (asynchronous) return (async () => {
+      check(); let receipt: Receipt;
+      try { controller.setText(reconcileWorkbookInputText(controller.state().text, input.value)); receipt = await controller.apply(options.prepareOptions?.()); }
+      catch (error) { if (!disposed) report(error); return; }
+      return complete(receipt);
+    })();
+    check(); let receipt: Receipt;
+    try { controller.setText(reconcileWorkbookInputText(controller.state().text, input.value)); receipt = controller.apply(options.prepareOptions?.()) as Receipt; }
     catch (error) { report(error); return; }
-    notify(options.onApplied, receipt); return receipt;
+    return complete(receipt);
   }
   input.addEventListener("input", () => {
     editing = true;
@@ -71,7 +99,7 @@ export function bindWorkbookTextInput(input: HTMLTextAreaElement, controller: Wo
     const state = controller.state();
     if (event.isComposing || event.keyCode === 229 || state.composing) return;
     const command = event.ctrlKey || event.metaKey, key = event.key.toLowerCase();
-    if (key === "escape") { event.preventDefault(); controller.cancel(); refresh(); input.select(); notify(options.onCancelled); return; }
+    if (key === "escape") { event.preventDefault(); try { controller.cancel(); refresh(); input.select(); notify(options.onCancelled); } catch (error) { report(error); } return; }
     if (key === "f2") { event.preventDefault(); editing = true; input.setSelectionRange(input.value.length, input.value.length); return; }
     if (key === "enter" && event.altKey && !command) {
       event.preventDefault();
@@ -83,8 +111,9 @@ export function bindWorkbookTextInput(input: HTMLTextAreaElement, controller: Wo
       return;
     }
     if ((key === "enter" && !event.altKey) || key === "tab") {
-      event.preventDefault(); if (!apply()) return;
-      if (!command) notify(options.onNavigate, key === "tab" ? event.shiftKey ? "left" : "right" : event.shiftKey ? "up" : "down", false);
+      event.preventDefault(); const result = apply(), direction = key === "tab" ? event.shiftKey ? "left" : "right" : event.shiftKey ? "up" : "down";
+      const navigate = (receipt: Receipt | undefined): void => { if (receipt && !disposed && !command) notify(options.onNavigate, direction, false); };
+      if (asynchronous) void Promise.resolve(result).then(navigate, report); else navigate(result as Receipt | undefined);
       return;
     }
     if (editing || state.dirty) return;

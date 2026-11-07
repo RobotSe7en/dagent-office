@@ -1,8 +1,8 @@
-import { captureWorkbookModel, DocumentError, parseContract, replaceWorkbookCellText } from "@doffi/core";
-import type { DocumentSelection, TransactionPrepareOptions, TransactionReceipt, WorkbookCellSource, WorkbookSession } from "@doffi/core";
-import { parseWorkbookTextInput } from "./text-input.js";
+import { captureWorkbookModel, DocumentError } from "@doffi/core";
+import type { DocumentSelection, TransactionPrepareOptions, TransactionReceipt, WorkbookSession } from "@doffi/core";
+import { createWorkbookInputTransaction, readWorkbookInputText } from "./input-source.js";
 import type { WorkbookTextInputMode } from "./text-input.js";
-import { workbookTextSplice } from "./text-projection.js";
+import { copyWorkbookInputSelection } from "./input-selection.js";
 
 export interface WorkbookInputState {
   readonly selection?: DocumentSelection;
@@ -33,13 +33,7 @@ export function createWorkbookInputController(session: WorkbookSession): Workboo
   function read(): void {
     if (!selection || selection.anchor.kind !== "cells") invalid("Workbook input requires a cell selection.");
     const at = selection.anchor.ranges[0]!.from, model = captureWorkbookModel(session), cell = model.getCell(selection.anchor.sheetId, at.row, at.column);
-    text = cell?.formula?.expression ?? (!cell || cell.value.type === "blank" ? "" : cell.value.type === "boolean" ? cell.value.value ? "TRUE" : "FALSE" : String(cell.value.value));
-    if (!cell?.formula && cell?.value.type === "text") {
-      let literal = false;
-      try { const parsed = parseWorkbookTextInput(text, at); literal = parsed.kind === "value" && parsed.value.type === "text" && parsed.value.value === text; }
-      catch { /* Text resembling an invalid formula still has a literal input representation. */ }
-      if (!literal) text = "'" + text;
-    }
+    text = readWorkbookInputText(cell);
     original = text;
     mode = "auto"; composing = false;
   }
@@ -52,16 +46,9 @@ export function createWorkbookInputController(session: WorkbookSession): Workboo
     state() { check(); return Object.freeze({ ...(selection ? { selection } : {}), text, mode, dirty: dirty(), composing }); },
     select(input: DocumentSelection) {
       check();
-      if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).some(key => !["documentId", "baseRevision", "anchor"].includes(key))) invalid("Invalid workbook input selection.");
-      if (!input.anchor || input.anchor.kind !== "cells" || !Array.isArray(input.anchor.ranges) || input.anchor.ranges.length !== 1) invalid("Text input requires one worksheet rectangle.");
-      const anchor = parseContract("anchor", input.anchor); if (anchor.kind !== "cells") invalid("Expected a cell selection.");
-      const range = anchor.ranges[0]!;
-      if (range.from.row > range.to.row || range.from.column > range.to.column) invalid("Workbook selection ranges must be ordered.");
       const model = captureWorkbookModel(session), manifest = model.snapshot().manifest;
-      if (input.documentId !== manifest.documentId || input.baseRevision !== manifest.revision) throw new DocumentError("RevisionConflict", "Input selection belongs to another workbook revision.");
-      if (!model.snapshot().metadata.workbook.sheets.some(sheet => sheet.sheetId === anchor.sheetId)) invalid("Input selection requires an existing worksheet.");
-      const next = Object.freeze({ documentId: input.documentId, baseRevision: input.baseRevision,
-        anchor: Object.freeze({ kind: "cells" as const, sheetId: anchor.sheetId, ranges: Object.freeze([Object.freeze({ from: Object.freeze({ ...range.from }), to: Object.freeze({ ...range.to }) })]) }) });
+      const next = copyWorkbookInputSelection(input, manifest);
+      if (!model.snapshot().metadata.workbook.sheets.some(sheet => sheet.sheetId === next.anchor.sheetId)) invalid("Input selection requires an existing worksheet.");
       if (JSON.stringify(selection) === JSON.stringify(next)) return;
       if (composing || dirty()) invalid("Finish or cancel the current cell input before changing its selection.");
       selection = next; read();
@@ -79,17 +66,7 @@ export function createWorkbookInputController(session: WorkbookSession): Workboo
       if (composing) invalid("An active composition must finish before a document transaction.");
       const at = selection.anchor.ranges[0]!.from, model = captureWorkbookModel(session), manifest = model.snapshot().manifest;
       if (selection.documentId !== manifest.documentId || selection.baseRevision !== manifest.revision) throw new DocumentError("RevisionConflict", "Input selection belongs to another workbook revision.");
-      let source: WorkbookCellSource | undefined;
-      if (dirty()) {
-        source = parseWorkbookTextInput(text, at, mode);
-        const cell = model.getCell(selection.anchor.sheetId, at.row, at.column);
-        if (source.kind === "value" && source.value.type === "text" && cell?.value.type === "text" && !cell.formula) {
-          const edit = workbookTextSplice(cell.text, source.value.value);
-          source = edit ? replaceWorkbookCellText(model, { sheetId: selection.anchor.sheetId, ...at }, [edit]) : undefined;
-        }
-      }
-      const candidate = session.prepare({ protocolVersion: 1, documentId: selection.documentId, baseRevision: selection.baseRevision,
-        operations: source ? [{ op: "setWorkbookCells", sheetId: selection.anchor.sheetId, cells: [{ ...at, source }] }] : [] }, options);
+      const candidate = session.prepare(createWorkbookInputTransaction(model, selection.anchor.sheetId, at, text, mode), options);
       const receipt = session.commit(candidate);
       selection = Object.freeze({ ...selection, baseRevision: receipt.revision }); read(); return receipt;
     },

@@ -7,9 +7,13 @@ import type * as editorFixture from "./fixtures/workbook-editor.js";
 import { scalarWorkbook } from "../../packages/core/tests/workbook-scalar-fixture.js";
 import { encodeTestPackage } from "./package-transport.js";
 import { createDocumentSession, openDocument } from "@doffi/core";
+import { writeDocumentZip } from "@doffi/office";
+import type * as remoteFixture from "./fixtures/workbook-remote-text-host.js";
 declare global { interface Window { workbookInput: typeof fixture } }
 declare global { interface Window { workbookEditor: typeof editorFixture } }
+declare global { interface Window { workbookRemoteText: typeof remoteFixture } }
 let code = "", editorCode = "";
+let remoteCode = "", remoteWorker = "";
 test.beforeAll(async () => {
   const result = await build({ configFile: false, logLevel: "silent", build: { write: false, target: "es2022", lib: { entry: fileURLToPath(new URL("./fixtures/workbook-input.ts", import.meta.url)), formats: ["iife"], name: "WorkbookInput" } } });
   const output = Array.isArray(result) ? result.flatMap(part => part.output) : "output" in result ? result.output : [];
@@ -17,6 +21,48 @@ test.beforeAll(async () => {
   const editor = await build({ configFile: false, logLevel: "silent", build: { write: false, target: "es2022", lib: { entry: fileURLToPath(new URL("./fixtures/workbook-editor.ts", import.meta.url)), formats: ["iife"], name: "WorkbookEditorFixture" } } });
   const chunks = Array.isArray(editor) ? editor.flatMap(part => part.output) : "output" in editor ? editor.output : [];
   editorCode = chunks.flatMap(part => part.type === "chunk" ? [part.code] : []).join("\n");
+  for (const name of ['workbook-remote-text-host', 'workbook-session-worker']) {
+    const built = await build({ configFile: false, logLevel: 'silent', build: { write: false, target: 'es2022', lib: { entry: fileURLToPath(new URL(`./fixtures/${name}.ts`, import.meta.url)), formats: ['iife'], name: 'RemoteInputFixture' } } });
+    const parts = Array.isArray(built) ? built.flatMap(part => part.output) : 'output' in built ? built.output : [];
+    const value = parts.flatMap(part => part.type === 'chunk' ? [part.code] : []).join('\n');
+    if (name === 'workbook-session-worker') remoteWorker = value; else remoteCode = value;
+  }
+});
+function remoteSource() { return Buffer.from(writeDocumentZip(scalarWorkbook([{ row: 0, column: 0, value: { type: 'number', value: 1 } }]).serialize())).toString('base64'); }
+test('Worker native text input waits for its transaction before navigation and retains literal types and history', async ({ page }) => {
+  await page.evaluate(() => window.workbookInput.dispose()); await page.addScriptTag({ content: remoteCode });
+  await page.evaluate(({ code, source }) => window.workbookRemoteText.mountRemoteText(code, source), { code: remoteWorker, source: remoteSource() });
+  const input = page.getByRole('textbox', { name: 'Worker 单元格输入', exact: true });
+  await input.pressSequentially('00123'); expect(await page.evaluate(() => window.workbookRemoteText.inspect())).toMatchObject({ revision: 0, history: { undoSteps: 0 }, input: { dirty: true } });
+  await input.press('Enter'); await page.evaluate(() => window.workbookRemoteText.settled());
+  expect(await page.evaluate(() => window.workbookRemoteText.inspect())).toMatchObject({ revision: 1, history: { undoSteps: 1 }, source: { text: '00123' }, input: { dirty: false }, navigation: ['down'], errors: [] });
+  await page.evaluate(() => window.workbookRemoteText.undo()); await expect(input).toHaveValue('1');
+  await page.evaluate(() => window.workbookRemoteText.setMode('text')); await input.fill('12'); await input.press('Control+Enter'); await page.evaluate(() => window.workbookRemoteText.settled());
+  await expect(input).toHaveValue("'12"); expect(await page.evaluate(() => window.workbookRemoteText.inspect())).toMatchObject({ source: { text: "'12" }, errors: [] });
+  expect(await page.evaluate(() => window.workbookRemoteText.finish())).toMatchObject({ sessionsCreated: 1, endpointDisposed: true, hostUsable: { type: 'number', value: 42 } });
+});
+test('Worker native editing preserves original CRLF and variation sequences', async ({ page }) => {
+  await page.evaluate(() => window.workbookInput.dispose()); await page.addScriptTag({ content: remoteCode });
+  await page.evaluate(({ code, source }) => window.workbookRemoteText.mountRemoteText(code, source), { code: remoteWorker, source: remoteSource() });
+  await page.evaluate(() => window.workbookRemoteText.external('ABC\r\n中文禰󠄀'));
+  const input = page.getByRole('textbox', { name: 'Worker 单元格输入', exact: true }); await input.press('Control+End'); await input.pressSequentially('尾'); await input.press('Control+Enter');
+  await page.evaluate(() => window.workbookRemoteText.settled());
+  expect(await page.evaluate(() => window.workbookRemoteText.inspect())).toMatchObject({ source: { text: 'ABC\r\n中文禰󠄀尾' }, errors: [] });
+  await page.evaluate(() => window.workbookRemoteText.releaseBinding()); await input.fill('ignored'); await input.press('Enter');
+  expect(await page.evaluate(() => window.workbookRemoteText.hostStillUsable())).toBe(true);
+  expect(await page.evaluate(() => window.workbookRemoteText.finish())).toMatchObject({ sessionsCreated: 1, endpointDisposed: true });
+});
+test('Worker real IME retains a conflicting draft until explicit cancellation and reload', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'CDP composition is Chromium-specific.');
+  await page.evaluate(() => window.workbookInput.dispose()); await page.addScriptTag({ content: remoteCode });
+  await page.evaluate(({ code, source }) => window.workbookRemoteText.mountRemoteText(code, source), { code: remoteWorker, source: remoteSource() });
+  const input = page.getByRole('textbox', { name: 'Worker 单元格输入', exact: true }), cdp = await page.context().newCDPSession(page);
+  await cdp.send('Input.imeSetComposition', { text: '中文', selectionStart: 2, selectionEnd: 2 });
+  await page.evaluate(() => window.workbookRemoteText.external('external'));
+  await cdp.send('Input.insertText', { text: '中文😀' }); await input.press('Enter'); await page.evaluate(() => window.workbookRemoteText.settled());
+  expect(await page.evaluate(() => window.workbookRemoteText.inspect())).toMatchObject({ revision: 1, source: { text: 'external' }, input: { text: '中文😀', dirty: true, selection: { baseRevision: 0 } }, errors: [{ code: 'RevisionConflict' }], navigation: [] });
+  await input.press('Escape'); await page.evaluate(() => window.workbookRemoteText.settled()); await expect(input).toHaveValue('external');
+  await page.evaluate(() => window.workbookRemoteText.finish());
 });
 function editorSource(rtl = false, structure = true) {
   return encodeTestPackage(scalarWorkbook([{ row: 0, column: 0, value: { type: "number", value: 1 } }, { row: 0, column: 1, value: { type: "number", value: 999 }, formula: "=A1+1" }], metadata => {

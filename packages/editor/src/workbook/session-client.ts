@@ -1,9 +1,9 @@
-import { DocumentError, DocumentErrorDataSchema, WorkbookRangeSchema } from "@doffi/core";
-import type { TransactionPrepareOptions, WorkbookChangeImpact } from "@doffi/core";
+import { DocumentError, DocumentErrorDataSchema, WorkbookCoordinateSchema, WorkbookRangeSchema } from "@doffi/core";
+import type { TransactionPrepareOptions, WorkbookChangeImpact, WorkbookCoordinate } from "@doffi/core";
 import { connectWorkbookReads, linkWorkbookPreviewSource } from "@doffi/render";
 import type { WorkbookReadConnection } from "@doffi/render";
 import { checkSessionMessage, freezeSessionValue, invalidSessionTransport, keys, positiveId, record, sessionTransportConfig, WORKBOOK_SESSION_PROTOCOL } from "./session-transport.js";
-import type { WorkbookSessionCandidate, WorkbookSessionCommand, WorkbookSessionConnection, WorkbookSessionExecution, WorkbookSessionFindOptions, WorkbookSessionProgress, WorkbookSessionReceipt, WorkbookSessionState, WorkbookSessionTransportOptions, WorkbookSessionViewOptions } from "./session-transport.js";
+import type { WorkbookSessionCandidate, WorkbookSessionCommand, WorkbookSessionConnection, WorkbookSessionExecution, WorkbookSessionFindOptions, WorkbookSessionInput, WorkbookSessionProgress, WorkbookSessionReceipt, WorkbookSessionState, WorkbookSessionTransportOptions, WorkbookSessionViewOptions } from "./session-transport.js";
 import type { WorkbookFindQuery, WorkbookFindResult } from "./find-contracts.js";
 
 interface Reply { readonly value: unknown; readonly port?: MessagePort }
@@ -127,6 +127,18 @@ export async function connectWorkbookSession(port: MessagePort, options: Workboo
           || value.candidate.documentId !== current.documentId || !Number.isSafeInteger(value.candidate.baseRevision) || !Array.isArray(value.candidate.changes)
           || !Array.isArray(value.candidate.affectedNodeIds) || !record(value.candidate.mapping)) invalidSessionTransport("Invalid workbook candidate response.");
         const candidate = freezeSessionValue(value.candidate as unknown as WorkbookSessionCandidate); candidates.set(candidate, { handle: value.handle, consumed: false }); return candidate;
+      },
+      async readInput(sheetId: string, at: WorkbookCoordinate, candidate?: WorkbookSessionCandidate, execution?: WorkbookSessionExecution) {
+        const coordinate = WorkbookCoordinateSchema.safeParse(at);
+        if (!coordinate.success || typeof sheetId !== "string" || !sheetId || sheetId.length > 256) invalidSessionTransport("Invalid workbook input coordinate.");
+        const point = coordinate.data, expected = candidate ? { documentId: candidate.documentId, revision: candidate.baseRevision } : identity(), owned = candidate ? candidateRecord(candidate) : undefined;
+        const { value } = await request("inputText", { ...expected, sheetId, at: point, ...(owned ? { handle: owned.handle } : {}) }, execution);
+        if (!record(value) || !keys(value, ["documentId", "revision", "sheetId", "at", "text"]) || value.documentId !== expected.documentId || value.revision !== expected.revision
+          || value.sheetId !== sheetId || !record(value.at) || !keys(value.at, ["row", "column"]) || value.at.row !== point.row || value.at.column !== point.column
+          || typeof value.text !== "string" || value.text.length > 32768) invalidSessionTransport("Invalid workbook input result.");
+        for (const character of value.text) { const code = character.codePointAt(0)!; if (code === 0 || code >= 0xd800 && code <= 0xdfff) invalidSessionTransport("Workbook input returned malformed Unicode."); }
+        if (current.revision !== expected.revision || owned?.consumed) throw new DocumentError("RevisionConflict", "Workbook input source changed before it became available.");
+        return freezeSessionValue(value as unknown as WorkbookSessionInput);
       },
       async view(candidate?: WorkbookSessionCandidate, options: WorkbookSessionViewOptions = {}) {
         if (!options || typeof options !== "object" || Array.isArray(options) || Object.keys(options).some(key => !["signal", "onProgress", "calculate", "calculationContext", "previous"].includes(key))) invalidSessionTransport("Invalid workbook view options.");

@@ -15,10 +15,13 @@ export { mountPresentationWorkbench } from "./presentation-workbench.js";
 export type { PresentationWorkbenchOptions,PresentationWorkbenchView,PresentationWorkbenchEvent } from "./presentation-workbench.js";
 export { parseWorkbookTextInput, parseWorkbookTsv, createWorkbookPasteTransaction } from "./workbook/text-input.js";
 export type { WorkbookTextInputMode, WorkbookPasteOptions } from "./workbook/text-input.js";
+export { createWorkbookInputTransaction, readWorkbookInputText } from "./workbook/input-source.js";
 export { createWorkbookInputController } from "./workbook/input-controller.js";
 export type { WorkbookInputController, WorkbookInputState } from "./workbook/input-controller.js";
-export { bindWorkbookTextInput } from "./workbook/text-binding.js";
-export type { WorkbookTextBinding, WorkbookTextBindingOptions, WorkbookNavigationDirection } from "./workbook/text-binding.js";
+export { createWorkbookRemoteInputController } from "./workbook/remote-input.js";
+export type { WorkbookRemoteInputController, WorkbookRemoteInputState } from "./workbook/remote-input.js";
+export { bindWorkbookTextInput, bindWorkbookAsyncTextInput } from "./workbook/text-binding.js";
+export type { WorkbookTextBinding, WorkbookTextBindingOptions, WorkbookAsyncTextBinding, WorkbookAsyncTextBindingOptions, WorkbookNavigationDirection } from "./workbook/text-binding.js";
 export { mountWorkbookEditor } from "./workbook/editor.js";
 export type { WorkbookEditorOptions, WorkbookEditorView } from "./workbook/editor-contracts.js";
 export { createWorkbookFillTransaction } from "./workbook/fill.js";
@@ -30,5 +33,5 @@ export { createWorkbookRangeCopyTransaction } from "./workbook/copy-range.js";
 export type { WorkbookRangeCopyOptions } from "./workbook/copy-range.js";
 export { serveWorkbookSession } from "./workbook/session-server.js";
 export { connectWorkbookSession } from "./workbook/session-client.js";
-export type { WorkbookSessionIdentity, WorkbookSessionState, WorkbookSessionMapping, WorkbookSessionReceipt, WorkbookSessionCandidate, WorkbookSessionCommand, WorkbookSessionProgress,
+export type { WorkbookSessionIdentity, WorkbookSessionState, WorkbookSessionInput, WorkbookSessionMapping, WorkbookSessionReceipt, WorkbookSessionCandidate, WorkbookSessionCommand, WorkbookSessionProgress,
   WorkbookSessionExecution, WorkbookSessionViewOptions, WorkbookSessionFindOptions, WorkbookSessionTransportOptions, WorkbookSessionConnection, WorkbookSessionServer } from "./workbook/session-transport.js";

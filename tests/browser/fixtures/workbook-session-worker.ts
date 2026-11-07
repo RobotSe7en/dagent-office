@@ -1,10 +1,10 @@
 import { createDocumentSession, DocumentError, openDocument } from "@doffi/core";
 import type { WorkbookSession } from "@doffi/core";
-import { importXlsx } from "@doffi/office";
+import { importXlsx, readDocumentZip } from "@doffi/office";
 import { serveWorkbookSession } from "@doffi/editor";
 import type { WorkbookSessionServer } from "@doffi/editor";
 
-const scope = globalThis as unknown as { onmessage: ((event: MessageEvent<{ kind: string; documentId: string; bytes: Uint8Array; port: MessagePort }>) => void) | null; postMessage(value: unknown): void };
+const scope = globalThis as unknown as { onmessage: ((event: MessageEvent<{ kind: string; format?: "package"; documentId: string; bytes: Uint8Array; port: MessagePort }>) => void) | null; postMessage(value: unknown): void };
 let session: WorkbookSession | undefined, server: WorkbookSessionServer | undefined, opened = false, sessionsCreated = 0;
 scope.onmessage = event => {
   const request = event.data;
@@ -12,7 +12,7 @@ scope.onmessage = event => {
     try {
       if (request.kind === "open" && !opened) {
         opened = true;
-        const files = await importXlsx(request.bytes, { documentId: request.documentId, onProgress: progress => scope.postMessage({ kind: "progress", progress }) });
+        const files = request.format === "package" ? readDocumentZip(request.bytes) : await importXlsx(request.bytes, { documentId: request.documentId, onProgress: progress => scope.postMessage({ kind: "progress", progress }) });
         session = createDocumentSession(openDocument(files, { kind: "workbook" }), { sessionLimits: {
           maxCandidateBytes: 512 * 1024 * 1024, maxTransactionBytes: 512 * 1024 * 1024, maxHistoryBytes: 512 * 1024 * 1024 } }); sessionsCreated++;
         server = serveWorkbookSession(request.port, session); return;

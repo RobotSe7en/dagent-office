@@ -1,4 +1,4 @@
-import { captureWorkbookModel, copyWorkbookScalarContext, createWorkbookCalculator, DocumentError, readWorkbookChangeImpact } from "@doffi/core";
+import { captureWorkbookModel, copyWorkbookScalarContext, createWorkbookCalculator, DocumentError, readWorkbookChangeImpact, WorkbookCoordinateSchema } from "@doffi/core";
 import type { WorkbookCandidateChange, WorkbookCalculationResult, WorkbookModel, WorkbookSession, TransactionPrepareOptions } from "@doffi/core";
 import { serveWorkbookReads } from "@doffi/render";
 import type { WorkbookReadServer } from "@doffi/render";
@@ -6,6 +6,9 @@ import { createWorkbookRangeCopyTransaction } from "./copy-range.js";
 import { createWorkbookFillTransaction } from "./fill.js";
 import { createWorkbookReplaceTransaction } from "./replace.js";
 import { findWorkbookText } from "./find.js";
+import { createWorkbookInputTransaction, readWorkbookInputText } from "./input-source.js";
+import { createWorkbookPasteTransaction } from "./text-input.js";
+import { createWorkbookTaskQueue } from "./task-queue.js";
 import { calculationOptions, checkSessionMessage, invalidSessionTransport, keys, positiveId, record, sessionMapping, sessionReceipt, sessionTransportConfig, WORKBOOK_SESSION_PROTOCOL } from "./session-transport.js";
 import type { WorkbookSessionCommand, WorkbookSessionProgress, WorkbookSessionServer, WorkbookSessionState, WorkbookSessionTransportOptions } from "./session-transport.js";
 import type { WorkbookFindQuery } from "./find-contracts.js";
@@ -42,7 +45,7 @@ export function serveWorkbookSession(port: MessagePort, session: WorkbookSession
     for (const id of [...candidates.keys()]) release(id);
     send({ event: "state", value: state() });
   });
-  const yieldTask = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+  const tasks = createWorkbookTaskQueue(), yieldTask = (): Promise<void> => tasks.yield();
   async function calculate(model: WorkbookModel, abort: AbortController, progress: (value: WorkbookSessionProgress) => void, preparation?: TransactionPrepareOptions, guard?: () => void): Promise<WorkbookCalculationResult> {
     const calculator = captureWorkbookModel(session) === model ? undefined : createWorkbookCalculator(model);
     progress({ phase: "calculation", completed: 0, total: 0 });
@@ -67,7 +70,13 @@ export function serveWorkbookSession(port: MessagePort, session: WorkbookSession
         transaction = command.transaction;
       } else {
         identity(command);
-        if (command.kind === "copy") {
+        if (command.kind === "input") {
+          if (!keys(payload.command, ["kind", "documentId", "revision", "sheetId", "at", "text", "mode"])) invalidSessionTransport("Invalid workbook input command.");
+          transaction = createWorkbookInputTransaction(base, command.sheetId, command.at, command.text, command.mode);
+        } else if (command.kind === "paste") {
+          if (!keys(payload.command, ["kind", "documentId", "revision", "sheetId", "at", "text", "options"])) invalidSessionTransport("Invalid workbook paste command.");
+          transaction = createWorkbookPasteTransaction(base.snapshot(), command.sheetId, command.at, command.text, command.options);
+        } else if (command.kind === "copy") {
           if (!keys(payload.command, ["kind", "documentId", "revision", "sheetId", "source", "target", "mode", "skipBlanks"])) invalidSessionTransport("Invalid workbook copy command.");
           const calculation = command.mode === "values" ? await calculate(base, abort, progress, preparation, guard) : undefined; guard();
           transaction = await createWorkbookRangeCopyTransaction(session, command.sheetId, command.source, command.target, { ...common,
@@ -112,6 +121,16 @@ export function serveWorkbookSession(port: MessagePort, session: WorkbookSession
     } else if (operation === "undo" || operation === "redo") {
       if (!keys(payload, ["documentId", "revision"])) invalidSessionTransport("Invalid workbook history request."); identity(payload);
       mutationResult(id, () => session[operation]());
+    } else if (operation === "inputText") {
+      if (!keys(payload, ["documentId", "revision", "sheetId", "at", "handle"])) invalidSessionTransport("Invalid workbook input read.");
+      const owned = payload.handle === undefined ? undefined : positiveId(payload.handle) ? candidates.get(payload.handle) : undefined;
+      if (payload.handle !== undefined && !owned) invalidSessionTransport("The input candidate is unavailable.");
+      if (!owned) identity(payload);
+      const model = owned?.candidate.model ?? captureWorkbookModel(session), snapshot = model.snapshot(), coordinate = WorkbookCoordinateSchema.safeParse(payload.at);
+      if (payload.documentId !== snapshot.manifest.documentId || payload.revision !== snapshot.manifest.revision) throw new DocumentError("RevisionConflict", "Workbook input belongs to another source revision.");
+      if (!coordinate.success || !snapshot.metadata.workbook.sheets.some(sheet => sheet.sheetId === payload.sheetId)) invalidSessionTransport("Workbook input requires an existing worksheet coordinate.");
+      const at = coordinate.data, sheetId = payload.sheetId as string;
+      post(id, { documentId: snapshot.manifest.documentId, revision: snapshot.manifest.revision, sheetId, at, text: readWorkbookInputText(model.getCell(sheetId, at.row, at.column)) });
     } else if (operation === "view") {
       if (!keys(payload, ["documentId", "revision", "handle", "calculate", "calculationContext", "previousView"]) || payload.calculate !== undefined && typeof payload.calculate !== "boolean") invalidSessionTransport("Invalid workbook view request.");
       const previous = payload.previousView === undefined ? undefined : positiveId(payload.previousView) ? viewRequests.get(payload.previousView) : undefined;
@@ -176,7 +195,7 @@ export function serveWorkbookSession(port: MessagePort, session: WorkbookSession
     } catch (reason) { error(id, reason); }
   }
   function dispose(): void {
-    if (disposed) return; disposed = true; unsubscribe();
+    if (disposed) return; disposed = true; unsubscribe(); tasks.dispose();
     for (const abort of pending.values()) abort.abort(); pending.clear();
     for (const handle of [...candidates.keys()]) release(handle);
     for (const view of views) view.dispose(); views.clear(); viewRequests.clear();
