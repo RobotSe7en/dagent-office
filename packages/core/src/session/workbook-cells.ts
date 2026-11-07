@@ -10,11 +10,14 @@ import { parseFormula } from "../workbook/formula.js";
 import { checkRange } from "../workbook/ranges.js";
 import { workbookSource } from "../workbook/source.js";
 
-export function escapeWorkbookText(value: string): string {
+function checkWorkbookUnicode(value: string): void {
   for (const character of value) {
     const point = character.codePointAt(0)!;
     if (point >= 0xd800 && point <= 0xdfff || point === 0) invalid("Workbook text must contain well-formed Unicode without null characters.");
   }
+}
+export function escapeWorkbookText(value: string): string {
+  checkWorkbookUnicode(value);
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/\r/g, "&#13;");
 }
 export function rangeContains(range: WorkbookRange, row: number, column: number): boolean {
@@ -23,7 +26,7 @@ export function rangeContains(range: WorkbookRange, row: number, column: number)
 export function rangesIntersect(a: WorkbookRange, b: WorkbookRange): boolean {
   return a.from.row <= b.to.row && a.to.row >= b.from.row && a.from.column <= b.to.column && a.to.column >= b.from.column;
 }
-interface EditedChunk { descriptor: WorkbookChunkDescriptor; cells: Map<number, string> }
+interface EditedChunk { descriptor: WorkbookChunkDescriptor; cells: Map<number, string>; pending: Set<number> }
 const coordinate = (row: number, column: number): number => row * 16_384 + column;
 
 /** A preparation owns only touched, bounded cell blocks. Other bytes stay shared. */
@@ -49,7 +52,7 @@ export class WorkbookCellEdit {
     }
     const index = this.originals.get(descriptor.path), cells = new Map<number, string>();
     for (const cell of index?.readWindow({ ...position, rows: CHUNK_ROWS, columns: CHUNK_COLUMNS }) ?? []) cells.set(coordinate(cell.row, cell.column), cell.html);
-    const result = { descriptor, cells }; this.chunks.set(key, result); return result;
+    const result = { descriptor, cells, pending: new Set<number>() }; this.chunks.set(key, result); return result;
   }
   get(sheetId: string, row: number, column: number): WorkbookCell | undefined {
     const chunk = this.chunks.get(this.key(sheetId, row, column));
@@ -72,6 +75,8 @@ export class WorkbookCellEdit {
   }
   removeSheet(sheetId: string): void {
     for (const descriptor of this.manifest.chunks.filter(chunk => chunk.sheetId === sheetId)) {
+      const edited = this.chunks.get(this.key(sheetId, descriptor.row, descriptor.column));
+      if (edited) for (const key of edited.pending) this.validatePending(edited, key);
       this.files.delete(descriptor.path); this.chunks.delete(this.key(sheetId, descriptor.row, descriptor.column));
     }
     this.manifest.chunks = this.manifest.chunks.filter(chunk => chunk.sheetId !== sheetId);
@@ -89,7 +94,7 @@ export class WorkbookCellEdit {
     if (input.source.kind === "formula") {
       parseFormula(input.source.expression, input);
       attrs["data-value-type"] = "blank"; attrs["data-formula"] = input.source.expression; attrs["data-cache-state"] = "stale"; html = "";
-    } else if (input.source.kind === "richText") { attrs["data-value-type"] = "text"; html = input.source.html; }
+    } else if (input.source.kind === "richText") { checkWorkbookUnicode(input.source.html); attrs["data-value-type"] = "text"; html = input.source.html; }
     else {
       const value = input.source.value; attrs["data-value-type"] = value.type;
       if (value.type !== "blank" && value.type !== "text") attrs["data-value"] = String(value.value);
@@ -130,12 +135,19 @@ export class WorkbookCellEdit {
     this.store(sheetId, input.row, input.column, source, previous.value.type === "blank" && !previous.formula && !cssClass && !formatId && root.childNodes.length === 0);
   }
   private store(sheetId: string, row: number, column: number, source: string, empty: boolean): void {
-    const chunk = this.chunk(sheetId, row, column);
-    // Validate even intermediate cells that a later operation would clear.
-    const probe = this.serialize(chunk.descriptor, new Map([[coordinate(row, column), source]]));
+    const chunk = this.chunk(sheetId, row, column), key = coordinate(row, column);
+    this.validatePending(chunk, key);
+    if (empty) chunk.cells.delete(key);
+    else { chunk.cells.set(key, source); chunk.pending.add(key); }
+  }
+  /** Final blocks are validated together by reopen. Inputs that disappear
+   * before that boundary still receive the same bounded single-cell check. */
+  private validatePending(chunk: EditedChunk, key: number): void {
+    if (!chunk.pending.has(key)) return;
+    const source = chunk.cells.get(key)!;
+    const probe = this.serialize(chunk.descriptor, new Map([[key, source]]));
     indexWorkbookChunk(probe, chunk.descriptor, this.limits.maxFileBytes, { maxNodes: this.limits.maxNodes, maxDepth: this.limits.maxDepth });
-    if (empty) chunk.cells.delete(coordinate(row, column));
-    else chunk.cells.set(coordinate(row, column), source);
+    chunk.pending.delete(key);
   }
   clear(sheetId: string, ranges: readonly WorkbookRange[], mode: "contents" | "all"): void {
     for (const range of ranges) checkRange(range);
@@ -145,7 +157,7 @@ export class WorkbookCellEdit {
       for (const key of [...chunk.cells.keys()]) {
         const row = Math.floor(key / 16_384), column = key % 16_384;
         if (!ranges.some(range => rangeContains(range, row, column))) continue;
-        if (mode === "all") chunk.cells.delete(key);
+        if (mode === "all") { this.validatePending(chunk, key); chunk.cells.delete(key); }
         else this.set(sheetId, { row, column, source: { kind: "value", value: { type: "blank" } } });
       }
     }

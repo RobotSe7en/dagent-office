@@ -26,3 +26,5 @@ export type { WorkbookFillOptions } from "./workbook/fill.js";
 export { findWorkbookText } from "./workbook/find.js";
 export { createWorkbookReplaceTransaction } from "./workbook/replace.js";
 export type { WorkbookFindQuery, WorkbookFindOptions, WorkbookFindProgress, WorkbookFindMatch, WorkbookFindDiagnostic, WorkbookFindResult, WorkbookReplaceOptions } from "./workbook/find-contracts.js";
+export { createWorkbookRangeCopyTransaction } from "./workbook/copy-range.js";
+export type { WorkbookRangeCopyOptions } from "./workbook/copy-range.js";

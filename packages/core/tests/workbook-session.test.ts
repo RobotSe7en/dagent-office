@@ -45,6 +45,24 @@ describe("workbook shared transaction and history boundary", () => {
     expect(() => s.commit(candidate)).toThrow(); s.discard(stale);
     expect(s.getCell(sheetId, 0, 0)?.value).toEqual({ type: "number", value: 1 });
   });
+  test("invalid intermediate rich input cannot disappear through overwrite, clear or worksheet deletion", () => {
+    for (const html of ['<span onclick="bad()">unsafe</span>', '<script>unsafe</script>', "长".repeat(32768), "\ud800"]) for (const action of ["overwrite", "clear", "sheet"] as const) {
+      const s = session(); s.commit(prepare(s, [{ op: "insertWorkbookSheet", name: "Retained" }])); s.clearHistory(); const before = s.serialize();
+      const remove: DocumentOperation = action === "overwrite" ? number(0, 0, 7) : action === "sheet" ? { op: "removeWorkbookSheet", sheetId }
+        : { op: "clearWorkbookRanges", sheetId, ranges: [{ from: { row: 0, column: 0 }, to: { row: 0, column: 0 } }], mode: "all" };
+      expect(() => prepare(s, [{ op: "setWorkbookCells", sheetId, cells: [{ row: 0, column: 0, source: { kind: "richText", html } }] }, remove])).toThrow();
+      expect(s.serialize()).toEqual(before); expect(s.history().undoSteps).toBe(0); s.dispose();
+    }
+  });
+  test("removed rich input retains its node budget while temporary aggregate block size is checked on the final source", () => {
+    const s = session({ limits: { maxNodes: 40 } }), before = s.serialize();
+    expect(() => prepare(s, [{ op: "setWorkbookCells", sheetId, cells: [{ row: 0, column: 0, source: { kind: "richText", html: "<span>x</span>".repeat(100) } }] },
+      { op: "clearWorkbookRanges", sheetId, ranges: [{ from: { row: 0, column: 0 }, to: { row: 0, column: 0 } }], mode: "all" }])).toThrowError(expect.objectContaining({ code: "ResourceLimitExceeded" }));
+    expect(s.serialize()).toEqual(before); expect(s.history().undoSteps).toBe(0);
+    const candidate = prepare(s, [{ op: "setWorkbookCells", sheetId, cells: Array.from({ length: 20 }, (_, column) => ({ row: 0, column, source: { kind: "value" as const, value: { type: "number" as const, value: column } } })) },
+      { op: "clearWorkbookRanges", sheetId, ranges: [{ from: { row: 0, column: 10 }, to: { row: 0, column: 19 } }], mode: "all" }]);
+    s.commit(candidate); expect(s.readWindow({ sheetId, row: 0, column: 0, rows: 1, columns: 20 })).toHaveLength(10); expect(s.history().undoSteps).toBe(1);
+  });
   test("no-op and reverted batches preserve revision, redo and events", () => {
     const s = session(); s.commit(prepare(s, [number(0, 0, 1)])); s.commit(prepare(s, [number(0, 0, 2)])); s.undo();
     const history = s.history(), revision = s.snapshot().manifest.revision, events: string[] = []; s.subscribe(event => events.push(event.type));
