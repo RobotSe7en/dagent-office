@@ -11,3 +11,6 @@ playwright-report/
 !.env.example
 fixtures/private/
 __pycache__/
+packages/*/LICENSE
+packages/*/NOTICE
+packages/*/COMMERCIAL-LICENSE.md

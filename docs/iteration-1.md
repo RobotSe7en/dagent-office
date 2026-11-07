@@ -58,7 +58,7 @@ SDK 提供文档预览和批注界面。宿主提供既有智能体入口、模�
 
 ### 工程基线
 
-采用 pnpm workspace、TypeScript strict、ESM 及类型声明。建立 `core`、`editor`、`office`、`node` 四个库模块和 Vite Playground。具体发布包名与第一方许可证在发布前确定。
+采用 pnpm workspace、TypeScript strict、ESM 及类型声明。建立 `core`、`editor`、`office`、`node` 四个库模块和 Vite Playground。包名现为 `@doffi/*`，第一方许可采用 AGPL-3.0-only 与另行商业授权，见[商业授权说明](../COMMERCIAL-LICENSE.md)。
 
 核心源码使用不包含 DOM 和 Node 专属能力的类型环境。编辑器主实现使用 DOM 组件；React 作为可选包装入口，复用相同界面并适配生命周期。Playground 验证 React 消费，另用最小普通 JS 宿主验证挂载入口。
 

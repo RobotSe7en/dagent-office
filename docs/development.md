@@ -15,7 +15,7 @@ pnpm dev
 
 Playground 通过公开入口打开 DOCX/文档包、选择文字／对象／区域、管理批注、缩放、撤销重做、下载当前会话的文档包及重开。开发宿主将公开合成样例作为静态资源提供；SDK 不自行访问样例目录。它使用 React 生命周期挂载同一 DOM 组件，SDK 的 `core`、`office` 和 `node` 不依赖 React；编辑器专用 React 包装通过可选 `@doffi/editor/react` 入口提供；普通 JS 入口不要求 React。
 
-项目名称为 `doffi`，内部 workspace 使用 `@doffi/core`、`@doffi/editor`、`@doffi/office`、`@doffi/render` 和 `@doffi/node`；Playground 为 `@doffi/playground`，Node CLI 为 `doffi`。版本均为 `0.0.0`，包均设为 `private`，许可证字段为 `UNLICENSED`；npm scope 归属、第一方许可证和正式发布仍按发布计划确认。
+项目名称为 `doffi`，内部 workspace 使用 `@doffi/core`、`@doffi/editor`、`@doffi/office`、`@doffi/render` 和 `@doffi/node`；Playground 为 `@doffi/playground`，Node CLI 为 `doffi`。版本均为 `0.0.0`，包均设为 `private`；公开许可字段为 `AGPL-3.0-only`，版权署名为 RobotSe7en，也可另行洽谈[商业授权](../COMMERCIAL-LICENSE.md)。npm scope 归属和正式发布仍按发布计划确认。
 
 运行时环境变量统一使用 `DOFFI_*` 前缀，验收使用 `DOFFI_SOURCE_HEAD` 和 `DOFFI_WORKBOOK_*`。Playground 转换路由为 `/__doffi/convert`，请求头为 `X-Doffi-Dev: 1`，浏览器渲染桥为 `window.__doffiRender`，显示设置使用 `doffi:layout`。
 
@@ -83,7 +83,9 @@ DOFFI_BROWSER_CHANNEL=chrome pnpm test:browser
 pnpm pack:packages
 ```
 
-五个 tarball 输出到 `.cache/packages`。pnpm 会把内部 `workspace:*` 依赖转换为包版本，`files` 仅包含构建目录；包的公开入口指向构建结果，不暴露 `src` 或 `dist` 内部路径。
+五个 tarball 输出到 `.cache/packages`。pnpm 会把内部 `workspace:*` 依赖转换为包版本，`files` 包含构建目录和许可声明；包的公开入口指向构建结果，不暴露 `src` 或 `dist` 内部路径。
+
+各库的 `prepack` 自动从仓库根目录复制 `LICENSE`、`NOTICE` 和 `COMMERCIAL-LICENSE.md`，三份文件随每个 tarball 分发；本地副本由 Git 忽略，根文件为唯一维护来源。`core` 和 `render` 另外保留既有 ECMA-376 许可。打包消费检查核对安装后的许可标识与文件实际内容。发布时还应按所选许可提供与发行物匹配的对应源码及构建材料。
 
 使用 `pack:packages` 避免与 pnpm 自带的 `pack` 命令混淆。此命令只生成本地文件，不发布包或推送仓库。
 

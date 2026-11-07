@@ -3,10 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-only",
   "description": "Document workbench with preview, annotations, request/proposal review and optional React integration",
   "files": [
-    "dist"
+    "dist",
+    "LICENSE",
+    "NOTICE",
+    "COMMERCIAL-LICENSE.md"
   ],
   "types": "./dist/index.d.ts",
   "exports": {
@@ -22,7 +25,8 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsc --build",
-    "dev": "tsc --watch --project tsconfig.json --preserveWatchOutput"
+    "dev": "tsc --watch --project tsconfig.json --preserveWatchOutput",
+    "prepack": "node ../../scripts/prepare-package-licenses.mjs"
   },
   "dependencies": {
     "@doffi/core": "workspace:*",

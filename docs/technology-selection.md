@@ -57,7 +57,7 @@
 | @types/node | 24.19.2 | Node 模块、工具及测试类型 | MIT |
 | @types/react、@types/react-dom | 19.3.0 | React 开发类型 | MIT |
 
-开发环境使用 Node.js 24，pnpm 固定为 10.28.2；全部解析版本见根锁文件。许可证信息来自已安装依赖的 manifest，不表示第一方许可证已经确定。
+开发环境使用 Node.js 24，pnpm 固定为 10.28.2；全部解析版本见根锁文件。上述第三方许可证来自已安装依赖的 manifest，与项目自有内容的 AGPL-3.0-only 及另行商业授权分别保留。
 
 TypeScript 暂用 6.0.3，以保留工程边界检查所需的编译器 API；7.0 尚未提供该程序化 API，待工具链适配后再评估升级。[TypeScript 官方说明](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/)
 
@@ -100,7 +100,7 @@ Office 转换路线已确定为自研 OOXML，不采用 docx、PptxGenJS、Excel
 
 第一轮的三格式模型设计、DOCX 读取验收、事务交互及独立 Word 闭环已完成，R1-15 达智验证延期。[第二轮 PPT](iteration-2.md)已按模型、独立样例、完整声明范围读取与只读验收、编辑和导出的顺序完成。PPT 延续 DOCX 自研路线，包含主题／母版编辑、两类批注及三类基础图表，不引入第三方富文本、幻灯片、图表编辑器或 Office 转换库。[第三轮 Excel](iteration-3.md)设计已固定，完整工作簿及自研计算尚未实现。ZIP 候选还须验证原始路径、重复项和有界展开，不能仅以库能成功打开文件作为通过标准。详细任务见[第一轮实施细则](iteration-1.md)。
 
-独立发布前确定本项目许可证，并提供依赖及字体许可清单。尚未确定第一方许可证，当前目录不代表已作出开源授权。
+本项目自有内容采用 AGPL-3.0-only 与另行商业授权的模式，版权署名为 RobotSe7en；见根 [LICENSE](../LICENSE)、[NOTICE](../NOTICE)及[商业授权说明](../COMMERCIAL-LICENSE.md)。第三方依赖、规范数据和字体保留原许可，商业授权不替换第三方条件。独立发布前核对依赖及字体许可清单和对应源码。
 
 ## ibisOffice 参考
 

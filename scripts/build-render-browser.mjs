@@ -2,7 +2,8 @@ import { fileURLToPath } from "node:url";
 import { build } from "vite";
 import { readFileSync } from "node:fs";
 
-const notice = readFileSync(new URL("../packages/core/ECMA-376-GEOMETRY-LICENSE.txt", import.meta.url), "utf8");
+const notice = ["../NOTICE", "../packages/core/ECMA-376-GEOMETRY-LICENSE.txt"]
+  .map(path => readFileSync(new URL(path, import.meta.url), "utf8")).join("\n");
 
 await build({ configFile: false, logLevel: "error", build: {
   emptyOutDir: false,

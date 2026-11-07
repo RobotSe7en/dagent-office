@@ -47,6 +47,7 @@
 
 ## Document and editing invariants
 
+- First-party code, documentation and examples use AGPL-3.0-only or a separate commercial agreement arranged through RobotSe7en. Root LICENSE, NOTICE and COMMERCIAL-LICENSE.md are canonical and ship in every SDK tarball through prepack. Preserve separate third-party/ECMA/font notices; an AGPL contribution alone does not grant commercial relicensing rights.
 - The product and npm workspace names are `doffi` and `@doffi/*`. The user chose a complete pre-publication rename without legacy-name compatibility: use `doffi` for the V1 format, contract Schema URNs and workbook Worker protocol identifier. Preserve independent native fixture bytes and historical acceptance evidence.
 - The persisted source is a versioned HTML document package. Runtime trees and editor DOMs must serialize to that same source without introducing competing authoritative copies.
 - Put human and AI edits through the same typed transaction boundary. Validate the complete batch before committing one new revision and one undo step.

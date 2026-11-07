@@ -1,0 +1,20 @@
+doffi
+Copyright (C) 2026 RobotSe7en
+
+Except for files or portions carrying separate third-party notices, the
+first-party code, documentation and examples are licensed under the GNU Affero
+General Public License, version 3 only (SPDX-License-Identifier: AGPL-3.0-only).
+The full, unmodified license text is included in LICENSE.
+License text: https://www.gnu.org/licenses/agpl-3.0.html
+
+RobotSe7en also offers a separate commercial licensing option for first-party material
+for which RobotSe7en has the necessary rights. Commercial rights are granted only by
+a separate written agreement; this notice does not itself grant those rights.
+See COMMERCIAL-LICENSE.md for details and contact information.
+
+Third-party dependencies, standard definition data and fonts retain their own
+copyright notices and license terms. Neither licensing option replaces those
+terms. The ECMA-376 notices shipped with core and render remain applicable.
+
+Source repository: https://github.com/RobotSe7en/doffi
+Public attribution and commercial contact: RobotSe7en (https://github.com/RobotSe7en)

@@ -130,7 +130,12 @@ test("packed packages load in Node and reject access to their internal files", (
   expect(cli.status, cli.stderr).toBe(0);
   expect(cli.stdout).toMatch(/^doffi: /);
   for (const module of modules) {
-    const manifest = JSON.parse(readFileSync(join(consumer, "node_modules/@doffi", module, "package.json"), "utf8"));
+    const directory = join(consumer, "node_modules/@doffi", module);
+    const manifest = JSON.parse(readFileSync(join(directory, "package.json"), "utf8"));
+    expect(manifest.license).toBe("AGPL-3.0-only");
+    for (const notice of ["LICENSE", "NOTICE", "COMMERCIAL-LICENSE.md"]) {
+      expect(readFileSync(join(directory, notice), "utf8")).toBe(readFileSync(join(repository, notice), "utf8"));
+    }
     for (const version of Object.values(manifest.dependencies ?? {})) {
       expect(version).not.toMatch(/^workspace:/);
     }
