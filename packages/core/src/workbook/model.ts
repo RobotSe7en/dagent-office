@@ -28,6 +28,13 @@ function readLimits(input: Partial<WorkbookReadLimits> = {}): WorkbookReadLimits
 /** Receives an isolated package copy. Indexed chunks take sole ownership of their
  * stored bytes; the remaining map retains only non-chunk package files. */
 export function openWorkbookModel(files: Map<string, Uint8Array>, manifest: WorkbookManifest, documentLimits: DocumentReadLimits, inputLimits?: Partial<WorkbookReadLimits>, previous?: WorkbookModel): WorkbookModel {
+  const steps = openWorkbookModelSteps(files, manifest, documentLimits, inputLimits, previous);
+  for (;;) { const next = steps.next(); if (next.done) return next.value ?? invalid("Workbook model loading did not complete."); }
+}
+
+/** Chunk checkpoints keep candidate validation private until the final model is
+ * registered. The synchronous reader consumes these exact same steps. */
+export function* openWorkbookModelSteps(files: Map<string, Uint8Array>, manifest: WorkbookManifest, documentLimits: DocumentReadLimits, inputLimits?: Partial<WorkbookReadLimits>, previous?: WorkbookModel): Generator<{ completed: number; total: number }, WorkbookModel | undefined> {
   const limits = readLimits(inputLimits), metadata = parseContract("document-metadata", readJson(files, manifest.metadata));
   if (!("workbook" in metadata)) invalid("Manifest kind and workbook metadata must match.");
   const annotations = parseContract("annotations", readJson(files, manifest.annotations));
@@ -58,6 +65,7 @@ export function openWorkbookModel(files: Map<string, Uint8Array>, manifest: Work
     cellCount += index.cellCount; formulaCount += index.formulaCount;
     checkLimit(cellCount, limits.maxCells); checkLimit(formulaCount, limits.maxFormulas);
     sheet.set(key, index); chunks.push({ path: chunk.path, index });
+    yield { completed: chunks.length, total: manifest.chunks.length };
   }
   const decodedCells = new WorkbookCellReadCache(Math.min(5000, limits.maxWindowCells));
   for (const sheet of metadata.workbook.sheets) for (const table of sheet.tables ?? []) if (table.header) {

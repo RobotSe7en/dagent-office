@@ -149,18 +149,23 @@ export class WorkbookCellEdit {
     indexWorkbookChunk(probe, chunk.descriptor, this.limits.maxFileBytes, { maxNodes: this.limits.maxNodes, maxDepth: this.limits.maxDepth });
     chunk.pending.delete(key);
   }
-  clear(sheetId: string, ranges: readonly WorkbookRange[], mode: "contents" | "all"): void {
+  *clearSteps(sheetId: string, ranges: readonly WorkbookRange[], mode: "contents" | "all"): Generator<{ completed: number; total: number }, void> {
     for (const range of ranges) checkRange(range);
-    for (const descriptor of [...this.manifest.chunks]) {
-      if (descriptor.sheetId !== sheetId || !ranges.some(range => rangesIntersect(range, { from: descriptor, to: { row: descriptor.row + CHUNK_ROWS - 1, column: descriptor.column + CHUNK_COLUMNS - 1 } }))) continue;
+    const descriptors = this.manifest.chunks.filter(descriptor => descriptor.sheetId === sheetId && ranges.some(range => rangesIntersect(range, { from: descriptor, to: { row: descriptor.row + CHUNK_ROWS - 1, column: descriptor.column + CHUNK_COLUMNS - 1 } })));
+    const total = descriptors.reduce((count, descriptor) => count + (this.chunks.get(this.key(sheetId, descriptor.row, descriptor.column))?.cells.size ?? this.originals.get(descriptor.path)?.cellCount ?? 0), 0);
+    let completed = 0;
+    for (const descriptor of descriptors) {
       const chunk = this.chunk(sheetId, descriptor.row, descriptor.column);
       for (const key of [...chunk.cells.keys()]) {
         const row = Math.floor(key / 16_384), column = key % 16_384;
-        if (!ranges.some(range => rangeContains(range, row, column))) continue;
-        if (mode === "all") { this.validatePending(chunk, key); chunk.cells.delete(key); }
-        else this.set(sheetId, { row, column, source: { kind: "value", value: { type: "blank" } } });
+        if (ranges.some(range => rangeContains(range, row, column))) {
+          if (mode === "all") { this.validatePending(chunk, key); chunk.cells.delete(key); }
+          else this.set(sheetId, { row, column, source: { kind: "value", value: { type: "blank" } } });
+        }
+        if (++completed % 256 === 0) yield { completed, total };
       }
     }
+    if (completed % 256 !== 0 || completed === 0) yield { completed, total };
   }
   private serialize(descriptor: WorkbookChunkDescriptor, cells: ReadonlyMap<number, string>): Uint8Array {
     let html = '<!doctype html><html><head></head><body><table data-sheet-id="' + escapeWorkbookText(descriptor.sheetId) + '" data-row="' + descriptor.row + '" data-column="' + descriptor.column + '"><tbody>';
@@ -173,16 +178,17 @@ export class WorkbookCellEdit {
     if (previous >= 0) html += "</tr>";
     const bytes = encode(html + "</tbody></table></body></html>"); checkLimit(bytes.byteLength, this.limits.maxFileBytes); return bytes;
   }
-  flush(): void {
+  *flushSteps(): Generator<{ completed: number; total: number }, void> {
+    let completed = 0; const total = this.chunks.size;
     for (const chunk of this.chunks.values()) {
-      if (!chunk.cells.size) { this.files.delete(chunk.descriptor.path); this.manifest.chunks = this.manifest.chunks.filter(item => item.path !== chunk.descriptor.path); continue; }
+      if (!chunk.cells.size) { this.files.delete(chunk.descriptor.path); this.manifest.chunks = this.manifest.chunks.filter(item => item.path !== chunk.descriptor.path); yield { completed: ++completed, total }; continue; }
       const bytes = this.serialize(chunk.descriptor, chunk.cells), previous = this.files.get(chunk.descriptor.path);
       // Preserve original bytes when the final cell set is unchanged, including source syntax.
       const original = this.originals.get(chunk.descriptor.path);
       const originalCells = original?.readWindow({ ...chunk.descriptor, rows: CHUNK_ROWS, columns: CHUNK_COLUMNS });
-      if (previous && originalCells?.length === chunk.cells.size && originalCells.every(cell => chunk.cells.get(coordinate(cell.row, cell.column)) === cell.html)) continue;
-      if (previous && decodeText(previous) === decodeText(bytes)) continue;
-      this.files.set(chunk.descriptor.path, bytes); chunk.descriptor.sha256 = assetDigest(bytes);
+      if (!(previous && originalCells?.length === chunk.cells.size && originalCells.every(cell => chunk.cells.get(coordinate(cell.row, cell.column)) === cell.html))
+        && !(previous && decodeText(previous) === decodeText(bytes))) { this.files.set(chunk.descriptor.path, bytes); chunk.descriptor.sha256 = assetDigest(bytes); }
+      yield { completed: ++completed, total };
     }
   }
 }

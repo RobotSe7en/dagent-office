@@ -69,6 +69,6 @@ export type {
   OpenDocumentOptions, TextOffsetMapping, TransactionReceipt, DocumentEditingSession,
   DocumentNodeChange, DocumentSessionLimits, DocumentSessionOptions, DocumentHistoryState,
   TransactionPrepareOptions,
-  WorkbookSession, WorkbookCandidateChange, WorkbookRangeChange, WorkbookStructureMapping,
+  WorkbookSession, WorkbookCandidateChange, WorkbookRangeChange, WorkbookStructureMapping, TransactionPreparationExecution, TransactionPreparationProgress,
   PresentationInteractionRequestInput,PresentationAnnotationSubmissionHandler,
 } from "./runtime.js";

@@ -1,12 +1,25 @@
 import type { ChangeMapping, DocumentNodeChange, WorkbookModel, WorkbookRangeChange } from "../runtime.js";
-import { freeze } from "../document/validation.js";
+import { freeze, invalid } from "../document/validation.js";
 import { readonlyMap } from "../session/changes.js";
 import { workbookSource } from "./source.js";
 import { CHUNK_COLUMNS, CHUNK_ROWS } from "./chunk-index.js";
 
-export function compareWorkbooks(before: WorkbookModel, after: WorkbookModel, mapping?: ChangeMapping) {
+interface WorkbookSourceDiff {
+  readonly changes: readonly DocumentNodeChange[];
+  readonly affectedNodeIds: readonly string[];
+  readonly affectedSheetIds: readonly string[];
+  readonly changedRanges: readonly WorkbookRangeChange[];
+  readonly changedAnnotationIds: readonly string[];
+  readonly mapping: ChangeMapping;
+}
+export function compareWorkbooks(before: WorkbookModel, after: WorkbookModel, mapping?: ChangeMapping): WorkbookSourceDiff {
+  const steps = compareWorkbookSteps(before, after, mapping);
+  for (;;) { const next = steps.next(); if (next.done) return next.value ?? invalid("Workbook comparison did not complete."); }
+}
+export function* compareWorkbookSteps(before: WorkbookModel, after: WorkbookModel, mapping?: ChangeMapping): Generator<{ completed: number; total: number }, WorkbookSourceDiff | undefined> {
   const previous = workbookSource(before)!, next = workbookSource(after)!, changedRanges: WorkbookRangeChange[] = [], sheets = new Set<string>();
   const descriptors = new Map([...before.snapshot().manifest.chunks, ...after.snapshot().manifest.chunks].map(chunk => [chunk.path, chunk]));
+  let completed = 0;
   for (const [path, descriptor] of descriptors) {
     if (previous.files.get(path) === next.files.get(path)) continue;
     const window = { ...descriptor, rows: CHUNK_ROWS, columns: CHUNK_COLUMNS };
@@ -20,6 +33,7 @@ export function compareWorkbooks(before: WorkbookModel, after: WorkbookModel, ma
       else changedRanges.push({ sheetId: descriptor.sheetId, range: { from: { row, column }, to: { row, column } } });
       sheets.add(descriptor.sheetId);
     }
+    yield { completed: ++completed, total: 0 };
   }
   const a = before.snapshot(), b = after.snapshot();
   for (const sheetId of new Set([...a.metadata.workbook.sheets, ...b.metadata.workbook.sheets].map(sheet => sheet.sheetId))) {

@@ -8,15 +8,18 @@ import { openDocument } from "../document-model.js";
 import { readManifest } from "../document/manifest.js";
 import { encode, validatePackage } from "../document/package.js";
 import { readLimits } from "../document/validation.js";
-import { openWorkbookModel } from "../workbook/model.js";
+import { openWorkbookModel, openWorkbookModelSteps } from "../workbook/model.js";
 import { createWorkbookCalculator } from "../workbook/calculation.js";
 import { copyWorkbookScalarContext } from "../workbook/scalar.js";
 import { workbookSource, registerWorkbookModelProvider } from "../workbook/source.js";
 import { createSessionLifecycle } from "./lifecycle.js";
-import { compareWorkbooks, retainedWorkbookBytes, sameWorkbookSource } from "../workbook/source-changes.js";
+import type { SessionPreparationControl, SessionPrepared } from "./lifecycle.js";
+import { finishWorkbookPreparation, finishWorkbookPreparationAsync } from "./workbook-preparation.js";
+import type { WorkbookPreparation } from "./workbook-preparation.js";
+import { compareWorkbooks, compareWorkbookSteps, retainedWorkbookBytes, sameWorkbookSource } from "../workbook/source-changes.js";
 import { WorkbookCellEdit } from "./workbook-cells.js";
 import { checkResourceUse, stageResourceFiles } from "./resources.js";
-import { validateWorkbookCandidate } from "./workbook-validation.js";
+import { validateWorkbookCandidateSteps } from "./workbook-validation.js";
 import { checkTransactionSize } from "./limits.js";
 import { WorkbookContentEdit } from "./workbook-content.js";
 import { editWorkbookSheet } from "./workbook-sheets.js";
@@ -43,14 +46,16 @@ export function createWorkbookSession(document: WorkbookModel, options: Document
     files.set("manifest.json", encode(JSON.stringify(manifest))); files.set(manifest.annotations, encode(JSON.stringify(annotations)));
     return reopen(model, files);
   }
-  function prepare(base: WorkbookModel, transaction: DocumentTransaction, allocate: () => string, resolvedIds?: readonly string[], preparation?: TransactionPrepareOptions) {
+  function* preparationSteps(base: WorkbookModel, transaction: DocumentTransaction, allocate: () => string, resolvedIds?: readonly string[], preparation?: TransactionPrepareOptions): WorkbookPreparation<SessionPrepared<WorkbookModel>> {
     if (preparation !== undefined && (!preparation || typeof preparation !== "object" || Array.isArray(preparation) || Object.keys(preparation).some(name => !["assets", "calculationContext", "validation"].includes(name)))) invalid("Invalid workbook preparation options.");
-    if (preparation?.calculationContext !== undefined) copyWorkbookScalarContext(preparation.calculationContext);
+    const context = preparation?.calculationContext === undefined ? undefined : copyWorkbookScalarContext(preparation.calculationContext);
     if (preparation?.validation !== undefined) {
       checkTransactionSize(preparation.validation, limits.maxFileBytes, limits.maxDepth);
       if (!preparation.validation || typeof preparation.validation !== "object" || Object.keys(preparation.validation).some(name => name !== "acceptedRuleIds")
         || !Array.isArray(preparation.validation.acceptedRuleIds) || preparation.validation.acceptedRuleIds.some(id => typeof id !== "string" || !id)) invalid("Invalid validation acknowledgment options.");
     }
+    const captured: TransactionPrepareOptions = { ...(context ? { calculationContext: context } : {}),
+      ...(preparation?.validation ? { validation: { acceptedRuleIds: [...preparation.validation.acceptedRuleIds] } } : {}) };
     const staged = stageResourceFiles(workbookSource(base)!.files, base.snapshot().manifest, preparation?.assets !== undefined ? { assets: preparation.assets } : undefined, limits);
     const parsed = parseContract("document-manifest", staged.manifest); if (parsed.kind !== "workbook") invalid("Expected a workbook manifest.");
     const manifest = parsed, files = new Map(staged.files), metadata = parseContract("document-metadata", base.snapshot().metadata);
@@ -87,18 +92,23 @@ export function createWorkbookSession(document: WorkbookModel, options: Document
       }
       annotations[index] = value;
     }
+    let operationCount = 0;
+    yield { kind: "progress", value: { phase: "operations", completed: 0, total: transaction.operations.length } };
     for (const operation of transaction.operations) {
-      if (!isWorkbookOperation(operation)) { annotation(operation as AnnotationOperation); continue; }
-      if (operation.op === "setWorkbookCells" || operation.op === "setWorkbookCellFormats") {
+      if (!isWorkbookOperation(operation)) annotation(operation as AnnotationOperation);
+      else if (operation.op === "setWorkbookCells" || operation.op === "setWorkbookCellFormats") {
         const sheet = workbook.sheets.find(item => item.sheetId === operation.sheetId) ?? invalid("An earlier operation removed the worksheet.");
         const seen = new Set<string>(), merges = new WorkbookRegionIndex(sheet.merges);
+        let completed = 0;
         for (const cell of operation.cells) {
           const key = cell.row + ":" + cell.column; if (seen.has(key)) invalid("A cell batch cannot repeat coordinates."); seen.add(key);
           const merge = merges.at(cell.row, cell.column);
           if (merge && (merge.from.row !== cell.row || merge.from.column !== cell.column)) invalid("Only the leading cell of a merged region can be edited.");
           if (operation.op === "setWorkbookCells" && "source" in cell) cells.set(operation.sheetId, cell);
           else cells.format(operation.sheetId, cell);
+          if (++completed % 256 === 0) yield { kind: "progress", value: { phase: "cells", completed, total: operation.cells.length } };
         }
+        if (completed % 256 !== 0) yield { kind: "progress", value: { phase: "cells", completed, total: operation.cells.length } };
       } else if (operation.op === "setWorkbookNumberFormat") {
         if ("code" in operation.format) compileNumberFormat(operation.format.code);
         const index = workbook.numberFormats.findIndex(format => format.formatId === operation.format.formatId);
@@ -109,10 +119,11 @@ export function createWorkbookSession(document: WorkbookModel, options: Document
         hyperlinkSheets.add(sheet.sheetId);
       } else if (operation.op === "clearWorkbookRanges") {
         if (!workbook.sheets.some(sheet => sheet.sheetId === operation.sheetId)) invalid("An earlier operation removed the worksheet.");
-        cells.clear(operation.sheetId, operation.ranges, operation.mode);
+        for (const value of cells.clearSteps(operation.sheetId, operation.ranges, operation.mode)) yield { kind: "progress", value: { phase: "cells", ...value } };
       }
       else if (operation.op === "setWorkbookSettings") Object.assign(workbook, operation.changes);
       else editWorkbookSheet(workbook, cells, richContent, annotations, operation, allocate, mapping);
+      yield { kind: "progress", value: { phase: "operations", completed: ++operationCount, total: transaction.operations.length } };
     }
     for (const sheet of workbook.sheets.filter(sheet => hyperlinkSheets.has(sheet.sheetId))) {
       const previous = base.snapshot().metadata.workbook.sheets.find(previous => previous.sheetId === sheet.sheetId);
@@ -122,15 +133,40 @@ export function createWorkbookSession(document: WorkbookModel, options: Document
       }
     }
     if (resolvedIds) for (const value of annotations) if (resolvedIds.includes(value.annotationId) && value.status === "open") value.status = "resolved";
-    cells.flush(); richContent.flush();
+    for (const value of cells.flushSteps()) yield { kind: "progress", value: { phase: "chunks", ...value } };
+    richContent.flush();
     files.set("manifest.json", encode(JSON.stringify(manifest))); files.set(manifest.metadata, encode(JSON.stringify(metadata)));
     files.set(manifest.annotations, encode(JSON.stringify(annotations)));
-    const next = reopen(base, files), content = workbookSource(next)!.content;
+    yield { kind: "progress", value: { phase: "validation", completed: 0, total: 0 } };
+    validatePackage(files, limits);
+    const loadedManifest = readManifest(files); if (loadedManifest.kind !== "workbook") invalid("Workbook transactions cannot change the document kind.");
+    const loader = openWorkbookModelSteps(files, loadedManifest, limits, options.workbookLimits, base);
+    let next: WorkbookModel;
+    try {
+      for (;;) {
+        const step = loader.next();
+        if (step.done) { next = step.value ?? invalid("Workbook loading did not complete."); break; }
+        yield { kind: "progress", value: { phase: "validation", ...step.value } };
+      }
+    } finally { loader.return(undefined); }
+    const content = workbookSource(next)!.content;
     if (staged.added.size) { if (!content || !manifest.content) invalid("New resources must be referenced by workbook content."); checkResourceUse(staged.added, content, manifest.content); }
-    validateWorkbookCandidate(base, next, compareWorkbooks(base, next).changedRanges, preparation);
-    return { state: next, mapping: { nodes: new Map<string, string | null>(), textEdits: [], workbook: mapping } };
+    const comparison = compareWorkbookSteps(base, next, { nodes: new Map<string, string | null>(), textEdits: [], workbook: mapping });
+    let diff: ReturnType<typeof compareWorkbooks>;
+    try {
+      for (;;) {
+        const step = comparison.next();
+        if (step.done) { diff = step.value ?? invalid("Workbook comparison did not complete."); break; }
+        yield { kind: "progress", value: { phase: "validation", ...step.value } };
+      }
+    } finally { comparison.return(undefined); }
+    yield* validateWorkbookCandidateSteps(base, next, diff.changedRanges, captured);
+    yield { kind: "progress", value: { phase: "validation", completed: 1, total: 1 } };
+    return { state: next, mapping: diff.mapping, diff };
   }
-  const boundary = createSessionLifecycle<WorkbookModel, WorkbookModel>(initial, { model: state => state, prepare, rebase, compare: compareWorkbooks,
+  const prepare = (base: WorkbookModel, transaction: DocumentTransaction, allocate: () => string, resolvedIds?: readonly string[], preparation?: TransactionPrepareOptions) => finishWorkbookPreparation(preparationSteps(base, transaction, allocate, resolvedIds, preparation));
+  const prepareAsync = (base: WorkbookModel, transaction: DocumentTransaction, allocate: () => string, resolvedIds: readonly string[] | undefined, preparation: TransactionPrepareOptions | undefined, control: SessionPreparationControl) => finishWorkbookPreparationAsync(preparationSteps(base, transaction, allocate, resolvedIds, preparation), control);
+  const boundary = createSessionLifecycle<WorkbookModel, WorkbookModel>(initial, { model: state => state, prepare, prepareAsync, rebase, compare: compareWorkbooks,
     same: sameWorkbookSource, retained: retainedWorkbookBytes, identities: model => workbookSource(model)?.content?.nodeIds() ?? [] }, options);
   const current = boundary.state;
   const calculator = createWorkbookCalculator(current, options.calculationLimits);
@@ -138,6 +174,7 @@ export function createWorkbookSession(document: WorkbookModel, options: Document
     getCell: (sheetId, row, column) => current().getCell(sheetId, row, column), readWindow: window => current().readWindow(window),
     getAsset: (path, maxBytes) => current().getAsset(path, maxBytes), resolveReference: (expression, origin) => current().resolveReference(expression, origin),
     serialize: () => current().serialize(), ...boundary.lifecycle,
+    prepareAsync: (transaction, preparation, execution) => boundary.prepareAsyncTransaction(transaction, undefined, preparation, execution),
     calculate: calculator.calculate, calculateSync: calculator.calculateSync,
     getCalculatedCell: (sheetId, row, column) => calculator.getCell({ sheetId, row, column }),
     dispose: () => { boundary.lifecycle.dispose(); calculator.dispose(); },

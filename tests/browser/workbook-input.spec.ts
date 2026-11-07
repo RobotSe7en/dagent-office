@@ -155,6 +155,12 @@ test("mounted workbook fill shifts formulas, extends numeric seeds and cancels b
   expect(await page.evaluate(() => window.workbookEditor.inspect())).toMatchObject({ history: { undoSteps: 0 }, cleanSource: true, errors: [] });
   expect(await page.evaluate(() => window.workbookEditor.cell("sheet-1", 256, 0))).toBeUndefined();
   await expect(page.getByRole("button", { name: "取消操作", exact: true })).toBeDisabled();
+  // Let command generation finish, then cancel while core is preparing source.
+  await page.evaluate(() => window.workbookEditor.cancelPreparationAtProgress());
+  await page.getByRole("button", { name: "向下填充", exact: true }).click(); await page.evaluate(() => window.workbookEditor.settled());
+  expect(await page.evaluate(() => window.workbookEditor.inspect())).toMatchObject({ history: { undoSteps: 0 }, errors: [] });
+  expect(await page.evaluate(() => window.workbookEditor.cell("sheet-1", 256, 0))).toBeUndefined();
+  await expect(page.getByRole("status", { name: "工作簿编辑状态", exact: true })).toContainText("操作已取消");
 });
 test("mounted rich cell input retains font spans and line endings, with explicit type conversion", async ({ page }) => {
   const files = new Map(scalarWorkbook([]).serialize());

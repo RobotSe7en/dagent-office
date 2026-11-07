@@ -77,9 +77,16 @@ export function cancelSearchAtProgress(): void {
     [...root.querySelectorAll<HTMLButtonElement>(".tools button")].find(button => button.textContent === "取消操作")!.click();
   }); observer.observe(status, { childList: true, subtree: true });
 }
+export function cancelPreparationAtProgress(): void {
+  const root = editor.element.shadowRoot!, status = root.querySelector('[role="status"]')!;
+  const observer = new MutationObserver(() => {
+    if (!/正在准备更改 · 256/.test(status.textContent!)) return; observer.disconnect();
+    [...root.querySelectorAll<HTMLButtonElement>(".tools button")].find(button => button.textContent === "取消操作")!.click();
+  }); observer.observe(status, { childList: true, subtree: true });
+}
 export function dispose(): { revision: number; usable: boolean } {
   observer?.disconnect(); for (const restore of restores.splice(0)) restore();
   editor.dispose(); const revision = session.snapshot().manifest.revision; external("host remains usable"); container.remove();
   return { revision, usable: session.getCell("sheet-1", 0, 0)?.value.type === "text" };
 }
-(window as unknown as { workbookEditor: unknown }).workbookEditor = { mount, mountObserved, displayedCell, settled, select, inspect, external, cell, paste, point, cancelFillAtProgress, cancelSearchAtProgress, dispose };
+(window as unknown as { workbookEditor: unknown }).workbookEditor = { mount, mountObserved, displayedCell, settled, select, inspect, external, cell, paste, point, cancelFillAtProgress, cancelSearchAtProgress, cancelPreparationAtProgress, dispose };

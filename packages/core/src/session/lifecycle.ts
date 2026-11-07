@@ -1,6 +1,6 @@
 import type { DocumentTransaction } from "../contracts/operations.js";
 import type { DocumentEvent } from "../contracts/events.js";
-import type { CandidateChange, ChangeMapping, DocumentModel, DocumentSessionOptions, SessionLifecycle, TransactionPrepareOptions, TransactionReceipt } from "../runtime.js";
+import type { CandidateChange, ChangeMapping, DocumentModel, DocumentSessionOptions, SessionLifecycle, TransactionPreparationExecution, TransactionPreparationProgress, TransactionPrepareOptions, TransactionReceipt } from "../runtime.js";
 import { DocumentError } from "../errors.js";
 import { checkLimit, freeze, readLimits } from "../document/validation.js";
 import { parseContract } from "../schema-registry.js";
@@ -8,9 +8,16 @@ import { checkTransactionSize, sessionLimits } from "./limits.js";
 import { invertWorkbookMapping } from "../workbook/range-mapping.js";
 
 export type SessionDiff = Pick<CandidateChange<DocumentModel>, "affectedNodeIds" | "affectedSlideIds" | "affectedSheetIds" | "changedRanges" | "changes" | "changedAnnotationIds" | "mapping">;
+export interface SessionPrepared<State> { readonly state: State; readonly mapping?: ChangeMapping; readonly diff?: SessionDiff }
+export interface SessionPreparationControl {
+  readonly signal?: { readonly aborted: boolean };
+  guard(): void;
+  checkpoint(progress: TransactionPreparationProgress): Promise<void>;
+}
 export interface SessionAdapter<State, Model extends DocumentModel> {
   model(state: State): Model;
-  prepare(base: State, transaction: DocumentTransaction, allocate: () => string, resolvedIds?: readonly string[], options?: TransactionPrepareOptions): { state: State; mapping?: ChangeMapping };
+  prepare(base: State, transaction: DocumentTransaction, allocate: () => string, resolvedIds?: readonly string[], options?: TransactionPrepareOptions): SessionPrepared<State>;
+  prepareAsync?(base: State, transaction: DocumentTransaction, allocate: () => string, resolvedIds: readonly string[] | undefined, options: TransactionPrepareOptions | undefined, control: SessionPreparationControl): Promise<SessionPrepared<State>>;
   rebase(state: State, revision: number): State;
   compare(before: State, after: State, mapping?: ChangeMapping): SessionDiff;
   same(before: State, after: State): boolean;
@@ -27,7 +34,7 @@ export function createSessionLifecycle<State, Model extends DocumentModel>(initi
   const active = new Map<Candidate, State>(), listeners = new Set<import("../runtime.js").DocumentEventListener>();
   let issued = new WeakMap<Candidate, { baseRevision: number; consumed: boolean }>();
   const reserved = new Set(adapter.identities(initial));
-  let sequence = 0, publishing = false;
+  let sequence = 0, publishing = false, preparing = 0;
   function invalid(message: string): never { throw new DocumentError("InvalidOperation", message); }
   function state(): State { if (current === undefined) invalid("This document session has been disposed."); return current; }
   function editable(): void { state(); if (publishing) invalid("A session cannot be changed while its events are being delivered."); }
@@ -74,7 +81,7 @@ export function createSessionLifecycle<State, Model extends DocumentModel>(initi
       ...(diff.affectedSlideIds ? { affectedSlideIds: [...diff.affectedSlideIds] } : {}), ...(diff.affectedSheetIds ? { affectedSheetIds: [...diff.affectedSheetIds] } : {}) });
     if (diff.changedAnnotationIds.length) emit({ ...identity, type: "annotationChanged", annotationIds: [...diff.changedAnnotationIds] }); return result;
   }
-  function prepareTransaction(input: DocumentTransaction, resolvedIds?: readonly string[], preparation?: TransactionPrepareOptions): Candidate {
+  function preparationInput(input: DocumentTransaction): { readonly transaction: DocumentTransaction; readonly base: State } {
     if (input && Array.isArray(input.operations)) {
       let count = input.operations.length;
       for (const operation of input.operations) { if (operation?.op === "reconcileFragment" && Array.isArray(operation.textEdits)) count += operation.textEdits.length; checkLimit(count, budgets.maxOperations); }
@@ -83,12 +90,54 @@ export function createSessionLifecycle<State, Model extends DocumentModel>(initi
     const transaction = parseContract("document-transaction", input), base = state(), snapshot = adapter.model(base).snapshot();
     if (transaction.documentId !== snapshot.manifest.documentId) invalid("The transaction belongs to another document.");
     if (transaction.baseRevision !== snapshot.manifest.revision) throw new DocumentError("RevisionConflict", "The transaction is based on a different document revision.");
-    checkLimit(active.size + 1, budgets.maxCandidates); reserve(snapshot.metadata); reserve(snapshot.annotations); reserve(transaction);
-    const prepared = adapter.prepare(base, transaction, allocate, resolvedIds, preparation), model = adapter.model(prepared.state);
+    checkLimit(active.size + preparing + 1, budgets.maxCandidates); reserve(snapshot.metadata); reserve(snapshot.annotations); reserve(transaction);
+    return { transaction, base };
+  }
+  function preparedCandidate(transaction: DocumentTransaction, base: State, prepared: SessionPrepared<State>): Candidate {
+    const model = adapter.model(prepared.state);
+    checkLimit(active.size + 1, budgets.maxCandidates);
     checkLimit(adapter.retained([...active.values(), prepared.state]), budgets.maxCandidateBytes);
     const candidate = freeze({ documentId: transaction.documentId, baseRevision: transaction.baseRevision,
-      preview: model.snapshot(), model, ...adapter.compare(base, prepared.state, prepared.mapping) }) as unknown as Candidate;
+      preview: model.snapshot(), model, ...(prepared.diff ?? adapter.compare(base, prepared.state, prepared.mapping)) }) as unknown as Candidate;
     issued.set(candidate, { baseRevision: transaction.baseRevision, consumed: false }); active.set(candidate, prepared.state); return candidate;
+  }
+  function prepareTransaction(input: DocumentTransaction, resolvedIds?: readonly string[], preparation?: TransactionPrepareOptions): Candidate {
+    const { transaction, base } = preparationInput(input);
+    return preparedCandidate(transaction, base, adapter.prepare(base, transaction, allocate, resolvedIds, preparation));
+  }
+  async function prepareAsyncTransaction(input: DocumentTransaction, resolvedIds?: readonly string[], preparation?: TransactionPrepareOptions, execution: TransactionPreparationExecution = {}): Promise<Candidate> {
+    editable(); let entered = false;
+    try {
+      if (!adapter.prepareAsync) invalid("This document format has no asynchronous preparation adapter.");
+      if (!execution || typeof execution !== "object" || Array.isArray(execution) || Object.keys(execution).some(key => !["signal", "yield", "onProgress"].includes(key))
+        || execution.signal !== undefined && (!execution.signal || typeof execution.signal.aborted !== "boolean")
+        || execution.yield !== undefined && typeof execution.yield !== "function" || execution.onProgress !== undefined && typeof execution.onProgress !== "function") invalid("Invalid transaction preparation execution options.");
+      const config = { ...execution };
+      if (config.signal?.aborted) throw new DocumentError("OperationCancelled", "Transaction preparation was cancelled.");
+      if (preparing) throw new DocumentError("ResourceLimitExceeded", "Another asynchronous preparation is already in progress for this session.");
+      // The structural parser captures the input before any host callback or
+      // checkpoint. No mutable caller transaction is retained across a yield.
+      const { transaction, base } = preparationInput(input); preparing++; entered = true;
+      const guard = (): void => {
+        if (current === undefined || config.signal?.aborted) throw new DocumentError("OperationCancelled", "Transaction preparation was cancelled or disposed.");
+        if (current !== base) throw new DocumentError("RevisionConflict", "The document changed while preparing the transaction.");
+      };
+      const control: SessionPreparationControl = { ...(config.signal ? { signal: config.signal } : {}), guard,
+        async checkpoint(progress) {
+          guard(); try { config.onProgress?.(freeze({ ...progress })); } catch { /* Host reporting cannot publish source. */ }
+          guard(); await config.yield?.(); guard();
+        } };
+      const prepared = await adapter.prepareAsync(base, transaction, allocate, resolvedIds, preparation, control);
+      guard(); return preparedCandidate(transaction, base, prepared);
+    } catch (error) {
+      const bounded = error instanceof DocumentError ? error.code === "InvalidDocument" ? new DocumentError("InvalidOperation", error.message) : error
+        : new DocumentError("InvalidOperation", "The document operation could not be prepared or committed.");
+      if (current !== undefined) {
+        const manifest = adapter.model(current).snapshot().manifest;
+        emit({ protocolVersion: 1, documentId: manifest.documentId, revision: manifest.revision, type: "error", error: bounded.toJSON() });
+      }
+      throw bounded;
+    } finally { if (entered) preparing--; }
   }
   const lifecycle: SessionLifecycle<Candidate> = {
     getAnnotations: () => adapter.model(state()).snapshot().annotations,
@@ -116,5 +165,5 @@ export function createSessionLifecycle<State, Model extends DocumentModel>(initi
     subscribe: listener => { state(); listeners.add(listener); return () => { listeners.delete(listener); }; },
     dispose: () => { if (current === undefined) return; editable(); current = undefined; undo = []; redo = []; active.clear(); issued = new WeakMap(); reserved.clear(); listeners.clear(); },
   };
-  return { lifecycle, state, execute, prepareTransaction };
+  return { lifecycle, state, execute, prepareTransaction, prepareAsyncTransaction };
 }

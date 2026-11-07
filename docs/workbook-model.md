@@ -211,6 +211,16 @@ pnpm probe:workbook-model
 
 公开入口的一万行[本地测量](evidence/workbook-model-baseline.json)覆盖 20 万实际单元格和 2 万公式：HTML 包打开约 1.9 秒，通过受限窗口扫描全部单元格约 9.0 秒，快照仅 7,215 字节，进程生涯峰值约 444 MiB。该记录没有宣称原生 XLSX、计算引擎或最终固定环境性能已通过。
 
+## 工作簿候选准备（R3-09 实施中）
+
+工作簿会话提供 `prepareAsync(transaction, options?, execution?)`，同步 `prepare` 与异步入口驱动相同的私有候选步骤，候选仍交由共享生命周期的 `commit`／`discard` 管理。异步入口不自动提交；成功准备不改变当前源、修订或历史。完整编辑阶段的剩余范围见[编辑计算交接](workbook-editing-handoff.md)。
+
+`execution` 可传 `signal`、`yield: () => Promise<void>` 和 `onProgress`。进度报告 `operations`／`cells`／`chunks`／`validation`／`calculation`、`completed` 与 `total`；未知总量用 `total: 0`，不同子阶段的计数不合成为整体百分比。单元格写入及稀疏清除按最多 256 个实际处理格让步，块生成、块校验及来源比较逐块让步，规则扫描和既有计算调度也有检查点。宿主为消息取消提供宏任务让步；core 不创建 Worker 或计时器。事务结构解析、授权资源复制和单个有界块的处理仍在对应检查点之间同步执行。
+
+调用者事务、计算时间／地区上下文、验证确认列表及新增资源在第一次让步前捕获。每个会话最多一项异步准备，正在准备的工作占一个候选名额；取消、失败或释放归还名额且不发布私有源。让步期间若其他操作提交了新源，准备以 `RevisionConflict` 失败；释放或取消以 `OperationCancelled` 失败。进度回调失败不影响文档结果。返回候选后宿主仍需在提交前检查自己的取消状态，取消时丢弃候选；已经提交的事务只能通过共同历史显式撤销。
+
+当前直连小型编辑器的填充及替换已接入异步准备；默认 Worker 唯一会话、完整结构操作、增量预览和固定资源大表编辑门槛仍未完成。
+
 ## 工作簿批注正文
 
 工作簿可选 `manifest.content` 指向同一包内的辅助 HTML，使用 `data-office-kind="workbook-content"` 根节点。它仅包含有界的富文本批注 story，不拼接单元格块，也不创建另一份工作表内容。`snapshot.content` 和 `getNode` 提供正文查询；每个元素有稳定身份，复用无脚本 HTML/CSS 校验。正文和回复各自拥有一个 story；孤立正文、重复归属、未知类名、未来修订和重叠锚点区域明确拒绝。元数据和批注记录共用累计条目限额。

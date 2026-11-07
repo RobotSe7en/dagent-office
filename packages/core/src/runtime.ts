@@ -215,6 +215,19 @@ export interface TransactionPrepareOptions {
    * rules cannot be bypassed by this list. */
   readonly validation?: { readonly acceptedRuleIds: readonly string[] };
 }
+export interface TransactionPreparationProgress {
+  readonly phase: "operations" | "cells" | "chunks" | "validation" | "calculation";
+  readonly completed: number;
+  /** Zero when this phase cannot know its final work count in advance. */
+  readonly total: number;
+}
+/** Hosts provide a macrotask checkpoint for message-based cancellation. Core
+ * owns neither the Worker nor its event loop. */
+export interface TransactionPreparationExecution {
+  readonly signal?: { readonly aborted: boolean };
+  readonly yield?: () => Promise<void>;
+  readonly onProgress?: (progress: TransactionPreparationProgress) => void;
+}
 
 /** Shared transaction and history boundary for editing views. */
 export interface SessionLifecycle<Candidate extends CandidateChange<DocumentModel>> {
@@ -232,6 +245,7 @@ export interface SessionLifecycle<Candidate extends CandidateChange<DocumentMode
 export interface DocumentEditingSession extends ContentDocumentModel, SessionLifecycle<CandidateChange> {}
 export type WorkbookCandidateChange = CandidateChange<WorkbookModel>;
 export interface WorkbookSession extends WorkbookModel, SessionLifecycle<WorkbookCandidateChange> {
+  prepareAsync(transaction: DocumentTransaction, options?: TransactionPrepareOptions, execution?: TransactionPreparationExecution): Promise<WorkbookCandidateChange>;
   calculate(options?: import("./workbook/calculation.js").WorkbookCalculationOptions): Promise<import("./workbook/calculation.js").WorkbookCalculationResult>;
   calculateSync(options?: Omit<import("./workbook/calculation.js").WorkbookCalculationOptions, "yield">): import("./workbook/calculation.js").WorkbookCalculationResult;
   getCalculatedCell(sheetId: string, row: number, column: number): import("./workbook/calculation.js").WorkbookCalculatedCell;

@@ -173,12 +173,24 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
       const transaction = await createWorkbookFillTransaction(session, sheetId, source, target, { mode: series ? "series" : "copy", axis, signal: abort.signal,
         yield: () => new Promise<void>(resolve => setTimeout(resolve, 0)), onProgress: progress => { if (!disposed) ui.status.textContent = `正在填充 ${progress.completed} / ${progress.total}`; } });
       if (disposed || abort.signal.aborted) throw new DocumentError("OperationCancelled", "Workbook fill was cancelled.");
-      const receipt = session.commit(session.prepare(transaction, preparation())); readCurrentSelection();
+      const receipt = await commitCommand(transaction, abort); readCurrentSelection();
       if (!receipt.changed) ui.status.textContent = "选区没有变化。";
     } catch (error) {
       if (!(error instanceof DocumentError && error.code === "OperationCancelled" && abort.signal.aborted)) throw error;
       if (!disposed) ui.status.textContent = "操作已取消。";
     } finally { if (commandAbort === abort) commandAbort = undefined; if (!disposed) { ui.input.disabled = !input.state().selection; controls(); } }
+  }
+  async function commitCommand(transaction: Parameters<WorkbookSession["prepare"]>[0], abort: AbortController): Promise<TransactionReceipt> {
+    const candidate = await session.prepareAsync(transaction, preparation(), { signal: abort.signal,
+      yield: () => new Promise<void>(resolve => setTimeout(resolve, 0)), onProgress: progress => {
+        if (!disposed) ui.status.textContent = `正在${progress.phase === "calculation" ? "计算" : progress.phase === "validation" ? "检查更改" : "准备更改"} · ${progress.completed}${progress.total ? ` / ${progress.total}` : ""}`;
+      } });
+    if (disposed || abort.signal.aborted) {
+      try { session.discard(candidate); } catch { /* A host-disposed session has already released its candidates. */ }
+      throw new DocumentError("OperationCancelled", "Workbook command was cancelled before publication.");
+    }
+    try { return session.commit(candidate); }
+    catch (error) { try { session.discard(candidate); } catch { /* A concurrent commit or disposal may already have released it. */ } throw error; }
   }
   function findQuery(): WorkbookFindQuery {
     const selected = input.state().selection, scope = ui.findScope.value, sheetId = preview.layout().sheetId;
@@ -220,7 +232,7 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
           ...(replace === "one" && previous ? { only: { documentId: previous.result.documentId, baseRevision: previous.result.baseRevision, match: previous.result.matches[previous.index]! } } : {}) });
         if (disposed || abort.signal.aborted) throw new DocumentError("OperationCancelled", "Workbook replacement was cancelled.");
         const count = transaction.operations.reduce((sum, operation) => sum + (operation.op === "setWorkbookCells" ? operation.cells.length : 0), 0);
-        const receipt = session.commit(session.prepare(transaction, preparation())); found = undefined;
+        const receipt = await commitCommand(transaction, abort); found = undefined;
         readCurrentSelection();
         await sourceSettled();
         if (!disposed) {
