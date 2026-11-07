@@ -38,4 +38,3 @@ export class WorkbookRegionIndex {
     return undefined;
   }
 }
-
