@@ -1,7 +1,7 @@
 import { captureWorkbookModel, DocumentError } from "@doffi/core";
 import type { DeepReadonly, DocumentOperation, DocumentSelection, TransactionPrepareOptions, TransactionReceipt, WorkbookRange, WorkbookSession } from "@doffi/core";
 import { createWorkbookPreviewSource, mountDocumentPreview } from "@doffi/render";
-import type { WorkbookPreview, WorkbookRenderReport } from "@doffi/render";
+import type { WorkbookPreview, WorkbookPreviewSource, WorkbookRenderReport } from "@doffi/render";
 import type { WorkbookEditorOptions, WorkbookEditorView } from "./editor-contracts.js";
 import { createWorkbookEditorUi } from "./editor-ui.js";
 import { createWorkbookInputController } from "./input-controller.js";
@@ -24,6 +24,7 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
   let disposed = false, choosing = 0, refreshQueued = false, forceCalculation = false, latest: Promise<void> = Promise.resolve();
   let interaction: Promise<void> = Promise.resolve();
   let revision = -1, generation = 0, calculationAbort: AbortController | undefined, commandAbort: AbortController | undefined, preview: WorkbookPreview;
+  let renderedSource: WorkbookPreviewSource | undefined;
   let found: { readonly key: string; readonly result: WorkbookFindResult; index: number } | undefined;
   let findSelectionScope: WorkbookFindQuery["scope"];
   const searchFields = [ui.find, ui.replacement, ui.findField, ui.findScope, ui.matchCase, ui.entireCell, ui.replacementMode];
@@ -110,8 +111,10 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
     const calculation = force || snapshot.metadata.workbook.calculationMode === "auto" ? await session.calculate({ signal: abort.signal,
       yield: () => new Promise<void>(resolve => setTimeout(resolve, 0)), ...(prepared.calculationContext ? { context: prepared.calculationContext } : {}) }) : undefined;
     if (disposed || ticket !== generation || abort.signal.aborted) return;
-    preview.update(createWorkbookPreviewSource(model, calculation)); await preview.settled();
+    const source = createWorkbookPreviewSource(model, calculation, renderedSource);
+    preview.update(source); await preview.settled();
     if (disposed || ticket !== generation) return;
+    renderedSource = source;
     revision = snapshot.manifest.revision;
     const state = input.state();
     if (!pendingInput()) {
@@ -245,10 +248,13 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
           const prepared = preparation(), calculation = query.field === "display" ? await session.calculate({ signal: abort.signal, yield: scan.yield, ...(prepared.calculationContext ? { context: prepared.calculationContext } : {}) }) : undefined;
           if (calculation) {
             if (disposed || abort.signal.aborted) throw new DocumentError("OperationCancelled", "Workbook search was cancelled.");
-            const model = captureWorkbookModel(session), anchor = input.state().selection?.anchor;
+            const model = captureWorkbookModel(session), anchor = input.state().selection?.anchor, ticket = ++generation;
+            const source = createWorkbookPreviewSource(model, calculation, renderedSource);
             choosing++;
             try {
-              preview.update(createWorkbookPreviewSource(model, calculation)); await preview.settled();
+              preview.update(source); await preview.settled();
+              if (disposed || abort.signal.aborted || ticket !== generation) throw new DocumentError("OperationCancelled", "Workbook display search was superseded.");
+              renderedSource = source;
               if (!disposed && !abort.signal.aborted && anchor?.kind === "cells" && preview.layout().sheetId === anchor.sheetId) await preview.selectRange(anchor.ranges[0]!, false);
             } finally { choosing--; }
           }
@@ -293,7 +299,8 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
     onError(error) { report(error); controls(); },
   });
   try {
-    preview = mountDocumentPreview(ui.preview, session, { title: "工作簿网格", retainSelection: true, ...(config.widthPt === undefined ? {} : { widthPt: config.widthPt }),
+    renderedSource = createWorkbookPreviewSource(session);
+    preview = mountDocumentPreview(ui.preview, renderedSource, { title: "工作簿网格", retainSelection: true, ...(config.widthPt === undefined ? {} : { widthPt: config.widthPt }),
       ...(config.heightPt === undefined ? {} : { heightPt: config.heightPt }), ...(config.locale === undefined ? {} : { locale: config.locale }),
       ...(config.limits === undefined ? {} : { limits: config.limits }), onError: error => report(new DocumentError(error.code, error.message, error.details)), onSelectionChange: sourceSelection });
   } catch (error) { binding.dispose(); input.dispose(); ui.element.remove(); throw error; }
@@ -338,7 +345,7 @@ export function mountWorkbookEditor(container: HTMLElement, session: WorkbookSes
   controls(); void scheduleRefresh(); const ready = sourceSettled().then(() => {}); void ready.catch(() => {});
   return Object.freeze({ element: ui.element, ready, settled, selection() { check(); return input.state().selection; }, inputState() { check(); return input.state(); },
     selectRange: (sheetId: string, range: DeepReadonly<WorkbookRange>) => runInteraction(() => choose(sheetId, range)), focusInput(selectAll = true) { check(); binding.focus(selectAll); }, applyInput: binding.apply, cancelInput, perform,
-    recalculate: async () => { await scheduleRefresh(true); return settled(); },
-    dispose() { if (disposed) return; disposed = true; ++generation; calculationAbort?.abort(); commandAbort?.abort(); unsubscribe(); events.abort(); binding.dispose(); input.dispose(); preview.dispose(); ui.element.remove(); },
+    recalculate: async () => { commandAbort?.abort(); await scheduleRefresh(true); return settled(); },
+    dispose() { if (disposed) return; disposed = true; ++generation; calculationAbort?.abort(); commandAbort?.abort(); unsubscribe(); events.abort(); binding.dispose(); input.dispose(); preview.dispose(); renderedSource = undefined; ui.element.remove(); },
   });
 }

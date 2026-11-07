@@ -1,4 +1,4 @@
-import { captureWorkbookModel, copyWorkbookScalarContext, createWorkbookCalculator, DocumentError } from "@doffi/core";
+import { captureWorkbookModel, copyWorkbookScalarContext, createWorkbookCalculator, DocumentError, readWorkbookChangeImpact } from "@doffi/core";
 import type { WorkbookCandidateChange, WorkbookCalculationResult, WorkbookModel, WorkbookSession, TransactionPrepareOptions } from "@doffi/core";
 import { serveWorkbookReads } from "@doffi/render";
 import type { WorkbookReadServer } from "@doffi/render";
@@ -14,7 +14,8 @@ import type { WorkbookFindQuery } from "./find-contracts.js";
  * Closing it releases its candidates/views, never the host session or Worker. */
 export function serveWorkbookSession(port: MessagePort, session: WorkbookSession, options: WorkbookSessionTransportOptions = {}): WorkbookSessionServer {
   if (session.kind !== "workbook") invalidSessionTransport("Workbook session endpoints require their owning core session.");
-  const config = sessionTransportConfig(options), pending = new Map<number, AbortController>(), jobs = new Map<number, Promise<void>>(), views = new Set<WorkbookReadServer>(), viewRequests = new Map<number, WorkbookReadServer>();
+  const config = sessionTransportConfig(options), pending = new Map<number, AbortController>(), jobs = new Map<number, Promise<void>>(), views = new Set<WorkbookReadServer>();
+  const viewRequests = new Map<number, { server: WorkbookReadServer; model: WorkbookModel; calculation?: WorkbookCalculationResult }>();
   const candidates = new Map<number, { candidate: WorkbookCandidateChange; requestId: number; views: Set<WorkbookReadServer>; preparation?: TransactionPrepareOptions }>();
   let disposed = false, highestId = 0, nextCandidate = 0, preparing = false;
   const state = (): WorkbookSessionState => { const manifest = session.snapshot().manifest; return { documentId: manifest.documentId, revision: manifest.revision, history: session.history() }; };
@@ -112,7 +113,9 @@ export function serveWorkbookSession(port: MessagePort, session: WorkbookSession
       if (!keys(payload, ["documentId", "revision"])) invalidSessionTransport("Invalid workbook history request."); identity(payload);
       mutationResult(id, () => session[operation]());
     } else if (operation === "view") {
-      if (!keys(payload, ["documentId", "revision", "handle", "calculate", "calculationContext"]) || payload.calculate !== undefined && typeof payload.calculate !== "boolean") invalidSessionTransport("Invalid workbook view request.");
+      if (!keys(payload, ["documentId", "revision", "handle", "calculate", "calculationContext", "previousView"]) || payload.calculate !== undefined && typeof payload.calculate !== "boolean") invalidSessionTransport("Invalid workbook view request.");
+      const previous = payload.previousView === undefined ? undefined : positiveId(payload.previousView) ? viewRequests.get(payload.previousView) : undefined;
+      if (payload.previousView !== undefined && (!previous || previous.server.disposed)) invalidSessionTransport("The previous workbook view is unavailable or belongs to another connection.");
       const owned = payload.handle === undefined ? undefined : positiveId(payload.handle) ? candidates.get(payload.handle) : undefined;
       if (payload.handle !== undefined && !owned) invalidSessionTransport("The preview candidate is unavailable.");
       if (!owned) identity(payload);
@@ -124,13 +127,20 @@ export function serveWorkbookSession(port: MessagePort, session: WorkbookSession
       if (abort.signal.aborted) throw new DocumentError("OperationCancelled", "Workbook view was cancelled.");
       if (owned ? candidates.get(payload.handle as number) !== owned : captureWorkbookModel(session) !== model) throw new DocumentError("RevisionConflict", "Workbook view source changed before completion.");
       for (const view of views) if (view.disposed) views.delete(view);
-      for (const [requestId, view] of viewRequests) if (view.disposed) viewRequests.delete(requestId);
+      for (const [requestId, view] of viewRequests) if (view.server.disposed) viewRequests.delete(requestId);
       if (views.size >= config.maxViews) throw new DocumentError("ResourceLimitExceeded", "Too many retained workbook views.");
+      const value: Record<string, unknown> = { documentId: model.snapshot().manifest.documentId, revision: model.snapshot().manifest.revision, viewHandle: id };
+      checkSessionMessage(value, config);
+      if (previous && !previous.server.disposed) {
+        const impact = readWorkbookChangeImpact(previous.model, model, previous.calculation, calculation);
+        try { checkSessionMessage({ ...value, impact }, config); value.impact = impact; }
+        catch (reason) { if (!(reason instanceof DocumentError) || reason.code !== "ResourceLimitExceeded") throw reason; }
+      }
       const channel = new MessageChannel(); let view: WorkbookReadServer;
       try { view = serveWorkbookReads(channel.port1, model, config.reads, calculation); }
       catch (reason) { channel.port1.close(); channel.port2.close(); throw reason; }
-      views.add(view); viewRequests.set(id, view); owned?.views.add(view);
-      send({ id, ok: true, value: { documentId: model.snapshot().manifest.documentId, revision: model.snapshot().manifest.revision }, port: channel.port2 }, [channel.port2]);
+      views.add(view); viewRequests.set(id, { server: view, model, ...(calculation ? { calculation } : {}) }); owned?.views.add(view);
+      send({ id, ok: true, value, port: channel.port2 }, [channel.port2]);
     } else if (operation === "find") {
       if (!keys(payload, ["documentId", "revision", "query", "calculationContext", "locale"])) invalidSessionTransport("Invalid workbook find request."); identity(payload);
       const model = captureWorkbookModel(session), query = payload.query as WorkbookFindQuery;
@@ -151,7 +161,7 @@ export function serveWorkbookSession(port: MessagePort, session: WorkbookSession
     const id = message.id;
     if (message.operation === "cancel" && keys(message, ["protocol", "id", "operation"])) {
       pending.get(id)?.abort(); for (const [handle, owned] of candidates) if (owned.requestId === id) release(handle);
-      const view = viewRequests.get(id); view?.dispose(); if (view) views.delete(view); viewRequests.delete(id);
+      const view = viewRequests.get(id)?.server; view?.dispose(); if (view) views.delete(view); viewRequests.delete(id);
       const work = jobs.get(id); if (work) void work.then(() => send({ id, event: "cancelled" })); else send({ id, event: "cancelled" }); return;
     }
     try {

@@ -1,4 +1,4 @@
-import type { DeepReadonly, DocumentErrorData, DocumentSelection, WorkbookModel, WorkbookRange, WorkbookSnapshot } from "@doffi/core";
+import type { DeepReadonly, DocumentErrorData, DocumentSelection, WorkbookChangeImpact, WorkbookModel, WorkbookRange, WorkbookSnapshot } from "@doffi/core";
 import type { FontResolution } from "../contracts.js";
 import type { WorkbookWindowSource } from "./window-source.js";
 import type { WorkbookAssetSource } from "./assets.js";
@@ -18,6 +18,9 @@ export interface WorkbookPreviewSource {
   readonly assets: WorkbookAssetSource;
   readonly charts: WorkbookChartSource;
   readonly rules?: WorkbookRuleSource;
+  /** Cell invalidation from this provider's authorized immutable sources and
+   * completed calculations. Metadata/style compatibility is checked separately. */
+  readonly impact?: WorkbookChangeImpact;
 }
 export type WorkbookPreviewInput = WorkbookModel | WorkbookPreviewSource;
 export interface WorkbookPreviewOptions {

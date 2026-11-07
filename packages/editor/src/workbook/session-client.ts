@@ -1,6 +1,6 @@
-import { DocumentError, DocumentErrorDataSchema } from "@doffi/core";
-import type { TransactionPrepareOptions } from "@doffi/core";
-import { connectWorkbookReads } from "@doffi/render";
+import { DocumentError, DocumentErrorDataSchema, WorkbookRangeSchema } from "@doffi/core";
+import type { TransactionPrepareOptions, WorkbookChangeImpact } from "@doffi/core";
+import { connectWorkbookReads, linkWorkbookPreviewSource } from "@doffi/render";
 import type { WorkbookReadConnection } from "@doffi/render";
 import { checkSessionMessage, freezeSessionValue, invalidSessionTransport, keys, positiveId, record, sessionTransportConfig, WORKBOOK_SESSION_PROTOCOL } from "./session-transport.js";
 import type { WorkbookSessionCandidate, WorkbookSessionCommand, WorkbookSessionConnection, WorkbookSessionExecution, WorkbookSessionFindOptions, WorkbookSessionProgress, WorkbookSessionReceipt, WorkbookSessionState, WorkbookSessionTransportOptions, WorkbookSessionViewOptions } from "./session-transport.js";
@@ -14,6 +14,7 @@ export async function connectWorkbookSession(port: MessagePort, options: Workboo
   const config = sessionTransportConfig(options), pending = new Map<number, Pending>(), listeners = new Set<(state: WorkbookSessionState) => void>(), views = new Set<WorkbookReadConnection>();
   let disposed = false, nextId = 0, current: WorkbookSessionState;
   const candidates = new WeakMap<WorkbookSessionCandidate, { handle: number; consumed: boolean }>();
+  const viewHandles = new WeakMap<WorkbookReadConnection, number>();
   function cancelled(message = "The workbook session operation was cancelled."): DocumentError { return new DocumentError("OperationCancelled", message); }
   function check(): void { if (disposed) invalidSessionTransport("This workbook session connection has been disposed."); }
   function closeTransferred(port: MessagePort | undefined): void { if (port) void connectWorkbookReads(port, config.reads, AbortSignal.abort()).catch(() => {}); }
@@ -128,17 +129,36 @@ export async function connectWorkbookSession(port: MessagePort, options: Workboo
         const candidate = freezeSessionValue(value.candidate as unknown as WorkbookSessionCandidate); candidates.set(candidate, { handle: value.handle, consumed: false }); return candidate;
       },
       async view(candidate?: WorkbookSessionCandidate, options: WorkbookSessionViewOptions = {}) {
-        if (!options || typeof options !== "object" || Array.isArray(options) || Object.keys(options).some(key => !["signal", "onProgress", "calculate", "calculationContext"].includes(key))) invalidSessionTransport("Invalid workbook view options.");
-        const { calculate, calculationContext, ...execution } = options;
+        if (!options || typeof options !== "object" || Array.isArray(options) || Object.keys(options).some(key => !["signal", "onProgress", "calculate", "calculationContext", "previous"].includes(key))) invalidSessionTransport("Invalid workbook view options.");
+        const { calculate, calculationContext, previous, ...execution } = options;
+        const previousView = previous === undefined ? undefined : viewHandles.get(previous);
+        if (previous !== undefined && (previousView === undefined || !views.has(previous))) invalidSessionTransport("The previous view must be retained by this workbook connection.");
         const expected = candidate ? { documentId: candidate.documentId, revision: candidate.baseRevision } : identity(), owned = candidate ? candidateRecord(candidate) : undefined;
         if (views.size >= config.maxViews) throw new DocumentError("ResourceLimitExceeded", "Too many retained workbook views.");
-        const reply = await request("view", { ...expected, ...(owned ? { handle: owned.handle } : {}), ...(calculate === undefined ? {} : { calculate }), ...(calculationContext === undefined ? {} : { calculationContext }) }, execution);
-        if (!reply.port || !record(reply.value) || reply.value.documentId !== expected.documentId || reply.value.revision !== expected.revision) { closeTransferred(reply.port); invalidSessionTransport("Invalid workbook view identity."); }
+        const reply = await request("view", { ...expected, ...(owned ? { handle: owned.handle } : {}), ...(calculate === undefined ? {} : { calculate }), ...(calculationContext === undefined ? {} : { calculationContext }), ...(previousView === undefined ? {} : { previousView }) }, execution);
+        if (!reply.port || !record(reply.value) || !keys(reply.value, ["documentId", "revision", "viewHandle", "impact"]) || !positiveId(reply.value.viewHandle)
+          || reply.value.documentId !== expected.documentId || reply.value.revision !== expected.revision) { closeTransferred(reply.port); invalidSessionTransport("Invalid workbook view identity."); }
+        let impact: WorkbookChangeImpact | undefined;
+        if (reply.value.impact !== undefined) {
+          const value = reply.value.impact;
+          if (!previous || !record(value) || !keys(value, ["documentId", "fromRevision", "revision", "sourceRanges", "calculatedRanges"])
+            || value.documentId !== expected.documentId || value.fromRevision !== previous.cells.snapshot.manifest.revision || value.revision !== expected.revision
+            || !Array.isArray(value.sourceRanges) || !Array.isArray(value.calculatedRanges)) { closeTransferred(reply.port); invalidSessionTransport("Invalid workbook view invalidation."); }
+          for (const ranges of [value.sourceRanges, value.calculatedRanges]) for (const item of ranges) {
+            const range = record(item) ? WorkbookRangeSchema.safeParse(item.range) : undefined;
+            if (!record(item) || !keys(item, ["sheetId", "range"]) || typeof item.sheetId !== "string" || !item.sheetId || item.sheetId.length > 256
+              || !range?.success || range.data.from.row > range.data.to.row || range.data.from.column > range.data.to.column) { closeTransferred(reply.port); invalidSessionTransport("Invalid workbook view invalidation rectangle."); }
+          }
+          impact = freezeSessionValue(value as unknown as WorkbookChangeImpact);
+        }
         const source = await connectWorkbookReads(reply.port, config.reads, execution?.signal);
         if (disposed || current.revision !== expected.revision || source.cells.snapshot.manifest.documentId !== expected.documentId || source.cells.snapshot.manifest.revision !== expected.revision || owned?.consumed) {
           source.dispose(); throw new DocumentError("RevisionConflict", "Workbook view source changed before it became available.");
         }
-        const result: WorkbookReadConnection = Object.freeze({ ...source, dispose() { views.delete(result); source.dispose(); } }); views.add(result); return result;
+        const result: WorkbookReadConnection = Object.freeze({ ...source, ...(impact ? { impact } : {}), dispose() { views.delete(result); source.dispose(); } });
+        views.add(result); viewHandles.set(result, reply.value.viewHandle);
+        if (impact && previous) linkWorkbookPreviewSource(result, previous, impact);
+        return result;
       },
       async commit(candidate: WorkbookSessionCandidate) {
         const owned = candidateRecord(candidate);

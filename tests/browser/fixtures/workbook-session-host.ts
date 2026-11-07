@@ -35,7 +35,7 @@ export async function editWorker(code: string, input: string, documentId: string
     ] }] } }, undefined, { signal: abort.signal });
     const seedPreparedMs = performance.now() - start, isolated = client.state().revision === 0 && client.state().history.undoSteps === 0;
     await client.commit(seed);
-    let next = await client.view(undefined, { signal: abort.signal });
+    let next = await client.view(undefined, { signal: abort.signal, previous: source });
     await preview.update(next); await preview.settled(); source.dispose(); source = next;
     const seededChunks = source.cells.snapshot.manifest.chunks;
     const cancelling = new AbortController(); let cancelled = "", cancellationPoint = 0;
@@ -51,7 +51,7 @@ export async function editWorker(code: string, input: string, documentId: string
       source: capacity ? { from: { row: 0, column: 0 }, to: { row: 9999, column: 19 } } : { from: { row: 12000, column: 32 }, to: { row: 12001, column: 32 } },
       target: capacity ? { row: 0, column: 1 } : { row: 12000, column: 33 } }, undefined, { signal: abort.signal, onProgress: value => { if (value.phase === "copy") copied++; else prepared++; } });
     const copyPreparedMs = performance.now() - copyStart; await client.commit(copy);
-    next = await client.view(undefined, { signal: abort.signal });
+    next = await client.view(undefined, { signal: abort.signal, previous: source });
     const at = capacity ? { row: 9999, column: 20 } : { row: 12001, column: 33 };
     const current = await next.rules!.read({ documentId, revision: 2, sheetId, coordinates: [at], includeCurrent: true, ...DEFAULT_WORKBOOK_RULE_LIMITS }, abort.signal);
     await preview.update(next); await preview.settled(); source.dispose(); source = next;

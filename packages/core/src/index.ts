@@ -48,6 +48,8 @@ export { createWorkbookScalarEvaluator, copyWorkbookScalarContext } from "./work
 export { captureWorkbookModel } from "./workbook/source.js";
 export type { WorkbookScalarEvaluator, WorkbookScalarResult, WorkbookScalarUnavailable, WorkbookScalarLimits, WorkbookScalarQueryOptions } from "./workbook/scalar.js";
 export type { WorkbookScalarContext } from "./workbook/scalar.js";
+export { readWorkbookChangeImpact } from "./workbook/change-impact.js";
+export type { WorkbookChangeImpact } from "./workbook/change-impact.js";
 export { createWorkbookCalculator, DEFAULT_WORKBOOK_CALCULATION_LIMITS, WORKBOOK_CALCULATION_VERSION } from "./workbook/calculation.js";
 export { createWorkbookCalculatedEvaluator } from "./workbook/calculated-evaluator.js";
 export type { WorkbookCalculator, WorkbookCalculationLimits, WorkbookCalculationOptions, WorkbookCalculationResult, WorkbookCalculatedCell } from "./workbook/calculation.js";

@@ -4,6 +4,7 @@ import type { DocumentOperation, WorkbookSession } from "@doffi/core";
 import { connectWorkbookSession, serveWorkbookSession } from "../src/index.js";
 import type { WorkbookSessionConnection, WorkbookSessionProgress, WorkbookSessionTransportOptions } from "../src/index.js";
 import { scalarWorkbook } from "../../core/tests/workbook-scalar-fixture.js";
+import { workbookPreviewChangeImpact } from "../../render/dist/workbook/preview-source.js";
 
 const cleanups: (() => void)[] = [], sheetId = "sheet-1";
 afterEach(() => { for (const cleanup of cleanups.splice(0).reverse()) cleanup(); });
@@ -98,6 +99,35 @@ test("connection disposal releases candidates and views while its host session r
   expect(s.snapshot().manifest.revision).toBe(0); expect(s.history().undoSteps).toBe(0); await expect(view.cells.read({ documentId: "worker-session", revision: 0, maxCells: 1, maxCodeUnits: 1024,
     windows: [{ sheetId, row: 0, column: 0, rows: 1, columns: 1 }] }, new AbortController().signal)).rejects.toThrow();
   s.commit(s.prepare(transaction(s, [number(0, 0, 7)]))); expect(s.getCell(sheetId, 0, 0)?.value).toEqual({ type: "number", value: 7 });
+});
+
+test("retained Worker views link exact source and calculation deltas across source revisions", async () => {
+  const s = createDocumentSession(scalarWorkbook([{ row: 0, column: 0, value: { type: "number", value: 1 } },
+    { row: 1000, column: 1, value: { type: "number", value: 999 }, formula: "=A1+1" }])); cleanups.push(() => s.dispose());
+  const { client } = await pair(s), previous = await client.view(), original = await client.view();
+  expect(previous.impact).toBeUndefined();
+  await client.commit(await client.prepare(command(s, [number(0, 0, 2)])));
+  const next = await client.view(undefined, { previous });
+  expect(next.impact).toMatchObject({ fromRevision: 0, revision: 1,
+    sourceRanges: [{ sheetId, range: { from: { row: 0, column: 0 }, to: { row: 0, column: 0 } } }],
+    calculatedRanges: [{ sheetId, range: { from: { row: 1000, column: 1 }, to: { row: 1000, column: 1 } } }] });
+  expect(Object.isFrozen(next.impact?.calculatedRanges[0]?.range)).toBe(true);
+  expect(workbookPreviewChangeImpact(previous, next)).toBe(next.impact);
+  expect(workbookPreviewChangeImpact(original, next)).toBeUndefined();
+  previous.dispose(); original.dispose(); next.dispose();
+  await expect(client.view(undefined, { previous })).rejects.toThrowError(expect.objectContaining({ code: "InvalidOperation" }));
+});
+
+test("Worker view deltas distinguish calculation contexts at the same source revision", async () => {
+  const s = createDocumentSession(scalarWorkbook([{ row: 0, column: 0, value: { type: "number", value: 999 }, formula: "=TODAY()" }])); cleanups.push(() => s.dispose());
+  const a = await pair(s), b = await pair(s), previous = await a.client.view(undefined, { calculationContext: { now: { unixMilliseconds: 0, utcOffsetMinutes: 0 } } });
+  const other = await a.client.view(undefined, { calculationContext: { now: { unixMilliseconds: 86400000, utcOffsetMinutes: 0 } } });
+  const next = await a.client.view(undefined, { previous, calculationContext: { now: { unixMilliseconds: 86400000, utcOffsetMinutes: 0 } } });
+  expect(next.impact).toMatchObject({ fromRevision: 0, revision: 0, sourceRanges: [], calculatedRanges: [{ sheetId, range: { from: { row: 0, column: 0 }, to: { row: 0, column: 0 } } }] });
+  expect(workbookPreviewChangeImpact(previous, next)).toBe(next.impact); expect(workbookPreviewChangeImpact(other, next)).toBeUndefined();
+  await expect(b.client.view(undefined, { previous })).rejects.toThrowError(expect.objectContaining({ code: "InvalidOperation" }));
+  await expect(a.client.view(undefined, { previous: { ...previous } })).rejects.toThrowError(expect.objectContaining({ code: "InvalidOperation" }));
+  previous.dispose(); other.dispose(); next.dispose();
 });
 
 test("views enforce retained limits and reclaim cancelled or explicitly released ports", async () => {

@@ -18,20 +18,27 @@ export function compareWorkbooks(before: WorkbookModel, after: WorkbookModel, ma
 }
 export function* compareWorkbookSteps(before: WorkbookModel, after: WorkbookModel, mapping?: ChangeMapping): Generator<{ completed: number; total: number }, WorkbookSourceDiff | undefined> {
   const previous = workbookSource(before)!, next = workbookSource(after)!, changedRanges: WorkbookRangeChange[] = [], sheets = new Set<string>();
-  const descriptors = new Map([...before.snapshot().manifest.chunks, ...after.snapshot().manifest.chunks].map(chunk => [chunk.path, chunk]));
+  const oldDescriptors = new Map(before.snapshot().manifest.chunks.map(chunk => [chunk.path, chunk]));
+  const newDescriptors = new Map(after.snapshot().manifest.chunks.map(chunk => [chunk.path, chunk]));
+  const paths = new Set([...oldDescriptors.keys(), ...newDescriptors.keys()]);
   let completed = 0;
-  for (const [path, descriptor] of descriptors) {
-    if (previous.files.get(path) === next.files.get(path)) continue;
-    const window = { ...descriptor, rows: CHUNK_ROWS, columns: CHUNK_COLUMNS };
-    const left = new Map(previous.chunks.get(path)?.readWindow(window).map(cell => [cell.row * 16_384 + cell.column, cell.html]));
-    const right = new Map(next.chunks.get(path)?.readWindow(window).map(cell => [cell.row * 16_384 + cell.column, cell.html]));
-    for (const key of [...new Set([...left.keys(), ...right.keys()])].sort((a, b) => a - b)) {
-      if (left.get(key) === right.get(key)) continue;
-      const row = Math.floor(key / 16_384), column = key % 16_384, last = changedRanges.at(-1);
-      if (last?.sheetId === descriptor.sheetId && last.range.from.row === row && last.range.to.column + 1 === column)
-        changedRanges[changedRanges.length - 1] = { sheetId: descriptor.sheetId, range: { from: last.range.from, to: { row, column } } };
-      else changedRanges.push({ sheetId: descriptor.sheetId, range: { from: { row, column }, to: { row, column } } });
-      sheets.add(descriptor.sheetId);
+  for (const path of paths) {
+    const old = oldDescriptors.get(path), current = newDescriptors.get(path);
+    if (previous.files.get(path) === next.files.get(path) && old?.sheetId === current?.sheetId && old?.row === current?.row && old?.column === current?.column) continue;
+    // Each immutable chunk is read at its own position. A stable resource path
+    // does not imply a stable worksheet or coordinate after a host replacement.
+    const oldCells = new Map(old && previous.chunks.get(path)?.readWindow({ ...old, rows: CHUNK_ROWS, columns: CHUNK_COLUMNS }).map(cell => [cell.row * 16_384 + cell.column, cell.html]));
+    const newCells = new Map(current && next.chunks.get(path)?.readWindow({ ...current, rows: CHUNK_ROWS, columns: CHUNK_COLUMNS }).map(cell => [cell.row * 16_384 + cell.column, cell.html]));
+    for (const sheetId of new Set([...(old ? [old.sheetId] : []), ...(current ? [current.sheetId] : [])])) {
+      const left = old?.sheetId === sheetId ? oldCells : new Map<number, string>(), right = current?.sheetId === sheetId ? newCells : new Map<number, string>();
+      for (const key of [...new Set([...left.keys(), ...right.keys()])].sort((a, b) => a - b)) {
+        if (left.get(key) === right.get(key)) continue;
+        const row = Math.floor(key / 16_384), column = key % 16_384, last = changedRanges.at(-1);
+        if (last?.sheetId === sheetId && last.range.from.row === row && last.range.to.column + 1 === column)
+          changedRanges[changedRanges.length - 1] = { sheetId, range: { from: last.range.from, to: { row, column } } };
+        else changedRanges.push({ sheetId, range: { from: { row, column }, to: { row, column } } });
+        sheets.add(sheetId);
+      }
     }
     yield { completed: ++completed, total: 0 };
   }

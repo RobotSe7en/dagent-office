@@ -32,6 +32,9 @@ export interface WorkbookSessionViewOptions extends WorkbookSessionExecution {
   /** Default follows the source's automatic/manual calculation mode. */
   readonly calculate?: boolean;
   readonly calculationContext?: WorkbookScalarContext;
+  /** A still-retained view from this connection. Its exact private model and
+   * calculation can supply an optional incremental preview invalidation. */
+  readonly previous?: WorkbookReadConnection;
 }
 export interface WorkbookSessionFindOptions extends WorkbookSessionExecution {
   readonly calculationContext?: WorkbookScalarContext;

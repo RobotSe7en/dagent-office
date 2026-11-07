@@ -4,7 +4,7 @@ import { createWorkbookPreviewChrome, workbookColumnLabel } from "./preview-chro
 import type { WorkbookPreview, WorkbookPreviewInput, WorkbookPreviewOptions, WorkbookRenderReport } from "./preview-contracts.js";
 import { decorateWorkbookPreview } from "./preview-decoration.js";
 import type { WorkbookPreviewDecoration } from "./preview-decoration.js";
-import { workbookPreviewSource } from "./preview-source.js";
+import { workbookPreviewChangeImpact, workbookPreviewSource } from "./preview-source.js";
 import { hitWorkbookCell, WorkbookMergeIndex } from "./projection.js";
 import { createWorkbookSurface } from "./surface.js";
 import type { WorkbookSurface } from "./surface.js";
@@ -13,6 +13,9 @@ import type { WorkbookRenderedWindow } from "./window-controller.js";
 import type { WorkbookViewport } from "./viewport.js";
 import { navigateWorkbookSelection } from "./selection-navigation.js";
 import type { WorkbookSelectionNavigation } from "./selection-navigation.js";
+import { workbookRowInvalidation } from "./row-invalidation.js";
+import { DEFAULT_AUTO_ROW_LIMITS } from "./auto-rows.js";
+import { waitForWorkbookRead } from "./read-cancellation.js";
 
 interface PreviewWindow { readonly controls: WorkbookPreviewDecoration; commitChrome(): void }
 interface PreviewContext {
@@ -220,16 +223,23 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
   }
   function prepare(providers: ReturnType<typeof workbookPreviewSource>, inputViewport: WorkbookViewport, sheetId: string, kind: "update" | "resize"): void {
     const snapshot = providers.cells.snapshot, viewport = Object.freeze({ ...inputViewport }); desired = viewport;
-    pending?.cancel(); active?.controller.cancelPending(); const ticket = ++generation, abort = new AbortController();
+    pending?.cancel(); active?.controller.cancelForReplacement(); const ticket = ++generation, abort = new AbortController();
+    const before = active, oldViewport = before?.controller.current?.frame.layout;
+    const rows = before ? workbookRowInvalidation(before.snapshot, snapshot, workbookPreviewChangeImpact(before.providers, providers), config.limits.autoRows.maxCells ?? DEFAULT_AUTO_ROW_LIMITS.maxCells) : undefined;
+    const share = rows && before?.surface.fork && oldViewport?.widthPt === viewport.widthPt && oldViewport.heightPt === viewport.heightPt
+      && snapshot.styles.every(style => /^(?:\s*\.[a-zA-Z_][-\w]*\s*\{[^{}]*\}\s*)*$/.test(style.css)) ? before : undefined;
     let candidate: PreviewContext | undefined;
     const request = { kind, cancel() { abort.abort(); candidate?.dispose(); } }; pending = request; chrome.busy(true);
     const work = (async () => {
-      const slot = container.ownerDocument.createElement("div");
-      slot.style.cssText = "position:absolute;inset:0;opacity:0;pointer-events:none;overflow:hidden";
-      slot.setAttribute("aria-hidden", "true"); chrome.canvas.append(slot);
+      const slot = share?.slot ?? container.ownerDocument.createElement("div");
+      if (!share) {
+        slot.style.cssText = "position:absolute;inset:0;opacity:0;pointer-events:none;overflow:hidden";
+        slot.setAttribute("aria-hidden", "true"); chrome.canvas.append(slot);
+      }
       let surface: WorkbookSurface | undefined, formatter: ReturnType<typeof createWorkbookNumberFormatter> | undefined;
       try {
-        surface = await createWorkbookSurface(slot, snapshot, { ...viewport, signal: abort.signal });
+        surface = share ? share.surface.fork!() : await createWorkbookSurface(slot, snapshot, { ...viewport, signal: abort.signal });
+        if (share && surface.document.fonts.status === "loading") await waitForWorkbookRead(surface.document.fonts.ready, abort.signal);
         if (abort.signal.aborted) return;
         formatter = createWorkbookNumberFormatter({ dateSystem: snapshot.metadata.workbook.dateSystem,
           ...(config.locale !== undefined ? { hostLocale: config.locale } : {}), ...(snapshot.metadata.locale ? { documentLocale: snapshot.metadata.locale } : {}) });
@@ -255,20 +265,23 @@ export function mountWorkbookPreview(container: HTMLElement, input: WorkbookPrev
             selectSourceRange(merges.at(cell.row, cell.column) ?? { from: cell, to: cell });
           }), { signal: events.signal });
           return { get nodes() { return controls.nodes; }, get fonts() { return controls.fonts; }, dispose() { events.abort(); controls.dispose(); } };
-        });
+        }, { deferPublication: true, ...(share && rows ? { measurements: share.controller.measurementSeeds(rows) } : {}) });
         let released = false;
         // Native point-based styles retain their stable indexes on resize.
         // Viewport/container units and conditional CSS need a fresh surface
         // to measure typography at the final size before atomic publication.
         const viewportDependentStyles = usesViewportStyles(snapshot);
         candidate = { snapshot, providers, viewportDependentStyles, surface, controller, windows, slot, dispose() {
-          if (released) return; released = true; controller.dispose(); ownedFormatter.dispose(); ownedSurface.dispose(); slot.remove();
+          if (released) return; released = true; controller.dispose(); ownedFormatter.dispose(); ownedSurface.dispose(); if (!slot.querySelector("iframe")) slot.remove();
         } };
         if (!await controller.render(sheetId, viewport) || abort.signal.aborted || disposed || ticket !== generation) return;
         const previous = active;
         // Chrome preparation and all controls already succeeded before the
         // controller published this isolated candidate's complete window.
-        active = candidate; accepted(candidate); candidate = undefined;
+        previous?.controller.unpublish();
+        try { controller.publish(); active = candidate; accepted(candidate); }
+        catch (error) { active = previous; previous?.controller.publish(); throw error; }
+        candidate = undefined;
         slot.style.opacity = "1"; slot.style.pointerEvents = "auto"; slot.removeAttribute("aria-hidden"); previous?.dispose();
         surface = undefined; formatter = undefined;
       } catch (error) { if (!abort.signal.aborted && !disposed && ticket === generation) throw error; }

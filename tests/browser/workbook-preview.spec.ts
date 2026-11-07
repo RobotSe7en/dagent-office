@@ -31,6 +31,20 @@ test.beforeAll(async () => {
   }
 });
 test.beforeEach(async ({ page }) => { await openSdkHost(page); await page.addScriptTag({ content: code }); });
+test('incremental preview remeasures distant hidden-column results and retains its accepted surface on failure and cancellation', async ({ page }) => {
+  const model = scalarWorkbook(Array.from({ length: 2048 * 3 }, (_, index) => {
+    const row = Math.floor(index / 3), column = index % 3;
+    return { row, column, value: { type: 'number' as const, value: row === 0 && column === 0 ? 1 : index + 1 },
+      ...(row === 1000 && column === 1 ? { formula: '=IF($A$1=1,"short","long wrapped content long wrapped content long wrapped content long wrapped content")' } : {}) };
+  }), metadata => { metadata.workbook.sheets[0]!.columnDimensions = [{ from: 1, to: 1, hidden: true, width: 8.43, unit: 'characters' }]; });
+  const files = new Map(model.serialize()), encoder = new TextEncoder();
+  files.set('styles.css', encoder.encode(new TextDecoder().decode(files.get('styles.css')!).replace('font-size:11pt;', 'font-size:11pt;--office-cell-wrap:true;')));
+  const result = await page.evaluate(entries => window.workbookPreview.incrementalPreview(entries), encodeTestPackage(files));
+  expect(result).toMatchObject({ failure: 'RevisionConflict', retained: true, superseded: true, sameFrame: true, frames: 1,
+    measuredDistant: true, skippedUntouched: true, errors: ['RevisionConflict'], unhandled: [] });
+  expect(result.updated).toEqual(result.fresh); expect(result.updated.scrollTopPt).toBeGreaterThan(result.oldTop);
+  expect(result.updatedReadRows).toBeLessThan(result.initialReadRows / 2);
+});
 test('completed calculation renders an unruled long chain and preserves view selection and active sheet', async ({ page }) => {
   const model = scalarWorkbook(Array.from({ length: 150 }, (_, row) => ({ row, column: 0, value: { type: 'number' as const, value: 9999 }, formula: row ? `=A${row}+1` : '=1' })), metadata => { metadata.workbook.sheets[0]!.defaultRowHeightCustom = true; });
   const result = await page.evaluate(entries => window.workbookPreview.calculatedPreview(entries), encodeTestPackage(model.serialize()));
